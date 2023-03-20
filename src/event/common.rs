@@ -1,0 +1,190 @@
+use super::{eq_ip_country, EventCategory, EventFilter, FlowKind, TrafficDirection, TriagePolicy};
+use anyhow::{bail, Result};
+use num_traits::ToPrimitive;
+use serde::{Deserialize, Serialize};
+use std::{
+    net::IpAddr,
+    num::NonZeroU8,
+    sync::{Arc, Mutex},
+};
+
+pub(super) trait Match {
+    fn src_addr(&self) -> IpAddr;
+    fn src_port(&self) -> u16;
+    fn dst_addr(&self) -> IpAddr;
+    fn dst_port(&self) -> u16;
+    fn proto(&self) -> u8;
+    fn category(&self) -> EventCategory;
+    fn level(&self) -> NonZeroU8;
+    fn kind(&self) -> &str;
+    fn confidence(&self) -> Option<f32>;
+    fn score_by_packet_attr(&self, triage: &TriagePolicy) -> f64;
+
+    fn matches(
+        &self,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<(bool, Option<Vec<TriageScore>>)> {
+        if !self.kind_matches(filter) {
+            return Ok((false, None));
+        }
+        self.other_matches(filter, locator)
+    }
+
+    fn kind_matches(&self, filter: &EventFilter) -> bool {
+        if let Some(kinds) = &filter.kinds {
+            if kinds.iter().all(|k| k != self.kind()) {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn other_matches(
+        &self,
+        filter: &EventFilter,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+    ) -> Result<(bool, Option<Vec<TriageScore>>)> {
+        if let Some(customers) = &filter.customers {
+            if customers.iter().all(|customer| {
+                !customer.contains(self.src_addr()) && !customer.contains(self.dst_addr())
+            }) {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some(endpoints) = &filter.endpoints {
+            if endpoints.iter().all(|endpoint| match endpoint.direction {
+                Some(TrafficDirection::From) => !endpoint.network.contains(self.src_addr()),
+                Some(TrafficDirection::To) => !endpoint.network.contains(self.dst_addr()),
+                None => {
+                    !endpoint.network.contains(self.src_addr())
+                        && !endpoint.network.contains(self.dst_addr())
+                }
+            }) {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some(addr) = filter.source {
+            if self.src_addr() != addr {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some(addr) = filter.destination {
+            if self.dst_addr() != addr {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some((kinds, internal)) = &filter.directions {
+            let internal_src = internal.iter().any(|net| net.contains(self.src_addr()));
+            let internal_dst = internal.iter().any(|net| net.contains(self.dst_addr()));
+            match (internal_src, internal_dst) {
+                (true, true) => {
+                    if !kinds.contains(&FlowKind::Internal) {
+                        return Ok((false, None));
+                    }
+                }
+                (true, false) => {
+                    if !kinds.contains(&FlowKind::Outbound) {
+                        return Ok((false, None));
+                    }
+                }
+                (false, true) => {
+                    if !kinds.contains(&FlowKind::Inbound) {
+                        return Ok((false, None));
+                    }
+                }
+                (false, false) => return Ok((false, None)),
+            }
+        }
+
+        if let Some(countries) = &filter.countries {
+            if let Some(locator) = locator {
+                let Ok(mut locator) = locator.lock() else {
+                    bail!("IP location database unavailable")
+                };
+                if countries.iter().all(|country| {
+                    !eq_ip_country(&mut locator, self.src_addr(), *country)
+                        && !eq_ip_country(&mut locator, self.dst_addr(), *country)
+                }) {
+                    return Ok((false, None));
+                }
+            } else {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some(categories) = &filter.categories {
+            if categories
+                .iter()
+                .all(|category| *category != self.category())
+            {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some(levels) = &filter.levels {
+            if levels.iter().all(|level| *level != self.level()) {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some(triage_policies) = &filter.triage_policies {
+            if !triage_policies.is_empty() {
+                let triage_scores = triage_policies
+                    .iter()
+                    .filter_map(|triage| {
+                        let score = self.score_by_ti_db(triage)
+                            + self.score_by_packet_attr(triage)
+                            + self.score_by_confidence(triage);
+                        if triage.response.iter().any(|r| score >= r.minimum_score) {
+                            Some(TriageScore {
+                                policy_id: triage.id,
+                                score,
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                if triage_scores.is_empty() {
+                    return Ok((false, None));
+                }
+                return Ok((true, Some(triage_scores)));
+            }
+        }
+
+        Ok((true, None))
+    }
+
+    fn score_by_ti_db(&self, _triage: &TriagePolicy) -> f64 {
+        // TODO: implement
+        0.0
+    }
+
+    fn score_by_confidence(&self, triage: &TriagePolicy) -> f64 {
+        triage.confidence.iter().fold(0.0, |score, conf| {
+            if conf.threat_category == self.category()
+                && conf.threat_kind.to_lowercase() == self.kind().to_lowercase()
+                && self.confidence().map_or(true, |c| {
+                    c.to_f64().expect("safe: f32 -> f64") >= conf.confidence
+                })
+            {
+                score + conf.weight.unwrap_or(1.0)
+            } else {
+                score
+            }
+        })
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct TriageScore {
+    pub policy_id: u32,
+    pub score: f64,
+}

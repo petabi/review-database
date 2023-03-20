@@ -1,0 +1,1280 @@
+mod common;
+mod dns;
+mod http;
+mod rdp;
+mod tor;
+
+use self::{
+    common::Match,
+    http::{DgaFields, HttpThreatFields, RepeatedHttpSessionsFields},
+    rdp::RdpBruteForceFields,
+    tor::TorConnectionFields,
+};
+pub use self::{
+    common::TriageScore,
+    dns::{DnsCovertChannel, DnsEventFields},
+    http::{DomainGenerationAlgorithm, HttpThreat, RepeatedHttpSessions},
+    rdp::RdpBruteForce,
+    tor::TorConnection,
+};
+use super::{
+    types::{Customer, Endpoint, EventCategory, FromKeyValue, HostNetworkGroup, TriagePolicy},
+    Indexable,
+};
+use aho_corasick::AhoCorasickBuilder;
+use anyhow::{bail, Context, Result};
+use bincode::Options;
+use chrono::{serde::ts_nanoseconds, DateTime, TimeZone, Utc};
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
+use rand::{thread_rng, RngCore};
+pub use rocksdb::Direction;
+use rocksdb::IteratorMode;
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    convert::TryInto,
+    fmt,
+    mem::size_of,
+    net::IpAddr,
+    num::NonZeroU8,
+    sync::{Arc, Mutex, MutexGuard},
+};
+
+// event levels (currently unused ones commented out)
+// const VERY_LOW: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(1) };
+const LOW: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(2) };
+const MEDIUM: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(3) };
+// const HIGH: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(4) };
+// const VERY_HIGH: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(5) };
+
+// event kind
+const DNS_COVERT_CHANNEL: &str = "DNS Covert Channel";
+const HTTP_THREAT: &str = "HTTP Threat";
+const RDP_BRUTE_FORCE: &str = "RDP Brute Force";
+const REPEATED_HTTP_SESSIONS: &str = "Repeated HTTP Sessions";
+const TOR_CONNECTION: &str = "Tor Connection";
+const DOMAIN_GENERATION_ALGIRITHM: &str = "Domain Generation Algorithm";
+
+pub enum Event {
+    /// DNS requests and responses that convey unusual host names.
+    DnsCovertChannel(DnsCovertChannel),
+
+    /// HTTP-related threats.
+    HttpThreat(HttpThreat),
+
+    /// Brute force attacks against RDP, attempting to guess passwords.
+    RdpBruteForce(RdpBruteForce),
+
+    /// Multiple HTTP sessions with the same source and destination that occur within a short time.
+    /// This is a sign of a possible unauthorized communication channel.
+    RepeatedHttpSessions(RepeatedHttpSessions),
+
+    /// An HTTP connection to a Tor exit node.
+    TorConnection(TorConnection),
+
+    /// DGA (Domain Generation Algorithm) generated hostname in HTTP request message
+    DomainGenerationAlgorithm(Box<DomainGenerationAlgorithm>),
+}
+
+impl Event {
+    pub fn matches(
+        &self,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<(bool, Option<Vec<TriageScore>>)> {
+        match self {
+            Event::DnsCovertChannel(event) => event.matches(locator, filter),
+            Event::HttpThreat(event) => event.matches(locator, filter),
+            Event::RdpBruteForce(event) => event.matches(locator, filter),
+            Event::RepeatedHttpSessions(event) => event.matches(locator, filter),
+            Event::TorConnection(event) => event.matches(locator, filter),
+            Event::DomainGenerationAlgorithm(event) => event.matches(locator, filter),
+        }
+    }
+
+    #[allow(clippy::needless_pass_by_value)] // function prototype must be the same as other `count_*` functions.
+    pub fn count_country(
+        &self,
+        counter: &mut HashMap<String, usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::RdpBruteForce(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    let src_country = locator.as_ref().map_or_else(
+                        || "ZZ".to_string(),
+                        |mutex| {
+                            if let Ok(mut locator) = mutex.lock() {
+                                find_ip_country(&mut locator, event.src_addr)
+                            } else {
+                                "ZZ".to_string()
+                            }
+                        },
+                    );
+                    let entry = counter.entry(src_country).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_category(
+        &self,
+        counter: &mut HashMap<EventCategory, usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::CommandAndControl).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::Reconnaissance).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RdpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::Discovery).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::Exfiltration).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::CommandAndControl).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::CommandAndControl).or_insert(0);
+                    *entry += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_ip_address(
+        &self,
+        counter: &mut HashMap<IpAddr, usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::RdpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_ip_address_pair(
+        &self,
+        counter: &mut HashMap<(IpAddr, IpAddr), usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RdpBruteForce(_event) => {}
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_ip_address_pair_and_kind(
+        &self,
+        counter: &mut HashMap<(IpAddr, IpAddr, &'static str), usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, DNS_COVERT_CHANNEL))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, HTTP_THREAT))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RdpBruteForce(_event) => {}
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, REPEATED_HTTP_SESSIONS))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, TOR_CONNECTION))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, DOMAIN_GENERATION_ALGIRITHM))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_src_ip_address(
+        &self,
+        counter: &mut HashMap<IpAddr, usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RdpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_dst_ip_address(
+        &self,
+        counter: &mut HashMap<IpAddr, usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RdpBruteForce(_event) => {}
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_kind(
+        &self,
+        counter: &mut HashMap<String, usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(DNS_COVERT_CHANNEL.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.attack_kind.clone()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RdpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(RDP_BRUTE_FORCE.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry(REPEATED_HTTP_SESSIONS.to_string())
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(TOR_CONNECTION.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry(DOMAIN_GENERATION_ALGIRITHM.to_string())
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_level(
+        &self,
+        counter: &mut HashMap<NonZeroU8, usize>,
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(LOW).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RdpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn count_network(
+        &self,
+        counter: &mut HashMap<u32, usize>,
+        networks: &[Network],
+        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        filter: &EventFilter,
+    ) -> Result<()> {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::HttpThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::RdpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::RepeatedHttpSessions(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                if let Some(id) = find_network(event.dst_addr, networks) {
+                    let entry = counter.entry(id).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                if let Some(id) = find_network(event.dst_addr, networks) {
+                    let entry = counter.entry(id).or_insert(0);
+                    *entry += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn set_triage_scores(&mut self, triage_scores: Vec<TriageScore>) {
+        match self {
+            Event::DnsCovertChannel(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::HttpThreat(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::RdpBruteForce(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::RepeatedHttpSessions(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::TorConnection(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+        }
+    }
+}
+
+fn find_network(ip: IpAddr, networks: &[Network]) -> Option<u32> {
+    for net in networks.iter() {
+        if net.contains(ip) {
+            return Some(net.id);
+        }
+    }
+    None
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, FromPrimitive, PartialEq, ToPrimitive)]
+#[allow(clippy::module_name_repetitions)]
+pub enum EventKind {
+    DnsCovertChannel,
+    HttpThreat,
+    RdpBruteForce,
+    RepeatedHttpSessions,
+    Log,
+    TorConnection,
+    DomainGenerationAlgorithm,
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct EventFilter {
+    customers: Option<Vec<Customer>>,
+    endpoints: Option<Vec<Endpoint>>,
+    directions: Option<(Vec<FlowKind>, Vec<HostNetworkGroup>)>,
+    source: Option<IpAddr>,
+    destination: Option<IpAddr>,
+    countries: Option<Vec<[u8; 2]>>,
+    categories: Option<Vec<EventCategory>>,
+    levels: Option<Vec<NonZeroU8>>,
+    kinds: Option<Vec<String>>,
+    triage_policies: Option<Vec<TriagePolicy>>,
+}
+
+impl EventFilter {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        customers: Option<Vec<Customer>>,
+        endpoints: Option<Vec<Endpoint>>,
+        directions: Option<(Vec<FlowKind>, Vec<HostNetworkGroup>)>,
+        source: Option<IpAddr>,
+        destination: Option<IpAddr>,
+        countries: Option<Vec<[u8; 2]>>,
+        categories: Option<Vec<EventCategory>>,
+        levels: Option<Vec<NonZeroU8>>,
+        kinds: Option<Vec<String>>,
+        triage_policies: Option<Vec<TriagePolicy>>,
+    ) -> Self {
+        Self {
+            customers,
+            endpoints,
+            directions,
+            source,
+            destination,
+            countries,
+            categories,
+            levels,
+            kinds,
+            triage_policies,
+        }
+    }
+
+    pub fn has_country(&self) -> bool {
+        self.countries.is_some()
+    }
+
+    pub fn moderate_kinds(&mut self) {
+        if let Some(kinds) = self.kinds.as_mut() {
+            moderate_kinds_by(kinds, &["dns", "covert", "channel"], "dns covert channel");
+            moderate_kinds_by(
+                kinds,
+                &["http", "covert", "channel"],
+                "repeated http sessions",
+            );
+            moderate_kinds_by(kinds, &["rdp", "brute", "force"], "rdp brute force");
+            moderate_kinds_by(kinds, &["tor", "connection"], "tor exit nodes");
+            moderate_kinds_by(kinds, &["domain", "generation", "algorithm"], "dga");
+        }
+    }
+}
+
+fn moderate_kinds_by(kinds: &mut Vec<String>, patterns: &[&str], full_name: &str) {
+    let ac = AhoCorasickBuilder::new()
+        .ascii_case_insensitive(true)
+        .build(patterns);
+    if kinds.iter().any(|kind| {
+        let words = kind
+            .split_whitespace()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>();
+        words.iter().all(|w| ac.is_match(w))
+    }) {
+        kinds.push(full_name.to_string());
+    }
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(clippy::module_name_repetitions)]
+pub struct EventMessage {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub kind: EventKind,
+    #[serde(with = "serde_bytes")]
+    pub fields: Vec<u8>,
+}
+
+impl fmt::Display for EventMessage {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{},", self.time.to_rfc3339())?;
+        match self.kind {
+            EventKind::DnsCovertChannel => {
+                if let Ok(fields) = bincode::deserialize::<DnsEventFields>(&self.fields) {
+                    write!(f, "DnsCovertChannel,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::HttpThreat => {
+                if let Ok(fields) = bincode::deserialize::<HttpThreatFields>(&self.fields) {
+                    write!(f, "HttpThreat,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::RdpBruteForce => {
+                if let Ok(fields) = bincode::deserialize::<RdpBruteForceFields>(&self.fields) {
+                    write!(f, "RdpBruteForce,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::RepeatedHttpSessions => {
+                if let Ok(fields) = bincode::deserialize::<RepeatedHttpSessionsFields>(&self.fields)
+                {
+                    write!(f, "RepeatedHttpSessions,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::TorConnection => {
+                if let Ok(fields) = bincode::deserialize::<TorConnectionFields>(&self.fields) {
+                    write!(f, "TorConnection,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::DomainGenerationAlgorithm => {
+                if let Ok(fields) = bincode::deserialize::<DomainGenerationAlgorithm>(&self.fields)
+                {
+                    write!(f, "DomainGenerationAlgorithm,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::Log => Ok(()),
+        }
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct EventDb<'a> {
+    inner: &'a rocksdb::OptimisticTransactionDB,
+}
+
+impl<'a> EventDb<'a> {
+    pub fn new(inner: &'a rocksdb::OptimisticTransactionDB) -> EventDb {
+        Self { inner }
+    }
+
+    /// Creates an iterator over key-value pairs, starting from `key`.
+    pub fn iter_from(&self, key: i128, direction: Direction) -> EventIterator {
+        let iter = self
+            .inner
+            .iterator(IteratorMode::From(&key.to_be_bytes(), direction));
+        EventIterator { inner: iter }
+    }
+
+    /// Creates an iterator over key-value pairs for the entire events.
+    pub fn iter_forward(&self) -> EventIterator {
+        let iter = self.inner.iterator(IteratorMode::Start);
+        EventIterator { inner: iter }
+    }
+
+    /// Stores a new event into the database.
+    pub fn put(&self, event: &EventMessage) -> Result<i128> {
+        let mut key = i128::from(event.time.timestamp_nanos()) << 64
+            | event.kind.to_i128().expect("should not exceed i128::MAX") << 32;
+        loop {
+            let txn = self.inner.transaction();
+            if txn
+                .get_for_update(key.to_be_bytes(), super::EXCLUSIVE)
+                .context("cannot read from event database")?
+                .is_some()
+            {
+                let start = i128::from(thread_rng().next_u32());
+                key |= start;
+                #[allow(clippy::cast_possible_wrap)] // bit pattern
+                while txn
+                    .get_for_update(key.to_be_bytes(), super::EXCLUSIVE)
+                    .context("cannot read from event database")?
+                    .is_some()
+                {
+                    let next = (key + 1) & 0xffff_ffff;
+                    if next == start {
+                        bail!("too many events with the same timestamp");
+                    }
+                    key = key & 0xffff_ffff_ffff_ffff_ffff_ffff_0000_0000_u128 as i128 | next;
+                }
+            }
+            txn.put(key.to_be_bytes(), event.fields.as_slice())
+                .context("cannot write event")?;
+            match txn.commit() {
+                Ok(_) => break,
+                Err(e) => {
+                    if !e.as_ref().starts_with("Resource busy:") {
+                        return Err(e).context("failed to store event");
+                    }
+                }
+            }
+        }
+        Ok(key)
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct EventIterator<'i> {
+    inner: rocksdb::DBIteratorWithThreadMode<
+        'i,
+        rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
+    >,
+}
+
+impl<'i> Iterator for EventIterator<'i> {
+    type Item = Result<(i128, Event), InvalidEvent>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (k, v) = self.inner.next().transpose().ok().flatten()?;
+
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Some(Err(InvalidEvent::Key(k)));
+        };
+        let key = i128::from_be_bytes(key);
+        let time = Utc.timestamp_nanos((key >> 64).try_into().expect("valid i64"));
+        let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(kind) = EventKind::from_i128(kind_num) else {
+            return Some(Err(InvalidEvent::Key(k)));
+        };
+        match kind {
+            EventKind::DnsCovertChannel => {
+                let Ok(fields) = bincode::deserialize::<DnsEventFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::DnsCovertChannel(DnsCovertChannel::new(time, fields)),
+                )))
+            }
+            EventKind::HttpThreat => {
+                let Ok(fields) = bincode::deserialize::<HttpThreatFields>(v.as_ref()) else {
+                        return Some(Err(InvalidEvent::Value(v)))
+                    };
+                Some(Ok((
+                    key,
+                    Event::HttpThreat(HttpThreat::new(fields.time, fields)),
+                )))
+            }
+            EventKind::RdpBruteForce => {
+                let Ok(fields) = bincode::deserialize::<RdpBruteForceFields>(v.as_ref()) else {
+                        return Some(Err(InvalidEvent::Value(v)))
+                    };
+                Some(Ok((
+                    key,
+                    Event::RdpBruteForce(RdpBruteForce::new(time, &fields)),
+                )))
+            }
+            EventKind::RepeatedHttpSessions => {
+                let Ok(fields) =
+                    bincode::deserialize::<RepeatedHttpSessionsFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::RepeatedHttpSessions(RepeatedHttpSessions::new(time, &fields)),
+                )))
+            }
+            EventKind::TorConnection => {
+                let Ok(fields) = bincode::deserialize::<TorConnectionFields>(v.as_ref()) else {
+                        return Some(Err(InvalidEvent::Value(v)));
+                    };
+                Some(Ok((
+                    key,
+                    Event::TorConnection(TorConnection::new(time, &fields)),
+                )))
+            }
+            EventKind::DomainGenerationAlgorithm => {
+                let Ok(fields) =
+                    bincode::deserialize::<DgaFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::DomainGenerationAlgorithm(Box::new(DomainGenerationAlgorithm::new(
+                        time, fields,
+                    ))),
+                )))
+            }
+            EventKind::Log => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+#[allow(clippy::module_name_repetitions)]
+pub enum InvalidEvent {
+    Key(Box<[u8]>),
+    Value(Box<[u8]>),
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Filter {
+    pub name: String,
+    pub directions: Option<Vec<FlowKind>>,
+    pub keywords: Option<Vec<String>>,
+    pub network_tags: Option<Vec<String>>,
+    pub customers: Option<Vec<String>>,
+    pub endpoints: Option<Vec<FilterEndpoint>>,
+    pub sensors: Option<Vec<String>>,
+    pub os: Option<Vec<String>>,
+    pub devices: Option<Vec<String>>,
+    pub host_names: Option<Vec<String>>,
+    pub user_ids: Option<Vec<String>>,
+    pub user_names: Option<Vec<String>>,
+    pub user_departments: Option<Vec<String>>,
+    pub countries: Option<Vec<String>>,
+    pub categories: Option<Vec<u8>>,
+    pub levels: Option<Vec<u8>>,
+    pub kinds: Option<Vec<String>>,
+}
+
+pub type Id = u32;
+
+#[derive(Deserialize, Serialize)]
+pub struct FilterEndpoint {
+    pub direction: Option<TrafficDirection>,
+    pub predefined: Option<Id>,
+    pub custom: Option<HostNetworkGroup>,
+}
+
+/// Traffic flow direction.
+#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
+pub enum FlowKind {
+    Inbound,
+    Outbound,
+    Internal,
+}
+
+pub struct Network {
+    pub id: u32,
+    pub name: String,
+    pub description: String,
+    pub networks: HostNetworkGroup,
+    pub customer_ids: Vec<u32>,
+    pub tag_ids: Vec<u32>,
+    pub creation_time: DateTime<Utc>,
+}
+
+impl Network {
+    pub fn contains(&self, addr: IpAddr) -> bool {
+        self.networks.contains(addr)
+    }
+
+    pub fn has_tag(&self, tag_id: u32) -> bool {
+        self.tag_ids.contains(&tag_id)
+    }
+}
+
+impl FromKeyValue for Network {
+    fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self, anyhow::Error> {
+        let mut entry = NetworkEntry::from_key_value(key, value)?;
+        let id = u32::from_be_bytes(
+            entry.key[entry.key.len() - size_of::<Id>()..]
+                .try_into()
+                .expect("should have four bytes"),
+        );
+        entry.key.truncate(entry.key.len() - size_of::<Id>());
+        Ok(Self {
+            id,
+            name: String::from_utf8(entry.key).context("invalid key in database")?,
+            description: entry.value.description,
+            networks: entry.value.networks,
+            customer_ids: entry.value.customer_ids,
+            tag_ids: entry.value.tag_ids,
+            creation_time: entry.value.creation_time,
+        })
+    }
+}
+
+pub struct NetworkEntry {
+    pub key: Vec<u8>,
+    pub value: NetworkEntryValue,
+}
+
+impl NetworkEntry {
+    pub fn delete_customer(&mut self, customer_id: u32) -> bool {
+        let prev_len = self.value.customer_ids.len();
+        self.value.customer_ids.retain(|&id| id != customer_id);
+        prev_len != self.value.customer_ids.len()
+    }
+}
+
+impl FromKeyValue for NetworkEntry {
+    fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self, anyhow::Error> {
+        Ok(Self {
+            key: key.to_vec(),
+            value: bincode::DefaultOptions::new()
+                .deserialize(value)
+                .context("failed to deserialize")?,
+        })
+    }
+}
+
+impl Indexable for NetworkEntry {
+    fn key(&self) -> &[u8] {
+        &self.key[..self.key.len() - size_of::<Id>()]
+    }
+
+    fn indexed_key(&self) -> &[u8] {
+        &self.key
+    }
+
+    fn value(&self) -> Vec<u8> {
+        bincode::DefaultOptions::new()
+            .serialize(&self.value)
+            .expect("serializable")
+    }
+
+    fn set_index(&mut self, index: Id) {
+        let offset = self.key.len() - size_of::<Id>();
+        self.key[offset..].copy_from_slice(&index.to_be_bytes());
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct NetworkEntryValue {
+    pub description: String,
+    pub networks: HostNetworkGroup,
+    pub customer_ids: Vec<u32>,
+    pub tag_ids: Vec<u32>,
+    pub creation_time: DateTime<Utc>,
+}
+
+/// Possible network types of `CustomerNetwork`.
+#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
+pub enum NetworkType {
+    Intranet,
+    Extranet,
+    Gateway,
+}
+
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
+pub enum TrafficDirection {
+    From,
+    To,
+}
+
+fn common_count_ip_address(
+    counter: &mut HashMap<IpAddr, usize>,
+    src_addr: IpAddr,
+    dst_addr: IpAddr,
+) {
+    let entry = counter.entry(src_addr).or_insert(0);
+    *entry += 1;
+    let entry = counter.entry(dst_addr).or_insert(0);
+    *entry += 1;
+}
+
+fn common_count_country(
+    locator: &Option<Arc<Mutex<ip2location::DB>>>,
+    counter: &mut HashMap<String, usize>,
+    src_addr: IpAddr,
+    dst_addr: IpAddr,
+) {
+    let src_country = locator.as_ref().map_or_else(
+        || "ZZ".to_string(),
+        |mutex| {
+            if let Ok(mut locator) = mutex.lock() {
+                find_ip_country(&mut locator, src_addr)
+            } else {
+                "ZZ".to_string()
+            }
+        },
+    );
+    let dst_country = locator.as_ref().map_or_else(
+        || "ZZ".to_string(),
+        |mutex| {
+            if let Ok(mut locator) = mutex.lock() {
+                find_ip_country(&mut locator, dst_addr)
+            } else {
+                "ZZ".to_string()
+            }
+        },
+    );
+
+    if src_country != dst_country {
+        let entry = counter.entry(src_country).or_insert(0);
+        *entry += 1;
+    }
+    let entry = counter.entry(dst_country).or_insert(0);
+    *entry += 1;
+}
+
+pub fn find_ip_country(locator: &mut ip2location::DB, addr: IpAddr) -> String {
+    locator
+        .ip_lookup(addr)
+        .map(|r| get_record_country_short_name(&r))
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "XX".to_string())
+}
+
+fn eq_ip_country(
+    locator: &mut MutexGuard<ip2location::DB>,
+    addr: IpAddr,
+    country: [u8; 2],
+) -> bool {
+    locator
+        .ip_lookup(addr)
+        .ok()
+        .and_then(|r| get_record_country_short_name(&r))
+        .map_or(false, |c| c.as_bytes() == country)
+}
+
+fn get_record_country_short_name(record: &ip2location::Record) -> Option<String> {
+    use ip2location::Record;
+    match record {
+        Record::ProxyDb(r) => r.country.as_ref().map(|c| c.short_name.clone()),
+        Record::LocationDb(r) => r.country.as_ref().map(|c| c.short_name.clone()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{event::DnsEventFields, EventKind, EventMessage, Store};
+    use bincode::Options;
+    use chrono::Utc;
+    use std::{
+        net::{IpAddr, Ipv4Addr},
+        sync::Arc,
+    };
+
+    fn example_message() -> EventMessage {
+        let codec = bincode::DefaultOptions::new();
+        let fields = DnsEventFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 53,
+            proto: 17,
+            query: "foo.com".to_string(),
+            confidence: 0.8,
+        };
+        EventMessage {
+            time: Utc::now(),
+            kind: EventKind::DnsCovertChannel,
+            fields: codec.serialize(&fields).expect("serializable"),
+        }
+    }
+
+    #[tokio::test]
+    async fn event_db_put() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        assert!(db.iter_forward().next().is_none());
+
+        let msg = example_message();
+        db.put(&msg).unwrap();
+        let mut iter = db.iter_forward();
+        assert!(iter.next().is_some());
+        assert!(iter.next().is_none());
+
+        db.put(&msg).unwrap();
+        let mut iter = db.iter_forward();
+        assert!(iter.next().is_some());
+        assert!(iter.next().is_some());
+        assert!(iter.next().is_none());
+    }
+
+    #[tokio::test]
+    async fn event_db_backup() {
+        use rocksdb::backup::{BackupEngine, BackupEngineOptions, RestoreOptions};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        assert!(db.iter_forward().next().is_none());
+
+        let msg = example_message();
+
+        db.put(&msg).unwrap();
+        {
+            let mut iter = db.iter_forward();
+            assert!(iter.next().is_some());
+            assert!(iter.next().is_none());
+        }
+
+        // backing up
+        let res = store.backup(1);
+        assert!(res.is_ok());
+
+        // more operations
+        db.put(&msg).unwrap();
+        {
+            let mut iter = db.iter_forward();
+            assert!(iter.next().is_some());
+            assert!(iter.next().is_some());
+            assert!(iter.next().is_none());
+        }
+
+        // restoring the backup
+        drop(db);
+        drop(store);
+
+        let mut backup = BackupEngine::open(
+            &BackupEngineOptions::new(backup_dir.path().join("states.db")).unwrap(),
+            &rocksdb::Env::new().unwrap(),
+        )
+        .unwrap();
+        assert!(backup
+            .restore_from_backup(
+                db_dir.path().join("states.db"),
+                db_dir.path().join("states.db"),
+                &RestoreOptions::default(),
+                1,
+            )
+            .is_ok());
+
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        let mut iter = db.iter_forward();
+        assert!(iter.next().is_some());
+        assert!(iter.next().is_none());
+
+        let info = backup.get_backup_info();
+        assert_eq!(info.len(), 1);
+        assert_eq!(info[0].backup_id, 1);
+    }
+}
