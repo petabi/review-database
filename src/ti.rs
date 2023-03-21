@@ -161,6 +161,7 @@ impl Tidb {
         Ok(())
     }
 
+    #[must_use]
     pub fn patterns(&self) -> String {
         format!("{} rules", self.patterns.len())
     }

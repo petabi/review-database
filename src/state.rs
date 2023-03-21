@@ -66,22 +66,27 @@ impl StateDb {
         Ok(Self { inner: db })
     }
 
+    #[must_use]
     pub fn events(&self) -> event::EventDb {
         event::EventDb::new(&self.inner)
     }
 
+    #[must_use]
     pub fn map(&self, name: &str) -> Option<Map> {
         Map::new(&self.inner, name).ok()
     }
 
+    #[must_use]
     pub fn indexed_map(&self, name: &str) -> Option<IndexedMap> {
         IndexedMap::new(&self.inner, name).ok()
     }
 
+    #[must_use]
     pub fn indexed_multimap(&self, name: &str) -> Option<IndexedMultimap> {
         IndexedMultimap::new(&self.inner, name).ok()
     }
 
+    #[must_use]
     pub fn indexed_set(&self, name: &'static [u8]) -> Option<IndexedSet> {
         IndexedSet::new(&self.inner, META, name).ok()
     }

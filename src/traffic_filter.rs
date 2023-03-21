@@ -15,14 +15,17 @@ pub struct TrafficFilter {
 }
 
 impl TrafficFilter {
+    #[must_use]
     pub fn rules(&self) -> &Vec<IpNet> {
         &self.rules
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.rules.is_empty()
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.rules.len()
     }

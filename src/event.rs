@@ -657,6 +657,7 @@ pub struct EventFilter {
 
 impl EventFilter {
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         customers: Option<Vec<Customer>>,
         endpoints: Option<Vec<Endpoint>>,
@@ -683,6 +684,7 @@ impl EventFilter {
         }
     }
 
+    #[must_use]
     pub fn has_country(&self) -> bool {
         self.countries.is_some()
     }
@@ -786,11 +788,13 @@ pub struct EventDb<'a> {
 }
 
 impl<'a> EventDb<'a> {
+    #[must_use]
     pub fn new(inner: &'a rocksdb::OptimisticTransactionDB) -> EventDb {
         Self { inner }
     }
 
     /// Creates an iterator over key-value pairs, starting from `key`.
+    #[must_use]
     pub fn iter_from(&self, key: i128, direction: Direction) -> EventIterator {
         let iter = self
             .inner
@@ -799,6 +803,7 @@ impl<'a> EventDb<'a> {
     }
 
     /// Creates an iterator over key-value pairs for the entire events.
+    #[must_use]
     pub fn iter_forward(&self) -> EventIterator {
         let iter = self.inner.iterator(IteratorMode::Start);
         EventIterator { inner: iter }
@@ -992,10 +997,12 @@ pub struct Network {
 }
 
 impl Network {
+    #[must_use]
     pub fn contains(&self, addr: IpAddr) -> bool {
         self.networks.contains(addr)
     }
 
+    #[must_use]
     pub fn has_tag(&self, tag_id: u32) -> bool {
         self.tag_ids.contains(&tag_id)
     }

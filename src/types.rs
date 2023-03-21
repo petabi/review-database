@@ -140,6 +140,7 @@ impl Indexable for Customer {
 }
 
 impl Customer {
+    #[must_use]
     pub fn contains(&self, addr: IpAddr) -> bool {
         self.networks.iter().any(|n| n.contains(addr))
     }
@@ -154,6 +155,7 @@ pub struct CustomerNetwork {
 }
 
 impl CustomerNetwork {
+    #[must_use]
     pub fn contains(&self, addr: IpAddr) -> bool {
         self.network_group.contains(addr)
     }
@@ -216,6 +218,7 @@ pub struct HostNetworkGroup {
 }
 
 impl HostNetworkGroup {
+    #[must_use]
     pub fn new(
         mut hosts: Vec<IpAddr>,
         mut networks: Vec<IpNet>,
@@ -238,18 +241,22 @@ impl HostNetworkGroup {
         }
     }
 
+    #[must_use]
     pub fn hosts(&self) -> &[IpAddr] {
         &self.hosts
     }
 
+    #[must_use]
     pub fn ip_ranges(&self) -> &[RangeInclusive<IpAddr>] {
         &self.ip_ranges
     }
 
+    #[must_use]
     pub fn networks(&self) -> &[IpNet] {
         &self.networks
     }
 
+    #[must_use]
     pub fn contains(&self, addr: IpAddr) -> bool {
         if self.contains_host(addr) {
             return true;
@@ -266,14 +273,17 @@ impl HostNetworkGroup {
         false
     }
 
+    #[must_use]
     pub fn contains_host(&self, host: IpAddr) -> bool {
         self.hosts.binary_search(&host).is_ok()
     }
 
+    #[must_use]
     pub fn contains_ip_range(&self, ip_range: &RangeInclusive<IpAddr>) -> bool {
         self.ip_ranges.contains(ip_range)
     }
 
+    #[must_use]
     pub fn contains_network(&self, network: &IpNet) -> bool {
         self.networks.binary_search(network).is_ok()
     }
@@ -408,6 +418,7 @@ impl SaltedPassword {
         })
     }
 
+    #[must_use]
     pub fn is_match(&self, password: &str) -> bool {
         match self.algorithm {
             HashAlgorithm::Sha512 => pbkdf2::verify(
