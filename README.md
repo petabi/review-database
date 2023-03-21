@@ -3,6 +3,8 @@
 This crate provides a permanent storage for data collected and maintained by
 REview.
 
+[![Coverage Status](https://codecov.io/gh/petabi/review-database/branch/main/graphs/badge.svg)](https://codecov.io/gh/petabi/review-database)
+
 ## License
 
 Copyright 2018-2023 Petabi, Inc.
