@@ -9,6 +9,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `DataSource` is updated to store additional properties.
+
 ## [0.1.0] - 2023-03-20
 
 ### Added
