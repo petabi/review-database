@@ -165,8 +165,15 @@ impl CustomerNetwork {
 pub struct DataSource {
     pub id: u32,
     pub name: String,
-    pub kind: DataType,
+
+    pub server_name: String,
+    pub address: std::net::SocketAddr,
+
+    pub data_type: DataType,
     pub policy: u32,
+    pub source: String,
+    pub kind: Option<String>,
+
     pub description: String,
 }
 
@@ -187,7 +194,7 @@ impl Indexable for DataSource {
 }
 
 /// Data type of `DataSource`.
-#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum DataType {
     /// comma-separated values
     Csv,

@@ -215,11 +215,10 @@ impl Database {
         .await
     }
 
-    #[allow(clippy::type_complexity)]
     pub async fn load_model_by_name(
         &self,
         name: &str,
-    ) -> Result<(i32, String, Vec<u8>, u32), Error> {
+    ) -> Result<(i32, String, Vec<u8>, u32, u32), Error> {
         #[derive(Deserialize)]
         struct Model {
             id: i32,
@@ -227,13 +226,20 @@ impl Database {
             max_event_id_num: i32,
             #[serde(with = "serde_bytes")]
             classifier: Vec<u8>,
+            data_source_id: u32,
         }
 
         let conn = self.pool.get().await?;
         let model = conn
             .select_one_from::<Model>(
                 "model",
-                &["id", "kind", "max_event_id_num", "classifier"],
+                &[
+                    "id",
+                    "kind",
+                    "max_event_id_num",
+                    "classifier",
+                    "data_source_id",
+                ],
                 &[("name", super::Type::TEXT)],
                 &[&name],
             )
@@ -246,6 +252,10 @@ impl Database {
                 .max_event_id_num
                 .to_u32()
                 .unwrap_or(DEFAULT_MAX_EVENT_ID_NUM_U32),
+            model
+                .data_source_id
+                .to_u32()
+                .ok_or(Error::InvalidInput("Invalid data source id".to_string()))?,
         ))
     }
 
