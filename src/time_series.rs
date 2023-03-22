@@ -15,7 +15,7 @@ use tracing::error;
 use cluster::dsl as c_d;
 use time_series::dsl as t_d;
 
-pub const MAX_CSV_COLUMNS: usize = 200;
+const MAX_CSV_COLUMNS: usize = 200;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct TimeSeries {
