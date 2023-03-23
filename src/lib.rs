@@ -68,6 +68,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool, PooledConnection},
     PgConnection,
 };
+use semver::{Version, VersionReq};
 use std::fs::create_dir_all;
 use std::{
     any::Any,
@@ -80,6 +81,8 @@ use std::{
 use thiserror::Error;
 use tokio::sync::Notify;
 
+const DATABASE_VERSION_REQ: &str = ">=0.2, <=0.3.0-alpha.1";
+
 type BlockingPgConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub(crate) type BlockingPgPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -90,6 +93,8 @@ pub(crate) type BlockingPgPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 /// Returns an error if the data directory doesn't exist and cannot be created,
 /// or if the data directory exists but is in the format too old to be upgraded.
 pub fn migrate_data_dir(data_dir: &Path) -> Result<()> {
+    let version_req = VersionReq::parse(DATABASE_VERSION_REQ).expect("valid version requirement");
+
     let version_path = data_dir.join("VERSION");
     if data_dir.exists() {
         if data_dir
@@ -110,15 +115,12 @@ pub fn migrate_data_dir(data_dir: &Path) -> Result<()> {
         .context("cannot open VERSION")?
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
-    match ver.trim() {
-        env!("CARGO_PKG_VERSION") => Ok(()),
-
-        // backward-compatible versions
-        // "0.17.0.alpha.2" => {
-        //     create_version_file(&version_path).context("failed to update VERSION")?;
-        //     Ok(())
-        // }
-        _ => Err(anyhow!("incompatible version")),
+    let database_version = Version::parse(&ver).context("cannot parse VERSION")?;
+    if version_req.matches(&database_version) {
+        Ok(())
+    } else {
+        // Add migration code here if necessary
+        Err(anyhow!("incompatible version"))
     }
 }
 
@@ -501,4 +503,18 @@ pub enum OrderDirection {
     Asc,
     /// Specifies a descending order for a given orderBy argument.
     Desc,
+}
+
+#[cfg(test)]
+mod tests {
+    use semver::{Version, VersionReq};
+
+    use super::DATABASE_VERSION_REQ;
+
+    #[test]
+    fn version() {
+        let version_req = VersionReq::parse(DATABASE_VERSION_REQ).expect("valid semver");
+        let version = Version::parse(env!("CARGO_PKG_VERSION")).expect("valid semver");
+        assert!(version_req.matches(&version));
+    }
 }
