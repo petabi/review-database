@@ -52,7 +52,6 @@ pub use self::top_n::{
     StructuredColumnType, TopColumnsOfCluster, TopMultimaps, TopTrendsByColumn,
 };
 pub use self::traffic_filter::TrafficFilter;
-use self::types::SaltedPassword;
 pub use self::types::{
     AttrCmpKind, Confidence, Customer, CustomerNetwork, DataSource, DataType, EventCategory,
     HostNetworkGroup, ModelIndicator, PacketAttr, Response, ResponseKind, Role, Ti, TiCmpKind,
@@ -64,14 +63,12 @@ use bb8_postgres::{
     bb8,
     tokio_postgres::{self, types::Type},
 };
-use bincode::Options;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 use diesel::{
     r2d2::{ConnectionManager, Pool, PooledConnection},
     PgConnection,
 };
 use std::fs::create_dir_all;
-use std::net::IpAddr;
 use std::{
     any::Any,
     fs::File,
@@ -250,8 +247,6 @@ impl Database {
 
 const DEFAULT_STATES: &str = "states.db";
 const EXCLUSIVE: bool = true;
-const INITIAL_ADMINISTRATOR_ID: &str = "admin";
-const INITIAL_ADMINISTRATOR_PASSWORD: &str = "admin";
 
 /// A key-value store.
 pub struct Store {
@@ -268,17 +263,6 @@ impl Store {
             states,
             backup: backup.to_path_buf(),
         };
-
-        let account_map = store.account_map();
-        if account_map
-            .iter_forward()
-            .context("cannot read from database")?
-            .next()
-            .is_none()
-        {
-            let (key, value) = initial_account()?;
-            account_map.put(&key, &value)?;
-        }
         Ok(store)
     }
 
@@ -447,22 +431,6 @@ impl Store {
             .restore_from_latest_backup(&self.backup.join(DEFAULT_STATES))?;
         Ok(())
     }
-}
-
-pub fn initial_account() -> Result<(Vec<u8>, Vec<u8>), anyhow::Error> {
-    let salted_password = SaltedPassword::new(INITIAL_ADMINISTRATOR_PASSWORD)?;
-    let value = bincode::DefaultOptions::new().serialize(&(
-        INITIAL_ADMINISTRATOR_ID,
-        salted_password,
-        Role::SystemAdministrator,
-        "System Administrator",
-        "",
-        Utc::now(),
-        None as Option<DateTime<Utc>>,
-        None as Option<Vec<IpAddr>>,
-        None as Option<u32>,
-    ))?;
-    Ok((INITIAL_ADMINISTRATOR_ID.as_bytes().to_vec(), value))
 }
 
 pub async fn backup(
