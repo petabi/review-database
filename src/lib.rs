@@ -9,6 +9,7 @@ mod column_statistics;
 mod csv_column_extra;
 mod csv_indicator;
 pub mod event;
+mod migration;
 mod model;
 mod outlier;
 mod qualifier;
@@ -38,6 +39,7 @@ pub use self::event::{
     Network, NetworkEntry, NetworkEntryValue, NetworkType, RdpBruteForce, RepeatedHttpSessions,
     TorConnection, TrafficDirection, TriageScore,
 };
+pub use self::migration::migrate_data_dir;
 pub use self::model::Model;
 pub use self::outlier::*;
 pub use self::qualifier::Qualifier;
@@ -57,7 +59,7 @@ pub use self::types::{
     HostNetworkGroup, ModelIndicator, PacketAttr, Response, ResponseKind, Role, Ti, TiCmpKind,
     TriagePolicy, ValueKind,
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
 use backends::Value;
 use bb8_postgres::{
     bb8,
@@ -68,12 +70,8 @@ use diesel::{
     r2d2::{ConnectionManager, Pool, PooledConnection},
     PgConnection,
 };
-use semver::{Version, VersionReq};
-use std::fs::create_dir_all;
 use std::{
     any::Any,
-    fs::File,
-    io::{Read, Write},
     path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
@@ -81,55 +79,8 @@ use std::{
 use thiserror::Error;
 use tokio::sync::Notify;
 
-const DATABASE_VERSION_REQ: &str = ">=0.2, <=0.3.0-alpha.1";
-
 type BlockingPgConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub(crate) type BlockingPgPool = r2d2::Pool<ConnectionManager<PgConnection>>;
-
-/// Migrates the data directory to the up-to-date format if necessary.
-///
-/// # Errors
-///
-/// Returns an error if the data directory doesn't exist and cannot be created,
-/// or if the data directory exists but is in the format too old to be upgraded.
-pub fn migrate_data_dir(data_dir: &Path) -> Result<()> {
-    let version_req = VersionReq::parse(DATABASE_VERSION_REQ).expect("valid version requirement");
-
-    let version_path = data_dir.join("VERSION");
-    if data_dir.exists() {
-        if data_dir
-            .read_dir()
-            .context("cannot read data dir")?
-            .next()
-            .is_none()
-        {
-            return create_version_file(&version_path);
-        }
-    } else {
-        create_dir_all(data_dir)?;
-        return create_version_file(&version_path);
-    }
-
-    let mut ver = String::new();
-    File::open(&version_path)
-        .context("cannot open VERSION")?
-        .read_to_string(&mut ver)
-        .context("cannot read VERSION")?;
-    let database_version = Version::parse(&ver).context("cannot parse VERSION")?;
-    if version_req.matches(&database_version) {
-        Ok(())
-    } else {
-        // Add migration code here if necessary
-        Err(anyhow!("incompatible version"))
-    }
-}
-
-fn create_version_file(path: &Path) -> Result<()> {
-    let mut f = File::create(path).context("cannot create VERSION")?;
-    f.write_all(env!("CARGO_PKG_VERSION").as_bytes())
-        .context("cannot write VERSION")?;
-    Ok(())
-}
 
 pub fn create_blocking_pool(database_url: &str) -> Result<BlockingPgPool, Error> {
     let manager = ConnectionManager::<PgConnection>::new(database_url);
@@ -503,18 +454,4 @@ pub enum OrderDirection {
     Asc,
     /// Specifies a descending order for a given orderBy argument.
     Desc,
-}
-
-#[cfg(test)]
-mod tests {
-    use semver::{Version, VersionReq};
-
-    use super::DATABASE_VERSION_REQ;
-
-    #[test]
-    fn version() {
-        let version_req = VersionReq::parse(DATABASE_VERSION_REQ).expect("valid semver");
-        let version = Version::parse(env!("CARGO_PKG_VERSION")).expect("valid semver");
-        assert!(version_req.matches(&version));
-    }
 }
