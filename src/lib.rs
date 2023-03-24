@@ -370,6 +370,11 @@ impl Store {
             .expect("always available")
     }
 
+    /// Backup current database and keep most recent `num_backups_to_keep` backups
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails.
     pub fn backup(&self, num_of_backups_to_keep: u32) -> Result<()> {
         self.states.create_new_backup_flush(
             &self.backup.join(DEFAULT_STATES),
@@ -379,13 +384,34 @@ impl Store {
         Ok(())
     }
 
+    /// Restore from the latest backup on file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails or restoration fails.
     pub fn restore_from_latest_backup(&self) -> Result<()> {
         self.states
             .restore_from_latest_backup(&self.backup.join(DEFAULT_STATES))?;
         Ok(())
     }
+
+    /// Purge old backups and only keep `num_backups_to_keep` backups on file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails.
+    pub fn purge_old_backups(&self, num_backups_to_keep: u32) -> Result<()> {
+        self.states
+            .purge_old_backups(&self.backup.join(DEFAULT_STATES), num_backups_to_keep)?;
+        Ok(())
+    }
 }
 
+/// Schedule and execute database backup.
+///
+/// # Errors
+///
+/// Returns an error if backup fails.
 pub async fn backup(
     store: Arc<Store>,
     schedule: (Duration, Duration),
