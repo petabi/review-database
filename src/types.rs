@@ -39,6 +39,12 @@ where
     }
 }
 
+#[derive(Default, Deserialize, Serialize)]
+pub enum PasswordHashAlgorithm {
+    #[default]
+    Pbkdf2HmacSha512 = 0,
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct Account {
     pub username: String,
@@ -50,6 +56,7 @@ pub struct Account {
     pub last_signin_time: Option<DateTime<Utc>>,
     pub allow_access_from: Option<Vec<IpAddr>>,
     pub max_parallel_sessions: Option<u32>,
+    pub password_hash_algorithm: PasswordHashAlgorithm,
 }
 
 #[derive(
@@ -393,7 +400,7 @@ pub enum Role {
     SecurityMonitor,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct SaltedPassword {
     salt: Vec<u8>,
     hash: Vec<u8>,
