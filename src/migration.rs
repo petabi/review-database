@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 /// current version. When the database format changes, this requirement must be
 /// updated to match the new version, and the migration code must be added to
 /// the `migrate_data_dir` function.
-const DATABASE_VERSION_REQ: &str = ">0.3.0-alpha.1,<=0.3.0-alpha.3";
+const DATABASE_VERSION_REQ: &str = ">0.3.0-alpha.1,<=0.3.0-alpha.4";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -48,8 +48,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     }
 
     let migration = vec![(
-        VersionReq::parse(">=0.2,<0.3.0-alpha.2").expect("valid version requirement"),
-        Version::parse("0.3.0-alpha.2").expect("valid version"),
+        VersionReq::parse(">=0.2,<0.3.0-alpha.4").expect("valid version requirement"),
+        Version::parse("0.3.0-alpha.4").expect("valid version"),
         migrate_0_2_to_0_3,
     )];
     while let Some((_req, to, m)) = migration
@@ -122,6 +122,11 @@ fn read_version_file(path: &Path) -> Result<Version> {
     Version::parse(&ver).context("cannot parse VERSION")
 }
 
+/// Migrate the data base from 0.2 to 0.3.
+///
+/// # Errors
+///
+/// Returns an error if database migration fails.
 pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use super::{types::Account, types::SaltedPassword, IterableMap, Role};
     use chrono::{DateTime, Utc};

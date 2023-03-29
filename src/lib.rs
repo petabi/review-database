@@ -312,6 +312,11 @@ impl Store {
     }
 
     #[must_use]
+    pub fn outlier_map(&self) -> Map {
+        self.states.map(state::OUTLIERS).expect("always available")
+    }
+
+    #[must_use]
     pub fn sampling_policy_map(&self) -> IndexedMap {
         self.states
             .indexed_map(state::SAMPLING_POLICY)
