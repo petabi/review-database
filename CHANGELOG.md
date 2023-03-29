@@ -7,6 +7,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Support for Argon2id as a new and more secure alternative to the existing
+  PBKDF2 password hashing algorithm.
+
 ### Removed
 
 - `initial_account` has been removed since it should be defined by the

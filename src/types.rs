@@ -43,6 +43,7 @@ where
 pub enum PasswordHashAlgorithm {
     #[default]
     Pbkdf2HmacSha512 = 0,
+    Argon2id = 1,
 }
 
 #[derive(Deserialize, Serialize)]
