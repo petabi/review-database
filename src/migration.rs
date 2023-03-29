@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 /// current version. When the database format changes, this requirement must be
 /// updated to match the new version, and the migration code must be added to
 /// the `migrate_data_dir` function.
-const DATABASE_VERSION_REQ: &str = ">0.3.0-alpha.1,<=0.3.0-alpha.2";
+const DATABASE_VERSION_REQ: &str = ">0.3.0-alpha.1,<=0.3.0-alpha.3";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -185,5 +185,9 @@ mod tests {
         // The current version must match the version requirement.
         let version = Version::parse(env!("CARGO_PKG_VERSION")).expect("valid semver");
         assert!(version_req.matches(&version));
+
+        // An incompatible version must not match the version requirement.
+        let version = Version::parse("0.2.0").expect("valid semver");
+        assert!(!version_req.matches(&version));
     }
 }
