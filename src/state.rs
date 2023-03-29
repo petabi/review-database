@@ -15,6 +15,7 @@ pub(super) const MODEL_INDICATORS: &str = "model indicators";
 const META: &str = "meta";
 pub(super) const NETWORKS: &str = "networks";
 pub(super) const NODES: &str = "nodes";
+pub(super) const OUTLIERS: &str = "outliers";
 pub(super) const SAMPLING_POLICY: &str = "sampling policy";
 pub(super) const TEMPLATES: &str = "templates";
 pub(super) const TIDB: &str = "TI database";
@@ -24,7 +25,7 @@ pub(super) const TRIAGE_POLICY: &str = "triage policy";
 pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 
-const MAP_NAMES: [&str; 20] = [
+const MAP_NAMES: [&str; 21] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -37,6 +38,7 @@ const MAP_NAMES: [&str; 20] = [
     META,
     NETWORKS,
     NODES,
+    OUTLIERS,
     SAMPLING_POLICY,
     TEMPLATES,
     TIDB,
