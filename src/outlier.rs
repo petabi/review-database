@@ -8,8 +8,15 @@ pub struct UpdateOutlierRequest {
     pub is_new_outlier: bool,
     pub raw_event: Vec<u8>,
     pub event_ids: Vec<i64>,
-    pub distance: f64,
     pub size: i64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OutlierInfo {
+    pub id: i64,
+    pub rank: i64,
+    pub distance: f64,
+    pub source: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
