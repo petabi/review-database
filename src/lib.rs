@@ -464,7 +464,7 @@ pub enum Error {
     #[error("invalid input: {0}")]
     InvalidInput(String),
     #[error("migration error: {0}")]
-    Migration(#[from] Box<refinery::Error>),
+    Migration(Box<dyn std::error::Error + Send + Sync>),
     #[error("query error: {0}")]
     Query(#[from] diesel::result::Error),
     #[error("connection error: {0}")]

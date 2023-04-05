@@ -4,11 +4,6 @@ mod de;
 mod error;
 mod transaction;
 
-mod embedded {
-    use refinery::embed_migrations;
-    embed_migrations!("src/backends/postgres/migrations");
-}
-
 use crate::{
     self as database, column_statistics::Statistics, BlockingConnection, BlockingConnectionPool,
     BlockingPgConn, BlockingPgPool, ClusterScoreSet, Error, OrderDirection, StructuredColumnType,
@@ -25,6 +20,7 @@ use bb8_postgres::{
     PostgresConnectionManager,
 };
 use chrono::NaiveDateTime;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use rustls::{Certificate, ClientConfig, RootCertStore};
 use serde::de::DeserializeOwned;
 use std::{
@@ -39,6 +35,7 @@ use tokio_postgres_rustls::MakeRustlsConnect;
 pub use transaction::Transaction;
 
 pub type Value = dyn ToSql + Sync;
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./src/backends/postgres/migrations/");
 
 impl BlockingConnection for BlockingPgConn {
     fn get_column_statistics(
@@ -448,7 +445,6 @@ impl ConnectionPoolType {
     async fn build_notls_pool(config: tokio_postgres::Config) -> Result<Self, Error> {
         let manager = PostgresConnectionManager::new(config, tokio_postgres::NoTls);
         let inner = Self::builder(manager).await?;
-        Self::run_migration(&inner).await?;
 
         Ok(ConnectionPoolType::NoTls(inner))
     }
@@ -466,28 +462,8 @@ impl ConnectionPoolType {
 
         let manager = PostgresConnectionManager::new(config, tls_connect);
         let inner = Self::builder(manager).await?;
-        Self::run_migration(&inner).await?;
 
         Ok(ConnectionPoolType::Tls(inner))
-    }
-
-    #[allow(clippy::trait_duplication_in_bounds)] // rust-lang/rust-clippy#8771
-    async fn run_migration<Tls>(
-        pool: &bb8::Pool<PostgresConnectionManager<Tls>>,
-    ) -> Result<(), Error>
-    where
-        Tls: MakeTlsConnect<Socket> + Clone + Send + Sync + 'static,
-        <Tls as MakeTlsConnect<Socket>>::Stream: Send + Sync,
-        <Tls as MakeTlsConnect<Socket>>::TlsConnect: Send,
-        <<Tls as MakeTlsConnect<Socket>>::TlsConnect as TlsConnect<Socket>>::Future: Send,
-    {
-        let mut conn = pool.get().await?;
-        embedded::migrations::runner()
-            .run_async(&mut *conn)
-            .await
-            .map_err(Box::new)?;
-
-        Ok(())
     }
 
     fn build_client_config<P: AsRef<Path>>(
@@ -534,6 +510,18 @@ impl ConnectionPoolType {
     }
 }
 
+// diesel_migrations doesn't support async connections
+// diesel_async#17
+fn run_migrations(url: &str) -> Result<(), Error> {
+    use diesel::{pg::PgConnection, Connection};
+
+    let mut conn = PgConnection::establish(url)?;
+    conn.run_pending_migrations(MIGRATIONS)
+        .map_err(|e| Error::Migration(e))?;
+
+    Ok(())
+}
+
 #[derive(Clone)]
 pub struct ConnectionPool {
     inner: ConnectionPoolType,
@@ -550,11 +538,13 @@ impl ConnectionPool {
         match config.get_ssl_mode() {
             SslMode::Require | SslMode::Prefer => {
                 let inner = ConnectionPoolType::build_tls_pool(url, config, db_root_ca).await?;
+                run_migrations(url)?;
                 Ok(Self { inner })
             }
             _ => {
                 is_pg_ready(url, NoTls).await?;
                 let inner = ConnectionPoolType::build_notls_pool(config).await?;
+                run_migrations(url)?;
                 Ok(Self { inner })
             }
         }
