@@ -20,6 +20,7 @@ diesel = { version = "2", features = [
   "serde_json",
 ] }
 diesel_derives = "2.0"
+diesel_migrations = "2"
 fallible-iterator = "0.2"
 flate2 = "1.0"
 futures = "0.3"
@@ -30,7 +31,6 @@ num-traits = "0.2"
 postgres-protocol = "0.6"
 r2d2 = "0.8"
 rand = "0.8"
-refinery = { version = "0.8", features = ["tokio-postgres"] }
 ring = { version = "0.16", features = ["std"] }
 rocksdb = "0.20.1"
 rustls = "0.20" # should be the same version as what tokio-postgres-rustls depends on

@@ -1,11 +1,13 @@
-CREATE TABLE category (
+DROP TABLE IF EXISTS refinery_schema_history;
+
+CREATE TABLE IF NOT EXISTS category (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE
 );
-INSERT INTO category (name) VALUES('Non-Specified Alert');
-INSERT INTO category (name) VALUES('Irrelevant Alert');
+INSERT INTO category (name) VALUES('Non-Specified Alert') ON CONFLICT DO NOTHING;
+INSERT INTO category (name) VALUES('Irrelevant Alert') ON CONFLICT DO NOTHING;
 
-CREATE TABLE cluster (
+CREATE TABLE IF NOT EXISTS cluster (
   id SERIAL PRIMARY KEY,
   category_id INTEGER NOT NULL DEFAULT 1,
   cluster_id TEXT NOT NULL,
@@ -22,7 +24,7 @@ CREATE TABLE cluster (
   UNIQUE (cluster_id, model_id)
 );
 
-CREATE TABLE event_range (
+CREATE TABLE IF NOT EXISTS event_range (
   id SERIAL PRIMARY KEY,
   cluster_id INTEGER NOT NULL,
   time TIMESTAMP NOT NULL,
@@ -31,7 +33,7 @@ CREATE TABLE event_range (
   UNIQUE(cluster_id, time, first_event_id, last_event_id)
 );
 
-CREATE TABLE model (
+CREATE TABLE IF NOT EXISTS model (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   kind TEXT NOT NULL,
@@ -41,7 +43,7 @@ CREATE TABLE model (
   UNIQUE (name)
 );
 
-CREATE TABLE outlier (
+CREATE TABLE IF NOT EXISTS outlier (
   id SERIAL PRIMARY KEY,
   raw_event BYTEA NOT NULL,
   model_id INTEGER NOT NULL,
@@ -49,24 +51,24 @@ CREATE TABLE outlier (
   size BIGINT NOT NULL
 );
 
-CREATE TABLE qualifier (
+CREATE TABLE IF NOT EXISTS qualifier (
   id INTEGER PRIMARY KEY,
   description TEXT NOT NULL UNIQUE
 );
-INSERT INTO qualifier VALUES(1,'benign');
-INSERT INTO qualifier VALUES(2,'unknown');
-INSERT INTO qualifier VALUES(3,'suspicious');
-INSERT INTO qualifier VALUES(4,'mixed');
+INSERT INTO qualifier VALUES(1,'benign') ON CONFLICT DO NOTHING;
+INSERT INTO qualifier VALUES(2,'unknown') ON CONFLICT DO NOTHING;
+INSERT INTO qualifier VALUES(3,'suspicious') ON CONFLICT DO NOTHING;
+INSERT INTO qualifier VALUES(4,'mixed') ON CONFLICT DO NOTHING;
 
-CREATE TABLE status (
+CREATE TABLE IF NOT EXISTS status (
   id INTEGER PRIMARY KEY,
   description TEXT NOT NULL UNIQUE
 );
-INSERT INTO status VALUES(1,'reviewed');
-INSERT INTO status VALUES(2,'pending review');
-INSERT INTO status VALUES(3,'disabled');
+INSERT INTO status VALUES(1,'reviewed') ON CONFLICT DO NOTHING;
+INSERT INTO status VALUES(2,'pending review') ON CONFLICT DO NOTHING;
+INSERT INTO status VALUES(3,'disabled') ON CONFLICT DO NOTHING;
 
-CREATE TABLE column_description (
+CREATE TABLE IF NOT EXISTS column_description (
   id SERIAL PRIMARY KEY,
   event_range_id INTEGER NOT NULL,
   column_index INTEGER NOT NULL,
@@ -74,9 +76,9 @@ CREATE TABLE column_description (
   count BIGINT NOT NULL,
   unique_count BIGINT NOT NULL
 );
-CREATE INDEX column_description_idx ON column_description(event_range_id, column_index);
+CREATE INDEX IF NOT EXISTS column_description_idx ON column_description(event_range_id, column_index);
 
-CREATE TABLE csv_column_extra (
+CREATE TABLE IF NOT EXISTS csv_column_extra (
     id SERIAL PRIMARY KEY,
     model_id INTEGER NOT NULL,
     column_alias TEXT[],
@@ -87,7 +89,7 @@ CREATE TABLE csv_column_extra (
     UNIQUE(model_id)
 );
 
-CREATE TABLE csv_column_list (
+CREATE TABLE IF NOT EXISTS csv_column_list (
     id SERIAL PRIMARY KEY,
     model_id INTEGER NOT NULL,
     column_indicator TEXT[],
@@ -95,7 +97,7 @@ CREATE TABLE csv_column_list (
     UNIQUE(model_id)
 );
 
-CREATE TABLE csv_indicator (
+CREATE TABLE IF NOT EXISTS csv_indicator (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
@@ -104,7 +106,7 @@ CREATE TABLE csv_indicator (
     UNIQUE (name)
 );
 
-CREATE TABLE csv_whitelist (
+CREATE TABLE IF NOT EXISTS csv_whitelist (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
@@ -113,25 +115,25 @@ CREATE TABLE csv_whitelist (
     UNIQUE (name)
 );
 
-CREATE TABLE description_binary (
+CREATE TABLE IF NOT EXISTS description_binary (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   mode BYTEA NOT NULL
 );
 
-CREATE TABLE description_datetime (
+CREATE TABLE IF NOT EXISTS description_datetime (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   mode TIMESTAMP NOT NULL
 );
 
-CREATE TABLE description_enum (
+CREATE TABLE IF NOT EXISTS description_enum (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   mode TEXT NOT NULL
 );
 
-CREATE TABLE description_float (
+CREATE TABLE IF NOT EXISTS description_float (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   min DOUBLE PRECISION,
@@ -142,7 +144,7 @@ CREATE TABLE description_float (
   mode_largest DOUBLE PRECISION NOT NULL
 );
 
-CREATE TABLE description_int (
+CREATE TABLE IF NOT EXISTS description_int (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   min BIGINT,
@@ -152,19 +154,19 @@ CREATE TABLE description_int (
   mode BIGINT NOT NULL
 );
 
-CREATE TABLE description_ipaddr (
+CREATE TABLE IF NOT EXISTS description_ipaddr (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   mode TEXT NOT NULL
 );
 
-CREATE TABLE description_text (
+CREATE TABLE IF NOT EXISTS description_text (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   mode TEXT NOT NULL
 );
 
-CREATE TABLE time_series (
+CREATE TABLE IF NOT EXISTS time_series (
     id SERIAL PRIMARY KEY,
     cluster_id INTEGER NOT NULL,
     time TIMESTAMP NOT NULL,
@@ -172,64 +174,64 @@ CREATE TABLE time_series (
     value TIMESTAMP NOT NULL,
     count BIGINT NOT NULL
 );
-CREATE INDEX time_series_cluster_id ON time_series (cluster_id);
+CREATE INDEX IF NOT EXISTS time_series_cluster_id ON time_series (cluster_id);
 
-CREATE TABLE top_n_binary (
+CREATE TABLE IF NOT EXISTS top_n_binary (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   value BYTEA NOT NULL,
   count BIGINT NOT NULL
 );
-CREATE INDEX top_n_binary_idx_desc_id ON top_n_binary(description_id);
+CREATE INDEX IF NOT EXISTS top_n_binary_idx_desc_id ON top_n_binary(description_id);
 
-CREATE TABLE top_n_datetime (
+CREATE TABLE IF NOT EXISTS top_n_datetime (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   value TIMESTAMP NOT NULL,
   count BIGINT NOT NULL
 );
-CREATE INDEX top_n_datetime_idx_desc_id ON top_n_datetime(description_id);
+CREATE INDEX IF NOT EXISTS top_n_datetime_idx_desc_id ON top_n_datetime(description_id);
 
-CREATE TABLE top_n_enum (
+CREATE TABLE IF NOT EXISTS top_n_enum (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   value TEXT NOT NULL,
   count BIGINT NOT NULL
 );
-CREATE INDEX top_n_enum_idx_desc_id ON top_n_enum(description_id);
+CREATE INDEX IF NOT EXISTS top_n_enum_idx_desc_id ON top_n_enum(description_id);
 
-CREATE TABLE top_n_float (
+CREATE TABLE IF NOT EXISTS top_n_float (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   value_smallest DOUBLE PRECISION NOT NULL,
   value_largest DOUBLE PRECISION NOT NULL,
   count BIGINT NOT NULL
 );
-CREATE INDEX top_n_float_idx_desc_id ON top_n_float(description_id);
+CREATE INDEX IF NOT EXISTS top_n_float_idx_desc_id ON top_n_float(description_id);
 
-CREATE TABLE top_n_int (
+CREATE TABLE IF NOT EXISTS top_n_int (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   value BIGINT NOT NULL,
   count BIGINT NOT NULL
 );
-CREATE INDEX top_n_int_idx_desc_id ON top_n_int(description_id);
+CREATE INDEX IF NOT EXISTS top_n_int_idx_desc_id ON top_n_int(description_id);
 
-CREATE TABLE top_n_ipaddr (
+CREATE TABLE IF NOT EXISTS top_n_ipaddr (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   value TEXT NOT NULL,
   count BIGINT NOT NULL
 );
-CREATE INDEX top_n_ipaddr_idx_desc_id ON top_n_ipaddr(description_id);
+CREATE INDEX IF NOT EXISTS top_n_ipaddr_idx_desc_id ON top_n_ipaddr(description_id);
 
-CREATE TABLE top_n_text (
+CREATE TABLE IF NOT EXISTS top_n_text (
   id SERIAL PRIMARY KEY,
   description_id INTEGER NOT NULL,
   value TEXT NOT NULL,
   count BIGINT NOT NULL
 );
-CREATE INDEX top_n_text_idx_desc_id ON top_n_text(description_id);
+CREATE INDEX IF NOT EXISTS top_n_text_idx_desc_id ON top_n_text(description_id);
 
 /******************************************************
  * ATTEMPT CLUSTER UPSERT
@@ -499,14 +501,19 @@ END;
 $$ LANGUAGE plpgsql;
 
 /******************************************************
- * CREATE TRIGGERS
+ * CREATE TRIGGERS 
+ *
+ * 'CREATE OR REPLACE TRIGGER' is not supported in
+ * PostgreSQL 13 or lower.
  ******************************************************/
+DROP TRIGGER IF EXISTS qualifier_update_trigger ON cluster;
 CREATE TRIGGER qualifier_update_trigger
   AFTER UPDATE ON cluster
   FOR EACH ROW
   WHEN (old.qualifier_id != new.qualifier_id)
   EXECUTE PROCEDURE status_id_update();
 
+DROP TRIGGER IF EXISTS event_ids_update_trigger ON model;
 CREATE TRIGGER event_ids_update_trigger
   AFTER UPDATE ON model
   FOR EACH ROW
