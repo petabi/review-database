@@ -19,6 +19,7 @@ diesel = { version = "2", features = [
   "r2d2",
   "serde_json",
 ] }
+diesel-async =  { version = "0.2.1", features = ["bb8", "postgres"] }
 diesel_derives = "2.0"
 diesel_migrations = "2"
 fallible-iterator = "0.2"
