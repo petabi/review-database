@@ -18,6 +18,7 @@ use bb8_postgres::{
     PostgresConnectionManager,
 };
 use chrono::NaiveDateTime;
+use diesel_async::AsyncPgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use rustls::{Certificate, ClientConfig, RootCertStore};
 use serde::de::DeserializeOwned;
@@ -561,6 +562,15 @@ impl ConnectionPool {
                 Ok(Connection { inner })
             }
         }
+    }
+
+    pub async fn get_diesel_conn(&self) -> Result<AsyncPgConnection, Error> {
+        let conn = match &self.inner {
+            ConnectionPoolType::Tls(pool) => pool.dedicated_connection().await?,
+            ConnectionPoolType::NoTls(pool) => pool.dedicated_connection().await?,
+        };
+        let conn = AsyncPgConnection::try_from(conn).await?;
+        Ok(conn)
     }
 }
 
