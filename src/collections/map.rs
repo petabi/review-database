@@ -1,6 +1,6 @@
 use super::IterableMap;
 use crate::{
-    types::{Account, Role, SaltedPassword},
+    account::{Account, Role, SaltedPassword},
     EXCLUSIVE,
 };
 use anyhow::{anyhow, bail, Context, Result};
