@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(dead_code))]
-
 mod de;
 mod error;
 mod transaction;
