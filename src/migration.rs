@@ -128,7 +128,10 @@ fn read_version_file(path: &Path) -> Result<Version> {
 ///
 /// Returns an error if database migration fails.
 pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
-    use super::{types::Account, types::SaltedPassword, IterableMap, Role};
+    use super::{
+        account::{Account, PasswordHashAlgorithm, Role, SaltedPassword},
+        IterableMap,
+    };
     use chrono::{DateTime, Utc};
     use std::net::IpAddr;
 
@@ -157,7 +160,7 @@ pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<(
                 last_signin_time: input.last_signin_time,
                 allow_access_from: input.allow_access_from.clone(),
                 max_parallel_sessions: input.max_parallel_sessions,
-                password_hash_algorithm: super::types::PasswordHashAlgorithm::default(),
+                password_hash_algorithm: PasswordHashAlgorithm::default(),
             }
         }
     }

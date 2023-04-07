@@ -1,7 +1,8 @@
 #[macro_use]
 extern crate diesel;
 
-pub(crate) mod backends;
+mod account;
+mod backends;
 mod category;
 mod cluster;
 mod collections;
@@ -22,6 +23,7 @@ mod top_n;
 mod traffic_filter;
 pub mod types;
 
+pub use self::account::Role;
 use self::backends::ConnectionPool;
 pub use self::category::Category;
 pub use self::cluster::*;
@@ -56,7 +58,7 @@ pub use self::top_n::{
 pub use self::traffic_filter::TrafficFilter;
 pub use self::types::{
     AttrCmpKind, Confidence, Customer, CustomerNetwork, DataSource, DataType, EventCategory,
-    HostNetworkGroup, ModelIndicator, PacketAttr, Response, ResponseKind, Role, Ti, TiCmpKind,
+    HostNetworkGroup, ModelIndicator, PacketAttr, Response, ResponseKind, Ti, TiCmpKind,
     TriagePolicy, ValueKind,
 };
 use anyhow::Result;
