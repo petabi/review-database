@@ -13,7 +13,7 @@ pub struct Map<'a> {
 }
 
 impl<'a> Map<'a> {
-    pub fn new(
+    pub(crate) fn new(
         db: &'a rocksdb::OptimisticTransactionDB,
         name: &str,
     ) -> Result<Self, anyhow::Error> {
