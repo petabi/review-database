@@ -4,8 +4,10 @@ use super::{
 };
 use anyhow::anyhow;
 use chrono::{Duration, NaiveDateTime, Utc};
-use diesel::dsl::{max, min};
-use diesel::prelude::*;
+use diesel::{
+    dsl::{max, min},
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
+};
 use futures::future::join_all;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -68,6 +70,8 @@ pub(crate) fn get_cluster_time_series(
     start: Option<i64>,
     end: Option<i64>,
 ) -> Result<TimeSeriesResult, Error> {
+    use diesel::RunQueryDsl;
+
     let (earliest, latest) = c_d::cluster
         .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
         .select((min(t_d::value), max(t_d::value)))
@@ -160,6 +164,8 @@ pub(crate) fn get_time_range_of_model(
     conn: &mut BlockingPgConn,
     model_id: i32,
 ) -> Result<(Option<NaiveDateTime>, Option<NaiveDateTime>), Error> {
+    use diesel::RunQueryDsl;
+
     Ok(c_d::cluster
         .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
         .select((min(t_d::value), max(t_d::value)))
@@ -249,5 +255,120 @@ impl Database {
             error!("failed to insert time series");
             Err(anyhow!("failed to insert the entire time series"))
         }
+    }
+
+    pub async fn get_time_range_of_model(
+        &self,
+        model_id: i32,
+    ) -> Result<(Option<NaiveDateTime>, Option<NaiveDateTime>), Error> {
+        use diesel_async::RunQueryDsl;
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        Ok(c_d::cluster
+            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
+            .select((min(t_d::value), max(t_d::value)))
+            .filter(c_d::model_id.eq(model_id))
+            .get_result(&mut conn)
+            .await?)
+    }
+
+    pub async fn get_top_time_series_of_cluster(
+        &self,
+        model_id: i32,
+        cluster_id: &str,
+        start: Option<i64>,
+        end: Option<i64>,
+    ) -> Result<TimeSeriesResult, Error> {
+        use diesel_async::RunQueryDsl;
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let (earliest, latest) = c_d::cluster
+            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
+            .select((min(t_d::value), max(t_d::value)))
+            .filter(
+                c_d::model_id
+                    .eq(model_id)
+                    .and(c_d::cluster_id.eq(cluster_id)),
+            )
+            .get_result::<(Option<NaiveDateTime>, Option<NaiveDateTime>)>(&mut conn)
+            .await?;
+        let recent = latest.unwrap_or_else(|| Utc::now().naive_utc());
+
+        let (start, end) = if let (Some(start), Some(end)) = (start, end) {
+            match (
+                NaiveDateTime::from_timestamp_opt(start, 0),
+                NaiveDateTime::from_timestamp_opt(end, 0),
+            ) {
+                (Some(s), Some(e)) => (s, e),
+                _ => {
+                    return Err(Error::InvalidInput(format!(
+                        "illegal time range provided({start}, {end})"
+                    )))
+                }
+            }
+        } else {
+            (recent - Duration::hours(2), recent)
+        };
+
+        let values = c_d::cluster
+            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
+            .select((t_d::time, t_d::count_index, t_d::value, t_d::count))
+            .filter(
+                c_d::model_id
+                    .eq(model_id)
+                    .and(c_d::cluster_id.eq(cluster_id))
+                    .and(t_d::value.gt(start)) // HIGHLIGHT: first and last items should not be included because they might have insufficient counts.
+                    .and(t_d::value.lt(end)),
+            )
+            .load::<TimeSeriesLoad>(&mut conn)
+            .await?;
+
+        let mut series: HashMap<usize, HashMap<NaiveDateTime, i64>> = HashMap::new();
+        for v in values {
+            let (count_index, value, count) = (
+                v.count_index
+                    .map_or(100_000, |c| c.to_usize().expect("safe: positive")),
+                // 100_000 means counting events themselves, not any other column values.
+                v.value,
+                v.count,
+            );
+
+            *series
+                .entry(count_index)
+                .or_insert_with(HashMap::<NaiveDateTime, i64>::new)
+                .entry(value)
+                .or_insert(0) += count;
+        }
+
+        let mut series: Vec<ColumnTimeSeries> = series
+            .into_iter()
+            .filter_map(|(column_index, top_n)| {
+                if top_n.is_empty() {
+                    None
+                } else {
+                    let mut series: Vec<TimeCount> = top_n
+                        .into_iter()
+                        .map(|(dt, count)| TimeCount {
+                            time: dt,
+                            count: count.to_usize().unwrap_or(usize::MAX),
+                        })
+                        .collect();
+                    series.sort_by(|a, b| a.time.cmp(&b.time));
+                    let series = fill_vacant_time_slots(&series);
+
+                    Some(ColumnTimeSeries {
+                        column_index,
+                        series,
+                    })
+                }
+            })
+            .collect();
+        series.sort_by(|a, b| a.column_index.cmp(&b.column_index));
+
+        Ok(TimeSeriesResult {
+            earliest,
+            latest,
+            series,
+        })
     }
 }
