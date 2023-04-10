@@ -15,8 +15,8 @@ mod model;
 mod outlier;
 mod qualifier;
 mod schema;
-mod state;
 mod status;
+mod tables;
 mod ti;
 mod time_series;
 mod top_n;
@@ -45,8 +45,8 @@ pub use self::migration::migrate_data_dir;
 pub use self::model::Model;
 pub use self::outlier::*;
 pub use self::qualifier::Qualifier;
-pub use self::state::StateDb;
 pub use self::status::Status;
+pub use self::tables::{StateDb, Table};
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -229,151 +229,153 @@ impl Store {
     #[must_use]
     pub fn access_token_map(&self) -> Map {
         self.states
-            .map(state::ACCESS_TOKENS)
+            .map(tables::ACCESS_TOKENS)
             .expect("always available")
     }
 
     #[must_use]
-    pub fn account_map(&self) -> Map {
-        self.states.map(state::ACCOUNTS).expect("always available")
+    pub fn account_map(&self) -> Table<types::Account> {
+        self.states.accounts()
     }
 
     #[must_use]
     pub fn account_policy_map(&self) -> Map {
         self.states
-            .map(state::ACCOUNT_POLICY)
+            .map(tables::ACCOUNT_POLICY)
             .expect("always available")
     }
 
     #[must_use]
     pub fn allow_network_map(&self) -> IndexedMap {
         self.states
-            .indexed_map(state::ALLOW_NETWORKS)
+            .indexed_map(tables::ALLOW_NETWORKS)
             .expect("always available")
     }
 
     #[must_use]
     pub fn block_network_map(&self) -> IndexedMap {
         self.states
-            .indexed_map(state::BLOCK_NETWORKS)
+            .indexed_map(tables::BLOCK_NETWORKS)
             .expect("always available")
     }
 
     #[must_use]
     pub fn customer_map(&self) -> IndexedMap {
         self.states
-            .indexed_map(state::CUSTOMERS)
+            .indexed_map(tables::CUSTOMERS)
             .expect("always available")
     }
 
     #[must_use]
     pub fn data_source_map(&self) -> IndexedMap {
         self.states
-            .indexed_map(state::DATA_SOURCES)
+            .indexed_map(tables::DATA_SOURCES)
             .expect("always available")
     }
 
     #[must_use]
     pub fn event_tag_set(&self) -> IndexedSet {
         self.states
-            .indexed_set(state::EVENT_TAGS)
+            .indexed_set(tables::EVENT_TAGS)
             .expect("always available")
     }
 
     #[must_use]
     pub fn filter_map(&self) -> Map {
-        self.states.map(state::FILTERS).expect("always available")
+        self.states.map(tables::FILTERS).expect("always available")
     }
 
     #[must_use]
     pub fn model_indicator_map(&self) -> Map {
         self.states
-            .map(state::MODEL_INDICATORS)
+            .map(tables::MODEL_INDICATORS)
             .expect("always available")
     }
 
     #[must_use]
     pub fn network_map(&self) -> IndexedMultimap {
         self.states
-            .indexed_multimap(state::NETWORKS)
+            .indexed_multimap(tables::NETWORKS)
             .expect("always available")
     }
 
     #[must_use]
     pub fn network_tag_set(&self) -> IndexedSet {
         self.states
-            .indexed_set(state::NETWORK_TAGS)
+            .indexed_set(tables::NETWORK_TAGS)
             .expect("always available")
     }
 
     #[must_use]
     pub fn node_map(&self) -> IndexedMap {
         self.states
-            .indexed_map(state::NODES)
+            .indexed_map(tables::NODES)
             .expect("always available")
     }
 
     #[must_use]
     pub fn outlier_map(&self) -> Map {
-        self.states.map(state::OUTLIERS).expect("always available")
+        self.states.map(tables::OUTLIERS).expect("always available")
     }
 
     #[must_use]
     pub fn sampling_policy_map(&self) -> IndexedMap {
         self.states
-            .indexed_map(state::SAMPLING_POLICY)
+            .indexed_map(tables::SAMPLING_POLICY)
             .expect("always available")
     }
 
     #[must_use]
     pub fn template_map(&self) -> Map {
-        self.states.map(state::TEMPLATES).expect("always available")
+        self.states
+            .map(tables::TEMPLATES)
+            .expect("always available")
     }
 
     #[must_use]
     pub fn tidb_map(&self) -> Map {
-        self.states.map(state::TIDB).expect("always available")
+        self.states.map(tables::TIDB).expect("always available")
     }
 
     #[must_use]
     pub fn tor_exit_node_map(&self) -> Map {
         self.states
-            .map(state::TOR_EXIT_NODES)
+            .map(tables::TOR_EXIT_NODES)
             .expect("always available")
     }
 
     #[must_use]
     pub fn triage_policy_map(&self) -> IndexedMap {
         self.states
-            .indexed_map(state::TRIAGE_POLICY)
+            .indexed_map(tables::TRIAGE_POLICY)
             .expect("always available")
     }
 
     #[must_use]
     pub fn triage_response_map(&self) -> IndexedMap {
         self.states
-            .indexed_map(state::TRIAGE_RESPONSE)
+            .indexed_map(tables::TRIAGE_RESPONSE)
             .expect("always available")
     }
 
     #[must_use]
     pub fn trusted_dns_server_map(&self) -> Map {
         self.states
-            .map(state::TRUSTED_DNS_SERVERS)
+            .map(tables::TRUSTED_DNS_SERVERS)
             .expect("always available")
     }
 
     #[must_use]
     pub fn traffic_filter_map(&self) -> Map {
         self.states
-            .map(state::TRAFFIC_FILTER_RULES)
+            .map(tables::TRAFFIC_FILTER_RULES)
             .expect("always available")
     }
 
     #[must_use]
     pub fn workflow_tag_set(&self) -> IndexedSet {
         self.states
-            .indexed_set(state::WORKFLOW_TAGS)
+            .indexed_set(tables::WORKFLOW_TAGS)
             .expect("always available")
     }
 

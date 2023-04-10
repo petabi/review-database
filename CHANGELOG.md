@@ -7,10 +7,25 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The return value of `Store::account_map` method has been modified to provide
+  better encapsulation and prevent misuse of account-related functions.
+  Previously, this method returned a `Map` object, which allowed direct access
+  to the underlying data structure. To ensure that account-related functions
+  are only called on relevant objects, we have updated the return value to be
+  `Table<Account>` instead. As part of this change, the `Map::update_account`
+  function has been moved to `Table<Account>`. This helps prevent other Map
+  objects that have nothing to do with Account from mistakenly calling the
+  update_account function. This change aims to promote better practices in
+  accessing and manipulating the account data, as well as providing a more
+  consistent API for developers.
+
 ### Removed
 
 - `Map::new`. It is only used internally and shouldn't be called from another
   crate.
+- `Map::update_account`. This is now under `Table<Account>`.
 
 ## [0.4.0] - 2023-04-06
 

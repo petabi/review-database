@@ -1,3 +1,7 @@
+mod accounts;
+
+use crate::types::Account;
+
 use super::{event, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::Result;
 use std::path::Path;
@@ -69,6 +73,11 @@ impl StateDb {
     }
 
     #[must_use]
+    pub(crate) fn accounts(&self) -> Table<Account> {
+        Table::<Account>::open(&self.inner)
+    }
+
+    #[must_use]
     pub fn events(&self) -> event::EventDb {
         event::EventDb::new(&self.inner)
     }
@@ -120,5 +129,19 @@ impl StateDb {
         let db_env = rocksdb::Env::new()?;
         let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
         Ok(engine.purge_old_backups(num_of_backups_to_keep as usize)?)
+    }
+}
+
+pub struct Table<'d, R> {
+    map: Map<'d>,
+    _phantom: std::marker::PhantomData<R>,
+}
+
+impl<'d, R> Table<'d, R> {
+    fn new(map: Map<'d>) -> Self {
+        Self {
+            map,
+            _phantom: std::marker::PhantomData,
+        }
     }
 }

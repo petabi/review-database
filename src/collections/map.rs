@@ -1,15 +1,11 @@
 use super::IterableMap;
-use crate::{
-    account::{Account, Role, SaltedPassword},
-    EXCLUSIVE,
-};
+use crate::EXCLUSIVE;
 use anyhow::{anyhow, bail, Context, Result};
 use rocksdb::{Direction, IteratorMode};
-use std::net::IpAddr;
 
 pub struct Map<'a> {
-    db: &'a rocksdb::OptimisticTransactionDB,
-    cf: &'a rocksdb::ColumnFamily,
+    pub(crate) db: &'a rocksdb::OptimisticTransactionDB,
+    pub(crate) cf: &'a rocksdb::ColumnFamily,
 }
 
 impl<'a> Map<'a> {
@@ -134,82 +130,6 @@ impl<'a> Map<'a> {
         Ok(())
     }
 
-    /// Updates an entry in account map.
-    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
-    pub fn update_account(
-        &self,
-        username: &[u8],
-        new_password: &Option<String>,
-        role: Option<(Role, Role)>,
-        name: &Option<(String, String)>,
-        department: &Option<(String, String)>,
-        allow_access_from: &Option<(Option<Vec<IpAddr>>, Option<Vec<IpAddr>>)>,
-        max_parallel_sessions: &Option<(Option<u32>, Option<u32>)>,
-    ) -> Result<()> {
-        use bincode::Options;
-
-        loop {
-            let txn = self.db.transaction();
-            if let Some(old_value) = txn
-                .get_for_update_cf(self.cf, username, EXCLUSIVE)
-                .context("cannot read old entry")?
-            {
-                let mut account =
-                    bincode::DefaultOptions::new().deserialize::<Account>(old_value.as_ref())?;
-
-                if let Some(password) = &new_password {
-                    account.password = SaltedPassword::new(password)?;
-                }
-                if let Some((old, new)) = &role {
-                    if account.role != *old {
-                        bail!("old value mismatch");
-                    }
-                    account.role = *new;
-                }
-                if let Some((old, new)) = &name {
-                    if account.name != *old {
-                        bail!("old value mismatch");
-                    }
-                    account.name = new.clone();
-                }
-                if let Some((old, new)) = &department {
-                    if account.department != *old {
-                        bail!("old value mismatch");
-                    }
-                    account.department = new.clone();
-                }
-                if let Some((old, new)) = &allow_access_from {
-                    if account.allow_access_from != *old {
-                        bail!("old value mismatch");
-                    }
-                    account.allow_access_from = new.clone();
-                }
-                if let Some((old, new)) = max_parallel_sessions {
-                    if account.max_parallel_sessions != *old {
-                        bail!("old value mismatch");
-                    }
-                    account.max_parallel_sessions = *new;
-                }
-
-                let value = bincode::DefaultOptions::new().serialize(&account)?;
-                txn.put_cf(self.cf, username, value)
-                    .context("failed to write new entry")?;
-            } else {
-                bail!("no such entry");
-            };
-
-            match txn.commit() {
-                Ok(_) => break,
-                Err(e) => {
-                    if !e.as_ref().starts_with("Resource busy:") {
-                        return Err(e).context("failed to update entry");
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
     pub fn into_prefix_map(self, prefix: &'a [u8]) -> PrefixMap {
         PrefixMap { prefix, map: self }
     }
@@ -274,6 +194,17 @@ pub struct MapIterator<'i> {
         'i,
         rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
     >,
+}
+
+impl<'i> MapIterator<'i> {
+    pub(crate) fn new(
+        inner: rocksdb::DBIteratorWithThreadMode<
+            'i,
+            rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
+        >,
+    ) -> Self {
+        Self { inner }
+    }
 }
 
 impl<'i> Iterator for MapIterator<'i> {
