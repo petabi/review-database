@@ -1,8 +1,8 @@
 mod load;
-pub(super) mod round;
+mod round;
 mod save;
 
-use super::{schema, BlockingPgConn, Error};
-
-pub(crate) use load::{get_column_statistics, Statistics};
+pub(crate) use load::get_column_statistics;
+pub use load::Statistics;
+pub use round::{RoundByCluster, RoundByModel};
 pub use save::statistics::ColumnStatisticsUpdate;
