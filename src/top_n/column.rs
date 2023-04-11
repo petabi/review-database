@@ -5,15 +5,15 @@ use super::{
     DEFAULT_PORTION_OF_TOP_N,
 };
 use crate::{
-    csv_indicator::get_whitelists,
+    csv_indicator::{async_get_whitelists, get_whitelists},
     schema::{
         cluster, column_description, csv_column_extra, event_range, top_n_binary, top_n_datetime,
         top_n_enum, top_n_float, top_n_int, top_n_ipaddr, top_n_text,
     },
-    BlockingPgConn, Error, StructuredColumnType,
+    BlockingPgConn, Database, Error, StructuredColumnType,
 };
 use chrono::NaiveDateTime;
-use diesel::prelude::*;
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
 use num_traits::ToPrimitive;
 use std::collections::HashSet;
 use structured::{Element, FloatRange};
@@ -24,6 +24,8 @@ use event_range::dsl as e_d;
 
 macro_rules! get_top_n_of_column {
     ($conn:expr, $top_d:ident, $top_table:ident, $value_type:ty, $c:expr, $i:expr, $tc:expr, $time:expr) => {{
+        use diesel::RunQueryDsl;
+
         let query = c_d::cluster
             .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
             .inner_join(col_d::column_description.on(col_d::event_range_id.eq(e_d::id)))
@@ -67,8 +69,58 @@ macro_rules! get_top_n_of_column {
     }};
 }
 
+macro_rules! async_get_top_n_of_column {
+    ($conn:expr, $top_d:ident, $top_table:ident, $value_type:ty, $c:expr, $i:expr, $tc:expr, $time:expr) => {{
+        use diesel_async::RunQueryDsl;
+
+        let query = c_d::cluster
+            .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
+            .inner_join(col_d::column_description.on(col_d::event_range_id.eq(e_d::id)))
+            .inner_join($top_d::$top_table.on(top_d::description_id.eq(col_d::id)))
+            .select((
+                e_d::cluster_id,
+                col_d::column_index,
+                col_d::id,
+                top_d::value,
+                top_d::count,
+            ));
+        let top_n = if let Some(time) = $time {
+            query
+                .filter(
+                    c_d::id
+                        .eq_any($c)
+                        .and(e_d::time.eq(time))
+                        .and(col_d::column_index.eq($i)),
+                )
+                .load::<(i32, i32, i32, $value_type, i64)>($conn)
+                .await?
+        } else {
+            query
+                .filter(c_d::id.eq_any($c).and(col_d::column_index.eq($i)))
+                .load::<(i32, i32, i32, $value_type, i64)>($conn)
+                .await?
+        };
+
+        let mut top_n: Vec<TopNOfMultipleCluster> = top_n
+            .into_iter()
+            .map(|t| {
+                let value = ValueType::into_string(t.3);
+                TopNOfMultipleCluster {
+                    cluster_id: t.0,
+                    column_index: t.1,
+                    _description_id: t.2,
+                    value,
+                    count: t.4,
+                }
+            })
+            .collect();
+        $tc.append(&mut top_n);
+    }};
+}
+
 pub(super) fn get_columns_for_top_n(conn: &mut BlockingPgConn, model_id: i32) -> Vec<i32> {
     use csv_column_extra::dsl as column_d;
+    use diesel::RunQueryDsl;
 
     match column_d::csv_column_extra
         .select(column_d::column_top_n)
@@ -91,6 +143,34 @@ pub(super) fn get_columns_for_top_n(conn: &mut BlockingPgConn, model_id: i32) ->
     }
 }
 
+pub(super) async fn async_get_columns_for_top_n(
+    conn: &mut diesel_async::pg::AsyncPgConnection,
+    model_id: i32,
+) -> Result<Vec<i32>, Error> {
+    use csv_column_extra::dsl as column_d;
+    use diesel_async::RunQueryDsl;
+
+    let Some(columns) = column_d::csv_column_extra
+        .select(column_d::column_top_n)
+        .filter(column_d::model_id.eq(model_id))
+        .first::<Option<Vec<bool>>>(conn)
+        .await? else {
+            return Ok(Vec::new())
+    };
+
+    Ok(columns
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, is)| {
+            if is {
+                Some(index.to_i32().expect("column index < i32::max"))
+            } else {
+                None
+            }
+        })
+        .collect())
+}
+
 #[allow(clippy::type_complexity)]
 fn top_n_of_float(
     conn: &mut BlockingPgConn,
@@ -98,6 +178,7 @@ fn top_n_of_float(
     index: i32,
     time: Option<NaiveDateTime>,
 ) -> Result<Vec<(i32, i32, i32, f64, f64, i64)>, diesel::result::Error> {
+    use diesel::RunQueryDsl;
     use top_n_float::dsl as top_d;
     time.as_ref().map_or(
         c_d::cluster
@@ -140,6 +221,51 @@ fn top_n_of_float(
                 .load::<(i32, i32, i32, f64, f64, i64)>(conn)
         },
     )
+}
+
+#[allow(clippy::type_complexity)]
+async fn async_top_n_of_float(
+    conn: &mut diesel_async::pg::AsyncPgConnection,
+    cluster_ids: &[i32],
+    index: i32,
+    time: Option<NaiveDateTime>,
+) -> Result<Vec<(i32, i32, i32, f64, f64, i64)>, diesel::result::Error> {
+    use diesel_async::RunQueryDsl;
+    use top_n_float::dsl as top_d;
+
+    let query = c_d::cluster
+        .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
+        .inner_join(col_d::column_description.on(col_d::event_range_id.eq(e_d::id)))
+        .inner_join(top_d::top_n_float.on(top_d::description_id.eq(col_d::id)))
+        .select((
+            e_d::cluster_id,
+            col_d::column_index,
+            col_d::id,
+            top_d::value_smallest,
+            top_d::value_largest,
+            top_d::count,
+        ));
+
+    if let Some(time) = time {
+        query
+            .filter(
+                c_d::id
+                    .eq_any(cluster_ids)
+                    .and(e_d::time.eq(time))
+                    .and(col_d::column_index.eq(&index)),
+            )
+            .load::<(i32, i32, i32, f64, f64, i64)>(conn)
+            .await
+    } else {
+        query
+            .filter(
+                c_d::id
+                    .eq_any(cluster_ids)
+                    .and(col_d::column_index.eq(&index)),
+            )
+            .load::<(i32, i32, i32, f64, f64, i64)>(conn)
+            .await
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -280,4 +406,147 @@ pub(crate) fn get_top_columns_of_model(
     let column_indices: Vec<usize> = top_n.keys().copied().collect();
     let whitelists = get_whitelists(conn, model_id, &column_indices);
     Ok(filter_by_whitelists(top_n, &whitelists, number_of_top_n))
+}
+
+impl Database {
+    #[allow(clippy::too_many_lines)]
+    pub async fn get_top_columns_of_model(
+        &self,
+        model_id: i32,
+        number_of_top_n: usize,
+        time: Option<NaiveDateTime>,
+        portion_of_clusters: Option<f64>,
+        portion_of_top_n: Option<f64>,
+        mut column_types: Vec<StructuredColumnType>,
+    ) -> Result<Vec<TopElementCountsByColumn>, Error> {
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let columns_for_top_n = async_get_columns_for_top_n(&mut conn, model_id).await?;
+        let columns_for_top_n: HashSet<i32> = columns_for_top_n.into_iter().collect();
+        column_types.retain(|c| columns_for_top_n.get(&c.column_index).is_some());
+
+        let cluster_sizes = super::async_get_cluster_sizes(&mut conn, model_id).await?;
+        let cluster_ids = get_limited_cluster_ids(
+            &cluster_sizes,
+            portion_of_clusters.unwrap_or(DEFAULT_PORTION_OF_CLUSTER),
+            DEFAULT_NUMBER_OF_CLUSTER,
+        );
+
+        let mut top_n_of_cluster: Vec<TopNOfMultipleCluster> = Vec::new();
+
+        for c in column_types {
+            let index = c.column_index;
+            match c.data_type.as_str() {
+                "int64" => {
+                    use top_n_int::dsl as top_d;
+                    async_get_top_n_of_column!(
+                        &mut conn,
+                        top_d,
+                        top_n_int,
+                        i64,
+                        &cluster_ids,
+                        &index,
+                        top_n_of_cluster,
+                        time
+                    );
+                }
+                "enum" => {
+                    use top_n_enum::dsl as top_d;
+                    async_get_top_n_of_column!(
+                        &mut conn,
+                        top_d,
+                        top_n_enum,
+                        String,
+                        &cluster_ids,
+                        &index,
+                        top_n_of_cluster,
+                        time
+                    );
+                }
+                "float64" => {
+                    let top_n = async_top_n_of_float(&mut conn, &cluster_ids, index, time).await?;
+                    let mut top_n: Vec<TopNOfMultipleCluster> = top_n
+                        .into_iter()
+                        .map(|t| {
+                            let value = Element::FloatRange(FloatRange {
+                                smallest: t.3,
+                                largest: t.4,
+                            })
+                            .to_string();
+                            TopNOfMultipleCluster {
+                                cluster_id: t.0,
+                                column_index: t.1,
+                                _description_id: t.2,
+                                value,
+                                count: t.5,
+                            }
+                        })
+                        .collect();
+                    top_n_of_cluster.append(&mut top_n);
+                }
+                "utf8" => {
+                    use top_n_text::dsl as top_d;
+                    async_get_top_n_of_column!(
+                        &mut conn,
+                        top_d,
+                        top_n_text,
+                        String,
+                        &cluster_ids,
+                        &index,
+                        top_n_of_cluster,
+                        time
+                    );
+                }
+                "ipaddr" => {
+                    use top_n_ipaddr::dsl as top_d;
+                    async_get_top_n_of_column!(
+                        &mut conn,
+                        top_d,
+                        top_n_ipaddr,
+                        String,
+                        &cluster_ids,
+                        &index,
+                        top_n_of_cluster,
+                        time
+                    );
+                }
+                "datetime" => {
+                    use top_n_datetime::dsl as top_d;
+                    async_get_top_n_of_column!(
+                        &mut conn,
+                        top_d,
+                        top_n_datetime,
+                        NaiveDateTime,
+                        &cluster_ids,
+                        &index,
+                        top_n_of_cluster,
+                        time
+                    );
+                }
+                "binary" => {
+                    use top_n_binary::dsl as top_d;
+                    async_get_top_n_of_column!(
+                        &mut conn,
+                        top_d,
+                        top_n_binary,
+                        Vec<u8>,
+                        &cluster_ids,
+                        &index,
+                        top_n_of_cluster,
+                        time
+                    );
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        let top_n = total_of_top_n(top_n_of_cluster);
+        let top_n = limited_top_n_of_clusters(
+            top_n,
+            portion_of_top_n.unwrap_or(DEFAULT_PORTION_OF_TOP_N),
+            DEFAULT_NUMBER_OF_COLUMN,
+        );
+        let column_indices: Vec<usize> = top_n.keys().copied().collect();
+        let whitelists = async_get_whitelists(&mut conn, model_id, &column_indices).await?;
+        Ok(filter_by_whitelists(top_n, &whitelists, number_of_top_n))
+    }
 }

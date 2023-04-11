@@ -15,7 +15,7 @@ pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByCo
 use super::{BlockingPgConn, Database, Error, Type};
 use bb8_postgres::tokio_postgres::row::Row;
 use chrono::NaiveDateTime;
-use diesel::prelude::*;
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
@@ -174,6 +174,7 @@ impl Database {
 
 fn get_cluster_sizes(conn: &mut BlockingPgConn, model_id: i32) -> Result<Vec<ClusterSize>, Error> {
     use super::schema::cluster::dsl;
+    use diesel::RunQueryDsl;
 
     let cluster_sizes = dsl::cluster
         .select((dsl::id, dsl::size))
@@ -183,6 +184,22 @@ fn get_cluster_sizes(conn: &mut BlockingPgConn, model_id: i32) -> Result<Vec<Clu
         .load::<ClusterSize>(conn)?;
 
     Ok(cluster_sizes)
+}
+
+async fn async_get_cluster_sizes(
+    conn: &mut diesel_async::pg::AsyncPgConnection,
+    model_id: i32,
+) -> Result<Vec<ClusterSize>, diesel::result::Error> {
+    use super::schema::cluster::dsl;
+    use diesel_async::RunQueryDsl;
+
+    dsl::cluster
+        .select((dsl::id, dsl::size))
+        .filter(dsl::model_id.eq(model_id).and(dsl::category_id.ne(2)))
+        .order_by(dsl::size.desc())
+        .then_order_by(dsl::id.asc())
+        .load::<ClusterSize>(conn)
+        .await
 }
 
 fn get_limited_cluster_ids(
