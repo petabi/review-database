@@ -5,34 +5,30 @@ use rocksdb::{Direction, IteratorMode, OptimisticTransactionDB};
 
 use crate::{
     types::{Account, SaltedPassword},
-    IterableMap, Map, MapIterator, Role, EXCLUSIVE,
+    IterableMap, Map, MapIterator, Role, Table, EXCLUSIVE,
 };
 
-impl<'d> super::Table<'d, Account> {
+impl<'d> Table<'d, Account> {
     /// Opens the accounts table in the database.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the accounts table is not present in the database.
-    pub(super) fn open(db: &'d OptimisticTransactionDB) -> Self {
-        let map = Map::new(db, super::ACCOUNTS).expect("accounts table is present");
-        Self::new(map)
+    pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
+        Map::open(db, super::ACCOUNTS).map(Table::new)
     }
 
-    pub fn delete(&self, key: &[u8]) -> Result<(), anyhow::Error> {
-        self.map.delete(key)
+    /// Deletes an account.
+    pub fn delete(&self, username: &str) -> Result<(), anyhow::Error> {
+        self.map.delete(username.as_bytes())
     }
 
-    pub fn get(&self, key: &[u8]) -> Result<Option<impl AsRef<[u8]>>, anyhow::Error> {
-        self.map.get(key)
+    pub fn get(&self, username: &str) -> Result<Option<impl AsRef<[u8]>>, anyhow::Error> {
+        self.map.get(username.as_bytes())
     }
 
-    pub fn put(&self, key: &[u8], value: &[u8]) -> Result<(), anyhow::Error> {
-        self.map.put(key, value)
+    pub fn put(&self, username: &str, value: &[u8]) -> Result<(), anyhow::Error> {
+        self.map.put(username.as_bytes(), value)
     }
 
-    pub fn insert(&self, key: &[u8], value: &[u8]) -> Result<(), anyhow::Error> {
-        self.map.insert(key, value)
+    pub fn insert(&self, username: &str, value: &[u8]) -> Result<(), anyhow::Error> {
+        self.map.insert(username.as_bytes(), value)
     }
 
     pub fn update(&self, old: (&[u8], &[u8]), new: (&[u8], &[u8])) -> Result<(), anyhow::Error> {
@@ -120,7 +116,7 @@ impl<'d> super::Table<'d, Account> {
     }
 }
 
-impl<'i> IterableMap<'i, MapIterator<'i>> for super::Table<'i, Account> {
+impl<'i> IterableMap<'i, MapIterator<'i>> for Table<'i, Account> {
     fn iter_from(&self, key: &[u8], direction: Direction) -> Result<MapIterator, anyhow::Error> {
         Ok(self.inner_iterator(IteratorMode::From(key, direction)))
     }

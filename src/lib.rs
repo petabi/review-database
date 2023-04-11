@@ -46,7 +46,8 @@ pub use self::model::Model;
 pub use self::outlier::*;
 pub use self::qualifier::Qualifier;
 pub use self::status::Status;
-pub use self::tables::{StateDb, Table};
+use self::tables::StateDb;
+pub use self::tables::Table;
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -117,7 +118,6 @@ pub trait BlockingConnection {
         unimplemented!()
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn get_top_time_series_of_model(
         &mut self,
         _model_id: i32,

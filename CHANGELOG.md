@@ -23,9 +23,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- `Map::new`. It is only used internally and shouldn't be called from another
-  crate.
-- `Map::update_account`. This is now under `Table<Account>`.
+- `StatdDb` and `Map::new`. They are only used internally and shouldn't be
+  called from another crate.
+- `Map::update_account`. Use `Table<Account>::update_account` instead.
 
 ## [0.4.0] - 2023-04-06
 

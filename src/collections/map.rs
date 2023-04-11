@@ -9,13 +9,8 @@ pub struct Map<'a> {
 }
 
 impl<'a> Map<'a> {
-    pub(crate) fn new(
-        db: &'a rocksdb::OptimisticTransactionDB,
-        name: &str,
-    ) -> Result<Self, anyhow::Error> {
-        db.cf_handle(name)
-            .map(|cf| Self { db, cf })
-            .ok_or_else(|| anyhow!("database error: cannot find column family \"{}\"", name))
+    pub(crate) fn open(db: &'a rocksdb::OptimisticTransactionDB, name: &str) -> Option<Self> {
+        db.cf_handle(name).map(|cf| Self { db, cf })
     }
 
     /// Deletes a key-value pair.

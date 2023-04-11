@@ -59,7 +59,7 @@ pub(super) const NETWORK_TAGS: &[u8] = b"network tags";
 pub(super) const WORKFLOW_TAGS: &[u8] = b"workflow tags";
 
 #[allow(clippy::module_name_repetitions)]
-pub struct StateDb {
+pub(crate) struct StateDb {
     inner: rocksdb::OptimisticTransactionDB,
 }
 
@@ -74,7 +74,7 @@ impl StateDb {
 
     #[must_use]
     pub(crate) fn accounts(&self) -> Table<Account> {
-        Table::<Account>::open(&self.inner)
+        Table::<Account>::open(&self.inner).expect("accounts table must be present")
     }
 
     #[must_use]
@@ -83,26 +83,26 @@ impl StateDb {
     }
 
     #[must_use]
-    pub fn map(&self, name: &str) -> Option<Map> {
-        Map::new(&self.inner, name).ok()
+    pub(super) fn map(&self, name: &str) -> Option<Map> {
+        Map::open(&self.inner, name)
     }
 
     #[must_use]
-    pub fn indexed_map(&self, name: &str) -> Option<IndexedMap> {
+    pub(super) fn indexed_map(&self, name: &str) -> Option<IndexedMap> {
         IndexedMap::new(&self.inner, name).ok()
     }
 
     #[must_use]
-    pub fn indexed_multimap(&self, name: &str) -> Option<IndexedMultimap> {
+    pub(super) fn indexed_multimap(&self, name: &str) -> Option<IndexedMultimap> {
         IndexedMultimap::new(&self.inner, name).ok()
     }
 
     #[must_use]
-    pub fn indexed_set(&self, name: &'static [u8]) -> Option<IndexedSet> {
+    pub(super) fn indexed_set(&self, name: &'static [u8]) -> Option<IndexedSet> {
         IndexedSet::new(&self.inner, META, name).ok()
     }
 
-    pub fn create_new_backup_flush(
+    pub(super) fn create_new_backup_flush(
         &self,
         engine: &Path,
         flush: bool,
