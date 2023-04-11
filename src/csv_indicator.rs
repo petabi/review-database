@@ -1,8 +1,8 @@
 use crate::{
     schema::{csv_column_list, csv_indicator, csv_whitelist},
-    BlockingPgConn,
+    BlockingPgConn, Error,
 };
-use diesel::prelude::*;
+use diesel::{ExpressionMethods, QueryDsl};
 use std::collections::HashMap;
 
 pub(crate) fn get_whitelists(
@@ -12,6 +12,8 @@ pub(crate) fn get_whitelists(
 ) -> HashMap<usize, String> {
     use csv_column_list::dsl as list_d;
     use csv_whitelist::dsl as w_d;
+    use diesel::RunQueryDsl;
+
     let whitelist_names = match list_d::csv_column_list
         .select(list_d::column_whitelist)
         .filter(list_d::model_id.eq(model_id))
@@ -61,6 +63,8 @@ pub(crate) fn get_csv_indicators(
 ) -> HashMap<usize, String> {
     use csv_column_list::dsl as list_d;
     use csv_indicator::dsl as i_d;
+    use diesel::RunQueryDsl;
+
     let indicator_names = match list_d::csv_column_list
         .select(list_d::column_indicator)
         .filter(list_d::model_id.eq(model_id))
@@ -106,4 +110,55 @@ pub(crate) fn get_csv_indicators(
     });
 
     indicators
+}
+
+pub(crate) async fn async_get_csv_indicators(
+    conn: &mut diesel_async::pg::AsyncPgConnection,
+    model_id: i32,
+    column_indices: &[usize],
+) -> Result<HashMap<usize, String>, Error> {
+    use csv_column_list::dsl as list_d;
+    use csv_indicator::dsl as i_d;
+    use diesel_async::RunQueryDsl;
+
+    let indicator_names = list_d::csv_column_list
+        .select(list_d::column_indicator)
+        .filter(list_d::model_id.eq(model_id))
+        .get_result::<Option<Vec<String>>>(conn)
+        .await?;
+
+    let Some(names) = indicator_names else {
+        return Ok(HashMap::new());
+    };
+    let indicator_names_indices: HashMap<String, usize> = column_indices
+        .iter()
+        .filter_map(|i| {
+            names.get(*i).and_then(|n| {
+                if n.is_empty() {
+                    None
+                } else {
+                    Some((n.clone(), *i))
+                }
+            })
+        })
+        .collect();
+    let indicator_names: Vec<String> = indicator_names_indices
+        .keys()
+        .map(std::clone::Clone::clone)
+        .collect();
+    let indicators: Vec<(String, String)> = i_d::csv_indicator
+        .select((i_d::name, i_d::list))
+        .filter(i_d::name.eq_any(&indicator_names))
+        .get_results::<(String, String)>(conn)
+        .await?;
+
+    Ok(indicators
+        .into_iter()
+        .map(|(name, value)| {
+            (
+                *indicator_names_indices.get(&name).expect("already checked"),
+                value,
+            )
+        })
+        .collect())
 }
