@@ -4,7 +4,7 @@ use super::{
     },
     BlockingPgConn, ColumnIndex, Error, Statistics, ToDescription, ToElementCount, ToNLargestCount,
 };
-use diesel::prelude::*;
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
 use structured::{Description, Element, ElementCount, NLargestCount};
 
 #[derive(Debug, Queryable)]
@@ -81,6 +81,8 @@ fn load(
     conn: &mut BlockingPgConn,
     description_ids: &[i32],
 ) -> Result<(Vec<DescriptionInt>, Vec<TopNInt>), diesel::result::Error> {
+    use diesel::RunQueryDsl;
+
     let column_descriptions = desc::description_int
         .inner_join(cd::column_description.on(cd::id.eq(desc::description_id)))
         .select((
@@ -105,6 +107,40 @@ fn load(
         .load::<TopNInt>(conn)?;
 
     Ok((column_descriptions, top_n))
+}
+
+pub(super) async fn async_get_int_statistics(
+    mut conn: diesel_async::pg::AsyncPgConnection,
+    description_ids: &[i32],
+) -> Result<Vec<Statistics>, Error> {
+    use diesel_async::RunQueryDsl;
+
+    let column_descriptions = desc::description_int
+        .inner_join(cd::column_description.on(cd::id.eq(desc::description_id)))
+        .select((
+            cd::column_index,
+            cd::count,
+            cd::unique_count,
+            desc::mode,
+            desc::min,
+            desc::max,
+            desc::mean,
+            desc::s_deviation,
+        ))
+        .filter(cd::id.eq_any(description_ids))
+        .order_by((cd::column_index.asc(), cd::count.desc()))
+        .load::<DescriptionInt>(&mut conn)
+        .await?;
+
+    let top_n = top_n::top_n_int
+        .inner_join(cd::column_description.on(cd::id.eq(top_n::description_id)))
+        .select((cd::column_index, top_n::value, top_n::count))
+        .filter(cd::id.eq_any(description_ids))
+        .order_by(cd::column_index.asc())
+        .load::<TopNInt>(&mut conn)
+        .await?;
+
+    Ok(super::build_column_statistics(column_descriptions, top_n))
 }
 
 #[cfg(test)]

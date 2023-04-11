@@ -31,7 +31,6 @@ pub use self::collections::{
     Indexable, Indexed, IndexedMap, IndexedMapIterator, IndexedMapUpdate, IndexedMultimap,
     IndexedSet, IterableMap, Map, MapIterator,
 };
-pub use self::column_statistics::round::{RoundByCluster, RoundByModel};
 pub use self::column_statistics::*;
 pub use self::csv_column_extra::CsvColumnExtraConfig;
 pub use self::event::EventKind;
