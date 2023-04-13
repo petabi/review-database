@@ -13,7 +13,7 @@ use crate::{
     BlockingPgConn, Database, Error, StructuredColumnType,
 };
 use chrono::NaiveDateTime;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl};
 use num_traits::ToPrimitive;
 use std::collections::HashSet;
 use structured::{Element, FloatRange};
@@ -150,11 +150,12 @@ pub(super) async fn async_get_columns_for_top_n(
     use csv_column_extra::dsl as column_d;
     use diesel_async::RunQueryDsl;
 
-    let Some(columns) = column_d::csv_column_extra
+    let Some(Some(columns)) = column_d::csv_column_extra
         .select(column_d::column_top_n)
         .filter(column_d::model_id.eq(model_id))
         .first::<Option<Vec<bool>>>(conn)
-        .await? else {
+        .await
+        .optional()? else {
             return Ok(Vec::new())
     };
 
@@ -417,11 +418,11 @@ impl Database {
         time: Option<NaiveDateTime>,
         portion_of_clusters: Option<f64>,
         portion_of_top_n: Option<f64>,
-        mut column_types: Vec<StructuredColumnType>,
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
         let mut conn = self.pool.get_diesel_conn().await?;
         let columns_for_top_n = async_get_columns_for_top_n(&mut conn, model_id).await?;
         let columns_for_top_n: HashSet<i32> = columns_for_top_n.into_iter().collect();
+        let mut column_types = self.get_column_types_of_model(model_id).await?;
         column_types.retain(|c| columns_for_top_n.get(&c.column_index).is_some());
 
         let cluster_sizes = super::async_get_cluster_sizes(&mut conn, model_id).await?;
