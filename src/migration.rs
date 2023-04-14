@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 /// current version. When the database format changes, this requirement must be
 /// updated to match the new version, and the migration code must be added to
 /// the `migrate_data_dir` function.
-const DATABASE_VERSION_REQ: &str = ">=0.3.0,<0.5.0-alpha.3";
+const DATABASE_VERSION_REQ: &str = ">=0.3.0,<0.5.0-alpha.4";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
