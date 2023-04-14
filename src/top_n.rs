@@ -4,18 +4,14 @@ mod one_to_n;
 mod score;
 mod time_series;
 
-pub(crate) use self::column::get_top_columns_of_model;
-pub(crate) use self::ipaddr::{get_top_ip_addresses_of_cluster, get_top_ip_addresses_of_model};
-pub(crate) use self::one_to_n::get_top_multimaps_of_model;
 pub use self::one_to_n::{TopColumnsOfCluster, TopMultimaps};
-pub(crate) use self::score::get_top_clusters_by_score;
 pub use self::score::{ClusterScore, ClusterScoreSet};
-pub(crate) use self::time_series::get_top_cluster_time_series;
 pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByColumn};
-use super::{BlockingPgConn, Database, Error, Type};
+use super::{Database, Error, Type};
 use bb8_postgres::tokio_postgres::row::Row;
 use chrono::NaiveDateTime;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
+use diesel_async::pg::AsyncPgConnection;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
@@ -172,22 +168,8 @@ impl Database {
     }
 }
 
-fn get_cluster_sizes(conn: &mut BlockingPgConn, model_id: i32) -> Result<Vec<ClusterSize>, Error> {
-    use super::schema::cluster::dsl;
-    use diesel::RunQueryDsl;
-
-    let cluster_sizes = dsl::cluster
-        .select((dsl::id, dsl::size))
-        .filter(dsl::model_id.eq(model_id).and(dsl::category_id.ne(2)))
-        .order_by(dsl::size.desc())
-        .then_order_by(dsl::id.asc())
-        .load::<ClusterSize>(conn)?;
-
-    Ok(cluster_sizes)
-}
-
-async fn async_get_cluster_sizes(
-    conn: &mut diesel_async::pg::AsyncPgConnection,
+async fn get_cluster_sizes(
+    conn: &mut AsyncPgConnection,
     model_id: i32,
 ) -> Result<Vec<ClusterSize>, diesel::result::Error> {
     use super::schema::cluster::dsl;

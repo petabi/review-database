@@ -3,10 +3,11 @@ use super::{
         column_description::dsl as cd, description_datetime::dsl as desc,
         top_n_datetime::dsl as top_n,
     },
-    BlockingPgConn, ColumnIndex, Error, Statistics, ToDescription, ToElementCount, ToNLargestCount,
+    ColumnIndex, Error, Statistics, ToDescription, ToElementCount, ToNLargestCount,
 };
 use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use structured::{Description, Element, ElementCount, NLargestCount};
 
 #[derive(Debug, Queryable)]
@@ -67,43 +68,10 @@ impl ToElementCount for TopNDateTime {
     }
 }
 
-pub(super) fn get_datetime_statistics(
-    conn: &mut BlockingPgConn,
+pub(super) async fn get_datetime_statistics(
+    mut conn: AsyncPgConnection,
     description_ids: &[i32],
 ) -> Result<Vec<Statistics>, Error> {
-    let (column_descriptions, top_n) = load(conn, description_ids)?;
-    Ok(super::build_column_statistics(column_descriptions, top_n))
-}
-
-fn load(
-    conn: &mut BlockingPgConn,
-    description_ids: &[i32],
-) -> Result<(Vec<DescriptionDateTime>, Vec<TopNDateTime>), diesel::result::Error> {
-    use diesel::RunQueryDsl;
-
-    let column_descriptions = desc::description_datetime
-        .inner_join(cd::column_description.on(cd::id.eq(desc::description_id)))
-        .select((cd::column_index, cd::count, cd::unique_count, desc::mode))
-        .filter(cd::id.eq_any(description_ids))
-        .order_by((cd::column_index.asc(), cd::count.desc()))
-        .load::<DescriptionDateTime>(conn)?;
-
-    let top_n = top_n::top_n_datetime
-        .inner_join(cd::column_description.on(cd::id.eq(top_n::description_id)))
-        .select((cd::column_index, top_n::value, top_n::count))
-        .filter(cd::id.eq_any(description_ids))
-        .order_by(cd::column_index.asc())
-        .load::<TopNDateTime>(conn)?;
-
-    Ok((column_descriptions, top_n))
-}
-
-pub(super) async fn async_get_datetime_statistics(
-    mut conn: diesel_async::pg::AsyncPgConnection,
-    description_ids: &[i32],
-) -> Result<Vec<Statistics>, Error> {
-    use diesel_async::RunQueryDsl;
-
     let column_descriptions = desc::description_datetime
         .inner_join(cd::column_description.on(cd::id.eq(desc::description_id)))
         .select((cd::column_index, cd::count, cd::unique_count, desc::mode))

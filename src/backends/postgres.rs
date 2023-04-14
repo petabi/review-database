@@ -2,11 +2,7 @@ mod de;
 mod error;
 mod transaction;
 
-use crate::{
-    self as database, column_statistics::Statistics, BlockingConnection, BlockingConnectionPool,
-    BlockingPgConn, BlockingPgPool, ClusterScoreSet, Error, OrderDirection, StructuredColumnType,
-    TimeSeriesResult, TopElementCountsByColumn, TopMultimaps,
-};
+use crate::{self as database, Error, OrderDirection};
 use bb8_postgres::{
     bb8,
     tokio_postgres::{
@@ -17,13 +13,11 @@ use bb8_postgres::{
     },
     PostgresConnectionManager,
 };
-use chrono::NaiveDateTime;
 use diesel_async::AsyncPgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use rustls::{Certificate, ClientConfig, RootCertStore};
 use serde::de::DeserializeOwned;
 use std::{
-    any::Any,
     cmp::min,
     fmt::Write,
     fs::read,
@@ -35,124 +29,6 @@ pub use transaction::Transaction;
 
 pub type Value = dyn ToSql + Sync;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./src/backends/postgres/migrations/");
-
-impl BlockingConnection for BlockingPgConn {
-    fn get_column_statistics(
-        &mut self,
-        cluster: i32,
-        time: Option<NaiveDateTime>,
-        first_event_id: Option<i64>,
-        last_event_id: Option<i64>,
-    ) -> Result<Vec<Statistics>, Error> {
-        database::get_column_statistics(self, cluster, time, first_event_id, last_event_id)
-    }
-
-    fn get_time_range_of_model(
-        &mut self,
-        model_id: i32,
-    ) -> Result<(Option<NaiveDateTime>, Option<NaiveDateTime>), Error> {
-        database::get_time_range_of_model(self, model_id)
-    }
-
-    fn get_top_time_series_of_cluster(
-        &mut self,
-        model_id: i32,
-        cluster_id: &str,
-        start: Option<i64>,
-        end: Option<i64>,
-    ) -> Result<TimeSeriesResult, Error> {
-        database::get_cluster_time_series(self, model_id, cluster_id, start, end)
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn get_top_time_series_of_model(
-        &mut self,
-        model_id: i32,
-        time: Option<NaiveDateTime>,
-        start: Option<i64>,
-        end: Option<i64>,
-    ) -> Result<Vec<database::TopTrendsByColumn>, Error> {
-        database::get_top_cluster_time_series(self, model_id, time, start, end)
-    }
-
-    fn get_top_clusters_by_score(
-        &mut self,
-        model_id: i32,
-        size: usize,
-        time: Option<NaiveDateTime>,
-        types: Vec<StructuredColumnType>,
-    ) -> Result<ClusterScoreSet, Error> {
-        database::get_top_clusters_by_score(self, model_id, size, time, &types)
-    }
-
-    fn get_top_columns_of_model(
-        &mut self,
-        model_id: i32,
-        size: usize,
-        time: Option<NaiveDateTime>,
-        portion_of_clusters: Option<f64>,
-        portion_of_top_n: Option<f64>,
-        types: Vec<StructuredColumnType>,
-    ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        database::get_top_columns_of_model(
-            self,
-            model_id,
-            size,
-            time,
-            portion_of_clusters,
-            portion_of_top_n,
-            types,
-        )
-    }
-
-    fn get_top_ip_addresses_of_cluster(
-        &mut self,
-        model_id: i32,
-        cluster_id: &str,
-        size: usize,
-    ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        database::get_top_ip_addresses_of_cluster(self, model_id, cluster_id, size)
-    }
-
-    fn get_top_ip_addresses_of_model(
-        &mut self,
-        model_id: i32,
-        size: usize,
-        time: Option<NaiveDateTime>,
-        portion_of_clusters: Option<f64>,
-        portion_of_top_n: Option<f64>,
-    ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        database::get_top_ip_addresses_of_model(
-            self,
-            model_id,
-            size,
-            time,
-            portion_of_clusters,
-            portion_of_top_n,
-        )
-    }
-
-    fn get_top_multimaps_of_model(
-        &mut self,
-        model_id: i32,
-        size: usize,
-        min_map_size: usize,
-        time: Option<NaiveDateTime>,
-        types: Vec<StructuredColumnType>,
-    ) -> Result<Vec<TopMultimaps>, Error> {
-        database::get_top_multimaps_of_model(self, model_id, size, min_map_size, time, types)
-    }
-}
-
-impl BlockingConnectionPool for BlockingPgPool {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn get(&self) -> Result<Box<dyn BlockingConnection>, Error> {
-        Ok(Box::new(self.get()?))
-    }
-}
 
 pub(super) enum ConnectionType<'a> {
     Tls(bb8::PooledConnection<'a, PostgresConnectionManager<MakeRustlsConnect>>),
