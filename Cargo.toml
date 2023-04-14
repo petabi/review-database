@@ -1,6 +1,6 @@
 [package]
 name = "review-database"
-version = "0.5.0-alpha.2"
+version = "0.5.0-alpha.3"
 edition = "2021"
 
 [dependencies]
@@ -16,7 +16,6 @@ data-encoding = "2"
 diesel = { version = "2", features = [
   "chrono",
   "postgres",
-  "r2d2",
   "serde_json",
 ] }
 diesel-async =  { version = "0.2.1", features = ["bb8", "postgres"] }
@@ -30,7 +29,6 @@ ipnet = { version = "2", features = ["serde"] }
 num-derive = "0.3"
 num-traits = "0.2"
 postgres-protocol = "0.6"
-r2d2 = "0.8"
 rand = "0.8"
 ring = { version = "0.16", features = ["std"] }
 rocksdb = "0.20.1"

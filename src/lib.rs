@@ -67,124 +67,13 @@ use bb8_postgres::{
     bb8,
     tokio_postgres::{self, types::Type},
 };
-use chrono::NaiveDateTime;
-use diesel::{
-    r2d2::{ConnectionManager, Pool, PooledConnection},
-    PgConnection,
-};
 use std::{
-    any::Any,
     path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
 };
 use thiserror::Error;
 use tokio::sync::Notify;
-
-type BlockingPgConn = PooledConnection<ConnectionManager<PgConnection>>;
-pub(crate) type BlockingPgPool = r2d2::Pool<ConnectionManager<PgConnection>>;
-
-pub fn create_blocking_pool(database_url: &str) -> Result<BlockingPgPool, Error> {
-    let manager = ConnectionManager::<PgConnection>::new(database_url);
-    Ok(Pool::new(manager)?)
-}
-
-pub trait BlockingConnection {
-    fn get_column_statistics(
-        &mut self,
-        _cluster: i32,
-        _time: Option<NaiveDateTime>,
-        _first_event_id: Option<i64>,
-        _last_event_id: Option<i64>,
-    ) -> Result<Vec<Statistics>, Error> {
-        unimplemented!()
-    }
-
-    fn get_time_range_of_model(
-        &mut self,
-        _model_id: i32,
-    ) -> Result<(Option<NaiveDateTime>, Option<NaiveDateTime>), Error> {
-        unimplemented!()
-    }
-
-    fn get_top_time_series_of_cluster(
-        &mut self,
-        _model_id: i32,
-        _cluster_id: &str,
-        _start: Option<i64>,
-        _end: Option<i64>,
-    ) -> Result<TimeSeriesResult, Error> {
-        unimplemented!()
-    }
-
-    fn get_top_time_series_of_model(
-        &mut self,
-        _model_id: i32,
-        _time: Option<NaiveDateTime>,
-        _start: Option<i64>,
-        _end: Option<i64>,
-    ) -> Result<Vec<TopTrendsByColumn>, Error> {
-        unimplemented!()
-    }
-
-    fn get_top_clusters_by_score(
-        &mut self,
-        _model_id: i32,
-        _size: usize,
-        _time: Option<NaiveDateTime>,
-        _types: Vec<StructuredColumnType>,
-    ) -> Result<ClusterScoreSet, Error> {
-        unimplemented!()
-    }
-
-    fn get_top_columns_of_model(
-        &mut self,
-        _model_id: i32,
-        _size: usize,
-        _time: Option<NaiveDateTime>,
-        _portion_of_clusters: Option<f64>,
-        _portion_of_top_n: Option<f64>,
-        _types: Vec<StructuredColumnType>,
-    ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        unimplemented!()
-    }
-
-    fn get_top_ip_addresses_of_cluster(
-        &mut self,
-        _model_id: i32,
-        _cluster_id: &str,
-        _size: usize,
-    ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        unimplemented!()
-    }
-
-    fn get_top_ip_addresses_of_model(
-        &mut self,
-        _model_id: i32,
-        _size: usize,
-        _time: Option<NaiveDateTime>,
-        _portion_of_clusters: Option<f64>,
-        _portion_of_top_n: Option<f64>,
-    ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        unimplemented!()
-    }
-
-    fn get_top_multimaps_of_model(
-        &mut self,
-        _model_id: i32,
-        _size: usize,
-        _min_map_size: usize,
-        _time: Option<NaiveDateTime>,
-        _types: Vec<StructuredColumnType>,
-    ) -> Result<Vec<TopMultimaps>, Error> {
-        unimplemented!()
-    }
-}
-
-pub trait BlockingConnectionPool: Send + Sync + 'static {
-    fn as_any(&self) -> &dyn Any;
-    fn get(&self) -> Result<Box<dyn BlockingConnection>, Error>;
-}
 
 #[derive(Clone)]
 pub struct Database {
@@ -470,8 +359,6 @@ pub enum Error {
     Migration(Box<dyn std::error::Error + Send + Sync>),
     #[error("query error: {0}")]
     Query(#[from] diesel::result::Error),
-    #[error("connection error: {0}")]
-    R2D2(#[from] r2d2::Error),
     #[error("connection error: {0}")]
     PgConnection(#[from] bb8::RunError<tokio_postgres::Error>),
     #[error("PostgreSQL error: {0}")]
