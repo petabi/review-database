@@ -11,7 +11,8 @@ use chrono::NaiveDateTime;
 use diesel::{
     sql_query,
     sql_types::{BigInt, Integer, Text},
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
+    PgArrayExpressionMethods, QueryDsl,
 };
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
@@ -130,7 +131,7 @@ macro_rules! get_top_n_of_column_by_round {
     ($conn:expr, $top_d:ident, $top_table:ident, $load_type:ty, $d:expr, $c:expr, $f_ei:expr, $l_ei:expr, $index:expr, $func:tt, $top_n:expr) => {{
         let top_n = $top_d::$top_table
             .inner_join(cd_d::column_description.on(cd_d::id.eq($top_d::description_id)))
-            .inner_join(e_d::event_range.on(e_d::id.eq(cd_d::event_range_id)))
+            .inner_join(e_d::event_range.on(cd_d::event_range_ids.index(1).eq(e_d::id.nullable())))
             .inner_join(c_d::cluster.on(c_d::id.eq(e_d::cluster_id)))
             .inner_join(m_d::model.on(m_d::id.eq(c_d::model_id)))
             .filter(
@@ -244,7 +245,9 @@ async fn get_top_n(
             use top_n_float::dsl as ti_d;
             let top_n = ti_d::top_n_float
                 .inner_join(cd_d::column_description.on(cd_d::id.eq(ti_d::description_id)))
-                .inner_join(e_d::event_range.on(e_d::id.eq(cd_d::event_range_id)))
+                .inner_join(
+                    e_d::event_range.on(cd_d::event_range_ids.index(1).eq(e_d::id.nullable())),
+                )
                 .inner_join(c_d::cluster.on(c_d::id.eq(e_d::cluster_id)))
                 .inner_join(m_d::model.on(m_d::id.eq(c_d::model_id)))
                 .filter(
@@ -388,20 +391,32 @@ impl Database {
         let columns_for_1_to_n = column_d::csv_column_extra
             .select((column_d::column_1, column_d::column_n))
             .filter(column_d::model_id.eq(model_id))
-            .first::<(Option<Vec<bool>>, Option<Vec<bool>>)>(&mut conn)
+            .first::<(Option<Vec<Option<bool>>>, Option<Vec<Option<bool>>>)>(&mut conn)
             .await?;
 
         let columns_for_1: Vec<usize> = columns_for_1_to_n.0.map_or_else(Vec::new, |c| {
             c.iter()
                 .enumerate()
-                .filter_map(|(index, is)| if *is { Some(index) } else { None })
+                .filter_map(|(index, is)| {
+                    if let Some(true) = *is {
+                        Some(index)
+                    } else {
+                        None
+                    }
+                })
                 .collect()
         });
 
         let columns_for_n: Vec<usize> = columns_for_1_to_n.1.map_or_else(Vec::new, |c| {
             c.iter()
                 .enumerate()
-                .filter_map(|(index, is)| if *is { Some(index) } else { None })
+                .filter_map(|(index, is)| {
+                    if let Some(true) = *is {
+                        Some(index)
+                    } else {
+                        None
+                    }
+                })
                 .collect()
         });
 

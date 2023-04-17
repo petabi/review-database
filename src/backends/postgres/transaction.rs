@@ -48,16 +48,6 @@ impl<'a> Transaction<'a> {
         Ok(self.0.execute(stmt, params).await?)
     }
 
-    pub async fn insert_into(
-        &self,
-        table: &str,
-        columns: &[(&str, Type)],
-        params: &[&(dyn ToSql + Sync)],
-    ) -> Result<i32, Error> {
-        let query = super::query_insert_into(table, columns);
-        Ok(self.0.query_one(&query, params).await?.get(0))
-    }
-
     pub async fn select_in(
         &self,
         table: &str,
@@ -69,16 +59,5 @@ impl<'a> Transaction<'a> {
     ) -> Result<Vec<Row>, Error> {
         let query = super::query_select(table, columns, variables, in_variables, array_variables);
         Ok(self.0.query(&query, params).await?)
-    }
-
-    pub async fn select_one_from(
-        &self,
-        table: &str,
-        columns: &[&str],
-        variables: &[(&str, Type)],
-        params: &[&(dyn ToSql + Sync)],
-    ) -> Result<Row, Error> {
-        let query = super::query_select_one(table, columns, variables, &[], &[]);
-        Ok(self.0.query_one(&query, params).await?)
     }
 }

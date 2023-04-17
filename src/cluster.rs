@@ -12,7 +12,7 @@ pub struct UpdateClusterRequest {
     pub signature: String,
     pub score: Option<f64>,
     pub size: i64,
-    pub event_ids: Vec<i64>,
+    pub event_ids: Vec<crate::types::Id>,
     pub status_id: i32,
     pub labels: Option<Vec<String>>,
 }
@@ -115,6 +115,7 @@ impl Database {
                 "category_id",
                 "detector_id",
                 "event_ids",
+                "event_sources",
                 "labels",
                 "qualifier_id",
                 "status_id",
@@ -172,7 +173,8 @@ impl Database {
         cluster_update: Vec<UpdateClusterRequest>,
         model_id: i32,
     ) -> Result<(), Error> {
-        let query = "SELECT attempt_cluster_upsert($1::text, $2::int4, $3::int8[], $4::int4, $5::text, $6::int8, $7::int4, $8::text[], $9::float8)";
+        let query = "SELECT attempt_cluster_upsert(
+            $1::text, $2::int4, $3::int8[], $4::text[], $5::int4, $6::text, $7::int8, $8::int4, $9::text[], $10::float8)";
 
         // Split `cluster_update` into Vector of 1,000 each to create database
         // transactions with 1,000 queries
@@ -192,10 +194,19 @@ impl Database {
                         let mut conn = pool.get().await?;
                         let txn = conn.build_transaction().await?;
                         for c in chunk {
+                            let (timestamps, sources) = c.event_ids.iter().fold(
+                                (Vec::new(), Vec::new()),
+                                |(mut ts, mut src), id| {
+                                    ts.push(&id.0);
+                                    src.push(&id.1);
+                                    (ts, src)
+                                },
+                            );
                             let params: Vec<&(dyn ToSql + Sync)> = vec![
                                 &c.cluster_id,
                                 &c.detector_id,
-                                &c.event_ids,
+                                &timestamps,
+                                &sources,
                                 &model_id,
                                 &c.signature,
                                 &c.size,
@@ -203,6 +214,7 @@ impl Database {
                                 &c.labels,
                                 &c.score,
                             ];
+
                             txn.execute(query, params.as_slice()).await?;
                         }
                         txn.commit().await?;

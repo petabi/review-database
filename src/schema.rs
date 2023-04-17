@@ -1,60 +1,64 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
     category (id) {
         id -> Int4,
         name -> Text,
     }
 }
 
-table! {
+diesel::table! {
     cluster (id) {
         id -> Int4,
-        cluster_id -> Text,
         category_id -> Int4,
+        cluster_id -> Text,
         detector_id -> Int4,
-        event_ids -> Array<Int8>,
+        event_ids -> Array<Nullable<Int8>>,
+        labels -> Nullable<Array<Nullable<Text>>>,
+        last_modification_time -> Nullable<Timestamp>,
+        model_id -> Int4,
         qualifier_id -> Int4,
-        status_id -> Int4,
+        score -> Nullable<Float8>,
         signature -> Text,
         size -> Int8,
-        score -> Nullable<Float8>,
-        model_id -> Int4,
-        last_modification_time -> Nullable<Timestamp>,
+        status_id -> Int4,
+        event_sources -> Array<Nullable<Text>>,
     }
 }
 
-table! {
+diesel::table! {
     column_description (id) {
         id -> Int4,
-        event_range_id -> Int4,
         column_index -> Int4,
         type_id -> Int4,
         count -> Int8,
         unique_count -> Int8,
+        event_range_ids -> Array<Nullable<Int4>>,
     }
 }
 
-table! {
+diesel::table! {
     csv_column_extra (id) {
         id -> Int4,
         model_id -> Int4,
-        column_alias -> Nullable<Array<Text>>,
-        column_display -> Nullable<Array<Bool>>,
-        column_top_n -> Nullable<Array<Bool>>,
-        column_1 -> Nullable<Array<Bool>>,
-        column_n -> Nullable<Array<Bool>>,
+        column_alias -> Nullable<Array<Nullable<Text>>>,
+        column_display -> Nullable<Array<Nullable<Bool>>>,
+        column_top_n -> Nullable<Array<Nullable<Bool>>>,
+        column_1 -> Nullable<Array<Nullable<Bool>>>,
+        column_n -> Nullable<Array<Nullable<Bool>>>,
     }
 }
 
-table! {
+diesel::table! {
     csv_column_list (id) {
         id -> Int4,
         model_id -> Int4,
-        column_indicator -> Nullable<Array<Text>>,
-        column_whitelist -> Nullable<Array<Text>>,
+        column_indicator -> Nullable<Array<Nullable<Text>>>,
+        column_whitelist -> Nullable<Array<Nullable<Text>>>,
     }
 }
 
-table! {
+diesel::table! {
     csv_indicator (id) {
         id -> Int4,
         name -> Text,
@@ -64,7 +68,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     csv_whitelist (id) {
         id -> Int4,
         name -> Text,
@@ -74,7 +78,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     description_binary (id) {
         id -> Int4,
         description_id -> Int4,
@@ -82,7 +86,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     description_datetime (id) {
         id -> Int4,
         description_id -> Int4,
@@ -90,7 +94,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     description_enum (id) {
         id -> Int4,
         description_id -> Int4,
@@ -98,7 +102,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     description_float (id) {
         id -> Int4,
         description_id -> Int4,
@@ -111,7 +115,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     description_int (id) {
         id -> Int4,
         description_id -> Int4,
@@ -123,7 +127,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     description_ipaddr (id) {
         id -> Int4,
         description_id -> Int4,
@@ -131,7 +135,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     description_text (id) {
         id -> Int4,
         description_id -> Int4,
@@ -139,17 +143,18 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     event_range (id) {
         id -> Int4,
         cluster_id -> Int4,
         time -> Timestamp,
         first_event_id -> Int8,
         last_event_id -> Int8,
+        event_source -> Text,
     }
 }
 
-table! {
+diesel::table! {
     model (id) {
         id -> Int4,
         name -> Text,
@@ -160,31 +165,32 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     outlier (id) {
         id -> Int4,
         raw_event -> Bytea,
         model_id -> Int4,
-        event_ids -> Array<Int8>,
+        event_ids -> Array<Nullable<Int8>>,
         size -> Int8,
+        event_sources -> Array<Nullable<Text>>,
     }
 }
 
-table! {
+diesel::table! {
     qualifier (id) {
         id -> Int4,
         description -> Text,
     }
 }
 
-table! {
+diesel::table! {
     status (id) {
         id -> Int4,
         description -> Text,
     }
 }
 
-table! {
+diesel::table! {
     time_series (id) {
         id -> Int4,
         cluster_id -> Int4,
@@ -195,7 +201,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     top_n_binary (id) {
         id -> Int4,
         description_id -> Int4,
@@ -204,7 +210,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     top_n_datetime (id) {
         id -> Int4,
         description_id -> Int4,
@@ -213,7 +219,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     top_n_enum (id) {
         id -> Int4,
         description_id -> Int4,
@@ -222,7 +228,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     top_n_float (id) {
         id -> Int4,
         description_id -> Int4,
@@ -232,7 +238,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     top_n_int (id) {
         id -> Int4,
         description_id -> Int4,
@@ -241,7 +247,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     top_n_ipaddr (id) {
         id -> Int4,
         description_id -> Int4,
@@ -250,7 +256,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     top_n_text (id) {
         id -> Int4,
         description_id -> Int4,
@@ -259,7 +265,7 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
+diesel::allow_tables_to_appear_in_same_query!(
     category,
     cluster,
     column_description,
