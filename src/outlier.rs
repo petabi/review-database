@@ -1,3 +1,5 @@
+use crate::types::{Source, Timestamp};
+
 use super::{tokio_postgres::types::ToSql, Database, Error, OrderDirection, Type};
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
@@ -7,7 +9,7 @@ use tracing::error;
 pub struct UpdateOutlierRequest {
     pub is_new_outlier: bool,
     pub raw_event: Vec<u8>,
-    pub event_ids: Vec<i64>,
+    pub event_ids: Vec<crate::types::Id>,
     pub size: i64,
 }
 
@@ -25,7 +27,7 @@ pub struct OutlierInfo {
 pub struct LoadOutlier {
     #[serde(with = "serde_bytes")]
     raw_event: Vec<u8>,
-    event_ids: Vec<i64>,
+    event_ids: Vec<crate::types::Id>,
 }
 
 impl Database {
@@ -35,12 +37,25 @@ impl Database {
             .await
     }
 
-    pub async fn delete_outliers(&self, event_ids: Vec<i64>, model_id: i32) -> Result<(), Error> {
-        let param: Vec<&(dyn ToSql + Sync)> = vec![&event_ids, &model_id];
+    pub async fn delete_outliers(
+        &self,
+        event_ids: Vec<crate::types::Id>,
+        model_id: i32,
+    ) -> Result<(), Error> {
+        let (timestamps, sources) =
+            event_ids
+                .into_iter()
+                .fold((vec![], vec![]), |(mut ts, mut src), e| {
+                    let (t, s) = e;
+                    ts.push(t);
+                    src.push(s);
+                    (ts, src)
+                });
+        let param: Vec<&(dyn ToSql + Sync)> = vec![&timestamps, &sources, &model_id];
         let conn = self.pool.get().await?;
         conn.execute_function(
             "attempt_outlier_delete",
-            &[Type::INT8_ARRAY, Type::INT4],
+            &[Type::INT8_ARRAY, Type::TEXT_ARRAY, Type::INT4],
             param.as_slice(),
         )
         .await?;
@@ -67,7 +82,14 @@ impl Database {
         }
         conn.select_slice(
             "outlier",
-            &["id", "raw_event", "event_ids", "size", "model_id"],
+            &[
+                "id",
+                "raw_event",
+                "event_ids",
+                "event_sources",
+                "size",
+                "model_id",
+            ],
             &[("model_id", Type::INT4)],
             &[],
             &params,
@@ -85,15 +107,37 @@ impl Database {
         model_id: i32,
     ) -> Result<Vec<LoadOutlier>, Error> {
         let conn = self.pool.get().await?;
-        conn.select_in::<LoadOutlier>(
-            "outlier",
-            &["raw_event", "event_ids"],
-            &[("model_id", Type::INT4)],
-            &[],
-            &[],
-            &[&model_id],
-        )
-        .await
+
+        #[derive(Deserialize, Serialize)]
+        struct OutlierRow {
+            #[serde(with = "serde_bytes")]
+            raw_event: Vec<u8>,
+            event_ids: Vec<Timestamp>,
+            event_sources: Vec<Source>,
+        }
+
+        let results = conn
+            .select_in::<OutlierRow>(
+                "outlier",
+                &["raw_event", "event_ids", "event_sources"],
+                &[("model_id", Type::INT4)],
+                &[],
+                &[],
+                &[&model_id],
+            )
+            .await?;
+        Ok(results
+            .into_iter()
+            .map(|outlier| {
+                let (raw_event, timestamps, sources) =
+                    (outlier.raw_event, outlier.event_ids, outlier.event_sources);
+                let event_ids = timestamps.into_iter().zip(sources.into_iter()).collect();
+                LoadOutlier {
+                    raw_event,
+                    event_ids,
+                }
+            })
+            .collect())
     }
 
     pub async fn update_outliers(
@@ -102,7 +146,7 @@ impl Database {
         model_id: i32,
     ) -> Result<(), Error> {
         let query =
-            "SELECT attempt_outlier_upsert($1::bool, $2::bytea, $3::int4, $4::int8[], $5::int8)";
+            "SELECT attempt_outlier_upsert($1::bool, $2::bytea, $3::int4, $4::int8[], $5::text[], $6::int8)";
 
         // Split `outlier_update` into Vector of 1,000 each to create database
         // transactions with 1,000 queries
@@ -122,11 +166,20 @@ impl Database {
                         let mut conn = pool.get().await?;
                         let txn = conn.build_transaction().await?;
                         for c in chunk {
+                            let (timestamps, sources) = c.event_ids.iter().fold(
+                                (Vec::new(), Vec::new()),
+                                |(mut ts, mut src), id| {
+                                    ts.push(&id.0);
+                                    src.push(&id.1);
+                                    (ts, src)
+                                },
+                            );
                             let params: Vec<&(dyn ToSql + Sync)> = vec![
                                 &c.is_new_outlier,
                                 &c.raw_event,
                                 &model_id,
-                                &c.event_ids,
+                                &timestamps,
+                                &sources,
                                 &c.size,
                             ];
                             txn.execute(query, params.as_slice()).await?;

@@ -12,6 +12,8 @@ use crate::{
     Database, Error,
 };
 use chrono::NaiveDateTime;
+use diesel::NullableExpressionMethods;
+use diesel::PgArrayExpressionMethods;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
@@ -26,7 +28,10 @@ macro_rules! get_top_n_of_column {
     ($conn:expr, $top_d:ident, $top_table:ident, $value_type:ty, $c:expr, $i:expr, $tc:expr, $time:expr) => {{
         let query = c_d::cluster
             .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-            .inner_join(col_d::column_description.on(col_d::event_range_id.eq(e_d::id)))
+            .inner_join(
+                col_d::column_description
+                    .on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
+            )
             .inner_join($top_d::$top_table.on(top_d::description_id.eq(col_d::id)))
             .select((
                 e_d::cluster_id,
@@ -35,6 +40,7 @@ macro_rules! get_top_n_of_column {
                 top_d::value,
                 top_d::count,
             ));
+
         let top_n = if let Some(time) = $time {
             query
                 .filter(
@@ -78,7 +84,7 @@ pub(super) async fn get_columns_for_top_n(
     let Some(Some(columns)) = column_d::csv_column_extra
         .select(column_d::column_top_n)
         .filter(column_d::model_id.eq(model_id))
-        .first::<Option<Vec<bool>>>(conn)
+        .first::<Option<Vec<Option<bool>>>>(conn)
         .await
         .optional()? else {
             return Ok(HashSet::new())
@@ -88,7 +94,7 @@ pub(super) async fn get_columns_for_top_n(
         .into_iter()
         .enumerate()
         .filter_map(|(index, is)| {
-            if is {
+            if let Some(true) = is {
                 Some(index.to_i32().expect("column index < i32::max"))
             } else {
                 None
@@ -108,7 +114,9 @@ async fn top_n_of_float(
 
     let query = c_d::cluster
         .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-        .inner_join(col_d::column_description.on(col_d::event_range_id.eq(e_d::id)))
+        .inner_join(
+            col_d::column_description.on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
+        )
         .inner_join(top_d::top_n_float.on(top_d::description_id.eq(col_d::id)))
         .select((
             e_d::cluster_id,

@@ -40,6 +40,10 @@ where
     }
 }
 
+pub(crate) type Timestamp = i64;
+pub(crate) type Source = String;
+pub(crate) type Id = (Timestamp, Source);
+
 #[derive(
     Debug, Display, Copy, Clone, Eq, Hash, PartialEq, Deserialize, Serialize, PartialOrd, Ord,
 )]
@@ -387,7 +391,8 @@ pub struct Outlier {
     pub id: i32,
     #[serde(with = "serde_bytes")]
     pub raw_event: Vec<u8>,
-    pub event_ids: Vec<i64>,
+    pub event_ids: Vec<Timestamp>,
+    pub event_sources: Vec<Source>,
     pub size: i64,
     pub model_id: i32,
 }

@@ -11,7 +11,10 @@ use crate::{
     Database, Error,
 };
 use chrono::NaiveDateTime;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, PgArrayExpressionMethods,
+    QueryDsl,
+};
 use diesel_async::RunQueryDsl;
 use futures::future::join_all;
 use serde::Serialize;
@@ -52,29 +55,66 @@ impl Database {
         &self,
         cluster: i32,
         time: Option<NaiveDateTime>,
-        first_event_id: Option<i64>,
-        last_event_id: Option<i64>,
+        event_ranges: Option<Vec<crate::EventRange>>,
     ) -> Result<Vec<Statistics>, Error> {
         let mut conn = self.pool.get_diesel_conn().await?;
-        let mut query = cd_d::column_description
-            .inner_join(e_d::event_range.on(cd_d::event_range_id.eq(e_d::id)))
+
+        let query = cd_d::column_description
             .select((cd_d::id, cd_d::type_id))
-            .into_boxed();
-        if let Some(time) = time {
-            query = query.filter(e_d::cluster_id.eq(cluster).and(e_d::time.eq(time)));
-        } else {
-            query = query.filter(
-                e_d::cluster_id.eq(cluster).and(
-                    e_d::first_event_id
-                        .eq(first_event_id.unwrap_or_default())
-                        .and(e_d::last_event_id.eq(last_event_id.unwrap_or_default())),
-                ),
-            );
-        }
-        let column_info = query
-            .order_by(cd_d::column_index.asc())
-            .load::<ColumnDescriptionLoad>(&mut conn)
-            .await?;
+            .order_by(cd_d::column_index.asc());
+        let query = match (time, event_ranges) {
+            (Some(time), _) => {
+                let ids: Vec<Option<i32>> = e_d::event_range
+                    .select(e_d::id.nullable())
+                    .filter(e_d::cluster_id.eq(cluster).and(e_d::time.eq(time)))
+                    .get_results(&mut conn)
+                    .await?;
+                query
+                    .filter(cd_d::event_range_ids.contains(ids))
+                    .into_boxed()
+            }
+            (_, Some(event_ranges)) => {
+                let mut eids = e_d::event_range
+                    .select(e_d::id.nullable())
+                    .filter(e_d::cluster_id.eq(cluster))
+                    .into_boxed();
+                eids = event_ranges.into_iter().fold(eids, |eids, e| {
+                    eids.or_filter(
+                        e_d::first_event_id
+                            .eq(e.first_event_id)
+                            .and(e_d::last_event_id.eq(e.last_event_id))
+                            .and(e_d::event_source.eq(e.event_source)),
+                    )
+                });
+                let eids: Vec<Option<i32>> = eids.get_results(&mut conn).await?;
+                query
+                    .filter(cd_d::event_range_ids.contains(eids))
+                    .into_boxed()
+            }
+            _ => {
+                return Ok(vec![]);
+            }
+        };
+
+        // let query = event_ranges.into_iter().map(|e| {
+        //     super::save::statistics::EventRangeInsert {
+        //         cluster_id: cluster,
+        //         time:
+        //     }
+        // })
+
+        // if let Some(time) = time {
+        //     query = query.filter(e_d::cluster_id.eq(cluster).and(e_d::time.eq(time)));
+        // } else {
+        //     query = query.filter(
+        //         e_d::cluster_id.eq(cluster).and(
+        //             e_d::first_event_id
+        //                 .eq(first_event_id.unwrap_or_default())
+        //                 .and(e_d::last_event_id.eq(last_event_id.unwrap_or_default())),
+        //         ),
+        //     );
+        // }
+        let column_info = query.load::<ColumnDescriptionLoad>(&mut conn).await?;
 
         let mut columns: HashMap<i32, Vec<i32>> = HashMap::new();
         for c in &column_info {

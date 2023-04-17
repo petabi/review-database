@@ -10,7 +10,10 @@ use crate::{
     Database, Error,
 };
 use chrono::NaiveDateTime;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
+    PgArrayExpressionMethods, QueryDsl,
+};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
@@ -28,7 +31,10 @@ async fn get_top_n_of_multiple_clusters(
     let top_n_of_multiple_clusters = if let Some(time) = time {
         c_d::cluster
             .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-            .inner_join(col_d::column_description.on(col_d::event_range_id.eq(e_d::id)))
+            .inner_join(
+                col_d::column_description
+                    .on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
+            )
             .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
             .select((
                 c_d::id,
@@ -43,7 +49,10 @@ async fn get_top_n_of_multiple_clusters(
     } else {
         c_d::cluster
             .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-            .inner_join(col_d::column_description.on(col_d::event_range_id.eq(e_d::id)))
+            .inner_join(
+                col_d::column_description
+                    .on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
+            )
             .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
             .select((
                 c_d::id,
@@ -70,7 +79,10 @@ impl Database {
         let mut conn = self.pool.get_diesel_conn().await?;
         let values = c_d::cluster
             .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-            .inner_join(col_d::column_description.on(col_d::event_range_id.eq(e_d::id)))
+            .inner_join(
+                col_d::column_description
+                    .on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
+            )
             .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
             .select((col_d::column_index, col_d::id, top_d::value, top_d::count))
             .filter(

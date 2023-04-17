@@ -14,12 +14,12 @@ pub(crate) async fn get_whitelists(
     use csv_column_list::dsl as list_d;
     use csv_whitelist::dsl as w_d;
 
-    let Some(Some(whitelist_names)) = list_d::csv_column_list
+    let Some(whitelist_names) = list_d::csv_column_list
         .select(list_d::column_whitelist)
         .filter(list_d::model_id.eq(model_id))
-        .get_result::<Option<Vec<String>>>(conn)
+        .get_result::<Option<Vec<Option<String>>>>(conn)
         .await
-        .optional()? else {
+        .optional()?.flatten() else {
             return Ok(HashMap::new());
     };
 
@@ -27,10 +27,14 @@ pub(crate) async fn get_whitelists(
         .iter()
         .filter_map(|i| {
             whitelist_names.get(*i).and_then(|n| {
-                if n.is_empty() {
-                    None
+                if let Some(n) = n {
+                    if n.is_empty() {
+                        None
+                    } else {
+                        Some((n.clone(), *i))
+                    }
                 } else {
-                    Some((n.clone(), *i))
+                    None
                 }
             })
         })
@@ -63,7 +67,7 @@ pub(crate) async fn get_csv_indicators(
     let Some(Some(indicator_names)) = list_d::csv_column_list
         .select(list_d::column_indicator)
         .filter(list_d::model_id.eq(model_id))
-        .get_result::<Option<Vec<String>>>(conn)
+        .get_result::<Option<Vec<Option<String>>>>(conn)
         .await
         .optional()? else {
             return Ok(HashMap::new());
@@ -72,10 +76,14 @@ pub(crate) async fn get_csv_indicators(
         .iter()
         .filter_map(|i| {
             indicator_names.get(*i).and_then(|n| {
-                if n.is_empty() {
-                    None
+                if let Some(n) = n {
+                    if n.is_empty() {
+                        None
+                    } else {
+                        Some((n.clone(), *i))
+                    }
                 } else {
-                    Some((n.clone(), *i))
+                    None
                 }
             })
         })

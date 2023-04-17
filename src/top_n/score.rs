@@ -7,7 +7,10 @@ use crate::{
     Database, Error, StructuredColumnType,
 };
 use chrono::NaiveDateTime;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
+    PgArrayExpressionMethods, QueryDsl,
+};
 use diesel_async::RunQueryDsl;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
@@ -47,7 +50,9 @@ macro_rules! load_top_n {
         let top_n: Vec<(i32, String, $value, i64)> = if let Some(time) = $time {
             t_d::$top_n
                 .inner_join(cd_d::column_description.on(t_d::description_id.eq(cd_d::id)))
-                .inner_join(e_d::event_range.on(e_d::id.eq(cd_d::event_range_id)))
+                .inner_join(
+                    e_d::event_range.on(cd_d::event_range_ids.index(1).eq(e_d::id.nullable())),
+                )
                 .inner_join(c_d::cluster.on(e_d::cluster_id.eq(c_d::id)))
                 .inner_join(m_d::model.on(c_d::model_id.eq(m_d::id)))
                 .select((c_d::id, c_d::cluster_id, t_d::value, t_d::count))
@@ -57,7 +62,9 @@ macro_rules! load_top_n {
         } else {
             t_d::$top_n
                 .inner_join(cd_d::column_description.on(t_d::description_id.eq(cd_d::id)))
-                .inner_join(e_d::event_range.on(e_d::id.eq(cd_d::event_range_id)))
+                .inner_join(
+                    e_d::event_range.on(cd_d::event_range_ids.index(1).eq(e_d::id.nullable())),
+                )
                 .inner_join(c_d::cluster.on(e_d::cluster_id.eq(c_d::id)))
                 .inner_join(m_d::model.on(c_d::model_id.eq(m_d::id)))
                 .select((c_d::id, c_d::cluster_id, t_d::value, t_d::count))

@@ -7,4 +7,4 @@ mod postgres;
 
 use postgres as backend;
 
-pub(super) use backend::{ConnectionPool, Transaction, Value};
+pub(super) use backend::{ConnectionPool, Value};

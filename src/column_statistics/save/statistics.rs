@@ -1,21 +1,63 @@
 use super::{binary, datetime, float_range, int, ipaddr, r#enum, text};
-use crate::{Database, Type};
-use anyhow::{Context, Result};
+use crate::schema::{
+    cluster::dsl as cluster_d, column_description::dsl as cd_d, event_range::dsl as e_d,
+};
+use crate::Database;
+use anyhow::Result;
 use chrono::NaiveDateTime;
-use futures::future::join_all;
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
+use diesel_async::RunQueryDsl;
 use serde::Deserialize;
 use std::convert::TryFrom;
 use structured::{ColumnStatistics, Element};
-use tracing::error;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]
 pub struct ColumnStatisticsUpdate {
     cluster_id: String, // NOT cluster_id but id of cluster table
     time: NaiveDateTime,
-    first_event_id: u64,
-    last_event_id: u64,
+    first_event_id: crate::types::Timestamp,
+    last_event_id: crate::types::Timestamp,
+    sources: Vec<crate::types::Source>,
     column_statistics: Vec<ColumnStatistics>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct EventRange {
+    pub first_event_id: crate::types::Timestamp,
+    pub last_event_id: crate::types::Timestamp,
+    pub event_source: crate::types::Source,
+}
+
+#[derive(Debug, Insertable, PartialEq)]
+#[diesel(table_name = crate::schema::event_range)]
+pub(crate) struct EventRangeInsert<'a> {
+    cluster_id: i32,
+    time: NaiveDateTime,
+    first_event_id: crate::types::Timestamp,
+    last_event_id: crate::types::Timestamp,
+    event_source: &'a crate::types::Source,
+}
+
+#[derive(Deserialize, Debug, Insertable, PartialEq)]
+#[diesel(table_name = crate::schema::column_description)]
+struct ColumnDescriptionInput {
+    column_index: i32,
+    type_id: i32,
+    count: i64,
+    unique_count: i64,
+    event_range_ids: Option<Vec<i32>>,
+}
+
+#[derive(Deserialize, Debug, Insertable, PartialEq, Identifiable, Queryable)]
+#[diesel(table_name = crate::schema::column_description)]
+struct ColumnDescription {
+    id: i32,
+    column_index: i32,
+    type_id: i32,
+    count: i64,
+    unique_count: i64,
+    event_range_ids: Vec<Option<i32>>,
 }
 
 fn check_column_types(stats: &[ColumnStatisticsUpdate]) -> Vec<i32> {
@@ -46,126 +88,93 @@ impl Database {
         statistics: Vec<ColumnStatisticsUpdate>,
         model_id: i32,
     ) -> Result<()> {
+        let mut conn = self.pool.get_diesel_conn().await?;
+
         let column_types = check_column_types(&statistics);
         if column_types.is_empty() {
             anyhow::bail!("Unsupported column type");
         }
-        join_all(
-            statistics
-                .into_iter()
-                .map(|stat| {
-                    let client = self.pool.clone();
-                    let column_types_cloned = column_types.clone();
-                    tokio::spawn(async move {
-                        let mut conn = client.get().await?;
-                        let txn = conn.build_transaction().await?;
+        for stat in statistics {
+            let query = cluster_d::cluster.select(cluster_d::id).filter(
+                cluster_d::model_id
+                    .eq(model_id)
+                    .and(cluster_d::cluster_id.eq(stat.cluster_id)),
+            );
+            let cluster_id = query.load::<i32>(&mut conn).await?[0];
 
-                        let first_event_id = i64::try_from(stat.first_event_id)
-                            .context("must be less than i64::MAX")?;
-                        let last_event_id = i64::try_from(stat.last_event_id)
-                            .context("must be less than i64::MAX")?;
-                        let cluster_id: i32 = txn
-                            .select_one_from(
-                                "cluster",
-                                &["id"],
-                                &[("cluster_id", Type::TEXT), ("model_id", Type::INT4)],
-                                &[&stat.cluster_id, &model_id],
-                            )
-                            .await?
-                            .get(0);
-                        let event_range_id = txn
-                            .insert_into(
-                                "event_range",
-                                &[
-                                    ("time", Type::TIMESTAMP),
-                                    ("first_event_id", Type::INT8),
-                                    ("last_event_id", Type::INT8),
-                                    ("cluster_id", Type::INT4),
-                                ],
-                                &[&stat.time, &first_event_id, &last_event_id, &cluster_id],
-                            )
-                            .await
-                            .context("failed to insert event range")?;
-
-                        for ((column_index, type_id), column_stats) in
-                            (0..).zip(&column_types_cloned).zip(&stat.column_statistics)
-                        {
-                            let count =
-                                i64::try_from(column_stats.description.count()).unwrap_or_default();
-                            let unique_count =
-                                i64::try_from(column_stats.n_largest_count.number_of_elements())
-                                    .unwrap_or_default();
-                            let id = match txn
-                                .insert_into(
-                                    "column_description",
-                                    &[
-                                        ("event_range_id", Type::INT4),
-                                        ("column_index", Type::INT4),
-                                        ("type_id", Type::INT4),
-                                        ("count", Type::INT8),
-                                        ("unique_count", Type::INT8),
-                                    ],
-                                    &[
-                                        &event_range_id,
-                                        &column_index,
-                                        &type_id,
-                                        &count,
-                                        &unique_count,
-                                    ],
-                                )
-                                .await
-                            {
-                                Ok(id) => id,
-                                Err(e) => {
-                                    error!("failed to insert column_description: {:#}", e);
-                                    continue;
-                                }
-                            };
-
-                            match &column_stats.n_largest_count.mode() {
-                                Some(Element::Int(mode)) => {
-                                    int::insert_int(&txn, id, column_stats, *mode).await;
-                                }
-                                Some(Element::Enum(mode)) => {
-                                    r#enum::insert_enum(&txn, id, column_stats, mode).await;
-                                }
-                                Some(Element::FloatRange(mode)) => {
-                                    float_range::insert_float(&txn, id, column_stats, mode).await;
-                                }
-                                Some(Element::Text(mode)) => {
-                                    text::insert_text(&txn, id, column_stats, mode).await;
-                                }
-                                Some(Element::IpAddr(mode)) => {
-                                    ipaddr::insert_ipaddr(&txn, id, column_stats, mode).await;
-                                }
-                                Some(Element::DateTime(mode)) => {
-                                    datetime::insert_datetime(&txn, id, column_stats, mode).await;
-                                }
-                                Some(Element::Binary(mode)) => {
-                                    binary::insert_binary(&txn, id, column_stats, mode).await;
-                                }
-                                _ => {}
-                            }
-                        }
-
-                        txn.commit().await?;
-                        anyhow::Ok(())
-                    })
+            let event_ranges: Vec<_> = stat
+                .sources
+                .iter()
+                .map(|src| EventRangeInsert {
+                    cluster_id,
+                    time: stat.time,
+                    first_event_id: stat.first_event_id,
+                    last_event_id: stat.last_event_id,
+                    event_source: src,
                 })
-                .map(|task| async move {
-                    match task.await {
-                        Ok(Err(e)) => {
-                            error!(
-                                "An error occurred while inserting column statistics: {:#}",
-                                e
-                            );
-                        }
-                        Err(e) => error!("Failed to execute insert_column_statistics: {:#}", e),
-                        _ => {}
+                .collect();
+            let query = diesel::insert_into(e_d::event_range)
+                .values(&event_ranges)
+                .returning(e_d::id);
+            let event_ranges = query.get_results(&mut conn).await?;
+            let column_types_cloned = column_types.clone();
+            let column_descriptions: Vec<_> = (0..)
+                .zip(&column_types_cloned)
+                .zip(&stat.column_statistics)
+                .map(|((column_index, &type_id), column_stats)| {
+                    let count = i64::try_from(column_stats.description.count()).unwrap_or_default();
+                    let unique_count =
+                        i64::try_from(column_stats.n_largest_count.number_of_elements())
+                            .unwrap_or_default();
+                    ColumnDescriptionInput {
+                        column_index,
+                        type_id,
+                        count,
+                        unique_count,
+                        event_range_ids: Some(event_ranges.clone()),
                     }
-                }),
-        )
-        .await;
+                })
+                .collect();
+
+            let query = diesel::insert_into(cd_d::column_description).values(&column_descriptions);
+            let column_descriptions: Vec<ColumnDescription> = query.get_results(&mut conn).await?;
+            for (id, column_stats) in
+                column_descriptions
+                    .into_iter()
+                    .filter_map(|c: ColumnDescription| {
+                        if let Ok(cid) = usize::try_from(c.column_index) {
+                            Some((c.id, &stat.column_statistics[cid]))
+                        } else {
+                            None
+                        }
+                    })
+            {
+                match &column_stats.n_largest_count.mode() {
+                    Some(Element::Int(mode)) => {
+                        int::insert_top_n(&mut conn, id, column_stats, *mode).await?;
+                    }
+                    Some(Element::Enum(mode)) => {
+                        r#enum::insert_top_n(&mut conn, id, column_stats, mode).await?;
+                    }
+                    Some(Element::FloatRange(mode)) => {
+                        float_range::insert_top_n(&mut conn, id, column_stats, mode).await?;
+                    }
+                    Some(Element::Text(mode)) => {
+                        text::insert_top_n(&mut conn, id, column_stats, mode).await?;
+                    }
+                    Some(Element::IpAddr(mode)) => {
+                        ipaddr::insert_top_n(&mut conn, id, column_stats, mode).await?;
+                    }
+                    Some(Element::DateTime(mode)) => {
+                        datetime::insert_top_n(&mut conn, id, column_stats, mode).await?;
+                    }
+                    Some(Element::Binary(mode)) => {
+                        binary::insert_top_n(&mut conn, id, column_stats, mode).await?;
+                    }
+                    _ => {}
+                }
+            }
+        }
         Ok(())
     }
 }
