@@ -72,7 +72,7 @@ macro_rules! get_top_n_of_column {
 pub(super) async fn get_columns_for_top_n(
     conn: &mut AsyncPgConnection,
     model_id: i32,
-) -> Result<Vec<i32>, Error> {
+) -> Result<HashSet<i32>, Error> {
     use csv_column_extra::dsl as column_d;
 
     let Some(Some(columns)) = column_d::csv_column_extra
@@ -81,7 +81,7 @@ pub(super) async fn get_columns_for_top_n(
         .first::<Option<Vec<bool>>>(conn)
         .await
         .optional()? else {
-            return Ok(Vec::new())
+            return Ok(HashSet::new())
     };
 
     Ok(columns
@@ -153,7 +153,6 @@ impl Database {
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
         let mut conn = self.pool.get_diesel_conn().await?;
         let columns_for_top_n = get_columns_for_top_n(&mut conn, model_id).await?;
-        let columns_for_top_n: HashSet<i32> = columns_for_top_n.into_iter().collect();
         let mut column_types = self.get_column_types_of_model(model_id).await?;
         column_types.retain(|c| columns_for_top_n.get(&c.column_index).is_some());
 
