@@ -237,7 +237,6 @@ fn total_of_top_n(
 fn limited_top_n_of_clusters(
     top_n_of_clusters: HashMap<i32, HashMap<usize, HashMap<String, i64>>>,
     limit_rate: f64,
-    default_number: usize,
 ) -> HashMap<usize, HashMap<String, i64>> {
     let mut top_n_total: HashMap<usize, HashMap<String, i64>> = HashMap::new(); // (usize, (String, BigDecimal)) = (column_index, (Ip Address, size))
     for (_, top_n) in top_n_of_clusters {
@@ -248,7 +247,9 @@ fn limited_top_n_of_clusters(
 
             let size_including_ips =
                 i64::from_f64((total_sizes.to_f64().unwrap_or(0.0) * limit_rate).trunc())
-                    .unwrap_or_else(|| i64::from_usize(default_number).unwrap_or(i64::MAX));
+                    .unwrap_or_else(|| {
+                        i64::from_usize(DEFAULT_NUMBER_OF_COLUMN).unwrap_or(i64::MAX)
+                    });
 
             let mut sum_sizes = 0;
             for (ip, size) in top_n {
