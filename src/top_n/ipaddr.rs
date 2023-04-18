@@ -1,8 +1,7 @@
 use super::{
     filter_by_whitelists, get_cluster_sizes, get_limited_cluster_ids, limited_top_n_of_clusters,
     total_of_top_n, ElementCount, TopElementCountsByColumn, TopNOfCluster, TopNOfMultipleCluster,
-    DEFAULT_NUMBER_OF_CLUSTER, DEFAULT_NUMBER_OF_COLUMN, DEFAULT_PORTION_OF_CLUSTER,
-    DEFAULT_PORTION_OF_TOP_N,
+    DEFAULT_NUMBER_OF_CLUSTER, DEFAULT_PORTION_OF_CLUSTER, DEFAULT_PORTION_OF_TOP_N,
 };
 use crate::{
     self as database,
@@ -135,11 +134,8 @@ impl Database {
 
         let top_n = get_top_n_of_multiple_clusters(&mut conn, &cluster_ids, time).await?;
         let top_n = total_of_top_n(top_n);
-        let top_n = limited_top_n_of_clusters(
-            top_n,
-            portion_of_top_n.unwrap_or(DEFAULT_PORTION_OF_TOP_N),
-            DEFAULT_NUMBER_OF_COLUMN,
-        );
+        let top_n =
+            limited_top_n_of_clusters(top_n, portion_of_top_n.unwrap_or(DEFAULT_PORTION_OF_TOP_N));
         let column_indices: Vec<usize> = top_n.keys().copied().collect();
         let whitelists = get_whitelists(&mut conn, model_id, &column_indices).await?;
         Ok(filter_by_whitelists(top_n, &whitelists, size))
