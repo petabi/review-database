@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 /// current version. When the database format changes, this requirement must be
 /// updated to match the new version, and the migration code must be added to
 /// the `migrate_data_dir` function.
-const DATABASE_VERSION_REQ: &str = ">=0.3.0,<0.5.0-alpha.4";
+const DATABASE_VERSION_REQ: &str = "=0.5.0-alpha.4";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -47,11 +47,19 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         return create_version_file(&data).context("failed to update VERSION");
     }
 
-    let migration = vec![(
-        VersionReq::parse(">=0.2,<0.5.0-alpha").expect("valid version requirement"),
-        Version::parse("0.4.0").expect("valid version"),
-        migrate_0_2_to_0_3,
-    )];
+    let migration: Vec<(_, _, fn(_, _) -> Result<_, _>)> = vec![
+        (
+            VersionReq::parse(">=0.2,<0.4.0-alpha").expect("valid version requirement"),
+            Version::parse("0.3.0").expect("valid version"),
+            migrate_0_2_to_0_3,
+        ),
+        (
+            VersionReq::parse(">=0.4,<0.6.0-alpha").expect("valid version requirement"),
+            Version::parse("0.5.0-alpha.4").expect("valid version"),
+            migrate_0_4_to_0_5,
+        ),
+    ];
+
     while let Some((_req, to, m)) = migration
         .iter()
         .find(|(req, _to, _m)| req.matches(&version))
@@ -174,6 +182,79 @@ pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<(
         let account: Account = (&old).into();
         let new = bincode::DefaultOptions::new().serialize(&account)?;
         account_map.update((&k, &v), (&k, &new))?;
+    }
+
+    store.purge_old_backups(0)?;
+    Ok(())
+}
+
+/// Migrate the data base from 0.4 to 0.5.
+///
+/// # Errors
+///
+/// Returns an error if database migration fails.
+pub(crate) fn migrate_0_4_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+    use super::{
+        event::{Filter, FilterEndpoint, FlowKind},
+        IterableMap,
+    };
+
+    #[derive(Deserialize, Serialize)]
+    struct OldFilter {
+        name: String,
+        directions: Option<Vec<FlowKind>>,
+        keywords: Option<Vec<String>>,
+        network_tags: Option<Vec<String>>,
+        customers: Option<Vec<String>>,
+        endpoints: Option<Vec<FilterEndpoint>>,
+        sensors: Option<Vec<String>>,
+        os: Option<Vec<String>>,
+        devices: Option<Vec<String>>,
+        host_names: Option<Vec<String>>,
+        user_ids: Option<Vec<String>>,
+        user_names: Option<Vec<String>>,
+        user_departments: Option<Vec<String>>,
+        countries: Option<Vec<String>>,
+        categories: Option<Vec<u8>>,
+        levels: Option<Vec<u8>>,
+        kinds: Option<Vec<String>>,
+    }
+
+    impl From<&OldFilter> for Filter {
+        fn from(input: &OldFilter) -> Self {
+            Self {
+                name: input.name.clone(),
+                directions: input.directions.clone(),
+                keywords: input.keywords.clone(),
+                network_tags: input.network_tags.clone(),
+                customers: input.customers.clone(),
+                endpoints: input.endpoints.clone(),
+                sensors: input.sensors.clone(),
+                os: input.os.clone(),
+                devices: input.devices.clone(),
+                host_names: input.host_names.clone(),
+                user_ids: input.user_ids.clone(),
+                user_names: input.user_names.clone(),
+                user_departments: input.user_departments.clone(),
+                countries: input.countries.clone(),
+                categories: input.categories.clone(),
+                levels: input.levels.clone(),
+                kinds: input.kinds.clone(),
+                learning_methods: None,
+                confidence: None,
+            }
+        }
+    }
+
+    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    store.backup(1)?;
+    let filter_map = store.filter_map();
+
+    for (k, v) in filter_map.iter_forward()? {
+        let old: OldFilter = bincode::DefaultOptions::new().deserialize::<OldFilter>(&v)?;
+        let filter: Filter = (&old).into();
+        let new = bincode::DefaultOptions::new().serialize(&filter)?;
+        filter_map.update((&k, &v), (&k, &new))?;
     }
 
     store.purge_old_backups(0)?;

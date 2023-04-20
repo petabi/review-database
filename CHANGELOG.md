@@ -20,6 +20,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   update_account function. This change aims to promote better practices in
   accessing and manipulating the account data, as well as providing a more
   consistent API for developers.
+- `sensors`, `confidence`, and `learning_methods` are added in `EventFilter`.
 
 ### Removed
 
@@ -65,7 +66,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - An initial version.
 
 [Unreleased]: https://github.com/petabi/review-database/compare/0.4.0...main
-[0.4.0]: https://github.com/petabi/review-database/compare/0.3.0...0.4.0  
+[0.4.0]: https://github.com/petabi/review-database/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/petabi/review-database/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/petabi/review-database/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/petabi/review-database/tree/0.1.0

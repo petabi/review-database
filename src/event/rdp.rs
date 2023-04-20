@@ -98,6 +98,10 @@ impl Match for RdpBruteForce {
         "rdp brute force"
     }
 
+    fn source(&self) -> &str {
+        self.source.as_str()
+    }
+
     fn confidence(&self) -> Option<f32> {
         None
     }

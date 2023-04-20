@@ -107,6 +107,10 @@ impl Match for DnsCovertChannel {
         "dns covert channel"
     }
 
+    fn source(&self) -> &str {
+        self.source.as_str()
+    }
+
     fn confidence(&self) -> Option<f32> {
         Some(self.confidence)
     }

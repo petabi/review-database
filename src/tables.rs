@@ -124,7 +124,7 @@ impl StateDb {
         Ok(engine.restore_from_latest_backup(self.inner.path(), location, &opts)?)
     }
 
-    pub fn purge_old_backups(&self, engine: &Path, num_of_backups_to_keep: u32) -> Result<()> {
+    pub fn purge_old_backups(engine: &Path, num_of_backups_to_keep: u32) -> Result<()> {
         let opts = rocksdb::backup::BackupEngineOptions::new(engine)?;
         let db_env = rocksdb::Env::new()?;
         let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;

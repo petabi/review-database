@@ -98,6 +98,10 @@ impl Match for RepeatedHttpSessions {
         "repeated http sessions"
     }
 
+    fn source(&self) -> &str {
+        self.source.as_str()
+    }
+
     fn confidence(&self) -> Option<f32> {
         None
     }
@@ -241,6 +245,10 @@ impl Match for HttpThreat {
 
     fn kind(&self) -> &str {
         "all"
+    }
+
+    fn source(&self) -> &str {
+        self.source.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
@@ -418,6 +426,10 @@ impl Match for DomainGenerationAlgorithm {
 
     fn kind(&self) -> &str {
         "dga"
+    }
+
+    fn source(&self) -> &str {
+        self.source.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {

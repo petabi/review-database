@@ -98,6 +98,10 @@ impl Match for TorConnection {
         "tor exit node"
     }
 
+    fn source(&self) -> &str {
+        self.source.as_str()
+    }
+
     fn confidence(&self) -> Option<f32> {
         None
     }

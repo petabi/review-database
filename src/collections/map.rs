@@ -125,6 +125,7 @@ impl<'a> Map<'a> {
         Ok(())
     }
 
+    #[must_use]
     pub fn into_prefix_map(self, prefix: &'a [u8]) -> PrefixMap {
         PrefixMap { prefix, map: self }
     }
@@ -158,6 +159,7 @@ impl<'i> IterableMap<'i, MapIterator<'i>> for Map<'i> {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub struct PrefixMap<'a, 'b> {
     prefix: &'a [u8],
     map: Map<'b>,
