@@ -641,6 +641,13 @@ pub enum EventKind {
     DomainGenerationAlgorithm,
 }
 
+/// Machine Learning Method.
+#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
+pub enum LearningMethod {
+    Unsupervised,
+    SemiSupervised,
+}
+
 #[allow(clippy::module_name_repetitions)]
 pub struct EventFilter {
     customers: Option<Vec<Customer>>,
@@ -652,6 +659,9 @@ pub struct EventFilter {
     categories: Option<Vec<EventCategory>>,
     levels: Option<Vec<NonZeroU8>>,
     kinds: Option<Vec<String>>,
+    learning_methods: Option<Vec<LearningMethod>>,
+    sensors: Option<Vec<String>>,
+    confidence: Option<f32>,
     triage_policies: Option<Vec<TriagePolicy>>,
 }
 
@@ -668,6 +678,9 @@ impl EventFilter {
         categories: Option<Vec<EventCategory>>,
         levels: Option<Vec<NonZeroU8>>,
         kinds: Option<Vec<String>>,
+        learning_methods: Option<Vec<LearningMethod>>,
+        sensors: Option<Vec<String>>,
+        confidence: Option<f32>,
         triage_policies: Option<Vec<TriagePolicy>>,
     ) -> Self {
         Self {
@@ -680,6 +693,9 @@ impl EventFilter {
             categories,
             levels,
             kinds,
+            learning_methods,
+            sensors,
+            confidence,
             triage_policies,
         }
     }
@@ -967,11 +983,13 @@ pub struct Filter {
     pub categories: Option<Vec<u8>>,
     pub levels: Option<Vec<u8>>,
     pub kinds: Option<Vec<String>>,
+    pub learning_methods: Option<Vec<LearningMethod>>,
+    pub confidence: Option<f32>,
 }
 
 pub type Id = u32;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct FilterEndpoint {
     pub direction: Option<TrafficDirection>,
     pub predefined: Option<Id>,

@@ -1,4 +1,7 @@
-use super::{eq_ip_country, EventCategory, EventFilter, FlowKind, TrafficDirection, TriagePolicy};
+use super::{
+    eq_ip_country, EventCategory, EventFilter, FlowKind, LearningMethod, TrafficDirection,
+    TriagePolicy,
+};
 use anyhow::{bail, Result};
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
@@ -17,6 +20,7 @@ pub(super) trait Match {
     fn category(&self) -> EventCategory;
     fn level(&self) -> NonZeroU8;
     fn kind(&self) -> &str;
+    fn source(&self) -> &str;
     fn confidence(&self) -> Option<f32>;
     fn score_by_packet_attr(&self, triage: &TriagePolicy) -> f64;
 
@@ -131,6 +135,31 @@ pub(super) trait Match {
         if let Some(levels) = &filter.levels {
             if levels.iter().all(|level| *level != self.level()) {
                 return Ok((false, None));
+            }
+        }
+
+        if let Some(learning_methods) = &filter.learning_methods {
+            let category = self.category();
+            if learning_methods.iter().all(|learning_method| {
+                let unsuper = matches!(*learning_method, LearningMethod::Unsupervised);
+                let http = matches!(category, EventCategory::HttpThreat);
+                unsuper && !http || !unsuper && http
+            }) {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some(sensors) = &filter.sensors {
+            if sensors.iter().all(|s| s != self.source()) {
+                return Ok((false, None));
+            }
+        }
+
+        if let Some(confidence) = &filter.confidence {
+            if let Some(event_confidence) = self.confidence() {
+                if event_confidence < *confidence {
+                    return Ok((false, None));
+                }
             }
         }
 

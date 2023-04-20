@@ -37,8 +37,8 @@ pub use self::event::EventKind;
 pub use self::event::{
     find_ip_country, Direction, DnsCovertChannel, DomainGenerationAlgorithm, Event, EventDb,
     EventFilter, EventIterator, EventMessage, Filter, FilterEndpoint, FlowKind, HttpThreat,
-    Network, NetworkEntry, NetworkEntryValue, NetworkType, RdpBruteForce, RepeatedHttpSessions,
-    TorConnection, TrafficDirection, TriageScore,
+    LearningMethod, Network, NetworkEntry, NetworkEntryValue, NetworkType, RdpBruteForce,
+    RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
 };
 pub use self::migration::migrate_data_dir;
 pub use self::model::Model;
@@ -298,8 +298,7 @@ impl Store {
     ///
     /// Returns an error when backup engine fails.
     pub fn purge_old_backups(&self, num_backups_to_keep: u32) -> Result<()> {
-        self.states
-            .purge_old_backups(&self.backup.join(DEFAULT_STATES), num_backups_to_keep)?;
+        StateDb::purge_old_backups(&self.backup.join(DEFAULT_STATES), num_backups_to_keep)?;
         Ok(())
     }
 }

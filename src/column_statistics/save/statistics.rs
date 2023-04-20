@@ -8,6 +8,7 @@ use std::convert::TryFrom;
 use structured::{ColumnStatistics, Element};
 use tracing::error;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]
 pub struct ColumnStatisticsUpdate {
     cluster_id: String, // NOT cluster_id but id of cluster table
