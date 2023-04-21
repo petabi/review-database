@@ -2,7 +2,7 @@ name: Documentation
 
 on:
   push:
-    branches: [$default-branch]
+    branches: [main]
 
   workflow_dispatch:
 
@@ -25,7 +25,7 @@ jobs:
       - name: Build documentation
         run: cargo doc --no-deps
       - name: Create the root index
-        run: echo "<meta http-equiv=\"refresh\" content=\"0; url=${{ review_database }}\">" > target/doc/index.html
+        run: echo "<meta http-equiv=\"refresh\" content=\"0; url=review_database\">" > target/doc/index.html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
