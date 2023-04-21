@@ -1,15 +1,14 @@
 //! Routines to check the database format version and migrate it if necessary.
 
+use anyhow::{anyhow, Context, Result};
+use bincode::Options;
+use semver::{Version, VersionReq};
+use serde::{Deserialize, Serialize};
 use std::{
     fs::{create_dir_all, File},
     io::{Read, Write},
     path::{Path, PathBuf},
 };
-
-use anyhow::{anyhow, Context, Result};
-use bincode::Options;
-use semver::{Version, VersionReq};
-use serde::{Deserialize, Serialize};
 
 /// The range of versions that use the current database format.
 ///
@@ -31,7 +30,7 @@ use serde::{Deserialize, Serialize};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.5.0-alpha.4,<0.6.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.6.0-alpha.1,<0.6.0-alpha.2";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -84,6 +83,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             VersionReq::parse(">=0.3,<0.5.0").expect("valid version requirement"),
             Version::parse("0.5.0").expect("valid version"),
             migrate_0_3_to_0_5,
+        ),
+        (
+            VersionReq::parse(">=0.5.0,<0.6.0").expect("valid version requirement"),
+            Version::parse("0.6.0-alpha.1").expect("valid version"),
+            migrate_0_5_to_0_6,
         ),
     ];
 
@@ -282,6 +286,60 @@ pub(crate) fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<(
         let filter: Filter = (&old).into();
         let new = bincode::DefaultOptions::new().serialize(&filter)?;
         filter_map.update((&k, &v), (&k, &new))?;
+    }
+
+    store.purge_old_backups(0)?;
+    Ok(())
+}
+
+/// Migrates the database from 0.5 to 0.6.0-alpha.1.
+///
+/// # Errors
+///
+/// Returns an error if database migration fails.
+pub(crate) fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+    use super::{
+        traffic_filter::{ProtocolPorts, TrafficFilter},
+        IterableMap,
+    };
+    use chrono::{DateTime, Utc};
+    use ipnet::IpNet;
+    use std::collections::HashMap;
+
+    #[derive(Deserialize)]
+    struct OldTrafficFilter {
+        agent: String,
+        rules: Vec<IpNet>,
+        _last_modification_time: DateTime<Utc>,
+        _update_time: Option<DateTime<Utc>>,
+    }
+
+    impl From<&OldTrafficFilter> for TrafficFilter {
+        fn from(input: &OldTrafficFilter) -> Self {
+            let rules: HashMap<IpNet, ProtocolPorts> = input
+                .rules
+                .iter()
+                .map(|net| (*net, ProtocolPorts::default()))
+                .collect();
+            Self {
+                agent: input.agent.clone(),
+                rules,
+                last_modification_time: Utc::now(),
+                update_time: None,
+                description: None,
+            }
+        }
+    }
+
+    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    store.backup(1)?;
+    let traffic_filter_map = store.traffic_filter_map();
+
+    for (k, v) in traffic_filter_map.iter_forward()? {
+        let old = bincode::DefaultOptions::new().deserialize::<OldTrafficFilter>(&v)?;
+        let rule: TrafficFilter = (&old).into();
+        let new = bincode::DefaultOptions::new().serialize(&rule)?;
+        traffic_filter_map.update((&k, &v), (&k, &new))?;
     }
 
     store.purge_old_backups(0)?;

@@ -17,6 +17,12 @@ pub struct Tidb {
 }
 
 impl Tidb {
+    /// Parse and validate input TI database
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if it fails to decode or uncompress input TI database
+    /// * Returns an error if the input TI database is invalid
     pub fn new(data: &str) -> Result<Self> {
         let data = BASE64.decode(data.as_bytes())?;
         let decoder = GzDecoder::new(&data[..]);
@@ -39,6 +45,12 @@ impl Tidb {
         Ok(())
     }
 
+    /// Insert new TI database
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if it fails to encode TI database
+    /// * Returns an error if it fails to save TI database
     pub fn insert(&self, store: &Store) -> Result<(String, String)> {
         let name = self.name.clone();
         let version = self.version.clone();
@@ -48,6 +60,13 @@ impl Tidb {
         Ok((name, version))
     }
 
+    /// Replace TI database with the new
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if the TI database name does not match
+    /// * Returns an error if it fails to encode TI database
+    /// * Returns an error if it fails to delete or save TI database
     pub fn update(&self, store: &Store, name: &str) -> Result<(String, String)> {
         if *name != self.name {
             bail!("Tidb name does not matched");
@@ -61,7 +80,13 @@ impl Tidb {
         Ok((new_name, new_version))
     }
 
-    /// return ti database
+    /// Returns TI database
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if it fails to read database
+    /// * Returns an error if it fails to decode TI database
+    /// * Returns an error if the TI database does not exist
     pub fn get(store: &Store, name: &str) -> Result<Tidb> {
         let map = store.tidb_map();
         let tidb = match map.get(name.as_bytes())? {
@@ -73,7 +98,13 @@ impl Tidb {
         Ok(tidb)
     }
 
-    /// The list of TI databases
+    /// Returns the list of TI databases
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if it fails to read database
+    /// * Returns an error if it fails to decode TI database
+    /// * Returns an error if the rule does not exist
     pub fn get_list(store: &Store) -> Result<Vec<Tidb>> {
         let mut tidb_list = Vec::new();
         let map = store.tidb_map();
@@ -87,7 +118,11 @@ impl Tidb {
         Ok(tidb_list)
     }
 
-    /// return ti database name and database for the specified (name, version)
+    /// Returns TI database name and database for the specified name and version
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if it fails to decode TI database
     pub fn get_patterns(
         store: &Store,
         dbnames: Vec<(String, String)>,
@@ -140,6 +175,13 @@ impl Tidb {
         Ok(ret)
     }
 
+    /// Returns rule
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if it fails to get rule for the specified name
+    /// * Returns an error if it fails to decode TI database
+    /// * Returns an error if the TI database does not exist
     pub fn get_rule(store: &Store, name: &str, rule_id: u32) -> Result<Option<TidbRule>> {
         let map = store.tidb_map();
         let tidb = match map.get(name.as_bytes())? {
@@ -155,6 +197,11 @@ impl Tidb {
             .map_or(Ok(None), |rule| Ok(Some(rule.clone())))
     }
 
+    /// Removes TI database
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if it failes to remove value from database
     pub fn remove(store: &Store, name: &str) -> Result<()> {
         let map = store.tidb_map();
         map.delete(name.as_bytes())?;
