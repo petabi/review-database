@@ -55,7 +55,7 @@ pub use self::top_n::{
     ClusterScore, ClusterScoreSet, ClusterTrend, ElementCount, LineSegment, Regression,
     StructuredColumnType, TopColumnsOfCluster, TopMultimaps, TopTrendsByColumn,
 };
-pub use self::traffic_filter::TrafficFilter;
+pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::types::{
     AttrCmpKind, Confidence, Customer, CustomerNetwork, DataSource, DataType, EventCategory,
     HostNetworkGroup, ModelIndicator, PacketAttr, Response, ResponseKind, Ti, TiCmpKind,
