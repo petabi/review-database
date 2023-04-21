@@ -15,13 +15,14 @@ use bb8_postgres::{
 };
 use diesel_async::AsyncPgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use rustls::{Certificate, ClientConfig, RootCertStore};
+use rustls::{Certificate, CertificateError, ClientConfig, RootCertStore};
 use serde::de::DeserializeOwned;
 use std::{
     cmp::min,
     fmt::Write,
-    fs::read,
+    fs, io,
     path::Path,
+    sync::Arc,
     time::{Duration, Instant},
 };
 use tokio_postgres_rustls::MakeRustlsConnect;
@@ -341,29 +342,37 @@ impl ConnectionPoolType {
         Ok(ConnectionPoolType::Tls(inner))
     }
 
+    /// Builds a `ClientConfig` with safe defaults.
+    ///
+    /// # Errors
+    ///
+    /// This function may return a `rustls::Error` if any of the following occurs:
+    ///
+    /// * The provided root CA certificate paths are invalid or cannot be read.
+    /// * The provided root CA certificates are invalid or cannot be parsed.
+    /// * The function is unable to load root certificates from the platform's trusted certificate
+    ///   store.
     fn build_client_config<P: AsRef<Path>>(
         root_ca: &[P],
         with_platform_root: bool,
-    ) -> Result<ClientConfig, Error> {
+    ) -> Result<ClientConfig, rustls::Error> {
         let mut root_store = RootCertStore::empty();
         if with_platform_root {
             match rustls_native_certs::load_native_certs() {
                 Ok(certs) => {
                     for cert in certs {
-                        root_store
-                            .add(&rustls::Certificate(cert.0))
-                            .map_err(|e| Error::Tls(e.to_string()))?;
+                        root_store.add(&Certificate(cert.0))?;
                     }
                 }
                 Err(e) => tracing::error!("Could not load platform certificates: {:#}", e),
             }
         }
         for root in root_ca {
-            let certs = Self::read_certificate_from_path(root)?;
+            let certs = Self::read_certificates_from_path(root).map_err(|e| {
+                rustls::Error::InvalidCertificate(CertificateError::Other(Arc::new(e)))
+            })?;
             for cert in certs {
-                root_store
-                    .add(&cert)
-                    .map_err(|e| Error::Tls(e.to_string()))?;
+                root_store.add(&cert)?;
             }
         }
 
@@ -375,10 +384,17 @@ impl ConnectionPoolType {
         Ok(builder)
     }
 
-    fn read_certificate_from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Certificate>, Error> {
-        let cert = read(&path).map_err(|e| Error::Tls(e.to_string()))?;
-        Ok(rustls_pemfile::certs(&mut &*cert)
-            .map_err(|e| Error::Tls(e.to_string()))?
+    /// Reads certificates from a given file path.
+    ///
+    /// # Errors
+    ///
+    /// This function can return an [`std::io::Error`] in the following cases:
+    ///
+    /// * If the file cannot be read or does not exist.
+    /// * If the certificates cannot be parsed from the file.
+    fn read_certificates_from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Certificate>, io::Error> {
+        let cert = fs::read(&path)?;
+        Ok(rustls_pemfile::certs(&mut &*cert)?
             .into_iter()
             .map(Certificate)
             .collect())
