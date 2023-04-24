@@ -11,14 +11,32 @@ use bincode::Options;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 
-/// The latest break version for the database format to be compatible with the
-/// current version. When the database format changes, this must be updated to
-/// match the new break version, and the migration code must be added to the
-/// `migrate_data_dir` function. This should be complete and include any alpha
-/// or beta version designations if applicable.
-const BREAK_VERSION: &str = "0.5.0-alpha.4";
+/// The range of versions that use the current database format.
+///
+/// The range should include all the earlier, released versions that use the current database
+/// format, and exclude the first future version that uses a new database format.
+///
+/// # Examples
+///
+/// ```rust
+/// // The current version is 0.4.1 and the database format hasn't been changed since 0.3.0.
+/// // This should include future patch versions such as 0.4.2, 0.4.3, etc. since they won't
+/// // change the database format.
+/// const COMPATIBLE_VERSION: &str = ">=0.3,<0.5.0-alpha";
+/// ```
+///
+/// ```rust
+/// // The current version is 0.5.0-alpha.4 and the database format hasn't been changed since
+/// // 0.5.0-alpha.2. This shouldn't include any future version since we cannot guarantee that
+/// // the database format won't be changed in the future alpha or beta versions.
+/// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
+/// ```
+const COMPATIBLE_VERSION_REQ: &str = ">=0.5.0-alpha.4,<=0.5.0-alpha.4";
 
 /// Migrates the data directory to the up-to-date format if necessary.
+///
+/// Migration is supported between released versions only. The prelease versions (alpha, beta,
+/// etc.) should be assumed to be incompatible with each other.
 ///
 /// # Errors
 ///
@@ -29,7 +47,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     let data_dir = data_dir.as_ref();
     let backup_dir = backup_dir.as_ref();
 
-    let break_version = Version::parse(BREAK_VERSION).expect("valid version requirement");
+    let compatible = VersionReq::parse(COMPATIBLE_VERSION_REQ).expect("valid version requirement");
 
     let (data, data_ver) = retrieve_or_create_version(data_dir)?;
     let (backup, backup_ver) = retrieve_or_create_version(backup_dir)?;
@@ -41,24 +59,30 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     }
 
     let mut version = data_ver;
-    if version >= break_version {
-        // updates version on file to current
-
-        create_version_file(&backup).context("failed to update VERSION")?;
-        return create_version_file(&data).context("failed to update VERSION");
+    if compatible.matches(&version) {
+        return Ok(());
     }
 
+    // A list of migrations where each item is a tuple of (version requirement, to version,
+    // migration function).
+    //
+    // * The "version requirement" should include all the earlier, released versions that use the
+    //   database format the migration function can handle, and exclude the first future version
+    //   that uses a new database format.
+    // * The "to version" should be the first future version that uses a new database format.
+    // * The "migration function" should migrate the database from the version before "to version"
+    //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
+    //   the first version (major.minor) in the "version requirement" and B is the "to version"
+    //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
     let migration: Vec<(_, _, fn(_, _) -> Result<_, _>)> = vec![
         (
-            VersionReq::parse(">=0.2,<0.4.0-alpha").expect("valid version requirement"),
+            VersionReq::parse(">=0.2,<0.4.0").expect("valid version requirement"),
             Version::parse("0.3.0").expect("valid version"),
             migrate_0_2_to_0_3,
         ),
         (
-            VersionReq::parse(">=0.3,<0.6.0-alpha").expect("valid version requirement"),
-            // This doesn't include any alpha or beta versions even if the break version does.
+            VersionReq::parse(">=0.3,<0.5.0").expect("valid version requirement"),
             Version::parse("0.5.0").expect("valid version"),
-            // migrate_A_to_B: A should be the previous break version, B the current break version. (major only)
             migrate_0_3_to_0_5,
         ),
     ];
@@ -69,14 +93,14 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     {
         m(data_dir, backup_dir)?;
         version = to.clone();
-        if version >= break_version {
+        if compatible.matches(&version) {
             create_version_file(&backup).context("failed to update VERSION")?;
             return create_version_file(&data).context("failed to update VERSION");
         }
     }
 
     Err(anyhow!(
-        "incompatible version {version}, require 0.2.0 or later"
+        "incompatible version {version}, require {compatible}"
     ))
 }
 
@@ -133,7 +157,7 @@ fn read_version_file(path: &Path) -> Result<Version> {
     Version::parse(&ver).context("cannot parse VERSION")
 }
 
-/// Migrate the data base from 0.2 to 0.3.
+/// Migrates the database from 0.2 to 0.3.
 ///
 /// # Errors
 ///
@@ -191,7 +215,7 @@ pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<(
     Ok(())
 }
 
-/// Migrate the data base from 0.3 to 0.5.
+/// Migrates the database from 0.3 to 0.5.
 ///
 /// # Errors
 ///
@@ -266,20 +290,29 @@ pub(crate) fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<(
 
 #[cfg(test)]
 mod tests {
-    use semver::Version;
+    use semver::{Version, VersionReq};
 
-    use super::BREAK_VERSION;
+    use super::COMPATIBLE_VERSION_REQ;
 
     #[test]
     fn version() {
-        let break_version = Version::parse(BREAK_VERSION).expect("valid semver");
+        let compatible = VersionReq::parse(COMPATIBLE_VERSION_REQ).expect("valid semver");
+        let current = Version::parse(env!("CARGO_PKG_VERSION")).expect("valid semver");
 
-        // The current version must be the same as the break version, or later.
-        let version = Version::parse(env!("CARGO_PKG_VERSION")).expect("valid semver");
-        assert!(version >= break_version);
+        // The current version must match the compatible version requirement.
+        assert!(compatible.matches(&current));
 
-        // An incompatible version must be less than the break version.
-        let version = Version::parse("0.2.0").expect("valid semver");
-        assert!(version < break_version);
+        // A future, backward-incompatible version must not match the compatible version.
+        let version = Version::parse("0.5.0").expect("valid semver");
+        let breaking = {
+            let mut breaking = version.clone();
+            if breaking.major == 0 {
+                breaking.minor += 1;
+            } else {
+                breaking.major += 1;
+            }
+            breaking
+        };
+        assert!(!compatible.matches(&breaking));
     }
 }
