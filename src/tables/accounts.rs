@@ -1,3 +1,5 @@
+//! The accounts table.
+
 use std::net::IpAddr;
 
 use anyhow::{bail, Context};
@@ -8,25 +10,47 @@ use crate::{
     IterableMap, Map, MapIterator, Role, Table, EXCLUSIVE,
 };
 
+/// Fuctions for the accounts table.
 impl<'d> Table<'d, Account> {
     /// Opens the accounts table in the database.
+    ///
+    /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
         Map::open(db, super::ACCOUNTS).map(Table::new)
     }
 
-    /// Deletes an account.
+    /// Deletes an account with the given username.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account does not exist or the database operation fails.
     pub fn delete(&self, username: &str) -> Result<(), anyhow::Error> {
         self.map.delete(username.as_bytes())
     }
 
+    /// Gets an account with the given username.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account does not exist or the database operation fails.
     pub fn get(&self, username: &str) -> Result<Option<impl AsRef<[u8]>>, anyhow::Error> {
         self.map.get(username.as_bytes())
     }
 
+    /// Puts an account with the given username and content.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     pub fn put(&self, username: &str, value: &[u8]) -> Result<(), anyhow::Error> {
         self.map.put(username.as_bytes(), value)
     }
 
+    /// Inserts an account with the given username and content.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account already exists or the database operation fails.
     pub fn insert(&self, username: &str, value: &[u8]) -> Result<(), anyhow::Error> {
         self.map.insert(username.as_bytes(), value)
     }

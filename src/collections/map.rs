@@ -13,7 +13,11 @@ impl<'a> Map<'a> {
         db.cf_handle(name).map(|cf| Self { db, cf })
     }
 
-    /// Deletes a key-value pair.
+    /// Deletes a key-value pair with the given key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key does not exist or the database operation fails.
     pub fn delete(&self, key: &[u8]) -> Result<(), anyhow::Error> {
         self.db
             .delete_cf(self.cf, key)
@@ -21,6 +25,10 @@ impl<'a> Map<'a> {
     }
 
     /// Gets a value corresponding to the given key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key does not exist or the database operation fails.
     pub fn get(&self, key: &[u8]) -> Result<Option<impl AsRef<[u8]>>> {
         self.db
             .get_cf(self.cf, key)
@@ -28,6 +36,10 @@ impl<'a> Map<'a> {
     }
 
     /// Puts a key-value pair.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     pub fn put(&self, key: &[u8], value: &[u8]) -> Result<()> {
         self.db
             .put_cf(self.cf, key, value)
@@ -38,7 +50,7 @@ impl<'a> Map<'a> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the key already exists.
+    /// Returns an error if the key already exists or the database operation fails.
     pub fn insert(&self, key: &[u8], value: &[u8]) -> Result<()> {
         let txn = self.db.transaction();
         if txn

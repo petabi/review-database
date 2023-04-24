@@ -81,6 +81,11 @@ pub struct Database {
 }
 
 impl Database {
+    /// Creates a new database connection pool.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the connection pool cannot be created.
     pub async fn new<P: AsRef<Path>>(url: &str, db_root_ca: &[P]) -> Result<Self, Error> {
         ConnectionPool::new(url, db_root_ca)
             .await
@@ -98,6 +103,11 @@ pub struct Store {
 }
 
 impl Store {
+    /// Opens a new key-value store and its backup.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key-value store or its backup cannot be opened.
     pub fn new(path: &Path, backup: &Path) -> Result<Self, anyhow::Error> {
         let db_path = path.join(DEFAULT_STATES);
         let states = StateDb::open(&db_path)?;

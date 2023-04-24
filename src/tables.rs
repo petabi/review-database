@@ -132,6 +132,7 @@ impl StateDb {
     }
 }
 
+/// A database table storing records of type `R`.
 pub struct Table<'d, R> {
     map: Map<'d>,
     _phantom: std::marker::PhantomData<R>,
