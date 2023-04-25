@@ -81,7 +81,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_2_to_0_3,
         ),
         (
-            VersionReq::parse(">=0.3,<0.5.0").expect("valid version requirement"),
+            VersionReq::parse(">=0.3,<0.5.0-alpha.4").expect("valid version requirement"),
             Version::parse("0.5.0").expect("valid version"),
             migrate_0_3_to_0_5,
         ),
