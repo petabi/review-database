@@ -99,9 +99,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         }
     }
 
-    Err(anyhow!(
-        "incompatible version {version}, require {compatible}"
-    ))
+    Err(anyhow!("migration from {version} is not supported",))
 }
 
 /// Recursively creates `path` if not existed, creates the VERSION file
