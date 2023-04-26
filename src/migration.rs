@@ -30,7 +30,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.6.0-alpha.1,<0.6.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.6.0,<0.7.0-alpha";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -86,7 +86,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.5.0,<0.6.0").expect("valid version requirement"),
-            Version::parse("0.6.0-alpha.1").expect("valid version"),
+            Version::parse("0.6.0").expect("valid version"),
             migrate_0_5_to_0_6,
         ),
     ];
@@ -290,7 +290,7 @@ pub(crate) fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<(
     Ok(())
 }
 
-/// Migrates the database from 0.5 to 0.6.0-alpha.1.
+/// Migrates the database from 0.5 to 0.6.
 ///
 /// # Errors
 ///
@@ -359,9 +359,8 @@ mod tests {
         assert!(compatible.matches(&current));
 
         // A future, backward-incompatible version must not match the compatible version.
-        let version = Version::parse("0.5.0").expect("valid semver");
         let breaking = {
-            let mut breaking = version.clone();
+            let mut breaking = current;
             if breaking.major == 0 {
                 breaking.minor += 1;
             } else {
