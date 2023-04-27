@@ -10,6 +10,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Updated `ip2location` to 0.4.2.
+- Updated the database to include event_source(s) and modified the relevant
+  queries to accommodate this change.
 
 ## [0.6.0] - 2023-04-26
 

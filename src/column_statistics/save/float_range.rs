@@ -55,7 +55,7 @@ pub(super) async fn insert_top_n(
         mode_smallest: mode.smallest,
         mode_largest: mode.largest,
     };
-    let _query = diesel::insert_into(desc_d::description_float)
+    let _res = diesel::insert_into(desc_d::description_float)
         .values(&db)
         .execute(conn)
         .await?;

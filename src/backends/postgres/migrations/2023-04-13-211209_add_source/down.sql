@@ -23,4 +23,3 @@ DROP FUNCTION IF EXISTS attempt_cluster_upsert;
 DROP FUNCTION IF EXISTS attempt_event_ids_update;
 DROP FUNCTION IF EXISTS attempt_outlier_delete;
 DROP FUNCTION IF EXISTS attempt_outlier_upsert;
-
