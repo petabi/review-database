@@ -35,7 +35,7 @@ pub(super) async fn insert_top_n(
         description_id,
         mode,
     };
-    let _query = diesel::insert_into(desc_d::description_ipaddr)
+    let _res = diesel::insert_into(desc_d::description_ipaddr)
         .values(&db)
         .execute(conn)
         .await?;

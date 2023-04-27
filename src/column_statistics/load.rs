@@ -96,24 +96,6 @@ impl Database {
             }
         };
 
-        // let query = event_ranges.into_iter().map(|e| {
-        //     super::save::statistics::EventRangeInsert {
-        //         cluster_id: cluster,
-        //         time:
-        //     }
-        // })
-
-        // if let Some(time) = time {
-        //     query = query.filter(e_d::cluster_id.eq(cluster).and(e_d::time.eq(time)));
-        // } else {
-        //     query = query.filter(
-        //         e_d::cluster_id.eq(cluster).and(
-        //             e_d::first_event_id
-        //                 .eq(first_event_id.unwrap_or_default())
-        //                 .and(e_d::last_event_id.eq(last_event_id.unwrap_or_default())),
-        //         ),
-        //     );
-        // }
         let column_info = query.load::<ColumnDescriptionLoad>(&mut conn).await?;
 
         let mut columns: HashMap<i32, Vec<i32>> = HashMap::new();

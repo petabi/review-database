@@ -94,7 +94,7 @@ BEGIN
     _event_sources := array_cat($4, _event_sources);
     IF array_length(_event_ids, 1) > _max_event_id_num THEN
       LOOP
-        EXECUTE 'SELECT MIN(i), $2 FROM UNNEST($1) i, UNNEST($3) j WHERE i <> $4' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, _event_ids, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
+        EXECUTE 'SELECT i,  j FROM $1  i, $2 j WHERE i <> $3' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, (SELECT MIN(i) FROM _event_ids i);
 
         _event_ids := _event_ids_update;
         _event_sources := _event_sources_update;
@@ -162,7 +162,7 @@ BEGIN
       AND cluster.model_id = OLD.id
   LOOP
     LOOP
-      EXECUTE 'SELECT MIN(i), $2 FROM UNNEST($1) i, UNNEST($3) j WHERE i <> $4' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, _event_ids, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
+      EXECUTE 'SELECT i, j FROM UNNEST($1) WITH ORDINALITY AS t(i, idx) JOIN UNNEST($2) WITH ORDINALITY s(j, idx2) on idx = idx2 WHERE i <> $3' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
       _event_ids := _event_ids_update;
       _event_sources := _event_sources_update;
       IF (array_length(_event_ids, 1) > NEW.max_event_id_num) IS NOT TRUE THEN
@@ -179,7 +179,7 @@ BEGIN
       AND outlier.model_id = OLD.id
   LOOP
     LOOP
-      EXECUTE 'SELECT MIN(i), $2 FROM UNNEST($1) i, UNNEST($3) j WHERE i <> $4' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, _event_ids, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
+      EXECUTE 'SELECT i, j FROM UNNEST($1) WITH ORDINALITY AS t(i, idx) JOIN UNNEST($2) WITH ORDINALITY s(j, idx2) on idx = idx2 WHERE i <> $3' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
       _event_ids := _event_ids_update;
       _event_sources := _event_sources_update;
       IF (array_length(_event_ids, 1) > NEW.max_event_id_num) IS NOT TRUE THEN
@@ -278,7 +278,7 @@ BEGIN
 
     IF array_length(_event_ids, 1) > _max_event_id_num THEN
       LOOP
-        EXECUTE 'SELECT MIN(i), $2 FROM UNNEST($1) i, UNNEST($3) j WHERE i <> $4' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, _event_ids, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
+        EXECUTE 'SELECT i, j FROM UNNEST($1) WITH ORDINALITY AS t(i, idx) JOIN UNNEST($2) WITH ORDINALITY s(j, idx2) on idx = idx2 WHERE i <> $3' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
         _event_ids := _event_ids_update;
         _event_sources := _event_sources_update;
         IF (array_length(_event_ids, 1) > _max_event_id_num) IS NOT TRUE THEN

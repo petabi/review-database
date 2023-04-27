@@ -33,7 +33,7 @@ pub(super) async fn insert_top_n(
         description_id,
         mode,
     };
-    let _query = diesel::insert_into(desc_d::description_enum)
+    let _res = diesel::insert_into(desc_d::description_enum)
         .values(&db)
         .execute(conn)
         .await?;
