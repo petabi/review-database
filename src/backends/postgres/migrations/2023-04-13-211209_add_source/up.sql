@@ -1,4 +1,4 @@
-ALTER TABLE IF EXISTS cluster 
+ALTER TABLE IF EXISTS cluster
     ADD COLUMN event_sources TEXT[] DEFAULT '{}'::text[] NOT NULL;
 UPDATE cluster SET event_sources = ARRAY_FILL(''::TEXT, ARRAY[array_length(event_ids, 1)]);
 ALTER TABLE IF EXISTS cluster
@@ -94,7 +94,13 @@ BEGIN
     _event_sources := array_cat($4, _event_sources);
     IF array_length(_event_ids, 1) > _max_event_id_num THEN
       LOOP
-        EXECUTE 'SELECT i,  j FROM $1  i, $2 j WHERE i <> $3' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, (SELECT MIN(i) FROM _event_ids i);
+        SELECT ARRAY_AGG(t.id), ARRAY_AGG(t.src)
+        INTO _event_ids_update, _event_sources_update
+        FROM (
+          SELECT _event_ids[i] AS id, _event_sources[i] AS src
+          FROM generate_series(1, array_length(_event_ids, 1)) i
+          WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
+        ) t;
 
         _event_ids := _event_ids_update;
         _event_sources := _event_sources_update;
@@ -162,10 +168,13 @@ BEGIN
       AND cluster.model_id = OLD.id
   LOOP
     LOOP
-      SELECT _event_ids[i], _event_sources[i] 
-      FROM generate_series(1, array_length(_event_ids, 1)) i 
-      WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
-      INTO _event_ids_update, _event_sources_update;
+      SELECT ARRAY_AGG(t.id), ARRAY_AGG(t.src)
+        INTO _event_ids_update, _event_sources_update
+        FROM (
+          SELECT _event_ids[i] AS id, _event_sources[i] AS src
+          FROM generate_series(1, array_length(_event_ids, 1)) i
+          WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
+        ) t;
       _event_ids := _event_ids_update;
       _event_sources := _event_sources_update;
       IF (array_length(_event_ids, 1) > NEW.max_event_id_num) IS NOT TRUE THEN
@@ -182,10 +191,13 @@ BEGIN
       AND outlier.model_id = OLD.id
   LOOP
     LOOP
-      SELECT _event_ids[i], _event_sources[i] 
-      FROM generate_series(1, array_length(_event_ids, 1)) i 
-      WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
-      INTO _event_ids_update, _event_sources_update;
+      SELECT ARRAY_AGG(t.id), ARRAY_AGG(t.src)
+        INTO _event_ids_update, _event_sources_update
+        FROM (
+          SELECT _event_ids[i] AS id, _event_sources[i] AS src
+          FROM generate_series(1, array_length(_event_ids, 1)) i
+          WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
+        ) t;
       _event_ids := _event_ids_update;
       _event_sources := _event_sources_update;
       IF (array_length(_event_ids, 1) > NEW.max_event_id_num) IS NOT TRUE THEN
@@ -214,12 +226,11 @@ $$
 DECLARE
   _ids INTEGER[];
 BEGIN
-  SELECT array_agg(DISTINCT id)
+  SELECT array_agg(DISTINCT t.id)
   INTO _ids
-  FROM (SELECT outlier.id, unnest(outlier.event_ids) as event_id, unnest(outlier.event_sources) as event_source, model_id FROM outlier) t
-  WHERE t.event_id = ANY($1)
-    AND t.event_source = ANY($2)
-    AND t.model_id = $3;
+  FROM (SELECT outlier.id, unnest(outlier.event_ids) as event_id, unnest(outlier.event_sources) as event_source, model_id FROM outlier WHERE model_id = $3) t
+  JOIN (SELECT unnest($1) AS eid, unnest($2) AS src) input
+  ON event_id = input.eid AND event_source = input.src;
 
   DELETE FROM outlier
   WHERE id = ANY(_ids);
@@ -284,10 +295,13 @@ BEGIN
 
     IF array_length(_event_ids, 1) > _max_event_id_num THEN
       LOOP
-        SELECT _event_ids[i], _event_sources[i] 
-        FROM generate_series(1, array_length(_event_ids, 1)) i 
-        WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
-        INTO _event_ids_update, _event_sources_update;
+        SELECT ARRAY_AGG(t.id), ARRAY_AGG(t.src)
+        INTO _event_ids_update, _event_sources_update
+        FROM (
+          SELECT _event_ids[i] AS id, _event_sources[i] AS src
+          FROM generate_series(1, array_length(_event_ids, 1)) i
+          WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
+        ) t;
         _event_ids := _event_ids_update;
         _event_sources := _event_sources_update;
         IF (array_length(_event_ids, 1) > _max_event_id_num) IS NOT TRUE THEN
