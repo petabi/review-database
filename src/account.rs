@@ -57,6 +57,11 @@ pub struct SaltedPassword {
 }
 
 impl SaltedPassword {
+    /// Creates a new `SaltedPassword` with the given password.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the salt cannot be generated.
     pub fn new(password: &str) -> Result<Self> {
         const ITERATIONS: u32 = 100_000;
 

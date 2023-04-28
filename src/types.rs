@@ -22,6 +22,11 @@ use std::{
 use strum_macros::Display;
 
 pub trait FromKeyValue: Sized {
+    /// Creates a new instance from the given key and value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key or value cannot be deserialized.
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self>;
 }
 
@@ -283,6 +288,11 @@ pub struct ModelIndicator {
 }
 
 impl ModelIndicator {
+    /// Creates a new `ModelIndicator` from the given data.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the given data is invalid.
     pub fn new(data: &str) -> Result<Self> {
         let data = BASE64.decode(data.as_bytes())?;
         let decoder = GzDecoder::new(&data[..]);
@@ -296,6 +306,11 @@ impl ModelIndicator {
         Ok(indicator)
     }
 
+    /// Gets the `ModelIndicator` with the given name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails or the value in the database is invalid.
     pub fn get(store: &Arc<Store>, name: &str) -> Result<Option<Self>> {
         let map = store.model_indicator_map();
         Ok(match map.get(name.as_bytes())? {
@@ -308,6 +323,11 @@ impl ModelIndicator {
         })
     }
 
+    /// Gets the list of all `ModelIndicator`s, sorted by name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails or the value in the database is invalid.
     pub fn get_list(store: &Arc<Store>) -> Result<Vec<(String, ModelIndicator)>> {
         let map = store.model_indicator_map();
         let mut indicators = Vec::new();
@@ -321,6 +341,11 @@ impl ModelIndicator {
         Ok(indicators)
     }
 
+    /// Removes the `ModelIndicator`s with the given names. The removed names are returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     pub fn remove(store: &Arc<Store>, names: &[String]) -> Result<Vec<String>> {
         let map = store.model_indicator_map();
         let mut removed = Vec::with_capacity(names.len());
@@ -331,6 +356,11 @@ impl ModelIndicator {
         Ok(removed)
     }
 
+    /// Inserts the `ModelIndicator` into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the serialization fails or the database operation fails.
     pub fn insert(&self, store: &Arc<Store>, name: &str) -> Result<String> {
         let map = store.model_indicator_map();
         let value = bincode::DefaultOptions::new().serialize(self)?;
@@ -338,6 +368,11 @@ impl ModelIndicator {
         Ok(name.to_string())
     }
 
+    /// Updates the `ModelIndicator` in the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the serialization fails or the database operation fails.
     pub fn update(&self, store: &Arc<Store>, name: &str) -> Result<String> {
         let map = store.model_indicator_map();
         map.delete(name.as_bytes())?;
