@@ -1,6 +1,6 @@
 [package]
 name = "review-database"
-version = "0.6.0"
+version = "0.6.1-alpha.1"
 edition = "2021"
 
 [dependencies]
@@ -20,7 +20,7 @@ diesel_migrations = "2"
 fallible-iterator = "0.2"
 flate2 = "1.0"
 futures = "0.3"
-ip2location = "0.3.5"
+ip2location = "0.4.2"
 ipnet = { version = "2", features = ["serde"] }
 num-derive = "0.3"
 num-traits = "0.2"
