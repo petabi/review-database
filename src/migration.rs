@@ -30,7 +30,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.6.0,<0.7.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.6.0,<=0.6.1-alpha.1";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
