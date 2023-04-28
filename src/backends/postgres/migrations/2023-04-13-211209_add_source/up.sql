@@ -162,7 +162,10 @@ BEGIN
       AND cluster.model_id = OLD.id
   LOOP
     LOOP
-      EXECUTE 'SELECT i, j FROM UNNEST($1) WITH ORDINALITY AS t(i, idx) JOIN UNNEST($2) WITH ORDINALITY s(j, idx2) on idx = idx2 WHERE i <> $3' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
+      SELECT _event_ids[i], _event_sources[i] 
+      FROM generate_series(1, array_length(_event_ids, 1)) i 
+      WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
+      INTO _event_ids_update, _event_sources_update;
       _event_ids := _event_ids_update;
       _event_sources := _event_sources_update;
       IF (array_length(_event_ids, 1) > NEW.max_event_id_num) IS NOT TRUE THEN
@@ -179,7 +182,10 @@ BEGIN
       AND outlier.model_id = OLD.id
   LOOP
     LOOP
-      EXECUTE 'SELECT i, j FROM UNNEST($1) WITH ORDINALITY AS t(i, idx) JOIN UNNEST($2) WITH ORDINALITY s(j, idx2) on idx = idx2 WHERE i <> $3' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
+      SELECT _event_ids[i], _event_sources[i] 
+      FROM generate_series(1, array_length(_event_ids, 1)) i 
+      WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
+      INTO _event_ids_update, _event_sources_update;
       _event_ids := _event_ids_update;
       _event_sources := _event_sources_update;
       IF (array_length(_event_ids, 1) > NEW.max_event_id_num) IS NOT TRUE THEN
@@ -278,7 +284,10 @@ BEGIN
 
     IF array_length(_event_ids, 1) > _max_event_id_num THEN
       LOOP
-        EXECUTE 'SELECT i, j FROM UNNEST($1) WITH ORDINALITY AS t(i, idx) JOIN UNNEST($2) WITH ORDINALITY s(j, idx2) on idx = idx2 WHERE i <> $3' INTO _event_ids_update, _event_sources_update USING _event_ids, _event_sources, (SELECT MIN(i) FROM UNNEST(_event_ids) i);
+        SELECT _event_ids[i], _event_sources[i] 
+        FROM generate_series(1, array_length(_event_ids, 1)) i 
+        WHERE _event_ids[i] <> (SELECT MIN(j) FROM unnest(_event_ids) j)
+        INTO _event_ids_update, _event_sources_update;
         _event_ids := _event_ids_update;
         _event_sources := _event_sources_update;
         IF (array_length(_event_ids, 1) > _max_event_id_num) IS NOT TRUE THEN
