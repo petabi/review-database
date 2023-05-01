@@ -89,6 +89,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.6.0").expect("valid version"),
             migrate_0_5_to_0_6,
         ),
+        (
+            VersionReq::parse(">=0.6.0,<=0.7.0-alpha.1").expect("valid version requirement"),
+            Version::parse("0.7.0-alpha.1").expect("valid version"),
+            migrate_0_6_to_0_7,
+        ),
     ];
 
     while let Some((_req, to, m)) = migration
@@ -344,11 +349,92 @@ pub(crate) fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<(
     Ok(())
 }
 
+/// Migrates the database from 0.6 to 0.7.
+///
+/// # Errors
+///
+/// Returns an error if database migration fails.
+pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+    use crate::IterableMap;
+    use std::collections::HashMap;
+
+    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    store.backup(1)?;
+
+    #[derive(Deserialize, Serialize)]
+    struct OutlierKey {
+        model_id: i32,
+        timestamp: i64,
+        rank: i64,
+        id: i64,
+        source: String,
+    }
+
+    let map = store.outlier_map();
+
+    let mut outliers = vec![];
+
+    let mut max_ranks = HashMap::new();
+    for (k, v) in map.iter_forward()? {
+        let outlier_key: OutlierKey = bincode::DefaultOptions::new().deserialize(&k)?;
+        let max_rank = max_ranks
+            .entry((outlier_key.model_id, outlier_key.timestamp))
+            .or_default();
+        *max_rank = std::cmp::max(*max_rank, outlier_key.rank);
+        outliers.push((outlier_key, (k, v)));
+    }
+
+    for (mut outlier_key, (k, v)) in outliers {
+        let &max_rank = max_ranks
+            .get(&(outlier_key.model_id, outlier_key.timestamp))
+            .expect("the key should exists");
+        outlier_key.rank = max_rank - outlier_key.rank + 1;
+        let new_k = bincode::DefaultOptions::new().serialize(&outlier_key)?;
+        map.update((&k, &v), (&new_k, &v))?;
+    }
+
+    store.purge_old_backups(0)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use semver::{Version, VersionReq};
 
     use super::COMPATIBLE_VERSION_REQ;
+    use crate::{IterableMap, Store};
+
+    struct TestSchema {
+        db_dir: tempfile::TempDir,
+        backup_dir: tempfile::TempDir,
+        store: Store,
+    }
+
+    impl TestSchema {
+        fn new() -> Self {
+            let db_dir = tempfile::tempdir().unwrap();
+            let backup_dir = tempfile::tempdir().unwrap();
+            let store = Store::new(db_dir.path(), backup_dir.path()).unwrap();
+            TestSchema {
+                db_dir,
+                backup_dir,
+                store,
+            }
+        }
+
+        fn new_with_dir(db_dir: tempfile::TempDir, backup_dir: tempfile::TempDir) -> Self {
+            let store = Store::new(db_dir.path(), backup_dir.path()).unwrap();
+            TestSchema {
+                db_dir,
+                backup_dir,
+                store,
+            }
+        }
+
+        fn close(self) -> (tempfile::TempDir, tempfile::TempDir) {
+            (self.db_dir, self.backup_dir)
+        }
+    }
 
     #[test]
     fn version() {
@@ -369,5 +455,97 @@ mod tests {
             breaking
         };
         assert!(!compatible.matches(&breaking));
+    }
+
+    #[test]
+    fn migrate_0_6_to_0_7() {
+        use bincode::Options;
+        use serde::{Deserialize, Serialize};
+
+        #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
+        struct OutlierKey {
+            model_id: i32,
+            timestamp: i64,
+            rank: i64,
+            id: i64,
+            source: String,
+        }
+
+        #[derive(Default, Deserialize, Serialize)]
+        struct OutlierValue {
+            distance: f64,
+            is_saved: bool,
+        }
+
+        let value = OutlierValue::default();
+        let value = bincode::DefaultOptions::new()
+            .serialize(&value)
+            .expect("serialize error");
+        let keys = vec![
+            (1, 11, 1, 1, "a"),
+            (1, 11, 2, 2, "a"),
+            (1, 11, 2, 2, "b"),
+            (1, 11, 3, 3, "a"),
+            (1, 22, 1, 1, "a"),
+            (1, 22, 2, 2, "a"),
+            (1, 22, 3, 3, "c"),
+            (2, 11, 1, 1, "a"),
+            (2, 22, 2, 1, "a"),
+            (2, 22, 1, 2, "a"),
+        ];
+        let reversed = vec![
+            (1, 11, 1, 3, "a"),
+            (1, 11, 2, 2, "a"),
+            (1, 11, 2, 2, "b"),
+            (1, 11, 3, 1, "a"),
+            (1, 22, 1, 3, "c"),
+            (1, 22, 2, 2, "a"),
+            (1, 22, 3, 1, "a"),
+            (2, 11, 1, 1, "a"),
+            (2, 22, 1, 1, "a"),
+            (2, 22, 2, 2, "a"),
+        ];
+
+        let settings = TestSchema::new();
+        let map = settings.store.outlier_map();
+        for (model_id, timestamp, rank, id, source) in keys {
+            let key = OutlierKey {
+                model_id,
+                timestamp,
+                rank,
+                id,
+                source: source.to_owned(),
+            };
+            let key = bincode::DefaultOptions::new()
+                .serialize(&key)
+                .expect("serialize error");
+            map.insert(&key, &value).expect("storing error");
+        }
+
+        let (db_dir, backup_dir) = settings.close();
+        assert!(super::migrate_0_6_to_0_7(db_dir.path(), backup_dir.path()).is_ok());
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        let map = settings.store.outlier_map();
+        let updated: Vec<OutlierKey> = map
+            .iter_forward()
+            .expect("iter error")
+            .map(|(k, _v)| {
+                bincode::DefaultOptions::new()
+                    .deserialize(&k)
+                    .expect("deserialize error")
+            })
+            .collect();
+        let reversed: Vec<_> = reversed
+            .into_iter()
+            .map(|(model_id, timestamp, rank, id, source)| OutlierKey {
+                model_id,
+                timestamp,
+                rank,
+                id,
+                source: source.to_owned(),
+            })
+            .collect();
+        assert_eq!(reversed, updated);
     }
 }
