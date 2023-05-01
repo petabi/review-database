@@ -24,6 +24,13 @@ pub(super) trait Match {
     fn confidence(&self) -> Option<f32>;
     fn score_by_packet_attr(&self, triage: &TriagePolicy) -> f64;
 
+    /// Returns whether the event matches the filter and the triage scores. The triage scores are
+    /// only returned if the event matches the filter.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the filter contains a country filter but the ip2location database is
+    /// not available.
     fn matches(
         &self,
         locator: Option<Arc<Mutex<ip2location::DB>>>,
@@ -45,6 +52,13 @@ pub(super) trait Match {
         true
     }
 
+    /// Returns whether the event matches the filter (excluding `kinds`) and the triage scores. The
+    /// triage scores are only returned if the event matches the filter.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the filter contains a country filter but the ip2location database is
+    /// not available.
     #[allow(clippy::too_many_lines)]
     fn other_matches(
         &self,

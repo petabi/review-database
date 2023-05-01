@@ -78,6 +78,13 @@ pub enum Event {
 }
 
 impl Event {
+    /// Returns whether the event matches the given filter. If the event matches, returns the
+    /// triage score for the event.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the filter contains a country filter but the ip2location database is
+    /// not available.
     pub fn matches(
         &self,
         locator: Option<Arc<Mutex<ip2location::DB>>>,
@@ -93,6 +100,11 @@ impl Event {
         }
     }
 
+    /// Counts the number of events per country.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     #[allow(clippy::needless_pass_by_value)] // function prototype must be the same as other `count_*` functions.
     pub fn count_country(
         &self,
@@ -146,6 +158,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per category.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_category(
         &self,
         counter: &mut HashMap<EventCategory, usize>,
@@ -193,6 +210,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per IP address.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_ip_address(
         &self,
         counter: &mut HashMap<IpAddr, usize>,
@@ -235,6 +257,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per IP address pair.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_ip_address_pair(
         &self,
         counter: &mut HashMap<(IpAddr, IpAddr), usize>,
@@ -277,6 +304,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per IP address and event kind.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_ip_address_pair_and_kind(
         &self,
         counter: &mut HashMap<(IpAddr, IpAddr, &'static str), usize>,
@@ -329,6 +361,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per source IP address.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_src_ip_address(
         &self,
         counter: &mut HashMap<IpAddr, usize>,
@@ -376,6 +413,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per destination IP address.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_dst_ip_address(
         &self,
         counter: &mut HashMap<IpAddr, usize>,
@@ -418,6 +460,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per event kind.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_kind(
         &self,
         counter: &mut HashMap<String, usize>,
@@ -469,6 +516,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per level.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_level(
         &self,
         counter: &mut HashMap<NonZeroU8, usize>,
@@ -516,6 +568,11 @@ impl Event {
         Ok(())
     }
 
+    /// Counts the number of events per network.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if matching the event against the filter fails.
     pub fn count_network(
         &self,
         counter: &mut HashMap<u32, usize>,
@@ -596,6 +653,7 @@ impl Event {
         Ok(())
     }
 
+    /// Sets the triage scores of the event.
     pub fn set_triage_scores(&mut self, triage_scores: Vec<TriageScore>) {
         match self {
             Event::DnsCovertChannel(event) => {
