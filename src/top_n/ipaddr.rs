@@ -61,6 +61,11 @@ async fn get_top_n_of_multiple_clusters(
 }
 
 impl Database {
+    /// Gets top N IP addresses of a cluster.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn get_top_ip_addresses_of_cluster(
         &self,
         model_id: i32,
@@ -116,6 +121,11 @@ impl Database {
         Ok(top_n)
     }
 
+    /// Gets top N IP addresses of a model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn get_top_ip_addresses_of_model(
         &self,
         model_id: i32,

@@ -142,6 +142,11 @@ async fn top_n_of_float(
 }
 
 impl Database {
+    /// Gets the top N columns of a model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database error occurs.
     #[allow(clippy::too_many_lines)]
     pub async fn get_top_columns_of_model(
         &self,

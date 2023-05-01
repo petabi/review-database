@@ -113,6 +113,11 @@ struct ClusterSize {
 }
 
 impl Database {
+    /// Gets the top N elements of a cluster.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn get_column_types_of_model(
         &self,
         model_id: i32,

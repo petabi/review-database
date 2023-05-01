@@ -49,6 +49,11 @@ use cluster::dsl as c_d;
 use time_series::dsl as t_d;
 
 impl Database {
+    /// Returns the top trends of a model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn get_top_time_series_of_model(
         &self,
         model_id: i32,

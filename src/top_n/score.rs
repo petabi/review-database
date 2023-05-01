@@ -95,6 +95,11 @@ pub struct ClusterScoreSet {
 }
 
 impl Database {
+    /// Gets top N clusters by score.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     #[allow(clippy::too_many_lines)]
     pub async fn get_top_clusters_by_score(
         &self,

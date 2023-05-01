@@ -365,6 +365,11 @@ async fn get_top_n(
 }
 
 impl Database {
+    /// Gets the top N multimaps of a model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database error occurs.
     #[allow(clippy::too_many_lines)]
     pub async fn get_top_multimaps_of_model(
         &self,
