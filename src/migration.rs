@@ -356,10 +356,6 @@ pub(crate) fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<(
 /// Returns an error if database migration fails.
 pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use crate::IterableMap;
-
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(1)?;
-
     #[derive(Deserialize, Serialize)]
     struct OutlierKey {
         model_id: i32,
@@ -368,6 +364,9 @@ pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<(
         id: i64,
         source: String,
     }
+
+    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    store.backup(1)?;
 
     let map = store.outlier_map();
 
