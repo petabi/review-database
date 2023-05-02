@@ -356,7 +356,6 @@ pub(crate) fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<(
 /// Returns an error if database migration fails.
 pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use crate::IterableMap;
-    use std::collections::HashMap;
 
     let store = super::Store::new(path.as_ref(), backup.as_ref())?;
     store.backup(1)?;
@@ -374,21 +373,32 @@ pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<(
 
     let mut outliers = vec![];
 
-    let mut max_ranks = HashMap::new();
     for (k, v) in map.iter_forward()? {
         let outlier_key: OutlierKey = bincode::DefaultOptions::new().deserialize(&k)?;
-        let max_rank = max_ranks
-            .entry((outlier_key.model_id, outlier_key.timestamp))
-            .or_default();
-        *max_rank = std::cmp::max(*max_rank, outlier_key.rank);
+
         outliers.push((outlier_key, (k, v)));
     }
 
-    for (mut outlier_key, (k, v)) in outliers {
-        let &max_rank = max_ranks
-            .get(&(outlier_key.model_id, outlier_key.timestamp))
-            .expect("the key should exists");
-        outlier_key.rank = max_rank - outlier_key.rank + 1;
+    let mut prev = (-1, -1, -1);
+    let mut rank = -1;
+    let mut len = 0;
+    for (mut outlier_key, (k, v)) in outliers.into_iter().rev() {
+        if outlier_key.model_id != prev.0 || outlier_key.timestamp != prev.1 {
+            len = 1;
+            rank = 1;
+        } else {
+            len += 1;
+            if prev.2 != outlier_key.rank {
+                rank = len;
+            }
+        }
+
+        prev = (
+            outlier_key.model_id,
+            outlier_key.timestamp,
+            outlier_key.rank,
+        );
+        outlier_key.rank = rank;
         let new_k = bincode::DefaultOptions::new().serialize(&outlier_key)?;
         map.update((&k, &v), (&new_k, &v))?;
     }
@@ -485,21 +495,21 @@ mod tests {
             (1, 11, 1, 1, "a"),
             (1, 11, 2, 2, "a"),
             (1, 11, 2, 2, "b"),
-            (1, 11, 3, 3, "a"),
+            (1, 11, 3, 4, "a"),
             (1, 22, 1, 1, "a"),
             (1, 22, 2, 2, "a"),
-            (1, 22, 3, 3, "c"),
+            (1, 22, 2, 3, "c"),
             (2, 11, 1, 1, "a"),
-            (2, 22, 2, 1, "a"),
             (2, 22, 1, 2, "a"),
+            (2, 22, 2, 1, "a"),
         ];
         let reversed = vec![
-            (1, 11, 1, 3, "a"),
+            (1, 11, 1, 4, "a"),
             (1, 11, 2, 2, "a"),
             (1, 11, 2, 2, "b"),
-            (1, 11, 3, 1, "a"),
+            (1, 11, 4, 1, "a"),
+            (1, 22, 1, 2, "a"),
             (1, 22, 1, 3, "c"),
-            (1, 22, 2, 2, "a"),
             (1, 22, 3, 1, "a"),
             (2, 11, 1, 1, "a"),
             (2, 22, 1, 1, "a"),
