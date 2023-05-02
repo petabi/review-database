@@ -106,8 +106,6 @@ impl Database {
         &self,
         model_id: i32,
     ) -> Result<Vec<LoadOutlier>, Error> {
-        let conn = self.pool.get().await?;
-
         #[derive(Deserialize, Serialize)]
         struct OutlierRow {
             #[serde(with = "serde_bytes")]
@@ -116,6 +114,7 @@ impl Database {
             event_sources: Vec<Source>,
         }
 
+        let conn = self.pool.get().await?;
         let results = conn
             .select_in::<OutlierRow>(
                 "outlier",
