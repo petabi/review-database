@@ -18,6 +18,11 @@ pub struct UpdateClusterRequest {
 }
 
 impl Database {
+    /// Counts the number of clusters matching the given conditions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     #[allow(clippy::vec_init_then_push)] // `vec![..]` requires static lifetime.
     pub async fn count_clusters(
         &self,
@@ -56,6 +61,11 @@ impl Database {
         .await
     }
 
+    /// Returns the numerical ID of the cluster with the given cluster ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     pub async fn cluster_id(&self, cluster_id: &str, model_id: i32) -> Result<i32, Error> {
         let conn = self.pool.get().await?;
         conn.select_one_from(
@@ -67,6 +77,11 @@ impl Database {
         .await
     }
 
+    /// Returns the clusters that satisfy the given conditions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     #[allow(clippy::too_many_arguments)]
     pub async fn load_clusters(
         &self,
