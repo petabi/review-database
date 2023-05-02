@@ -76,6 +76,10 @@ impl<'a> Map<'a> {
     }
 
     /// Replaces the entire key-value pairs with new ones.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     pub fn replace_all(&self, new: &[(&[u8], &[u8])]) -> Result<()> {
         loop {
             let txn = self.db.transaction();
@@ -104,6 +108,11 @@ impl<'a> Map<'a> {
     }
 
     /// Updates an old key-value pair to a new one.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the old value does not match the value in the database, the old key does
+    /// not exist, or the database operation fails.
     pub fn update(&self, old: (&[u8], &[u8]), new: (&[u8], &[u8])) -> Result<()> {
         loop {
             let txn = self.db.transaction();
