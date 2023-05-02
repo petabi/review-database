@@ -30,7 +30,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.6.0,<=0.7.0-alpha.1";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.7.0,<0.8.0-alpha";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -90,8 +90,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_5_to_0_6,
         ),
         (
-            VersionReq::parse(">=0.6.0,<=0.7.0-alpha.1").expect("valid version requirement"),
-            Version::parse("0.7.0-alpha.1").expect("valid version"),
+            VersionReq::parse(">=0.6.0,<0.7.0").expect("valid version requirement"),
+            Version::parse("0.7.0").expect("valid version"),
             migrate_0_6_to_0_7,
         ),
     ];
