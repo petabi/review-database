@@ -82,6 +82,11 @@ fn check_column_types(stats: &[ColumnStatisticsUpdate]) -> Vec<i32> {
 }
 
 impl Database {
+    /// Inserts column statistics into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     #[allow(clippy::too_many_lines)]
     pub async fn insert_column_statistics(
         &self,
