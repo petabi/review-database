@@ -9,17 +9,32 @@ pub struct Qualifier {
 }
 
 impl Database {
+    /// Adds a new qualifier to the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn add_qualifier(&self, description: &str) -> Result<i32, Error> {
         let conn = self.pool.get().await?;
         conn.insert_into("qualifier", &[("description", Type::TEXT)], &[&description])
             .await
     }
 
+    /// Counts the number of qualifiers in the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn count_qualifiers(&self) -> Result<i64, Error> {
         let conn = self.pool.get().await?;
         conn.count("qualifier", &[], &[], &[]).await
     }
 
+    /// Returns the qualifier with the given id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn load_qualifier(&self, id: i32) -> Result<Qualifier, Error> {
         let conn = self.pool.get().await?;
         conn.select_one_from::<Qualifier>(
@@ -31,6 +46,11 @@ impl Database {
         .await
     }
 
+    /// Returns a list of qualifiers between `after` and `before`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn load_qualifiers(
         &self,
         after: &Option<(i32, String)>,
@@ -63,6 +83,11 @@ impl Database {
         .await
     }
 
+    /// Updates the description of the qualifier with the given id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn update_qualifier(&self, id: i32, description: &str) -> Result<(), Error> {
         let conn = self.pool.get().await?;
         conn.update(
