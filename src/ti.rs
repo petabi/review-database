@@ -234,6 +234,11 @@ pub enum TidbKind {
 }
 
 impl Database {
+    /// Updates the status of the agent.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn update_agent_status(&self, hostname: String, status: bool) -> Result<(), Error> {
         let conn = self.pool.get().await?;
         let id = conn
