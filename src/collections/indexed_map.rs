@@ -25,6 +25,11 @@ impl<'a> Indexed for IndexedMap<'a> {
 }
 
 impl<'a> IndexedMap<'a> {
+    /// Creates a new `IndexedMap`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the column family cannot be found.
     pub fn new(db: &'a rocksdb::OptimisticTransactionDB, name: &str) -> Result<Self> {
         db.cf_handle(name)
             .map(|cf| Self { db, cf })
@@ -32,6 +37,10 @@ impl<'a> IndexedMap<'a> {
     }
 
     /// Gets a value corresponding to the given index.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or cannot be read.
     pub fn get_by_id(&self, id: u32) -> Result<Option<impl AsRef<[u8]>>> {
         let index = self.index()?;
         let Some(key) = index.get(id).context("invalid ID")? else {
@@ -41,6 +50,10 @@ impl<'a> IndexedMap<'a> {
     }
 
     /// Gets a value corresponding to the given key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key is empty or cannot be read.
     pub fn get_by_key(&self, key: &[u8]) -> Result<Option<impl AsRef<[u8]>>> {
         if key.is_empty() {
             bail!("key shouldn't be empty");
