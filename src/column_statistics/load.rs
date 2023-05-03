@@ -51,6 +51,11 @@ trait ToNLargestCount {
 }
 
 impl Database {
+    /// Returns the column statistics for the given cluster and time.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     pub async fn get_column_statistics(
         &self,
         cluster: i32,
