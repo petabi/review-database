@@ -1,6 +1,7 @@
 use crate::{
-    tokio_postgres::types::ToSql, types::Cluster, Database, Error, OrderDirection, Type, Value,
+    tokio_postgres::types::ToSql, types::Cluster, Database, Error, Type, Value,
 };
+use chrono::NaiveDateTime;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -15,6 +16,47 @@ pub struct UpdateClusterRequest {
     pub event_ids: Vec<crate::types::Id>,
     pub status_id: i32,
     pub labels: Option<Vec<String>>,
+}
+
+#[derive(Queryable)]
+struct ClusterDbSchema {
+    id: i32,
+    cluster_id: String,
+    category_id: i32,
+    detector_id: i32,
+    event_ids: Vec<Option<i64>>,
+    labels: Option<Vec<Option<String>>>,
+    qualifier_id: i32,
+    status_id: i32,
+    signature: String,
+    size: i64,
+    score: Option<f64>,
+    last_modification_time: Option<NaiveDateTime>,
+    model_id: i32,
+}
+
+impl From<ClusterDbSchema> for Cluster {
+    fn from(c: ClusterDbSchema) -> Self {
+        let event_ids: Vec<i64> = c.event_ids.into_iter().flatten().collect();
+        let labels: Option<Vec<String>> = c
+            .labels
+            .map(|labels| labels.into_iter().flatten().collect());
+        Cluster {
+            id: c.id,
+            cluster_id: c.cluster_id,
+            category_id: c.category_id,
+            detector_id: c.detector_id,
+            event_ids,
+            labels,
+            qualifier_id: c.qualifier_id,
+            status_id: c.status_id,
+            signature: c.signature,
+            size: c.size,
+            score: c.score,
+            last_modification_time: c.last_modification_time,
+            model_id: c.model_id,
+        }
+    }
 }
 
 impl Database {
@@ -95,61 +137,65 @@ impl Database {
         is_first: bool,
         limit: usize,
     ) -> Result<Vec<Cluster>, Error> {
-        let conn = self.pool.get().await?;
-        let mut any_variables = Vec::new();
-        let mut params: Vec<&(dyn ToSql + Sync)> = vec![&model];
-        if categories.is_some() {
-            any_variables.push(("category_id", Type::INT4_ARRAY));
-            params.push(&categories);
+        use super::schema::cluster::dsl;
+        use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
+        use diesel_async::RunQueryDsl;
+
+        let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
+        let mut query = dsl::cluster
+            .select((
+                dsl::id,
+                dsl::cluster_id,
+                dsl::category_id,
+                dsl::detector_id,
+                dsl::event_ids,
+                dsl::labels,
+                dsl::qualifier_id,
+                dsl::status_id,
+                dsl::signature,
+                dsl::size,
+                dsl::score,
+                dsl::last_modification_time,
+                dsl::model_id,
+            ))
+            .filter(dsl::model_id.eq(&model))
+            .limit(limit)
+            .into_boxed();
+
+        if let Some(categories) = categories {
+            query = query.filter(dsl::category_id.eq_any(categories));
         }
-        if detectors.is_some() {
-            any_variables.push(("detector_id", Type::INT4_ARRAY));
-            params.push(&detectors);
+        if let Some(detectors) = detectors {
+            query = query.filter(dsl::detector_id.eq_any(detectors));
         }
-        if qualifiers.is_some() {
-            any_variables.push(("qualifier_id", Type::INT4_ARRAY));
-            params.push(&qualifiers);
+        if let Some(qualifiers) = qualifiers {
+            query = query.filter(dsl::qualifier_id.eq_any(qualifiers));
         }
-        if statuses.is_some() {
-            any_variables.push(("status_id", Type::INT4_ARRAY));
-            params.push(&statuses);
+        if let Some(statuses) = statuses {
+            query = query.filter(dsl::status_id.eq_any(statuses));
         }
-        if let Some(cursor) = after {
-            params.push(&cursor.1);
-            params.push(&cursor.0);
+        if let Some(after) = after {
+            query = query.filter(dsl::size.eq(after.1).and(dsl::id.lt(after.0)).or(dsl::size.lt(after.1)));
         }
-        if let Some(cursor) = before {
-            params.push(&cursor.1);
-            params.push(&cursor.0);
+        if let Some(before) = before {
+            query = query.filter(dsl::size.eq(before.1).and(dsl::id.gt(before.0)).or(dsl::size.gt(before.1)));
         }
-        conn.select_slice(
-            "cluster",
-            &[
-                "id",
-                "cluster_id",
-                "category_id",
-                "detector_id",
-                "event_ids",
-                "event_sources",
-                "labels",
-                "qualifier_id",
-                "status_id",
-                "signature",
-                "size",
-                "score",
-                "last_modification_time",
-                "model_id",
-            ],
-            &[("model_id", Type::INT4)],
-            &any_variables,
-            &params,
-            &("size", Type::INT8),
-            OrderDirection::Desc,
-            (after.is_some(), before.is_some()),
-            is_first,
-            limit,
-        )
-        .await
+        if is_first {
+            query = query
+                .order_by(dsl::size.desc())
+                .then_order_by(dsl::id.desc());
+        } else {
+            query = query
+                .order_by(dsl::size.asc())
+                .then_order_by(dsl::id.asc());
+        }
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let results = query.get_results::<ClusterDbSchema>(&mut conn).await?;
+        Ok(results
+            .into_iter()
+            .map(Into::into)
+            .collect())
     }
 
     /// Updates the cluster with the given ID.
