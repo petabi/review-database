@@ -55,11 +55,26 @@ impl<'d> Table<'d, Account> {
         self.map.insert(username.as_bytes(), value)
     }
 
+    /// Replaces an old key-value pair with a new one.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the old value does not match the value in the database, the old key does
+    /// not exist, or the database operation fails.
     pub fn update(&self, old: (&[u8], &[u8]), new: (&[u8], &[u8])) -> Result<(), anyhow::Error> {
         self.map.update(old, new)
     }
 
     /// Updates an entry in account map.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error in the following cases:
+    ///
+    /// * The account stored in the database in invalid.
+    /// * Random number generation for a password salt fails.
+    /// * The old values do not match the values in the database.
+    /// * The underlying database operation fails.
     #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     pub fn update_account(
         &self,
