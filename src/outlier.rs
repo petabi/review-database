@@ -31,12 +31,22 @@ pub struct LoadOutlier {
 }
 
 impl Database {
+    /// Returns the number of outliers for the given model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn count_outliers(&self, model: i32) -> Result<i64, Error> {
         let conn = self.pool.get().await?;
         conn.count("outlier", &[("model_id", Type::INT4)], &[], &[&model])
             .await
     }
 
+    /// Deletes the outliers with the given IDs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn delete_outliers(
         &self,
         event_ids: Vec<crate::types::Id>,
@@ -62,6 +72,11 @@ impl Database {
         Ok(())
     }
 
+    /// Returns a list of outliers between `after` and `before`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn load_outliers(
         &self,
         model: i32,
@@ -102,6 +117,11 @@ impl Database {
         .await
     }
 
+    /// Returns all outliers for the given model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn load_all_outliers_by_model_id(
         &self,
         model_id: i32,
@@ -139,6 +159,11 @@ impl Database {
             .collect())
     }
 
+    /// Updates the outliers with the given model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
     pub async fn update_outliers(
         &self,
         outlier_update: Vec<UpdateOutlierRequest>,
