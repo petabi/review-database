@@ -158,7 +158,7 @@ impl Database {
                 "column_description",
                 &["id"],
                 &[],
-                &[("event_range_id", Type::INT4_ARRAY)],
+                &[("event_range_ids", Type::INT4_ARRAY)],
                 &[],
                 &[&event_range_ids],
             )
