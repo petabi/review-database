@@ -25,6 +25,11 @@ impl Database {
             .collect()
     }
 
+    /// Adds a new model to the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model already exists or if a database operation fails.
     pub async fn add_model(
         &self,
         name: &str,
@@ -68,6 +73,11 @@ impl Database {
         }
     }
 
+    /// Deletes the model with the given name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn delete_model(&self, name: &str) -> Result<(), Error> {
         let conn = self.pool.get().await?;
         let query_result = conn
@@ -188,11 +198,21 @@ impl Database {
         Ok(())
     }
 
+    /// Returns the number of models.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     pub async fn count_models(&self) -> Result<i64, Error> {
         let conn = self.pool.get().await?;
         conn.count("model", &[], &[], &[]).await
     }
 
+    /// Returns the maximum number of outliers of the model with the given name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn get_max_event_id_num(&self, model_name: &str) -> Result<i32, Error> {
         let conn = self.pool.get().await?;
         conn.select_one_from(
@@ -204,6 +224,11 @@ impl Database {
         .await
     }
 
+    /// Returns the model with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn load_model(&self, id: i32) -> Result<Model, Error> {
         let conn = self.pool.get().await?;
         conn.select_one_from::<Model>(
@@ -215,6 +240,11 @@ impl Database {
         .await
     }
 
+    /// Returns the model with the given name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn load_model_by_name(
         &self,
         name: &str,
@@ -259,6 +289,11 @@ impl Database {
         ))
     }
 
+    /// Returns the models between `after` and `before`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     pub async fn load_models(
         &self,
         after: &Option<(i32, String)>,
@@ -291,6 +326,11 @@ impl Database {
         .await
     }
 
+    /// Updates the model with the given name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn update_model(
         &self,
         name: &str,
