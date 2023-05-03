@@ -29,6 +29,11 @@ impl<'a> Indexed for IndexedMultimap<'a> {
 }
 
 impl<'a> IndexedMultimap<'a> {
+    /// Creates a new `IndexedMultimap`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the column family cannot be found.
     pub fn new(db: &'a rocksdb::OptimisticTransactionDB, name: &str) -> Result<Self> {
         db.cf_handle(name)
             .map(|cf| Self { db, cf })
@@ -36,6 +41,10 @@ impl<'a> IndexedMultimap<'a> {
     }
 
     /// Gets a value corresponding to the given index.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or cannot be read.
     pub fn get_kv_by_id(&self, id: u32) -> Result<Option<(impl AsRef<[u8]>, impl AsRef<[u8]>)>> {
         let index = self.index()?;
         let mut key = if let Some(key) = index.get(id).context("invalid ID")? {
