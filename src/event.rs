@@ -884,6 +884,10 @@ impl<'a> EventDb<'a> {
     }
 
     /// Stores a new event into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     pub fn put(&self, event: &EventMessage) -> Result<i128> {
         let mut key = i128::from(event.time.timestamp_nanos()) << 64
             | event.kind.to_i128().expect("should not exceed i128::MAX") << 32;
