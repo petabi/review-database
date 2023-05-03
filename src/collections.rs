@@ -21,12 +21,24 @@ use super::types::FromKeyValue;
 
 pub trait IterableMap<'i, I: Iterator + 'i> {
     /// Creates an iterator over key-value pairs, starting from `key`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the iterator cannot be created.
     fn iter_from(&'i self, key: &[u8], direction: Direction) -> Result<I>;
 
     /// Creates an iterator that iterates forward over key-value pairs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the iterator cannot be created.
     fn iter_forward(&'i self) -> Result<I>;
 
     /// Creates an iterator that iterates backward over key-value pairs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the iterator cannot be created.
     fn iter_backward(&'i self) -> Result<I>;
 }
 
@@ -203,11 +215,21 @@ pub trait Indexed {
 
     fn indexed_key(&self, key: Vec<u8>, index: u32) -> Vec<u8>;
 
+    /// Returns the index.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is not found or the database operation fails.
     fn index(&self) -> Result<KeyIndex> {
         let Some(value) = self.db().get_cf(self.cf(), []).context("database error")? else { return Ok(KeyIndex::default()) };
         KeyIndex::from_bytes(value).context("invalid index in database")
     }
 
+    /// Returns the index in a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is not found or the database operation fails.
     fn index_in_transaction(
         &self,
         txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
@@ -218,17 +240,31 @@ pub trait Indexed {
         KeyIndex::from_bytes(value).context("invalid index in database")
     }
 
+    /// Returns the iterator over the index.
+    ///
+    /// # Errors
+    ///
+    /// Never fails.
     fn inner_iterator(&self, mode: IteratorMode) -> Result<IndexedMapIterator> {
         let iter = self.db().iterator_cf(self.cf(), mode);
 
         Ok(IndexedMapIterator { inner: iter })
     }
 
+    /// Returns the number of entries in the index.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is not found or the database operation fails.
     fn count(&self) -> Result<usize> {
         Ok(self.index()?.count())
     }
 
     /// Deactivates a key-value pair with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     fn deactivate(&self, id: u32) -> Result<Vec<u8>> {
         let mut key;
         loop {
@@ -263,6 +299,10 @@ pub trait Indexed {
     }
 
     /// Makes deactivated indices available.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     fn clear_inactive(&self) -> Result<()> {
         loop {
             let txn = self.db().transaction();
@@ -291,6 +331,8 @@ pub trait Indexed {
     }
 
     /// Inserts a new key-value pair.
+    ///
+    /// # Errors
     ///
     /// Returns an error if the key already exists.
     fn insert<T: Indexable>(&self, mut entry: T) -> Result<u32> {
@@ -333,6 +375,10 @@ pub trait Indexed {
     }
 
     /// Removes a key-value pair with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     fn remove(&self, id: u32) -> Result<Vec<u8>> {
         let mut key;
         loop {
@@ -369,6 +415,8 @@ pub trait Indexed {
 
     /// Overwrites the value of an existing key-value pair.
     ///
+    /// # Errors
+    ///
     /// Returns an error if the key doesn't exist.
     fn overwrite<T: Indexable>(&self, entry: &T) -> Result<()> {
         loop {
@@ -394,7 +442,11 @@ pub trait Indexed {
         Ok(())
     }
 
-    // Updates an old key-value pair to a new one.
+    /// Updates an old key-value pair to a new one.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `id` is invalid or the database operation fails.
     fn update<V>(&self, id: u32, old: &V, new: &V) -> Result<()>
     where
         V: IndexedMapUpdate,
@@ -514,6 +566,10 @@ pub trait IndexedMapUpdate {
     fn key(&self) -> Option<&[u8]>;
 
     /// Applies the changes to the value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the changes are invalid or the database operation fails.
     fn apply(&self, value: Self::Entry) -> Result<Self::Entry>;
 
     /// Verifies that the values to change match with the current entry.
