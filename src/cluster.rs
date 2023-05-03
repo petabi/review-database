@@ -152,6 +152,11 @@ impl Database {
         .await
     }
 
+    /// Updates the cluster with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     pub async fn update_cluster(
         &self,
         id: i32,
@@ -183,6 +188,11 @@ impl Database {
         }
     }
 
+    /// Updates the clusters with the given cluster IDs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
     pub async fn update_clusters(
         &self,
         cluster_update: Vec<UpdateClusterRequest>,
