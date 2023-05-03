@@ -14,6 +14,11 @@ pub struct CsvColumnExtraConfig {
 }
 
 impl Database {
+    /// Stores extra information regarding the columns of a CSV model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the connection to the database fails.
     pub async fn add_column_extra(
         &self,
         model_id: i32,
@@ -46,6 +51,11 @@ impl Database {
         .await
     }
 
+    /// Loads extra information regarding the columns of a CSV model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the connection to the database fails.
     pub async fn load_csv_column_extra_config(
         &self,
         model_id: i32,
@@ -68,6 +78,11 @@ impl Database {
         .await
     }
 
+    /// Updates extra information regarding the columns of a CSV model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the connection to the database fails.
     pub async fn update_csv_column_extra(
         &self,
         id: i32,
