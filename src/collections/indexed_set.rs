@@ -21,6 +21,11 @@ impl<'a> IndexedSet<'a> {
             .ok_or_else(|| anyhow!("database error: cannot find column family \"{}\"", name))
     }
 
+    /// Returns the index of the set.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or cannot be read.
     pub fn index(&self) -> Result<KeyIndex> {
         let Some(value) = self
             .db
@@ -32,6 +37,10 @@ impl<'a> IndexedSet<'a> {
     }
 
     /// Deactivates an entry with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or any database operation fails.
     pub fn deactivate(&self, id: u32) -> Result<Vec<u8>> {
         let mut key;
         loop {
@@ -61,6 +70,10 @@ impl<'a> IndexedSet<'a> {
     }
 
     /// Makes deactivated indices available.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or any database operation fails.
     pub fn clear_inactive(&self) -> Result<()> {
         loop {
             let txn = self.db.transaction();
@@ -89,6 +102,10 @@ impl<'a> IndexedSet<'a> {
     }
 
     /// Inserts an entry.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or any database operation fails.
     pub fn insert<T: AsRef<[u8]>>(&self, entry: T) -> Result<u32> {
         let mut i;
         loop {
@@ -116,6 +133,10 @@ impl<'a> IndexedSet<'a> {
     }
 
     /// Removes an entry for the given ID, returning the removed entry.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or any database operation fails.
     pub fn remove(&self, id: u32) -> Result<Vec<u8>> {
         let mut key;
         loop {
@@ -146,6 +167,10 @@ impl<'a> IndexedSet<'a> {
     ///
     /// It returns `true` if the entry was updated, and `false` if the entry was
     /// different or not found.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or any database operation fails.
     pub fn update(&self, id: u32, old: &[u8], new: &[u8]) -> Result<bool> {
         loop {
             let txn = self.db.transaction();
