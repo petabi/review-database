@@ -30,7 +30,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.7.0,<=0.7.1-alpha.1";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.7.0,<0.8.0-alpha";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -451,7 +451,15 @@ mod tests {
         let current = Version::parse(env!("CARGO_PKG_VERSION")).expect("valid semver");
 
         // The current version must match the compatible version requirement.
-        assert!(compatible.matches(&current));
+        if current.pre.is_empty() {
+            assert!(compatible.matches(&current));
+        } else if current.major == 0 && current.patch != 0 || current.major >= 1 {
+            // A pre-release for a backward-compatible version.
+            let non_pre = Version::new(current.major, current.minor, current.patch);
+            assert!(compatible.matches(&non_pre));
+        } else {
+            assert!(compatible.matches(&current));
+        }
 
         // A future, backward-incompatible version must not match the compatible version.
         let breaking = {
