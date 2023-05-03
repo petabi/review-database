@@ -232,7 +232,7 @@ impl TrafficFilter {
         let tf = match Self::get(store, agent)? {
             Some(mut v) => {
                 for network in networks {
-                    let _ = v.rules.remove(network);
+                    _ = v.rules.remove(network); // ignore when the network doesn't exist
                 }
                 v.last_modification_time = Utc::now();
                 if v.rules.is_empty() {
