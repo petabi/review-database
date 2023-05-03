@@ -1,6 +1,6 @@
 ALTER TABLE IF EXISTS cluster
     ADD COLUMN event_sources TEXT[] DEFAULT '{}'::text[] NOT NULL;
-UPDATE cluster SET event_sources = ARRAY_FILL(''::TEXT, ARRAY[array_length(event_ids, 1)]);
+UPDATE cluster SET event_sources = ARRAY_FILL(''::TEXT, ARRAY[coalesce(array_length(event_ids, 1),0)]);
 ALTER TABLE IF EXISTS cluster
     ALTER COLUMN event_sources SET NOT NULL,
     DROP CONSTRAINT IF EXISTS event_array_length_check,
@@ -13,7 +13,7 @@ ALTER TABLE IF EXISTS event_range
 
 ALTER TABLE IF EXISTS outlier
     ADD COLUMN event_sources TEXT[] DEFAULT '{}'::text[] NOT NULL;
-UPDATE outlier SET event_sources = ARRAY_FILL(''::TEXT, ARRAY[array_length(event_ids, 1)]);
+UPDATE outlier SET event_sources = ARRAY_FILL(''::TEXT, ARRAY[coalesce(array_length(event_ids, 1),0)]);
 ALTER TABLE IF EXISTS outlier
     ALTER COLUMN event_sources SET NOT NULL,
     DROP CONSTRAINT IF EXISTS event_array_length_check,

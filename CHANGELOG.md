@@ -10,6 +10,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Fixed query for selecting column description.
+- Fixed a case where the migration process was not correctly handling existing
+  empty values in the event_ids column.  
 
 ## [0.7.0] - 2023-05-02
 
