@@ -21,6 +21,11 @@ pub struct RoundByModel {
 }
 
 impl Database {
+    /// Returns the number of rounds in the given cluster.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     pub async fn count_rounds_by_cluster(&self, cluster_id: i32) -> Result<i64, Error> {
         let conn = self.pool.get().await?;
         conn.count(
@@ -32,6 +37,11 @@ impl Database {
         .await
     }
 
+    /// Returns the number of rounds in the given model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     pub async fn count_rounds_by_model(&self, model_id: i32) -> Result<i64, Error> {
         let conn = self.pool.get().await?;
         let cluster_id: i32 = conn
@@ -52,6 +62,11 @@ impl Database {
         .await
     }
 
+    /// Returns the rounds in the given cluster.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     pub async fn load_rounds_by_cluster(
         &self,
         cluster_id: i32,
@@ -85,6 +100,11 @@ impl Database {
         .await
     }
 
+    /// Returns the rounds in the given model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     pub async fn load_rounds_by_model(
         &self,
         model_id: i32,
