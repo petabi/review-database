@@ -100,6 +100,11 @@ pub(crate) fn fill_vacant_time_slots(series: &[TimeCount]) -> Vec<TimeCount> {
 }
 
 impl Database {
+    /// Adds a time series for the given model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database error occurs.
     pub async fn add_time_series(
         &self,
         time_series: Vec<TimeSeriesUpdate>,
@@ -148,6 +153,11 @@ impl Database {
         }
     }
 
+    /// Returns the time range of time series for the given model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database error occurs.
     pub async fn get_time_range_of_model(
         &self,
         model_id: i32,
@@ -161,6 +171,11 @@ impl Database {
             .await?)
     }
 
+    /// Gets the top time series of the given cluster.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database error occurs.
     pub async fn get_top_time_series_of_cluster(
         &self,
         model_id: i32,
