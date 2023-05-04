@@ -1,6 +1,4 @@
-use crate::{
-    tokio_postgres::types::ToSql, types::Cluster, Database, Error, Type, Value,
-};
+use crate::{tokio_postgres::types::ToSql, types::Cluster, Database, Error, Type, Value};
 use chrono::NaiveDateTime;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
@@ -175,27 +173,36 @@ impl Database {
             query = query.filter(dsl::status_id.eq_any(statuses));
         }
         if let Some(after) = after {
-            query = query.filter(dsl::size.eq(after.1).and(dsl::id.lt(after.0)).or(dsl::size.lt(after.1)));
+            query = query.filter(
+                dsl::size
+                    .eq(after.1)
+                    .and(dsl::id.lt(after.0))
+                    .or(dsl::size.lt(after.1)),
+            );
         }
         if let Some(before) = before {
-            query = query.filter(dsl::size.eq(before.1).and(dsl::id.gt(before.0)).or(dsl::size.gt(before.1)));
+            query = query.filter(
+                dsl::size
+                    .eq(before.1)
+                    .and(dsl::id.gt(before.0))
+                    .or(dsl::size.gt(before.1)),
+            );
         }
         if is_first {
             query = query
                 .order_by(dsl::size.desc())
                 .then_order_by(dsl::id.desc());
         } else {
-            query = query
-                .order_by(dsl::size.asc())
-                .then_order_by(dsl::id.asc());
+            query = query.order_by(dsl::size.asc()).then_order_by(dsl::id.asc());
         }
 
         let mut conn = self.pool.get_diesel_conn().await?;
-        let results = query.get_results::<ClusterDbSchema>(&mut conn).await?;
-        Ok(results
-            .into_iter()
-            .map(Into::into)
-            .collect())
+        let rows = query.get_results::<ClusterDbSchema>(&mut conn).await?;
+        if is_first {
+            Ok(rows.into_iter().map(Into::into).collect())
+        } else {
+            Ok(rows.into_iter().rev().map(Into::into).collect())
+        }
     }
 
     /// Updates the cluster with the given ID.
