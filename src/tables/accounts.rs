@@ -10,7 +10,7 @@ use crate::{
     IterableMap, Map, MapIterator, Role, Table, EXCLUSIVE,
 };
 
-/// Fuctions for the accounts table.
+/// Functions for the accounts table.
 impl<'d> Table<'d, Account> {
     /// Opens the accounts table in the database.
     ///
