@@ -162,6 +162,7 @@ diesel::table! {
         max_event_id_num -> Int4,
         data_source_id -> Int4,
         classifier -> Bytea,
+        classification_id -> Nullable<Int8>,
     }
 }
 

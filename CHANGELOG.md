@@ -7,6 +7,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Introduced a new column 'classification_id' in the 'model' table to track the
+  timestamp of the latest model classification.
+
 ### Changed
 
 - `Table<Account>::put` and `Table<Account>::insert` allow adding an Account
