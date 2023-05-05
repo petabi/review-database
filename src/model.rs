@@ -11,6 +11,7 @@ pub struct Model {
     pub id: i32,
     pub name: String,
     pub data_source_id: i32,
+    pub classification_id: Option<i64>,
 }
 
 impl Database {
@@ -37,6 +38,7 @@ impl Database {
         serialized_classifier: &[u8],
         max_event_id_num: u32,
         data_source_id: i32,
+        classification_id: i64,
     ) -> Result<i32, Error> {
         let max_event_id_num = i32::min(
             max_event_id_num
@@ -55,6 +57,7 @@ impl Database {
                     ("classifier", Type::BYTEA),
                     ("max_event_id_num", Type::INT4),
                     ("data_source_id", Type::INT4),
+                    ("classification_id", Type::INT8),
                 ],
                 &[
                     &name,
@@ -62,6 +65,7 @@ impl Database {
                     &serialized_classifier,
                     &max_event_id_num,
                     &data_source_id,
+                    &classification_id,
                 ],
             )
             .await
@@ -233,7 +237,7 @@ impl Database {
         let conn = self.pool.get().await?;
         conn.select_one_from::<Model>(
             "model",
-            &["id", "name", "data_source_id"],
+            &["id", "name", "data_source_id", "classification_id"],
             &[("id", super::Type::INT4)],
             &[&id],
         )
@@ -313,7 +317,7 @@ impl Database {
         }
         conn.select_slice(
             "model",
-            &["id", "name", "data_source_id"],
+            &["id", "name", "data_source_id", "classification_id"],
             &[],
             &[],
             &params,
@@ -338,6 +342,7 @@ impl Database {
         serialized_classifier: Vec<u8>,
         max_event_id_num: u32,
         data_source_id: i32,
+        classification_id: i64,
     ) -> Result<i32, Error> {
         let max_event_id_num = i32::min(
             max_event_id_num
@@ -359,12 +364,14 @@ impl Database {
                 ("classifier", Type::BYTEA),
                 ("max_event_id_num", Type::INT4),
                 ("data_source_id", Type::INT4),
+                ("classification_id", Type::INT8),
             ],
             &[
                 &kind,
                 &serialized_classifier,
                 &max_event_id_num,
                 &data_source_id,
+                &classification_id,
             ],
         )
         .await
