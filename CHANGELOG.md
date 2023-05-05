@@ -5,6 +5,26 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `Table<Account>::put` and `Table<Account>::insert` allow adding an Account
+  instance directly to the database, without requiring explicit serialization
+  by the caller.
+- Renamed `Table<Account>::update_account` to `Table<Account>::update`. This
+  change simplifies the method name and provides a more consistent interface
+  for updating `Account` records.
+
+### Removed
+
+- Removed the old `Table<Account>::update` method. This method was exposing the
+  internal format of the database to the public API, which could lead to
+  potential security and compatibility issues. To maintain a secure and
+  reliable interface, we have decided to remove this method. Users should now
+  use the newly renamed `Table<Account>::update` method for updating `Account`
+  records.
+
 ## [0.7.1] - 2023-05-03
 
 ### Fixed
@@ -87,6 +107,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.7.1...main
 [0.7.1]: https://github.com/petabi/review-database/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/petabi/review-database/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/petabi/review-database/compare/0.5.0...0.6.0
