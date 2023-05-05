@@ -30,7 +30,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.7.0,<0.8.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.7.0,<=0.8.0-alpha.1";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -215,7 +215,7 @@ pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<(
         let old: OldAccount = bincode::DefaultOptions::new().deserialize::<OldAccount>(&v)?;
         let account: Account = (&old).into();
         let new = bincode::DefaultOptions::new().serialize(&account)?;
-        account_map.update((&k, &v), (&k, &new))?;
+        account_map.update_raw((&k, &v), (&k, &new))?;
     }
 
     store.purge_old_backups(0)?;
