@@ -1,6 +1,6 @@
-use crate::types::{Source, Timestamp};
+use crate::types::{Outlier, Source, Timestamp};
 
-use super::{tokio_postgres::types::ToSql, Database, Error, OrderDirection, Type};
+use super::{tokio_postgres::types::ToSql, Database, Error, Type};
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -20,6 +20,31 @@ pub struct OutlierInfo {
     pub rank: i64,
     pub distance: f64,
     pub source: String,
+}
+
+#[derive(Queryable)]
+struct OutlierDbSchema {
+    id: i32,
+    raw_event: Vec<u8>,
+    event_ids: Vec<Option<i64>>,
+    event_sources: Vec<Option<Source>>,
+    size: i64,
+    model_id: i32,
+}
+
+impl From<OutlierDbSchema> for Outlier {
+    fn from(o: OutlierDbSchema) -> Self {
+        let event_ids: Vec<i64> = o.event_ids.into_iter().flatten().collect();
+        let event_sources: Vec<Source> = o.event_sources.into_iter().flatten().collect();
+        Outlier {
+            id: o.id,
+            raw_event: o.raw_event,
+            event_ids,
+            event_sources,
+            size: o.size,
+            model_id: o.model_id,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -84,37 +109,56 @@ impl Database {
         before: &Option<(i32, i64)>,
         is_first: bool,
         limit: usize,
-    ) -> Result<Vec<super::types::Outlier>, Error> {
-        let conn = self.pool.get().await?;
-        let mut params: Vec<&(dyn ToSql + Sync)> = vec![&model];
-        if let Some(cursor) = after {
-            params.push(&cursor.1);
-            params.push(&cursor.0);
+    ) -> Result<Vec<Outlier>, Error> {
+        use super::schema::outlier::dsl;
+        use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
+        use diesel_async::RunQueryDsl;
+
+        let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
+        let mut query = dsl::outlier
+            .select((
+                dsl::id,
+                dsl::raw_event,
+                dsl::event_ids,
+                dsl::event_sources,
+                dsl::size,
+                dsl::model_id,
+            ))
+            .filter(dsl::model_id.eq(&model))
+            .limit(limit)
+            .into_boxed();
+
+        if let Some(after) = after {
+            query = query.filter(
+                dsl::size
+                    .eq(after.1)
+                    .and(dsl::id.lt(after.0))
+                    .or(dsl::size.lt(after.1)),
+            );
         }
-        if let Some(cursor) = before {
-            params.push(&cursor.1);
-            params.push(&cursor.0);
+        if let Some(before) = before {
+            query = query.filter(
+                dsl::size
+                    .eq(before.1)
+                    .and(dsl::id.gt(before.0))
+                    .or(dsl::size.gt(before.1)),
+            );
         }
-        conn.select_slice(
-            "outlier",
-            &[
-                "id",
-                "raw_event",
-                "event_ids",
-                "event_sources",
-                "size",
-                "model_id",
-            ],
-            &[("model_id", Type::INT4)],
-            &[],
-            &params,
-            &("size", Type::INT8),
-            OrderDirection::Desc,
-            (after.is_some(), before.is_some()),
-            is_first,
-            limit,
-        )
-        .await
+        if is_first {
+            query = query
+                .order_by(dsl::size.desc())
+                .then_order_by(dsl::id.desc());
+        } else {
+            query = query.order_by(dsl::size.asc()).then_order_by(dsl::id.asc());
+        }
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let rows = query.get_results::<OutlierDbSchema>(&mut conn).await?;
+        if is_first {
+            Ok(rows.into_iter().map(Into::into).collect())
+        } else {
+            Ok(rows.into_iter().rev().map(Into::into).collect())
+        }
     }
 
     /// Returns all outliers for the given model.
