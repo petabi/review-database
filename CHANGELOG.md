@@ -32,6 +32,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   use the newly renamed `Table<Account>::update` method for updating `Account`
   records.
 
+### Fixed
+
+- Resolved issue with 'load_outliers' function to accurately retrieve cluster data.
+
 ## [0.7.1] - 2023-05-03
 
 ### Fixed
