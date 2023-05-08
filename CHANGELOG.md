@@ -20,6 +20,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Renamed `Table<Account>::update_account` to `Table<Account>::update`. This
   change simplifies the method name and provides a more consistent interface
   for updating `Account` records.
+- Introduced `event_sources` for `Cluster` to properly identify events included
+  in the cluster.
 
 ### Removed
 
