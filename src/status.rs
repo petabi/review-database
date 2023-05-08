@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
-use super::{tokio_postgres::types::ToSql, Database, Error, OrderDirection, Type};
+use super::{Database, Error, Type};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Queryable)]
 pub struct Status {
     pub id: i32,
     pub description: String,
@@ -58,29 +58,48 @@ impl Database {
         is_first: bool,
         limit: usize,
     ) -> Result<Vec<Status>, Error> {
-        let conn = self.pool.get().await?;
-        let mut params: Vec<&(dyn ToSql + Sync)> = Vec::new();
-        if let Some(cursor) = after {
-            params.push(&cursor.1);
-            params.push(&cursor.0);
+        use super::schema::status::dsl;
+        use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
+        use diesel_async::RunQueryDsl;
+
+        let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
+        let mut query = dsl::status
+            .select((dsl::id, dsl::description))
+            .limit(limit)
+            .into_boxed();
+
+        if let Some(after) = after {
+            query = query.filter(
+                dsl::description
+                    .eq(&after.1)
+                    .and(dsl::id.gt(after.0))
+                    .or(dsl::description.gt(&after.1)),
+            );
         }
-        if let Some(cursor) = before {
-            params.push(&cursor.1);
-            params.push(&cursor.0);
+        if let Some(before) = before {
+            query = query.filter(
+                dsl::description
+                    .eq(&before.1)
+                    .and(dsl::id.lt(before.0))
+                    .or(dsl::description.lt(&before.1)),
+            );
         }
-        conn.select_slice(
-            "status",
-            &["id", "description"],
-            &[],
-            &[],
-            &params,
-            &("description", Type::TEXT),
-            OrderDirection::Asc,
-            (after.is_some(), before.is_some()),
-            is_first,
-            limit,
-        )
-        .await
+        if is_first {
+            query = query
+                .order_by(dsl::description.asc())
+                .then_order_by(dsl::id.asc());
+        } else {
+            query = query
+                .order_by(dsl::description.desc())
+                .then_order_by(dsl::id.desc());
+        }
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut rows: Vec<Status> = query.get_results(&mut conn).await?;
+        if !is_first {
+            rows = rows.into_iter().rev().collect();
+        }
+        Ok(rows)
     }
 
     /// Updates the status with the given id.
