@@ -729,7 +729,6 @@ fn query_array(query: &mut String, index: usize, variables: &[(&str, database::T
 
 #[cfg(test)]
 mod tests {
-    use crate::OrderDirection;
     use bb8_postgres::tokio_postgres::types::Type;
 
     #[test]
