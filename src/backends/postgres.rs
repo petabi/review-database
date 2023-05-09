@@ -2,7 +2,7 @@ mod de;
 mod error;
 mod transaction;
 
-use crate::{self as database, Error, OrderDirection};
+use crate::{self as database, Error};
 use bb8_postgres::{
     bb8,
     tokio_postgres::{
@@ -145,56 +145,6 @@ impl<'a> Connection<'a> {
             ConnectionType::Tls(conn) => conn.query_one(query.as_str(), values).await?,
         };
         Ok(row.get(0))
-    }
-
-    /// Selects a slice of columns from a table.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `columns` is empty.
-    #[allow(clippy::too_many_arguments)]
-    pub async fn select_slice<D: DeserializeOwned>(
-        &self,
-        table: &str,
-        columns: &[&str],
-        variables: &[(&str, database::Type)],
-        any_variables: &[(&str, database::Type)],
-        params: &[&(dyn ToSql + Sync)],
-        key: &(&str, database::Type),
-        order: OrderDirection,
-        cursors: (bool, bool),
-        is_first: bool,
-        limit: usize,
-    ) -> Result<Vec<D>, Error> {
-        let query = query_select_slice(
-            table,
-            columns,
-            variables,
-            any_variables,
-            key,
-            order,
-            cursors,
-            is_first,
-            limit,
-        );
-        let rows = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.query(query.as_str(), params).await?,
-            ConnectionType::Tls(conn) => conn.query(query.as_str(), params).await?,
-        };
-
-        let mut result = Vec::with_capacity(rows.len());
-        if is_first {
-            for row in &rows {
-                let data = de::from_row(row).map_err(|e| Error::InvalidInput(e.to_string()))?;
-                result.push(data);
-            }
-        } else {
-            for row in rows.iter().rev() {
-                let data = de::from_row(row).map_err(|e| Error::InvalidInput(e.to_string()))?;
-                result.push(data);
-            }
-        }
-        Ok(result)
     }
 
     /// Selects columns according to the `IN` condition.
@@ -584,81 +534,6 @@ fn query_insert_into(table: &str, columns: &[(&str, database::Type)]) -> String 
 /// # Panics
 ///
 /// Panics if `columns` is empty.
-#[allow(clippy::too_many_arguments)]
-fn query_select_slice(
-    table: &str,
-    columns: &[&str],
-    variables: &[(&str, database::Type)],
-    any_variables: &[(&str, database::Type)],
-    key: &(&str, database::Type),
-    order: OrderDirection,
-    cursors: (bool, bool),
-    is_first: bool,
-    limit: usize,
-) -> String {
-    let (has_after, has_before) = cursors;
-    let mut query = "SELECT ".to_string();
-    query.push_str(columns[0]);
-    for &col in columns.iter().skip(1) {
-        query.push_str(", ");
-        query.push_str(col);
-    }
-    query.push_str(" FROM ");
-    query.push_str(table);
-
-    if !variables.is_empty() || !any_variables.is_empty() {
-        query.push_str(" WHERE ");
-    }
-    query_equality(&mut query, variables);
-    if !variables.is_empty() && !any_variables.is_empty() {
-        query.push_str(" AND ");
-    }
-    query_any(&mut query, variables.len() + 1, any_variables);
-
-    let mut next_var = variables.len() + any_variables.len() + 1;
-    if has_after || has_before {
-        let (after_op, before_op) = match order {
-            OrderDirection::Asc => ('>', '<'),
-            OrderDirection::Desc => ('<', '>'),
-        };
-        if variables.is_empty() && any_variables.is_empty() {
-            query.push_str(" WHERE ");
-        } else {
-            query.push_str(" AND ");
-        }
-        if has_after {
-            next_var = query_cursor(&mut query, key, after_op, next_var);
-        }
-        if has_before {
-            if has_after {
-                query.push_str(" AND ");
-            }
-            query_cursor(&mut query, key, before_op, next_var);
-        }
-    }
-
-    query.push_str(" ORDER BY ");
-    query.push_str(key.0);
-    match (order, is_first) {
-        (OrderDirection::Asc, true) | (OrderDirection::Desc, false) => {
-            query.push_str(" ASC, id ASC");
-        }
-        (OrderDirection::Asc, false) | (OrderDirection::Desc, true) => {
-            query.push_str(" DESC, id DESC");
-        }
-    }
-
-    query.push_str(" LIMIT ");
-    query.push_str(&(limit + 1).to_string());
-
-    query
-}
-
-/// Builds a SELECT statement.
-///
-/// # Panics
-///
-/// Panics if `columns` is empty.
 fn query_select(
     table: &str,
     columns: &[&str],
@@ -852,40 +727,6 @@ fn query_array(query: &mut String, index: usize, variables: &[(&str, database::T
     }
 }
 
-/// Builds a query fragment to compare with a cursor.
-fn query_cursor(
-    query: &mut String,
-    key: &(&str, database::Type),
-    op: char,
-    mut next_var: usize,
-) -> usize {
-    let key_type = key.1.to_string();
-    let value_idx = next_var.to_string();
-    next_var += 1;
-    let id_idx = next_var.to_string();
-    next_var += 1;
-    query.push('(');
-    query.push_str(key.0);
-    query.push_str(" = $");
-    query.push_str(&value_idx);
-    query.push_str("::");
-    query.push_str(&key_type);
-    query.push_str(" AND id ");
-    query.push(op);
-    query.push_str(" $");
-    query.push_str(&id_idx);
-    query.push_str("::int4 OR ");
-    query.push_str(key.0);
-    query.push(' ');
-    query.push(op);
-    query.push_str(" $");
-    query.push_str(&value_idx);
-    query.push_str("::");
-    query.push_str(&key_type);
-    query.push(')');
-    next_var
-}
-
 #[cfg(test)]
 mod tests {
     use crate::OrderDirection;
@@ -940,99 +781,6 @@ mod tests {
         assert_eq!(
             query,
             "SELECT f1, f2 FROM t1 WHERE f1 = $1::int4 AND f2 = $2::text LIMIT 1"
-        );
-    }
-
-    #[test]
-    fn query_select_slice_with_after() {
-        let has_after = true;
-        let has_before = false;
-        let query = super::query_select_slice(
-            "t1",
-            &["f1", "f2"],
-            &[],
-            &[("f3", Type::INT4)],
-            &("f1", Type::TEXT),
-            OrderDirection::Desc,
-            (has_after, has_before),
-            true,
-            2,
-        );
-        assert_eq!(
-            query,
-            "SELECT f1, f2 FROM t1 WHERE \
-             f3 = ANY($1::int4) AND \
-             (f1 = $2::text AND id < $3::int4 OR f1 < $2::text) \
-             ORDER BY f1 DESC, id DESC LIMIT 3"
-        );
-    }
-
-    #[test]
-    fn query_select_slice_with_before() {
-        let has_after = false;
-        let has_before = true;
-        let query = super::query_select_slice(
-            "t1",
-            &["f1", "f2"],
-            &[("f3", Type::INT8)],
-            &[],
-            &("f1", Type::TEXT),
-            OrderDirection::Asc,
-            (has_after, has_before),
-            true,
-            2,
-        );
-        assert_eq!(
-            query,
-            "SELECT f1, f2 FROM t1 WHERE \
-             f3 = $1::int8 AND \
-             (f1 = $2::text AND id < $3::int4 OR f1 < $2::text) \
-             ORDER BY f1 ASC, id ASC LIMIT 3"
-        );
-    }
-
-    #[test]
-    fn query_select_slice_with_both() {
-        let has_after = true;
-        let has_before = true;
-        let query = super::query_select_slice(
-            "t1",
-            &["f1", "f2"],
-            &[],
-            &[],
-            &("f1", Type::TEXT),
-            OrderDirection::Asc,
-            (has_after, has_before),
-            false,
-            2,
-        );
-        assert_eq!(
-            query,
-            "SELECT f1, f2 FROM t1 WHERE \
-             (f1 = $1::text AND id > $2::int4 OR f1 > $1::text) AND \
-             (f1 = $3::text AND id < $4::int4 OR f1 < $3::text) \
-             ORDER BY f1 DESC, id DESC LIMIT 3"
-        );
-    }
-
-    #[test]
-    fn query_select_slice_without_cursor() {
-        let has_after = false;
-        let has_before = false;
-        let query = super::query_select_slice(
-            "t1",
-            &["f1", "f2"],
-            &[],
-            &[],
-            &("f1", Type::TEXT),
-            OrderDirection::Asc,
-            (has_after, has_before),
-            true,
-            2,
-        );
-        assert_eq!(
-            query,
-            "SELECT f1, f2 FROM t1 ORDER BY f1 ASC, id ASC LIMIT 3"
         );
     }
 
