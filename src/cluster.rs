@@ -23,6 +23,7 @@ struct ClusterDbSchema {
     category_id: i32,
     detector_id: i32,
     event_ids: Vec<Option<i64>>,
+    event_sources: Vec<Option<String>>,
     labels: Option<Vec<Option<String>>>,
     qualifier_id: i32,
     status_id: i32,
@@ -36,6 +37,7 @@ struct ClusterDbSchema {
 impl From<ClusterDbSchema> for Cluster {
     fn from(c: ClusterDbSchema) -> Self {
         let event_ids: Vec<i64> = c.event_ids.into_iter().flatten().collect();
+        let event_sources: Vec<String> = c.event_sources.into_iter().flatten().collect();
         let labels: Option<Vec<String>> = c
             .labels
             .map(|labels| labels.into_iter().flatten().collect());
@@ -45,6 +47,7 @@ impl From<ClusterDbSchema> for Cluster {
             category_id: c.category_id,
             detector_id: c.detector_id,
             event_ids,
+            event_sources,
             labels,
             qualifier_id: c.qualifier_id,
             status_id: c.status_id,
@@ -147,6 +150,7 @@ impl Database {
                 dsl::category_id,
                 dsl::detector_id,
                 dsl::event_ids,
+                dsl::event_sources,
                 dsl::labels,
                 dsl::qualifier_id,
                 dsl::status_id,
