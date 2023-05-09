@@ -377,11 +377,3 @@ pub enum Error {
     #[error("Certificate error: {0}")]
     Tls(String),
 }
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum OrderDirection {
-    /// Specifies an ascending order for a given orderBy argument.
-    Asc,
-    /// Specifies a descending order for a given orderBy argument.
-    Desc,
-}
