@@ -5,6 +5,26 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- New iterator method `Table<Account>::iter` to improve usability and
+  encapsulation of internal database serialization format. This new iterator
+  method returns an iterator that produces `Account` objects in each iteration.
+  This change aims to simplify the usage of iterators and avoid potential
+  issues related to the direct handling of serialized data.
+
+### Deprecated
+
+- `Table<Account>::iter_forward`, `Table<Account>::iter_backward`, and
+  `Table<Account>::iter_from`. These methods will be removed in a future
+  release. Developers are encouraged to switch to the new
+  `Table<Account>::iter` method for iterating over Account objects in the
+  database. These deprecated methods expose the internal, serialized form in
+  the database as `[u8]`, which can lead to potential issues and challenges in
+  handling the data.
+
 ## [0.8.0] - 2023-05-08
 
 ### Added
@@ -118,6 +138,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.8.0...main
 [0.8.0]: https://github.com/petabi/review-database/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/petabi/review-database/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/petabi/review-database/compare/0.6.0...0.7.0
