@@ -11,6 +11,8 @@ use crate::{
     IterableMap, Map, MapIterator, Role, Table, EXCLUSIVE,
 };
 
+use super::TableIter;
+
 /// Functions for the accounts table.
 impl<'d> Table<'d, Account> {
     /// Opens the accounts table in the database.
@@ -170,8 +172,44 @@ impl<'d> Table<'d, Account> {
         Ok(())
     }
 
+    /// Returns an iterator over the account table.
+    #[must_use]
+    pub fn iter(&self, direction: Direction, from: Option<&str>) -> TableIter<'d, Account> {
+        match direction {
+            Direction::Forward => match from {
+                Some(from) => TableIter::new(self.map.db.iterator_cf(
+                    self.map.cf,
+                    IteratorMode::From(from.as_bytes(), Direction::Forward),
+                )),
+                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::Start)),
+            },
+            Direction::Reverse => match from {
+                Some(from) => TableIter::new(self.map.db.iterator_cf(
+                    self.map.cf,
+                    IteratorMode::From(from.as_bytes(), Direction::Reverse),
+                )),
+                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::End)),
+            },
+        }
+    }
+
     fn inner_iterator(&self, mode: IteratorMode) -> MapIterator {
         MapIterator::new(self.map.db.iterator_cf(self.map.cf, mode))
+    }
+}
+
+impl<'i> Iterator for TableIter<'i, Account> {
+    type Item = Result<Account, anyhow::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let serialized_item = self.inner.next()?;
+        match serialized_item {
+            Ok((_key, value)) => {
+                let item = bincode::DefaultOptions::new().deserialize::<Account>(&value);
+                Some(item.map_err(Into::into))
+            }
+            Err(e) => Some(Err(e.into())),
+        }
     }
 }
 
@@ -186,5 +224,113 @@ impl<'i> IterableMap<'i, MapIterator<'i>> for Table<'i, Account> {
 
     fn iter_backward(&self) -> Result<MapIterator, anyhow::Error> {
         Ok(self.inner_iterator(IteratorMode::End))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::{
+        types::{Account, PasswordHashAlgorithm, SaltedPassword},
+        Direction, Role, Store,
+    };
+
+    #[test]
+    fn put_delete() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.account_map();
+
+        assert!(!table.contains("user1").unwrap());
+        let acc1 = Account {
+            username: "user1".to_string(),
+            password: SaltedPassword::new("password").unwrap(),
+            role: Role::SystemAdministrator,
+            name: "User 1".to_string(),
+            department: "Department 1".to_string(),
+            creation_time: chrono::Utc::now(),
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
+        };
+        table.put(&acc1).unwrap();
+        assert!(table.contains("user1").unwrap());
+
+        let acc2 = Account {
+            username: "user2".to_string(),
+            password: SaltedPassword::new("password").unwrap(),
+            role: Role::SystemAdministrator,
+            name: "User 2".to_string(),
+            department: "Department 2".to_string(),
+            creation_time: chrono::Utc::now(),
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
+        };
+        table.put(&acc2).unwrap();
+        assert!(table.contains("user2").unwrap());
+
+        table.delete("user1").unwrap();
+        assert!(!table.contains("user1").unwrap());
+    }
+
+    #[test]
+    fn iter() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.account_map();
+
+        let mut iter = table.iter(Direction::Forward, None);
+        assert!(iter.next().is_none());
+
+        let acc1 = Account {
+            username: "user1".to_string(),
+            password: SaltedPassword::new("password").unwrap(),
+            role: Role::SystemAdministrator,
+            name: "User 1".to_string(),
+            department: "Department 1".to_string(),
+            creation_time: chrono::Utc::now(),
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
+        };
+        table.put(&acc1).unwrap();
+
+        let mut iter = table.iter(Direction::Forward, None);
+        let acc = iter.next().unwrap().unwrap();
+        assert_eq!(acc.username, "user1");
+        assert!(iter.next().is_none());
+
+        let acc2 = Account {
+            username: "user2".to_string(),
+            password: SaltedPassword::new("password").unwrap(),
+            role: Role::SystemAdministrator,
+            name: "User 2".to_string(),
+            department: "Department 2".to_string(),
+            creation_time: chrono::Utc::now(),
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
+        };
+        table.put(&acc2).unwrap();
+
+        let mut iter = table.iter(Direction::Forward, Some("user2"));
+        let acc = iter.next().unwrap().unwrap();
+        assert_eq!(acc.username, "user2");
+
+        let mut iter = table.iter(Direction::Reverse, None);
+        let acc = iter.next().unwrap().unwrap();
+        assert_eq!(acc.username, "user2");
+
+        let mut iter = table.iter(Direction::Reverse, Some("user1"));
+        let acc = iter.next().unwrap().unwrap();
+        assert_eq!(acc.username, "user1");
     }
 }

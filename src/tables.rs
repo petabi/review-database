@@ -146,3 +146,26 @@ impl<'d, R> Table<'d, R> {
         }
     }
 }
+
+/// An iterator over the records in a table.
+pub struct TableIter<'i, R> {
+    inner: rocksdb::DBIteratorWithThreadMode<
+        'i,
+        rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
+    >,
+    _phantom: std::marker::PhantomData<R>,
+}
+
+impl<'i, R> TableIter<'i, R> {
+    fn new(
+        inner: rocksdb::DBIteratorWithThreadMode<
+            'i,
+            rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
+        >,
+    ) -> Self {
+        Self {
+            inner,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
