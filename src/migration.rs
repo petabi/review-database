@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::{create_dir_all, File},
     io::{Read, Write},
+    net::IpAddr,
     path::{Path, PathBuf},
 };
 
@@ -30,7 +31,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.7.0,<0.9.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.9.0-alpha.1,<0.10.0-alpha";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -93,6 +94,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             VersionReq::parse(">=0.6.0,<0.7.0").expect("valid version requirement"),
             Version::parse("0.7.0").expect("valid version"),
             migrate_0_6_to_0_7,
+        ),
+        (
+            VersionReq::parse(">=0.7.0,<0.9.0-alpha1").expect("valid version requirement"),
+            Version::parse("0.9.0-alpha1").expect("valid version"),
+            migrate_0_7_to_0_9_alpha1,
         ),
     ];
 
@@ -175,7 +181,6 @@ pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<(
         IterableMap,
     };
     use chrono::{DateTime, Utc};
-    use std::net::IpAddr;
 
     #[derive(Deserialize, Serialize)]
     struct OldAccount {
@@ -406,6 +411,139 @@ pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<(
     Ok(())
 }
 
+/// Migrates the database from 0.7 to 0.9.0-alpha.1
+///
+/// # Errors
+///
+/// Returns an error if database migration fails.
+#[allow(clippy::too_many_lines)]
+pub(crate) fn migrate_0_7_to_0_9_alpha1<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+    use crate::{
+        event::{DnsEventFields, TorConnectionFields},
+        EventKind,
+    };
+    use chrono::{TimeZone, Utc};
+    use num_traits::FromPrimitive;
+
+    #[derive(Deserialize, Serialize)]
+    pub struct OldDnsEventFields {
+        pub source: String,
+        pub src_addr: IpAddr,
+        pub src_port: u16,
+        pub dst_addr: IpAddr,
+        pub dst_port: u16,
+        pub proto: u8,
+        pub query: String,
+        pub confidence: f32,
+    }
+
+    #[derive(Deserialize, Serialize)]
+    pub struct OldTorConnectionFields {
+        pub source: String,
+        pub src_addr: IpAddr,
+        pub src_port: u16,
+        pub dst_addr: IpAddr,
+        pub dst_port: u16,
+        pub proto: u8,
+    }
+
+    impl From<OldDnsEventFields> for DnsEventFields {
+        fn from(input: OldDnsEventFields) -> Self {
+            Self {
+                source: input.source.clone(),
+                session_end_time: Utc.timestamp_nanos(0),
+                src_addr: input.src_addr,
+                src_port: input.src_port,
+                dst_addr: input.dst_addr,
+                dst_port: input.dst_port,
+                proto: input.proto,
+                query: input.query.clone(),
+                answer: Vec::new(),
+                trans_id: 0,
+                rtt: 0,
+                qclass: 1,
+                qtype: 1,
+                rcode: 0,
+                aa_flag: false,
+                tc_flag: false,
+                rd_flag: false,
+                ra_flag: false,
+                ttl: Vec::new(),
+                confidence: input.confidence,
+            }
+        }
+    }
+
+    impl From<OldTorConnectionFields> for TorConnectionFields {
+        fn from(input: OldTorConnectionFields) -> Self {
+            Self {
+                source: input.source.clone(),
+                session_end_time: Utc.timestamp_nanos(0),
+                src_addr: input.src_addr,
+                src_port: input.src_port,
+                dst_addr: input.dst_addr,
+                dst_port: input.dst_port,
+                proto: input.proto,
+                method: String::new(),
+                host: String::new(),
+                uri: String::new(),
+                referrer: String::new(),
+                version: String::new(),
+                user_agent: String::new(),
+                request_len: 0,
+                response_len: 0,
+                status_code: 0,
+                status_msg: String::new(),
+                username: String::new(),
+                password: String::new(),
+                cookie: String::new(),
+                content_encoding: String::new(),
+                content_type: String::new(),
+                cache_control: String::new(),
+            }
+        }
+    }
+
+    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    store.backup(1)?;
+
+    let event_db = store.events();
+    for item in event_db.migration_iter_forward() {
+        let (k, v) = item.context("Failed to read events Database")?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(kind) = EventKind::from_i128(kind_num) else {
+            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+        };
+        match kind {
+            EventKind::DnsCovertChannel => {
+                let Ok(fields) = bincode::deserialize::<OldDnsEventFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                };
+                let dns_event: DnsEventFields = fields.into();
+                let new = bincode::serialize(&dns_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
+            }
+            EventKind::TorConnection => {
+                let Ok(fields) = bincode::deserialize::<OldTorConnectionFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                };
+                let tor_event: TorConnectionFields = fields.into();
+                let new = bincode::serialize(&tor_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
+            }
+            _ => continue,
+        }
+    }
+    store.purge_old_backups(0)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use semver::{Version, VersionReq};
@@ -564,5 +702,77 @@ mod tests {
             })
             .collect();
         assert_eq!(reversed, updated);
+    }
+
+    #[test]
+    fn migrate_0_7_to_0_9_alpha1() {
+        use crate::{EventKind, EventMessage};
+        use chrono::{TimeZone, Utc};
+        use serde::{Deserialize, Serialize};
+        use std::net::IpAddr;
+
+        #[derive(Deserialize, Serialize)]
+        pub struct OldDnsEventFields {
+            pub source: String,
+            pub src_addr: IpAddr,
+            pub src_port: u16,
+            pub dst_addr: IpAddr,
+            pub dst_port: u16,
+            pub proto: u8,
+            pub query: String,
+            pub confidence: f32,
+        }
+
+        #[derive(Deserialize, Serialize)]
+        pub struct OldTorConnectionFields {
+            pub source: String,
+            pub src_addr: IpAddr,
+            pub src_port: u16,
+            pub dst_addr: IpAddr,
+            pub dst_port: u16,
+            pub proto: u8,
+        }
+
+        let dsn_kind = EventKind::DnsCovertChannel;
+        let dns_time = Utc.with_ymd_and_hms(2023, 1, 20, 0, 0, 0).unwrap();
+        let dns_value = OldDnsEventFields {
+            source: "reveiw1".to_string(),
+            src_addr: "192.168.4.100".parse::<IpAddr>().unwrap(),
+            src_port: 40000,
+            dst_addr: "31.3.245.100".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 10,
+            query: "Hello Server Hello Server Hello Server".to_string(),
+            confidence: 1.1,
+        };
+        let dns_message = EventMessage {
+            time: dns_time,
+            kind: dsn_kind,
+            fields: bincode::serialize(&dns_value).unwrap_or_default(),
+        };
+
+        let tor_kind = EventKind::TorConnection;
+        let tor_time = Utc.with_ymd_and_hms(2023, 1, 20, 0, 0, 1).unwrap();
+        let tor_value = OldTorConnectionFields {
+            source: "reveiw1".to_string(),
+            src_addr: "192.168.4.200".parse::<IpAddr>().unwrap(),
+            src_port: 50000,
+            dst_addr: "31.3.245.200".parse::<IpAddr>().unwrap(),
+            dst_port: 160,
+            proto: 20,
+        };
+        let tor_message = EventMessage {
+            time: tor_time,
+            kind: tor_kind,
+            fields: bincode::serialize(&tor_value).unwrap_or_default(),
+        };
+
+        let settings = TestSchema::new();
+        let event_db = settings.store.events();
+        event_db.put(&dns_message).unwrap();
+        event_db.put(&tor_message).unwrap();
+        let (db_dir, backup_dir) = settings.close();
+
+        assert!(super::migrate_0_7_to_0_9_alpha1(db_dir.path(), backup_dir.path()).is_ok());
     }
 }

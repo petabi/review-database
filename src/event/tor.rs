@@ -1,16 +1,35 @@
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use chrono::{DateTime, Local, Utc};
-use serde::Deserialize;
+use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
+use serde::{Deserialize, Serialize};
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-#[derive(Deserialize)]
-pub(super) struct TorConnectionFields {
+#[derive(Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub struct TorConnectionFields {
     pub source: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub session_end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referrer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
 }
 
 impl fmt::Display for TorConnectionFields {
@@ -27,11 +46,28 @@ impl fmt::Display for TorConnectionFields {
 pub struct TorConnection {
     pub time: DateTime<Utc>,
     pub source: String,
+    pub session_end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referrer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -55,11 +91,28 @@ impl TorConnection {
         TorConnection {
             time,
             source: fields.source.clone(),
+            session_end_time: fields.session_end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            method: fields.method.clone(),
+            host: fields.host.clone(),
+            uri: fields.uri.clone(),
+            referrer: fields.referrer.clone(),
+            version: fields.version.clone(),
+            user_agent: fields.user_agent.clone(),
+            request_len: fields.request_len,
+            response_len: fields.response_len,
+            status_code: fields.status_code,
+            status_msg: fields.status_msg.clone(),
+            username: fields.username.clone(),
+            password: fields.password.clone(),
+            cookie: fields.cookie.clone(),
+            content_encoding: fields.content_encoding.clone(),
+            content_type: fields.content_type.clone(),
+            cache_control: fields.cache_control.clone(),
             triage_scores: None,
         }
     }

@@ -8,14 +8,13 @@ use self::{
     common::Match,
     http::{DgaFields, HttpThreatFields, RepeatedHttpSessionsFields},
     rdp::RdpBruteForceFields,
-    tor::TorConnectionFields,
 };
 pub use self::{
     common::TriageScore,
     dns::{DnsCovertChannel, DnsEventFields},
     http::{DomainGenerationAlgorithm, HttpThreat, RepeatedHttpSessions},
     rdp::RdpBruteForce,
-    tor::TorConnection,
+    tor::{TorConnection, TorConnectionFields},
 };
 use super::{
     types::{Customer, Endpoint, EventCategory, FromKeyValue, HostNetworkGroup, TriagePolicy},
@@ -29,7 +28,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::{thread_rng, RngCore};
 pub use rocksdb::Direction;
-use rocksdb::IteratorMode;
+use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -71,7 +70,7 @@ pub enum Event {
     RepeatedHttpSessions(RepeatedHttpSessions),
 
     /// An HTTP connection to a Tor exit node.
-    TorConnection(TorConnection),
+    TorConnection(Box<TorConnection>),
 
     /// DGA (Domain Generation Algorithm) generated hostname in HTTP request message
     DomainGenerationAlgorithm(Box<DomainGenerationAlgorithm>),
@@ -687,7 +686,7 @@ fn find_network(ip: IpAddr, networks: &[Network]) -> Option<u32> {
     None
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, FromPrimitive, PartialEq, ToPrimitive)]
+#[derive(Serialize, Clone, Copy, Debug, Deserialize, Eq, FromPrimitive, PartialEq, ToPrimitive)]
 #[allow(clippy::module_name_repetitions)]
 pub enum EventKind {
     DnsCovertChannel,
@@ -793,7 +792,7 @@ fn moderate_kinds_by(kinds: &mut Vec<String>, patterns: &[&str], full_name: &str
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[allow(clippy::module_name_repetitions)]
 pub struct EventMessage {
     #[serde(with = "ts_nanoseconds")]
@@ -883,6 +882,14 @@ impl<'a> EventDb<'a> {
         EventIterator { inner: iter }
     }
 
+    /// Creates an iterator over key-value pairs for migration entire events.
+    #[must_use]
+    pub fn migration_iter_forward(
+        &self,
+    ) -> DBIteratorWithThreadMode<rocksdb::OptimisticTransactionDB> {
+        self.inner.iterator(IteratorMode::Start)
+    }
+
     /// Stores a new event into the database.
     ///
     /// # Errors
@@ -925,6 +932,43 @@ impl<'a> EventDb<'a> {
             }
         }
         Ok(key)
+    }
+
+    /// Updates an old key-value pair to a new one.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the old value does not match the value in the database, the old key does
+    /// not exist, or the database operation fails.
+    pub fn update(&self, old: (&[u8], &[u8]), new: (&[u8], &[u8])) -> Result<()> {
+        loop {
+            let txn = self.inner.transaction();
+            if let Some(old_value) = txn
+                .get_for_update(old.0, super::EXCLUSIVE)
+                .context("cannot read old entry")?
+            {
+                if old.1 != old_value.as_slice() {
+                    bail!("old value mismatch");
+                }
+            } else {
+                bail!("no such entry");
+            };
+
+            txn.put(new.0, new.1).context("failed to write new entry")?;
+            if old.0 != new.0 {
+                txn.delete(old.0).context("failed to delete old entry")?;
+            }
+
+            match txn.commit() {
+                Ok(_) => break,
+                Err(e) => {
+                    if !e.as_ref().starts_with("Resource busy:") {
+                        return Err(e).context("failed to update entry");
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -998,7 +1042,7 @@ impl<'i> Iterator for EventIterator<'i> {
                     };
                 Some(Ok((
                     key,
-                    Event::TorConnection(TorConnection::new(time, &fields)),
+                    Event::TorConnection(Box::new(TorConnection::new(time, &fields))),
                 )))
             }
             EventKind::DomainGenerationAlgorithm => {
@@ -1266,12 +1310,24 @@ mod tests {
         let codec = bincode::DefaultOptions::new();
         let fields = DnsEventFields {
             source: "collector1".to_string(),
+            session_end_time: Utc::now(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
             query: "foo.com".to_string(),
+            answer: vec!["1.1.1.1".to_string()],
+            trans_id: 1,
+            rtt: 1,
+            qclass: 0,
+            qtype: 0,
+            rcode: 0,
+            aa_flag: false,
+            tc_flag: false,
+            rd_flag: false,
+            ra_flag: false,
+            ttl: vec![1; 5],
             confidence: 0.8,
         };
         EventMessage {
