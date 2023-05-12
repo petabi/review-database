@@ -14,6 +14,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   method returns an iterator that produces `Account` objects in each iteration.
   This change aims to simplify the usage of iterators and avoid potential
   issues related to the direct handling of serialized data.
+- Add all fields in `DnsCovertChannel` and `TorConnection` event. The added fields
+  are used to perform packet attribute criteria during the adjudication function.
+- Add the ability to migration for `DnsCovertChannel` and `TorConnection`.
 
 ### Deprecated
 
@@ -62,7 +65,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Fixed query for selecting column description.
 - Fixed a case where the migration process was not correctly handling existing
-  empty values in the event_ids column.  
+  empty values in the event_ids column.
 
 ## [0.7.0] - 2023-05-02
 
