@@ -18,6 +18,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   are used to perform packet attribute criteria during the adjudication function.
 - Add the ability to migration for `DnsCovertChannel` and `TorConnection`.
 
+### Changed
+
+- The `Event::DomainGenerationAlgorithm(Box<DomainGenerationAlgorithm>)` variant
+  has been replaced with `Event::DomainGenerationAlgorithm(DomainGenerationAlgorithm)`
+  to improve code structure and reduce unnecessary memory allocations."
+
 ### Deprecated
 
 - `Table<Account>::iter_forward`, `Table<Account>::iter_backward`, and

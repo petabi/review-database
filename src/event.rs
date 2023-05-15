@@ -70,10 +70,10 @@ pub enum Event {
     RepeatedHttpSessions(RepeatedHttpSessions),
 
     /// An HTTP connection to a Tor exit node.
-    TorConnection(Box<TorConnection>),
+    TorConnection(TorConnection),
 
     /// DGA (Domain Generation Algorithm) generated hostname in HTTP request message
-    DomainGenerationAlgorithm(Box<DomainGenerationAlgorithm>),
+    DomainGenerationAlgorithm(DomainGenerationAlgorithm),
 }
 
 impl Event {
@@ -1040,7 +1040,7 @@ impl<'i> Iterator for EventIterator<'i> {
                     };
                 Some(Ok((
                     key,
-                    Event::TorConnection(Box::new(TorConnection::new(time, &fields))),
+                    Event::TorConnection(TorConnection::new(time, &fields)),
                 )))
             }
             EventKind::DomainGenerationAlgorithm => {
@@ -1051,9 +1051,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 };
                 Some(Ok((
                     key,
-                    Event::DomainGenerationAlgorithm(Box::new(DomainGenerationAlgorithm::new(
-                        time, fields,
-                    ))),
+                    Event::DomainGenerationAlgorithm(DomainGenerationAlgorithm::new(time, fields)),
                 )))
             }
             EventKind::Log => None,
