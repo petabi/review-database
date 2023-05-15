@@ -175,7 +175,7 @@ fn read_version_file(path: &Path) -> Result<Version> {
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use super::{
         account::{Account, PasswordHashAlgorithm, Role, SaltedPassword},
         IterableMap,
@@ -232,7 +232,7 @@ pub(crate) fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<(
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-pub(crate) fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use super::{
         event::{Filter, FilterEndpoint, FlowKind},
         IterableMap,
@@ -305,7 +305,7 @@ pub(crate) fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<(
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-pub(crate) fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use super::{
         traffic_filter::{ProtocolPorts, TrafficFilter},
         IterableMap,
@@ -359,7 +359,7 @@ pub(crate) fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<(
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use crate::IterableMap;
     #[derive(Deserialize, Serialize)]
     struct OutlierKey {
@@ -417,7 +417,7 @@ pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<(
 ///
 /// Returns an error if database migration fails.
 #[allow(clippy::too_many_lines)]
-pub(crate) fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use crate::{
         event::{DnsEventFields, TorConnectionFields},
         EventKind,
