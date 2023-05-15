@@ -411,7 +411,7 @@ pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<(
     Ok(())
 }
 
-/// Migrates the database from 0.7 to 0.9.0
+/// Migrates the database from 0.7 to 0.9.
 ///
 /// # Errors
 ///
@@ -705,7 +705,7 @@ mod tests {
     }
 
     #[test]
-    fn migrate_0_7_to_0_9_alpha1() {
+    fn migrate_0_7_to_0_9() {
         use crate::{EventKind, EventMessage};
         use chrono::{TimeZone, Utc};
         use serde::{Deserialize, Serialize};

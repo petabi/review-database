@@ -884,7 +884,9 @@ impl<'a> EventDb<'a> {
 
     /// Creates an raw iterator over key-value pairs for the entire events.
     #[must_use]
-    pub fn raw_iter_forward(&self) -> DBIteratorWithThreadMode<rocksdb::OptimisticTransactionDB> {
+    pub(crate) fn raw_iter_forward(
+        &self,
+    ) -> DBIteratorWithThreadMode<rocksdb::OptimisticTransactionDB> {
         self.inner.iterator(IteratorMode::Start)
     }
 
