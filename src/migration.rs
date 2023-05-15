@@ -31,7 +31,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.9.0-alpha.1,<0.10.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = "=0.9.0-alpha.1";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -96,9 +96,9 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_6_to_0_7,
         ),
         (
-            VersionReq::parse(">=0.7.0,<0.9.0-alpha1").expect("valid version requirement"),
-            Version::parse("0.9.0-alpha1").expect("valid version"),
-            migrate_0_7_to_0_9_alpha1,
+            VersionReq::parse(">=0.7.0,<0.9.0").expect("valid version requirement"),
+            Version::parse("0.9.0").expect("valid version"),
+            migrate_0_7_to_0_9,
         ),
     ];
 
@@ -411,13 +411,13 @@ pub(crate) fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<(
     Ok(())
 }
 
-/// Migrates the database from 0.7 to 0.9.0-alpha.1
+/// Migrates the database from 0.7 to 0.9.0
 ///
 /// # Errors
 ///
 /// Returns an error if database migration fails.
 #[allow(clippy::too_many_lines)]
-pub(crate) fn migrate_0_7_to_0_9_alpha1<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+pub(crate) fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use crate::{
         event::{DnsEventFields, TorConnectionFields},
         EventKind,
@@ -773,6 +773,6 @@ mod tests {
         event_db.put(&tor_message).unwrap();
         let (db_dir, backup_dir) = settings.close();
 
-        assert!(super::migrate_0_7_to_0_9_alpha1(db_dir.path(), backup_dir.path()).is_ok());
+        assert!(super::migrate_0_7_to_0_9(db_dir.path(), backup_dir.path()).is_ok());
     }
 }
