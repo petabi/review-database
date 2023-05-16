@@ -285,17 +285,20 @@ impl TrafficFilter {
         Ok(0)
     }
 
-    fn check_duplicate(&self, network: IpNet) -> Option<&IpNet> {
-        if network.addr().is_unspecified() {
-            return None;
+    fn check_duplicate(&self, network: IpNet) -> Option<IpNet> {
+        if network.addr().is_unspecified() && self.rules.get(&network).is_some() {
+            return Some(network);
         }
-        self.rules.keys().find(|net| {
-            if net.addr().is_unspecified() {
-                false
-            } else {
-                **net == network || net.contains(&network) || network.contains(*net)
-            }
-        })
+        self.rules
+            .keys()
+            .find(|net| {
+                if net.addr().is_unspecified() {
+                    false
+                } else {
+                    **net == network || net.contains(&network) || network.contains(*net)
+                }
+            })
+            .copied()
     }
 }
 
@@ -366,21 +369,54 @@ mod tests {
     async fn check_duplicate_update() {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
-
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
 
-        let agent = "piglet@node1";
-        let network = "172.30.1.0/24".parse().unwrap();
-        let tcp_ports = Some(vec![80, 8000]);
-        let udp_ports = None;
-        let description = Some("first rule".to_string());
-        let _ = TrafficFilter::insert(&store, agent, network, tcp_ports, udp_ports, description);
+        let empty_rules = TrafficFilter::get(&store, "unknown_host");
+        assert!(empty_rules.is_ok());
+        if let Ok(r) = empty_rules {
+            assert!(r.is_none());
+        }
 
-        let new_tcp_ports = vec![8080, 8888];
+        let agent = "node1";
+        let any = "0.0.0.0/0".parse().unwrap();
+        let r = TrafficFilter::insert(
+            &store,
+            agent,
+            any,
+            Some(vec![80, 8000]),
+            None,
+            Some("any network".to_string()),
+        );
+        assert!(r.is_ok());
+
+        let r = TrafficFilter::insert(
+            &store,
+            agent,
+            any,
+            Some(vec![80]),
+            None,
+            Some("try duplicate network".to_string()),
+        );
+        assert!(r.is_err());
+
+        let network = "172.30.0.0/16".parse().unwrap();
+        let description = Some("first rule".to_string());
         let r = TrafficFilter::insert(
             &store,
             agent,
             network,
+            Some(vec![80, 8000]),
+            None,
+            description,
+        );
+        assert!(r.is_ok());
+
+        let new_tcp_ports = vec![8080, 8888];
+        let subnet_network = "172.30.1.0/24".parse().unwrap();
+        let r = TrafficFilter::insert(
+            &store,
+            agent,
+            subnet_network,
             Some(new_tcp_ports.clone()),
             None,
             None,
