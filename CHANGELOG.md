@@ -5,35 +5,35 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.0] - 2023-05-15
 
 ### Added
 
-- New iterator method `Table<Account>::iter` to improve usability and
-  encapsulation of internal database serialization format. This new iterator
-  method returns an iterator that produces `Account` objects in each iteration.
-  This change aims to simplify the usage of iterators and avoid potential
-  issues related to the direct handling of serialized data.
-- Add all fields in `DnsCovertChannel` and `TorConnection` event. The added fields
-  are used to perform packet attribute criteria during the adjudication function.
-- Add the ability to migration for `DnsCovertChannel` and `TorConnection`.
-- Add support for `argon2id` as a password hashing algorithm.
+- Introduced a new iterator method, `Table<Account>::iter`, to enhance the
+  encapsulation of the internal database serialization format and improve
+  usability. This method returns an iterator that generates `Account` objects
+  in each iteration, simplifying the use of iterators and mitigating potential
+  issues associated with the direct manipulation of serialized data.
+- Expanded the `DnsCovertChannel` and `TorConnection` events by adding all
+  fields. These added fields enable packet attribute criteria to be performed
+  during the adjudication function.
+- Added support for argon2id as a password hashing algorithm.
 
 ### Changed
 
-- The `Event::DomainGenerationAlgorithm(Box<DomainGenerationAlgorithm>)` variant
-  has been replaced with `Event::DomainGenerationAlgorithm(DomainGenerationAlgorithm)`
-  to improve code structure and reduce unnecessary memory allocations."
+- Revised the
+  `Event::DomainGenerationAlgorithm(Box<DomainGenerationAlgorithm>)` variant to
+  `Event::DomainGenerationAlgorithm(DomainGenerationAlgorithm)`. This change
+  enhances the code structure and reduces unnecessary memory allocations.
 
 ### Deprecated
 
-- `Table<Account>::iter_forward`, `Table<Account>::iter_backward`, and
-  `Table<Account>::iter_from`. These methods will be removed in a future
-  release. Developers are encouraged to switch to the new
-  `Table<Account>::iter` method for iterating over Account objects in the
-  database. These deprecated methods expose the internal, serialized form in
-  the database as `[u8]`, which can lead to potential issues and challenges in
-  handling the data.
+- The methods `Table<Account>::iter_forward`, `Table<Account>::iter_backward`,
+  and `Table<Account>::iter_from` have been deprecated. These methods will be
+  removed in a future release. We encourage developers to transition to the new
+  `Table<Account>::iter` method for iterating over `Account` objects in the
+  database. The deprecated methods expose the internal, serialized form in the
+  database as `[u8]`, which can create potential challenges in data handling.
 
 ## [0.8.0] - 2023-05-08
 
@@ -148,7 +148,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - An initial version.
 
-[Unreleased]: https://github.com/petabi/review-database/compare/0.8.0...main
+[0.9.0]: https://github.com/petabi/review-database/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/petabi/review-database/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/petabi/review-database/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/petabi/review-database/compare/0.6.0...0.7.0
