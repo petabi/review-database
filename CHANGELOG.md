@@ -17,6 +17,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Add all fields in `DnsCovertChannel` and `TorConnection` event. The added fields
   are used to perform packet attribute criteria during the adjudication function.
 - Add the ability to migration for `DnsCovertChannel` and `TorConnection`.
+- Add support for `argon2id` as a password hashing algorithm.
 
 ### Changed
 

@@ -1,4 +1,8 @@
 use anyhow::Result;
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
 use chrono::{DateTime, Utc};
 use ring::{
     digest, pbkdf2,
@@ -46,6 +50,7 @@ pub enum PasswordHashAlgorithm {
 #[repr(u32)]
 pub enum HashAlgorithm {
     Sha512 = 0,
+    Argon2id,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -85,6 +90,32 @@ impl SaltedPassword {
         })
     }
 
+    /// Creates a new `SaltedPassword`with argon2id from the given password.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if it fails to compute a password hash from the given
+    /// password and salt value.
+    pub fn with_argon2id(password: &str) -> Result<Self> {
+        let salt: SaltString = SaltString::generate(&mut OsRng);
+
+        // The default values of the `Argon2` struct are the followings:
+        // algorithm: argon2id, version number = 19, memory size = 19456, number of iterations = 2, degree of parallelism = 1
+        // This is one of the recommended configuration settings in the OWASP guidelines.
+        // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#argon2id
+        let argon2 = Argon2::default();
+        let password_hash = argon2
+            .hash_password(password.as_bytes(), &salt)?
+            .to_string();
+
+        Ok(Self {
+            salt: vec![], // not used in argon2
+            hash: password_hash.as_bytes().to_vec(),
+            algorithm: HashAlgorithm::Argon2id,
+            iterations: NonZeroU32::new(1).expect("non zero u32"), // not used in argon2
+        })
+    }
+
     #[must_use]
     pub fn is_match(&self, password: &str) -> bool {
         match self.algorithm {
@@ -96,6 +127,37 @@ impl SaltedPassword {
                 &self.hash,
             )
             .is_ok(),
+            HashAlgorithm::Argon2id => {
+                let hash = String::from_utf8_lossy(&self.hash);
+                match PasswordHash::new(&hash) {
+                    Ok(parsed_hash) => Argon2::default()
+                        .verify_password(password.as_bytes(), &parsed_hash)
+                        .is_ok(),
+                    Err(e) => {
+                        tracing::error!("Failed to parse the password hash: {hash}, reason: {e:?}");
+                        false
+                    }
+                }
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pbkdf2_test() {
+        let password = "password";
+        let pbkdf2 = SaltedPassword::new(password).unwrap();
+        assert!(pbkdf2.is_match(password));
+    }
+
+    #[test]
+    fn argon2id_test() {
+        let password = "password";
+        let argon2id = SaltedPassword::with_argon2id(password).unwrap();
+        assert!(argon2id.is_match(password));
     }
 }
