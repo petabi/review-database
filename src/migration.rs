@@ -31,7 +31,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.9.0,<0.10.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.9.0,<=0.10.0-alpha.1";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -176,13 +176,33 @@ fn read_version_file(path: &Path) -> Result<Version> {
 ///
 /// Returns an error if database migration fails.
 fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
-    use super::{
-        account::{Account, PasswordHashAlgorithm, Role, SaltedPassword},
-        IterableMap,
-    };
+    use super::{account::Role, IterableMap};
     use chrono::{DateTime, Utc};
+    use std::num::NonZeroU32;
 
-    #[derive(Deserialize, Serialize)]
+    #[derive(Clone, Deserialize, Serialize)]
+    #[repr(u32)]
+    enum HashAlgorithm {
+        Sha512 = 0,
+        Argon2id,
+    }
+
+    #[derive(Default, Deserialize, Serialize)]
+    enum PasswordHashAlgorithm {
+        #[default]
+        Pbkdf2HmacSha512 = 0,
+        Argon2id = 1,
+    }
+
+    #[derive(Clone, Deserialize, Serialize)]
+    struct SaltedPassword {
+        salt: Vec<u8>,
+        hash: Vec<u8>,
+        algorithm: HashAlgorithm,
+        iterations: NonZeroU32,
+    }
+
+    #[derive(Deserialize)]
     struct OldAccount {
         username: String,
         password: SaltedPassword,
@@ -195,7 +215,21 @@ fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         max_parallel_sessions: Option<u32>,
     }
 
-    impl From<&OldAccount> for Account {
+    #[derive(Serialize)]
+    struct NewAccount {
+        username: String,
+        password: SaltedPassword,
+        role: Role,
+        name: String,
+        department: String,
+        creation_time: DateTime<Utc>,
+        last_signin_time: Option<DateTime<Utc>>,
+        allow_access_from: Option<Vec<IpAddr>>,
+        max_parallel_sessions: Option<u32>,
+        password_hash_algorithm: PasswordHashAlgorithm,
+    }
+
+    impl From<&OldAccount> for NewAccount {
         fn from(input: &OldAccount) -> Self {
             Self {
                 username: input.username.clone(),
@@ -218,7 +252,7 @@ fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
 
     for (k, v) in account_map.iter_forward()? {
         let old: OldAccount = bincode::DefaultOptions::new().deserialize::<OldAccount>(&v)?;
-        let account: Account = (&old).into();
+        let account: NewAccount = (&old).into();
         let new = bincode::DefaultOptions::new().serialize(&account)?;
         account_map.update_raw((&k, &v), (&k, &new))?;
     }

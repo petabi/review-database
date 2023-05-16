@@ -1,5 +1,5 @@
 use super::{Indexable, IterableMap, NetworkType, Store, TrafficDirection};
-pub use crate::account::{Account, PasswordHashAlgorithm, Role, SaltedPassword};
+pub use crate::account::{Account, Role};
 use anyhow::{bail, Context, Result};
 use bincode::Options;
 use chrono::{

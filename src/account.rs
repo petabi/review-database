@@ -28,33 +28,99 @@ pub enum Role {
 #[derive(Deserialize, Serialize)]
 pub struct Account {
     pub username: String,
-    pub password: SaltedPassword,
+    password: SaltedPassword,
     pub role: Role,
     pub name: String,
     pub department: String,
-    pub creation_time: DateTime<Utc>,
-    pub last_signin_time: Option<DateTime<Utc>>,
+    creation_time: DateTime<Utc>,
+    last_signin_time: Option<DateTime<Utc>>,
     pub allow_access_from: Option<Vec<IpAddr>>,
     pub max_parallel_sessions: Option<u32>,
-    pub password_hash_algorithm: PasswordHashAlgorithm,
+    password_hash_algorithm: PasswordHashAlgorithm,
 }
 
-#[derive(Default, Deserialize, Serialize)]
-pub enum PasswordHashAlgorithm {
+impl Account {
+    const DEFAULT_HASH_ALGORITHM: PasswordHashAlgorithm = PasswordHashAlgorithm::Argon2id;
+
+    /// Creates a new `Account` with the given information
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if account creation fails.
+    pub fn new(
+        username: &str,
+        password: &str,
+        role: Role,
+        name: String,
+        department: String,
+        allow_access_from: Option<Vec<IpAddr>>,
+        max_parallel_sessions: Option<u32>,
+    ) -> Result<Self> {
+        let password =
+            SaltedPassword::new_with_hash_algorithm(password, &Self::DEFAULT_HASH_ALGORITHM)?;
+        Ok(Self {
+            username: username.to_string(),
+            password,
+            role,
+            name,
+            department,
+            creation_time: Utc::now(),
+            last_signin_time: None,
+            allow_access_from,
+            max_parallel_sessions,
+            password_hash_algorithm: Self::DEFAULT_HASH_ALGORITHM,
+        })
+    }
+
+    /// Update `Account::password` with the given password using
+    /// `Account::DEFAULT_HASH_ALGORITHM`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the salt for password cannot be generated.
+    pub fn update_password(&mut self, password: &str) -> Result<()> {
+        self.password =
+            SaltedPassword::new_with_hash_algorithm(password, &Self::DEFAULT_HASH_ALGORITHM)?;
+        self.password_hash_algorithm = Self::DEFAULT_HASH_ALGORITHM;
+        Ok(())
+    }
+
+    #[must_use]
+    pub fn verify_password(&self, provided: &str) -> bool {
+        self.password.is_match(provided)
+    }
+
+    #[must_use]
+    pub fn creation_time(&self) -> DateTime<Utc> {
+        self.creation_time
+    }
+
+    pub fn update_last_signin_time(&mut self) {
+        self.last_signin_time = Some(Utc::now());
+    }
+
+    #[must_use]
+    pub fn last_signin_time(&self) -> Option<DateTime<Utc>> {
+        self.last_signin_time
+    }
+}
+
+#[derive(Default, Debug, Deserialize, Serialize, PartialEq)]
+enum PasswordHashAlgorithm {
     #[default]
     Pbkdf2HmacSha512 = 0,
     Argon2id = 1,
 }
 
-#[derive(Clone, Copy, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 #[repr(u32)]
-pub enum HashAlgorithm {
+enum HashAlgorithm {
     Sha512 = 0,
     Argon2id,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-pub struct SaltedPassword {
+struct SaltedPassword {
     salt: Vec<u8>,
     hash: Vec<u8>,
     algorithm: HashAlgorithm,
@@ -62,12 +128,28 @@ pub struct SaltedPassword {
 }
 
 impl SaltedPassword {
+    /// Creates a new `SaltedPassword` with the given password and
+    /// password hash algorithm to be used.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the salt cannot be generated.
+    fn new_with_hash_algorithm(
+        password: &str,
+        hash_algorithm: &PasswordHashAlgorithm,
+    ) -> Result<Self> {
+        match hash_algorithm {
+            PasswordHashAlgorithm::Pbkdf2HmacSha512 => Self::with_pbkdf2(password),
+            PasswordHashAlgorithm::Argon2id => Self::with_argon2id(password),
+        }
+    }
+
     /// Creates a new `SaltedPassword` with the given password.
     ///
     /// # Errors
     ///
     /// Returns an error if the salt cannot be generated.
-    pub fn new(password: &str) -> Result<Self> {
+    fn with_pbkdf2(password: &str) -> Result<Self> {
         const ITERATIONS: u32 = 100_000;
 
         let iterations = NonZeroU32::new(ITERATIONS).expect("valid u32");
@@ -96,7 +178,7 @@ impl SaltedPassword {
     ///
     /// Returns an error if it fails to compute a password hash from the given
     /// password and salt value.
-    pub fn with_argon2id(password: &str) -> Result<Self> {
+    fn with_argon2id(password: &str) -> Result<Self> {
         let salt: SaltString = SaltString::generate(&mut OsRng);
 
         // The default values of the `Argon2` struct are the followings:
@@ -117,7 +199,7 @@ impl SaltedPassword {
     }
 
     #[must_use]
-    pub fn is_match(&self, password: &str) -> bool {
+    fn is_match(&self, password: &str) -> bool {
         match self.algorithm {
             HashAlgorithm::Sha512 => pbkdf2::verify(
                 pbkdf2::PBKDF2_HMAC_SHA512,
@@ -150,7 +232,7 @@ mod tests {
     #[test]
     fn pbkdf2_test() {
         let password = "password";
-        let pbkdf2 = SaltedPassword::new(password).unwrap();
+        let pbkdf2 = SaltedPassword::with_pbkdf2(password).unwrap();
         assert!(pbkdf2.is_match(password));
     }
 
@@ -159,5 +241,60 @@ mod tests {
         let password = "password";
         let argon2id = SaltedPassword::with_argon2id(password).unwrap();
         assert!(argon2id.is_match(password));
+    }
+
+    #[test]
+    fn account_password() {
+        let account = Account::new(
+            "test",
+            "password",
+            Role::SecurityAdministrator,
+            String::new(),
+            String::new(),
+            None,
+            None,
+        );
+        assert!(account.is_ok());
+
+        let account = account.unwrap();
+        assert_eq!(
+            account.password_hash_algorithm,
+            Account::DEFAULT_HASH_ALGORITHM
+        );
+        let password =
+            SaltedPassword::new_with_hash_algorithm("password", &Account::DEFAULT_HASH_ALGORITHM)
+                .unwrap();
+        assert_eq!(account.password.algorithm, password.algorithm);
+    }
+
+    #[test]
+    fn account_passowrd_update() {
+        let mut account = Account {
+            username: "test".to_string(),
+            password: SaltedPassword::new_with_hash_algorithm(
+                "password",
+                &PasswordHashAlgorithm::Pbkdf2HmacSha512,
+            )
+            .unwrap(),
+            role: Role::SecurityAdministrator,
+            department: String::new(),
+            name: String::new(),
+            creation_time: Utc::now(),
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Pbkdf2HmacSha512,
+        };
+        assert!(account.verify_password("password"));
+        assert!(!account.verify_password("updated"));
+
+        assert!(account.update_password("updated").is_ok());
+
+        assert!(!account.verify_password("password"));
+        assert!(account.verify_password("updated"));
+        assert_eq!(
+            account.password_hash_algorithm,
+            Account::DEFAULT_HASH_ALGORITHM
+        )
     }
 }

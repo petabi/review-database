@@ -6,10 +6,7 @@ use anyhow::{bail, Context};
 use bincode::Options;
 use rocksdb::{Direction, IteratorMode, OptimisticTransactionDB};
 
-use crate::{
-    types::{Account, SaltedPassword},
-    IterableMap, Map, MapIterator, Role, Table, EXCLUSIVE,
-};
+use crate::{types::Account, IterableMap, Map, MapIterator, Role, Table, EXCLUSIVE};
 
 use super::TableIter;
 
@@ -120,8 +117,9 @@ impl<'d> Table<'d, Account> {
                     bincode::DefaultOptions::new().deserialize::<Account>(old_value.as_ref())?;
 
                 if let Some(password) = &new_password {
-                    account.password = SaltedPassword::new(password)?;
+                    account.update_password(password)?;
                 }
+
                 if let Some((old, new)) = &role {
                     if account.role != *old {
                         bail!("old value mismatch");
@@ -231,10 +229,7 @@ impl<'i> IterableMap<'i, MapIterator<'i>> for Table<'i, Account> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{
-        types::{Account, PasswordHashAlgorithm, SaltedPassword},
-        Direction, Role, Store,
-    };
+    use crate::{types::Account, Direction, Role, Store};
 
     #[test]
     fn put_delete() {
@@ -244,33 +239,29 @@ mod tests {
         let table = store.account_map();
 
         assert!(!table.contains("user1").unwrap());
-        let acc1 = Account {
-            username: "user1".to_string(),
-            password: SaltedPassword::new("password").unwrap(),
-            role: Role::SystemAdministrator,
-            name: "User 1".to_string(),
-            department: "Department 1".to_string(),
-            creation_time: chrono::Utc::now(),
-            last_signin_time: None,
-            allow_access_from: None,
-            max_parallel_sessions: None,
-            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
-        };
+        let acc1 = Account::new(
+            "user1",
+            "password",
+            Role::SystemAdministrator,
+            "User 1".to_string(),
+            "Department 1".to_string(),
+            None,
+            None,
+        )
+        .unwrap();
         table.put(&acc1).unwrap();
         assert!(table.contains("user1").unwrap());
 
-        let acc2 = Account {
-            username: "user2".to_string(),
-            password: SaltedPassword::new("password").unwrap(),
-            role: Role::SystemAdministrator,
-            name: "User 2".to_string(),
-            department: "Department 2".to_string(),
-            creation_time: chrono::Utc::now(),
-            last_signin_time: None,
-            allow_access_from: None,
-            max_parallel_sessions: None,
-            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
-        };
+        let acc2 = Account::new(
+            "user2",
+            "password",
+            Role::SystemAdministrator,
+            "User 2".to_string(),
+            "Department 2".to_string(),
+            None,
+            None,
+        )
+        .unwrap();
         table.put(&acc2).unwrap();
         assert!(table.contains("user2").unwrap());
 
@@ -288,18 +279,16 @@ mod tests {
         let mut iter = table.iter(Direction::Forward, None);
         assert!(iter.next().is_none());
 
-        let acc1 = Account {
-            username: "user1".to_string(),
-            password: SaltedPassword::new("password").unwrap(),
-            role: Role::SystemAdministrator,
-            name: "User 1".to_string(),
-            department: "Department 1".to_string(),
-            creation_time: chrono::Utc::now(),
-            last_signin_time: None,
-            allow_access_from: None,
-            max_parallel_sessions: None,
-            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
-        };
+        let acc1 = Account::new(
+            "user1",
+            "password",
+            Role::SystemAdministrator,
+            "User 1".to_string(),
+            "Department 1".to_string(),
+            None,
+            None,
+        )
+        .unwrap();
         table.put(&acc1).unwrap();
 
         let mut iter = table.iter(Direction::Forward, None);
@@ -307,18 +296,16 @@ mod tests {
         assert_eq!(acc.username, "user1");
         assert!(iter.next().is_none());
 
-        let acc2 = Account {
-            username: "user2".to_string(),
-            password: SaltedPassword::new("password").unwrap(),
-            role: Role::SystemAdministrator,
-            name: "User 2".to_string(),
-            department: "Department 2".to_string(),
-            creation_time: chrono::Utc::now(),
-            last_signin_time: None,
-            allow_access_from: None,
-            max_parallel_sessions: None,
-            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
-        };
+        let acc2 = Account::new(
+            "user2",
+            "password",
+            Role::SystemAdministrator,
+            "User 2".to_string(),
+            "Department 2".to_string(),
+            None,
+            None,
+        )
+        .unwrap();
         table.put(&acc2).unwrap();
 
         let mut iter = table.iter(Direction::Forward, Some("user2"));
