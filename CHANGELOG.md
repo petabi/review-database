@@ -5,17 +5,19 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed an issue where the `event_source` column becomes `null` when the value
+  of `max_event_id_num` gets updated.
+
 ## [0.10.0] - 2023-05-16
 
 ### Changed
 
 - Improved security by hiding `SaltedPassword`, `Account::password` field and
   related operations from user access.
-
-### Fixed
-
-- Fixed an issue where the `event_source` column becomes `null` when the value
-  of `max_event_id_num` gets updated.
 
 ## [0.9.0] - 2023-05-15
 
