@@ -150,7 +150,9 @@ impl SaltedPassword {
     ///
     /// Returns an error if the salt cannot be generated.
     fn with_pbkdf2(password: &str) -> Result<Self> {
-        const ITERATIONS: u32 = 100_000;
+        // The recommended iteration count for PBKDF2-HMAC-SHA512 is 210,000
+        // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
+        const ITERATIONS: u32 = 210_000;
 
         let iterations = NonZeroU32::new(ITERATIONS).expect("valid u32");
         let rng = rand::SystemRandom::new();
