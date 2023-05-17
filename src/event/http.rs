@@ -113,8 +113,8 @@ impl Match for RepeatedHttpSessions {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub(super) struct HttpThreatFields {
-    pub event_id: u64,
+#[allow(clippy::module_name_repetitions)]
+pub struct HttpThreatFields {
     pub time: DateTime<Utc>,
     pub source: String,
     pub src_addr: IpAddr,
@@ -123,10 +123,25 @@ pub(super) struct HttpThreatFields {
     pub dst_port: u16,
     pub proto: u8,
     pub duration: i64,
+    pub method: String,
     pub host: String,
-    pub content: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
     pub db_name: String,
     pub rule_id: u32,
+    pub matched_to: String,
     pub cluster_id: usize,
     pub attack_kind: String,
     pub confidence: f32,
@@ -135,22 +150,30 @@ pub(super) struct HttpThreatFields {
 // Syslog format: 5-tuple,attack-name,severity,content
 impl fmt::Display for HttpThreatFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let user_agent = self.user_agent.replace(',', " ");
         write!(
             f,
-            "{},{},{},{},{},{},2,{}",
+            "{},{},{},{},{},{},2,{},{},{},{},{},{}",
             self.src_addr,
             self.src_port,
             self.dst_addr,
             self.dst_port,
             self.proto,
             self.attack_kind,
-            self.content,
+            self.method,
+            self.host,
+            self.uri,
+            self.referer,
+            self.status_code,
+            user_agent
         )
     }
 }
 
+#[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct HttpThreat {
+    #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub source: String,
     pub src_addr: IpAddr,
@@ -158,10 +181,26 @@ pub struct HttpThreat {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub duration: i64,
+    pub method: String,
     pub host: String,
-    pub content: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
     pub db_name: String,
     pub rule_id: u32,
+    pub matched_to: String,
     pub cluster_id: usize,
     pub attack_kind: String,
     pub confidence: f32,
@@ -170,7 +209,11 @@ pub struct HttpThreat {
 
 impl fmt::Display for HttpThreat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let content = self.content.replace(',', " ");
+        let mut content = format!(
+            "{} {} {} {} {} {}",
+            self.method, self.host, self.uri, self.referer, self.status_code, self.user_agent
+        );
+        content = content.replace(',', " ");
         write!(
             f,
             "{},{},{},{},{},{},{},HttpThreat,{},{},{},{},{},{},{}",
@@ -202,10 +245,26 @@ impl HttpThreat {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            duration: fields.duration,
+            method: fields.method,
             host: fields.host,
-            content: fields.content,
+            uri: fields.uri,
+            referer: fields.referer,
+            version: fields.version,
+            user_agent: fields.user_agent,
+            request_len: fields.request_len,
+            response_len: fields.response_len,
+            status_code: fields.status_code,
+            status_msg: fields.status_msg,
+            username: fields.username,
+            password: fields.password,
+            cookie: fields.cookie,
+            content_encoding: fields.content_encoding,
+            content_type: fields.content_type,
+            cache_control: fields.cache_control,
             db_name: fields.db_name,
             rule_id: fields.rule_id,
+            matched_to: fields.matched_to,
             cluster_id: fields.cluster_id,
             attack_kind: fields.attack_kind,
             confidence: fields.confidence,
@@ -357,8 +416,8 @@ impl fmt::Display for DomainGenerationAlgorithm {
             self.host,
             self.uri,
             self.referer,
-            user_agent,
-            self.status_code
+            self.status_code,
+            user_agent
         )
     }
 }

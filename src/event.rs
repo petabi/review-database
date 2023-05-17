@@ -6,13 +6,13 @@ mod tor;
 
 use self::{
     common::Match,
-    http::{DgaFields, HttpThreatFields, RepeatedHttpSessionsFields},
+    http::{DgaFields, RepeatedHttpSessionsFields},
     rdp::RdpBruteForceFields,
 };
 pub use self::{
     common::TriageScore,
     dns::{DnsCovertChannel, DnsEventFields},
-    http::{DomainGenerationAlgorithm, HttpThreat, RepeatedHttpSessions},
+    http::{DomainGenerationAlgorithm, HttpThreat, HttpThreatFields, RepeatedHttpSessions},
     rdp::RdpBruteForce,
     tor::{TorConnection, TorConnectionFields},
 };

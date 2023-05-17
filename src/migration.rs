@@ -31,7 +31,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.9.0,<=0.11.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.11.0-alpha.1,<0.12.0-alpha";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -99,6 +99,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             VersionReq::parse(">=0.7.0,<0.9.0").expect("valid version requirement"),
             Version::parse("0.9.0").expect("valid version"),
             migrate_0_7_to_0_9,
+        ),
+        (
+            VersionReq::parse(">=0.9.0,<0.11.0").expect("valid version requirement"),
+            Version::parse("0.11.0").expect("valid version"),
+            migrate_0_9_to_0_11,
         ),
     ];
 
@@ -460,25 +465,25 @@ fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     use num_traits::FromPrimitive;
 
     #[derive(Deserialize, Serialize)]
-    pub struct OldDnsEventFields {
-        pub source: String,
-        pub src_addr: IpAddr,
-        pub src_port: u16,
-        pub dst_addr: IpAddr,
-        pub dst_port: u16,
-        pub proto: u8,
-        pub query: String,
-        pub confidence: f32,
+    struct OldDnsEventFields {
+        source: String,
+        src_addr: IpAddr,
+        src_port: u16,
+        dst_addr: IpAddr,
+        dst_port: u16,
+        proto: u8,
+        query: String,
+        confidence: f32,
     }
 
     #[derive(Deserialize, Serialize)]
-    pub struct OldTorConnectionFields {
-        pub source: String,
-        pub src_addr: IpAddr,
-        pub src_port: u16,
-        pub dst_addr: IpAddr,
-        pub dst_port: u16,
-        pub proto: u8,
+    struct OldTorConnectionFields {
+        source: String,
+        src_addr: IpAddr,
+        src_port: u16,
+        dst_addr: IpAddr,
+        dst_port: u16,
+        proto: u8,
     }
 
     impl From<OldDnsEventFields> for DnsEventFields {
@@ -569,6 +574,106 @@ fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
                 };
                 let tor_event: TorConnectionFields = fields.into();
                 let new = bincode::serialize(&tor_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
+            }
+            _ => continue,
+        }
+    }
+    store.purge_old_backups(0)?;
+    Ok(())
+}
+
+/// Migrates the database from 0.9 to 0.11.
+///
+/// # Errors
+///
+/// Returns an error if database migration fails.
+#[allow(clippy::too_many_lines)]
+fn migrate_0_9_to_0_11<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+    use crate::{event::HttpThreatFields, EventKind};
+    use chrono::{DateTime, Utc};
+    use num_traits::FromPrimitive;
+
+    #[derive(Deserialize, Serialize)]
+    struct OldHttpThreatFields {
+        event_id: u64,
+        time: DateTime<Utc>,
+        source: String,
+        src_addr: IpAddr,
+        src_port: u16,
+        dst_addr: IpAddr,
+        dst_port: u16,
+        proto: u8,
+        duration: i64,
+        host: String,
+        content: String,
+        db_name: String,
+        rule_id: u32,
+        cluster_id: usize,
+        attack_kind: String,
+        confidence: f32,
+    }
+
+    impl From<OldHttpThreatFields> for HttpThreatFields {
+        fn from(input: OldHttpThreatFields) -> Self {
+            Self {
+                time: input.time,
+                source: input.source.clone(),
+                src_addr: input.src_addr,
+                src_port: input.src_port,
+                dst_addr: input.dst_addr,
+                dst_port: input.dst_port,
+                proto: input.proto,
+                duration: input.duration,
+                method: String::new(),
+                host: String::new(),
+                uri: String::new(),
+                referer: String::new(),
+                version: String::new(),
+                user_agent: String::new(),
+                request_len: 0,
+                response_len: 0,
+                status_code: 0,
+                status_msg: String::new(),
+                username: String::new(),
+                password: String::new(),
+                cookie: String::new(),
+                content_encoding: String::new(),
+                content_type: String::new(),
+                cache_control: String::new(),
+                db_name: input.db_name,
+                rule_id: input.rule_id,
+                matched_to: String::new(),
+                cluster_id: input.cluster_id,
+                attack_kind: input.attack_kind,
+                confidence: input.confidence,
+            }
+        }
+    }
+
+    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    store.backup(1)?;
+
+    let event_db = store.events();
+    for item in event_db.raw_iter_forward() {
+        let (k, v) = item.context("Failed to read events Database")?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(kind) = EventKind::from_i128(kind_num) else {
+            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+        };
+        match kind {
+            EventKind::HttpThreat => {
+                let Ok(fields) = bincode::deserialize::<OldHttpThreatFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                };
+                let http_event: HttpThreatFields = fields.into();
+                let new = bincode::serialize(&http_event).unwrap_or_default();
                 event_db.update((&k, &v), (&k, &new))?;
             }
             _ => continue,
@@ -746,25 +851,25 @@ mod tests {
         use std::net::IpAddr;
 
         #[derive(Deserialize, Serialize)]
-        pub struct OldDnsEventFields {
-            pub source: String,
-            pub src_addr: IpAddr,
-            pub src_port: u16,
-            pub dst_addr: IpAddr,
-            pub dst_port: u16,
-            pub proto: u8,
-            pub query: String,
-            pub confidence: f32,
+        struct OldDnsEventFields {
+            source: String,
+            src_addr: IpAddr,
+            src_port: u16,
+            dst_addr: IpAddr,
+            dst_port: u16,
+            proto: u8,
+            query: String,
+            confidence: f32,
         }
 
         #[derive(Deserialize, Serialize)]
-        pub struct OldTorConnectionFields {
-            pub source: String,
-            pub src_addr: IpAddr,
-            pub src_port: u16,
-            pub dst_addr: IpAddr,
-            pub dst_port: u16,
-            pub proto: u8,
+        struct OldTorConnectionFields {
+            source: String,
+            src_addr: IpAddr,
+            src_port: u16,
+            dst_addr: IpAddr,
+            dst_port: u16,
+            proto: u8,
         }
 
         let dsn_kind = EventKind::DnsCovertChannel;
@@ -808,5 +913,66 @@ mod tests {
         let (db_dir, backup_dir) = settings.close();
 
         assert!(super::migrate_0_7_to_0_9(db_dir.path(), backup_dir.path()).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_9_to_0_10() {
+        use crate::{EventKind, EventMessage};
+        use chrono::{DateTime, Utc};
+        use serde::{Deserialize, Serialize};
+        use std::net::IpAddr;
+
+        #[derive(Deserialize, Serialize)]
+        struct OldHttpThreatFields {
+            event_id: u64,
+            time: DateTime<Utc>,
+            source: String,
+            src_addr: IpAddr,
+            src_port: u16,
+            dst_addr: IpAddr,
+            dst_port: u16,
+            proto: u8,
+            duration: i64,
+            host: String,
+            content: String,
+            db_name: String,
+            rule_id: u32,
+            cluster_id: usize,
+            attack_kind: String,
+            confidence: f32,
+        }
+
+        let kind = EventKind::HttpThreat;
+        let time = Utc::now();
+        let value = OldHttpThreatFields {
+            event_id: 1,
+            time,
+            source: "reveiw1".to_string(),
+            src_addr: "192.168.4.100".parse::<IpAddr>().unwrap(),
+            src_port: 40000,
+            dst_addr: "31.3.245.100".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 10,
+            duration: Utc::now().timestamp_nanos(),
+            host: "example.com".to_string(),
+            content: "GET example.com /index.html - bbc browser".to_string(),
+            db_name: "http threat db".to_string(),
+            rule_id: 1000,
+            cluster_id: 100,
+            attack_kind: "http threat from example.com".to_string(),
+            confidence: 0.8,
+        };
+        let message = EventMessage {
+            time,
+            kind,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let settings = TestSchema::new();
+        let event_db = settings.store.events();
+        event_db.put(&message).unwrap();
+        let (db_dir, backup_dir) = settings.close();
+
+        assert!(super::migrate_0_9_to_0_11(db_dir.path(), backup_dir.path()).is_ok());
     }
 }
