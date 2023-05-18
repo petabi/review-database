@@ -5,12 +5,15 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.11.0] - 2023-05-18
 
 ### Changed
 
-- Expand `HttpThreat` event to use all of it's original fields and
-  add `matched_to` field to contain the matched patterns.
+- The `HttpThreat` event object has been significantly expanded to incorporate
+  all its original fields.
+- Added a new field called matched_to to the `HttpThreat` event object. This
+  field will contain the patterns that have been matched, enabling users to
+  identify the threats they are exposed to more effectively.
 
 ## [0.10.1] - 2023-05-16
 
@@ -169,6 +172,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - An initial version.
 
+[0.11.0]: https://github.com/petabi/review-database/compare/0.10.1...0.11.0
 [0.10.1]: https://github.com/petabi/review-database/compare/0.10.0...0.10.1
 [0.10.0]: https://github.com/petabi/review-database/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/petabi/review-database/compare/0.8.0...0.9.0
