@@ -163,7 +163,6 @@ pub struct DataSource {
     pub address: std::net::SocketAddr,
 
     pub data_type: DataType,
-    pub policy: u32,
     pub source: String,
     pub kind: Option<String>,
 
