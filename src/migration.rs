@@ -1087,7 +1087,7 @@ mod tests {
     }
 
     #[test]
-    fn migrate_0_9_to_0_10() {
+    fn migrate_0_9_to_0_11() {
         use crate::{EventKind, EventMessage};
         use chrono::{DateTime, Utc};
         use serde::{Deserialize, Serialize};
