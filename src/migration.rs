@@ -3,7 +3,7 @@
 use anyhow::{anyhow, Context, Result};
 use bincode::Options;
 use semver::{Version, VersionReq};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     fs::{create_dir_all, File},
     io::{Read, Write},
@@ -31,7 +31,7 @@ use std::{
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.11.0,<0.12.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.12.0-alpha.1,<0.13.0-alpha";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -104,6 +104,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             VersionReq::parse(">=0.9.0,<0.11.0").expect("valid version requirement"),
             Version::parse("0.11.0").expect("valid version"),
             migrate_0_9_to_0_11,
+        ),
+        (
+            VersionReq::parse(">=0.11.0,<0.12.0").expect("valid version requirement"),
+            Version::parse("0.12.0").expect("valid version"),
+            migrate_0_11_to_0_12,
         ),
     ];
 
@@ -583,13 +588,17 @@ fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     Ok(())
 }
 
-/// Migrates the database from 0.9 to 0.11.
-///
-/// # Errors
-///
-/// Returns an error if database migration fails.
-#[allow(clippy::too_many_lines)]
 fn migrate_0_9_to_0_11<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    store.backup(1)?;
+
+    update_events_0_9_to_0_11(&store)?;
+
+    store.purge_old_backups(0)?;
+    Ok(())
+}
+
+fn update_events_0_9_to_0_11(store: &crate::Store) -> Result<()> {
     use crate::{event::HttpThreatFields, EventKind};
     use chrono::{DateTime, Utc};
     use num_traits::FromPrimitive;
@@ -651,9 +660,6 @@ fn migrate_0_9_to_0_11<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(1)?;
-
     let event_db = store.events();
     for item in event_db.raw_iter_forward() {
         let (k, v) = item.context("Failed to read events Database")?;
@@ -679,7 +685,172 @@ fn migrate_0_9_to_0_11<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
             _ => continue,
         }
     }
+    Ok(())
+}
+
+fn migrate_0_11_to_0_12<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    store.backup(1)?;
+
+    update_data_source_0_11_to_0_12(&store)?;
+
     store.purge_old_backups(0)?;
+    Ok(())
+}
+
+fn update_data_source_0_11_to_0_12(store: &crate::Store) -> Result<()> {
+    use super::{DataType, IterableMap};
+
+    #[derive(Deserialize, Serialize, PartialEq)]
+    struct OldDataSource {
+        id: u32,
+        name: String,
+
+        server_name: String,
+        address: std::net::SocketAddr,
+
+        data_type: DataType,
+        _policy: u32,
+        source: String,
+        kind: Option<String>,
+
+        description: String,
+    }
+
+    impl crate::collections::Indexable for OldDataSource {
+        fn key(&self) -> &[u8] {
+            self.name.as_bytes()
+        }
+
+        fn value(&self) -> Vec<u8> {
+            bincode::DefaultOptions::new()
+                .serialize(self)
+                .expect("serializable")
+        }
+
+        fn set_index(&mut self, index: u32) {
+            self.id = index;
+        }
+    }
+
+    impl crate::collections::IndexedMapUpdate for OldDataSource {
+        type Entry = Self;
+        fn key(&self) -> Option<&[u8]> {
+            Some(self.name.as_bytes())
+        }
+        fn apply(&self, value: Self::Entry) -> Result<Self::Entry> {
+            Ok(value)
+        }
+        fn verify(&self, value: &Self::Entry) -> bool {
+            self == value
+        }
+    }
+
+    #[derive(Deserialize, Serialize, PartialEq)]
+    struct NewDataSource {
+        id: u32,
+        name: String,
+
+        server_name: String,
+        address: std::net::SocketAddr,
+
+        data_type: DataType,
+        source: String,
+        kind: Option<String>,
+
+        description: String,
+    }
+
+    impl From<OldDataSource> for NewDataSource {
+        fn from(old: OldDataSource) -> Self {
+            Self {
+                id: old.id,
+                name: old.name,
+                server_name: old.server_name,
+                address: old.address,
+                data_type: old.data_type,
+                source: old.source,
+                kind: old.kind,
+                description: old.description,
+            }
+        }
+    }
+
+    impl crate::collections::Indexable for NewDataSource {
+        fn key(&self) -> &[u8] {
+            self.name.as_bytes()
+        }
+
+        fn value(&self) -> Vec<u8> {
+            bincode::DefaultOptions::new()
+                .serialize(self)
+                .expect("serializable")
+        }
+
+        fn set_index(&mut self, index: u32) {
+            self.id = index;
+        }
+    }
+
+    impl crate::collections::IndexedMapUpdate for NewDataSource {
+        type Entry = Self;
+        fn key(&self) -> Option<&[u8]> {
+            Some(self.name.as_bytes())
+        }
+        fn apply(&self, value: Self::Entry) -> Result<Self::Entry> {
+            Ok(value)
+        }
+        fn verify(&self, value: &Self::Entry) -> bool {
+            self == value
+        }
+    }
+
+    let map = store.data_source_map();
+
+    let updates = collect_indexed_map_updates(
+        map.iter_forward()?,
+        |o: &OldDataSource, _n: &NewDataSource| o.id,
+    )?;
+
+    migrate_indexed_map(&map, updates)
+}
+
+fn collect_indexed_map_updates<O, N>(
+    iter: crate::collections::IndexedMapIterator,
+    get_id: fn(&O, &N) -> u32,
+) -> Result<Vec<(u32, O, N)>>
+where
+    O: DeserializeOwned,
+    N: From<O>,
+{
+    let mut updates = vec![];
+    for (_k, v) in iter {
+        let old = bincode::DefaultOptions::new().deserialize::<O>(&v)?;
+        let new: N = bincode::DefaultOptions::new()
+            .deserialize::<O>(&v)
+            .context("deserializing into old data source error")?
+            .into();
+        let id = get_id(&old, &new);
+        updates.push((id, old, new));
+    }
+    Ok(updates)
+}
+
+fn migrate_indexed_map<O, N>(
+    map: &crate::collections::IndexedMap,
+    updates: Vec<(u32, O, N)>,
+) -> Result<()>
+where
+    O: crate::collections::IndexedMapUpdate,
+    O::Entry: crate::collections::Indexable + crate::types::FromKeyValue,
+    N: crate::collections::IndexedMapUpdate,
+    N::Entry: crate::collections::Indexable + From<O::Entry>,
+{
+    use crate::collections::Indexed;
+
+    for (id, old, new) in updates {
+        map.update(id, &old, &new)?;
+    }
     Ok(())
 }
 

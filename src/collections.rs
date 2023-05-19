@@ -447,10 +447,12 @@ pub trait Indexed {
     /// # Errors
     ///
     /// Returns an error if the `id` is invalid or the database operation fails.
-    fn update<V>(&self, id: u32, old: &V, new: &V) -> Result<()>
+    fn update<O, V>(&self, id: u32, old: &O, new: &V) -> Result<()>
     where
+        O: IndexedMapUpdate,
+        O::Entry: Indexable + FromKeyValue,
         V: IndexedMapUpdate,
-        V::Entry: Indexable + FromKeyValue,
+        V::Entry: Indexable + From<O::Entry>,
     {
         loop {
             let txn = self.db().transaction();
@@ -476,7 +478,7 @@ pub trait Indexed {
                 .get_for_update_cf(self.cf(), &key, super::EXCLUSIVE)
                 .context("cannot read entry")?
             {
-                V::Entry::from_key_value(&key, &value).context("invalid entry in database")?
+                O::Entry::from_key_value(&key, &value).context("invalid entry in database")?
             } else {
                 bail!("corrupt index");
             };
@@ -491,7 +493,7 @@ pub trait Indexed {
             } else {
                 key
             };
-            let new_entry = new.apply(entry);
+            let new_entry = new.apply(entry.into());
             txn.put_cf(
                 self.cf(),
                 new_key,
