@@ -856,10 +856,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use semver::{Version, VersionReq};
 
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::{IterableMap, Store};
+    use crate::{Indexed, IterableMap, Store};
 
     struct TestSchema {
         db_dir: tempfile::TempDir,
@@ -1145,5 +1147,65 @@ mod tests {
         let (db_dir, backup_dir) = settings.close();
 
         assert!(super::migrate_0_9_to_0_11(db_dir.path(), backup_dir.path()).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_11_to_0_12() {
+        use crate::DataType;
+        use serde::{Deserialize, Serialize};
+
+        #[derive(Deserialize, Serialize, PartialEq)]
+        struct OldDataSource {
+            id: u32,
+            name: String,
+
+            server_name: String,
+            address: std::net::SocketAddr,
+
+            data_type: DataType,
+            _policy: u32,
+            source: String,
+            kind: Option<String>,
+
+            description: String,
+        }
+
+        impl crate::collections::Indexable for OldDataSource {
+            fn key(&self) -> &[u8] {
+                self.name.as_bytes()
+            }
+
+            fn value(&self) -> Vec<u8> {
+                use bincode::Options;
+
+                bincode::DefaultOptions::new()
+                    .serialize(self)
+                    .expect("serializable")
+            }
+
+            fn set_index(&mut self, index: u32) {
+                self.id = index;
+            }
+        }
+
+        let settings = TestSchema::new();
+        let map = settings.store.data_source_map();
+        let ds = OldDataSource {
+            id: 0,
+            name: "test".to_owned(),
+            server_name: "localhost".to_owned(),
+            address: std::net::SocketAddr::from_str("[::1]:12345")
+                .expect("failed to initialize ip address"),
+            data_type: DataType::Csv,
+            _policy: 1,
+            source: "source".to_owned(),
+            kind: Some("kind".to_owned()),
+            description: "test".to_owned(),
+        };
+        assert!(map.insert(ds).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        assert!(super::migrate_0_11_to_0_12(db_dir.path(), backup_dir.path()).is_ok());
     }
 }
