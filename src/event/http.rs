@@ -115,6 +115,7 @@ impl Match for RepeatedHttpSessions {
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct HttpThreatFields {
+    #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub source: String,
     pub src_addr: IpAddr,
