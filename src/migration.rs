@@ -627,7 +627,7 @@ fn update_events_0_9_to_0_11(store: &crate::Store) -> Result<()> {
         fn from(input: OldHttpThreatFields) -> Self {
             Self {
                 time: input.time,
-                source: input.source.clone(),
+                source: input.source,
                 src_addr: input.src_addr,
                 src_port: input.src_port,
                 dst_addr: input.dst_addr,
@@ -693,6 +693,7 @@ fn migrate_0_11_to_0_12<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     store.backup(1)?;
 
     update_data_source_0_11_to_0_12(&store)?;
+    update_httpthreatfields_0_11_to_0_12(&store)?;
 
     store.purge_old_backups(0)?;
     Ok(())
@@ -854,14 +855,118 @@ where
     Ok(())
 }
 
+// Update HttpThreatFields: migrate from 0.11 to 0.12
+#[allow(clippy::too_many_lines)]
+fn update_httpthreatfields_0_11_to_0_12(store: &crate::Store) -> Result<()> {
+    use crate::{event::HttpThreatFields, EventKind};
+    use chrono::{DateTime, Utc};
+    use num_traits::FromPrimitive;
+
+    #[derive(Deserialize, Serialize)]
+    struct OldHttpThreatFields {
+        pub time: DateTime<Utc>,
+        pub source: String,
+        pub src_addr: IpAddr,
+        pub src_port: u16,
+        pub dst_addr: IpAddr,
+        pub dst_port: u16,
+        pub proto: u8,
+        pub duration: i64,
+        pub method: String,
+        pub host: String,
+        pub uri: String,
+        pub referer: String,
+        pub version: String,
+        pub user_agent: String,
+        pub request_len: usize,
+        pub response_len: usize,
+        pub status_code: u16,
+        pub status_msg: String,
+        pub username: String,
+        pub password: String,
+        pub cookie: String,
+        pub content_encoding: String,
+        pub content_type: String,
+        pub cache_control: String,
+        pub db_name: String,
+        pub rule_id: u32,
+        pub matched_to: String,
+        pub cluster_id: usize,
+        pub attack_kind: String,
+        pub confidence: f32,
+    }
+
+    impl From<OldHttpThreatFields> for HttpThreatFields {
+        fn from(input: OldHttpThreatFields) -> Self {
+            Self {
+                time: input.time,
+                source: input.source,
+                src_addr: input.src_addr,
+                src_port: input.src_port,
+                dst_addr: input.dst_addr,
+                dst_port: input.dst_port,
+                proto: input.proto,
+                duration: input.duration,
+                method: input.method,
+                host: input.host,
+                uri: input.uri,
+                referer: input.referer,
+                version: input.version,
+                user_agent: input.user_agent,
+                request_len: input.request_len,
+                response_len: input.response_len,
+                status_code: input.status_code,
+                status_msg: input.status_msg,
+                username: input.username,
+                password: input.password,
+                cookie: input.cookie,
+                content_encoding: input.content_encoding,
+                content_type: input.content_type,
+                cache_control: input.cache_control,
+                db_name: input.db_name,
+                rule_id: input.rule_id,
+                matched_to: input.matched_to,
+                cluster_id: input.cluster_id,
+                attack_kind: input.attack_kind,
+                confidence: input.confidence,
+            }
+        }
+    }
+
+    let event_db = store.events();
+    for item in event_db.raw_iter_forward() {
+        let (k, v) = item.context("Failed to read events Database")?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(kind) = EventKind::from_i128(kind_num) else {
+            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+        };
+        match kind {
+            EventKind::HttpThreat => {
+                let Ok(fields) = bincode::deserialize::<OldHttpThreatFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                };
+                let http_event: HttpThreatFields = fields.into();
+                let new = bincode::serialize(&http_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
+            }
+            _ => continue,
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use semver::{Version, VersionReq};
-
     use super::COMPATIBLE_VERSION_REQ;
     use crate::{Indexed, IterableMap, Store};
+    use semver::{Version, VersionReq};
+    use std::str::FromStr;
 
     struct TestSchema {
         db_dir: tempfile::TempDir,
@@ -1152,7 +1257,10 @@ mod tests {
     #[test]
     fn migrate_0_11_to_0_12() {
         use crate::DataType;
+        use crate::{EventKind, EventMessage};
+        use chrono::{DateTime, TimeZone, Utc};
         use serde::{Deserialize, Serialize};
+        use std::net::IpAddr;
 
         #[derive(Deserialize, Serialize, PartialEq)]
         struct OldDataSource {
@@ -1204,6 +1312,81 @@ mod tests {
         };
         assert!(map.insert(ds).is_ok());
 
+        #[derive(Deserialize, Serialize)]
+        struct OldHttpThreatFields {
+            pub time: DateTime<Utc>,
+            pub source: String,
+            pub src_addr: IpAddr,
+            pub src_port: u16,
+            pub dst_addr: IpAddr,
+            pub dst_port: u16,
+            pub proto: u8,
+            pub duration: i64,
+            pub method: String,
+            pub host: String,
+            pub uri: String,
+            pub referer: String,
+            pub version: String,
+            pub user_agent: String,
+            pub request_len: usize,
+            pub response_len: usize,
+            pub status_code: u16,
+            pub status_msg: String,
+            pub username: String,
+            pub password: String,
+            pub cookie: String,
+            pub content_encoding: String,
+            pub content_type: String,
+            pub cache_control: String,
+            pub db_name: String,
+            pub rule_id: u32,
+            pub matched_to: String,
+            pub cluster_id: usize,
+            pub attack_kind: String,
+            pub confidence: f32,
+        }
+
+        let time = Utc.with_ymd_and_hms(2023, 1, 20, 0, 0, 1).unwrap();
+        let value = OldHttpThreatFields {
+            time,
+            source: "reveiw1".to_string(),
+            src_addr: "192.168.4.100".parse::<IpAddr>().unwrap(),
+            src_port: 40000,
+            dst_addr: "31.3.245.100".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 10,
+            duration: Utc::now().timestamp_nanos(),
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            uri: "/path/to/uri".to_string(),
+            referer: "-".to_string(),
+            version: "1.1".to_string(),
+            user_agent: "sample browser".to_string(),
+            request_len: 100,
+            response_len: 300,
+            status_code: 200,
+            status_msg: "Ok".to_string(),
+            username: "-".to_string(),
+            password: "-".to_string(),
+            cookie: "c.o.o.k.i.e".to_string(),
+            content_encoding: "text/html".to_string(),
+            content_type: "-".to_string(),
+            cache_control: "no-cache".to_string(),
+            db_name: "http threat db".to_string(),
+            rule_id: 1000,
+            matched_to: "31.3.245.100".to_string(),
+            cluster_id: 100,
+            attack_kind: "http threat from example.com".to_string(),
+            confidence: 0.8,
+        };
+        let message = EventMessage {
+            time,
+            kind: EventKind::HttpThreat,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
         let (db_dir, backup_dir) = settings.close();
 
         assert!(super::migrate_0_11_to_0_12(db_dir.path(), backup_dir.path()).is_ok());

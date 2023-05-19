@@ -843,8 +843,7 @@ impl fmt::Display for EventMessage {
                 }
             }
             EventKind::DomainGenerationAlgorithm => {
-                if let Ok(fields) = bincode::deserialize::<DomainGenerationAlgorithm>(&self.fields)
-                {
+                if let Ok(fields) = bincode::deserialize::<DgaFields>(&self.fields) {
                     write!(f, "DomainGenerationAlgorithm,{fields}")
                 } else {
                     write!(f, "invalid event")
@@ -1296,9 +1295,12 @@ fn get_record_country_short_name(record: &ip2location::Record) -> Option<String>
 
 #[cfg(test)]
 mod tests {
-    use crate::{event::DnsEventFields, EventKind, EventMessage, Store};
+    use crate::{
+        event::DgaFields, event::DnsEventFields, DomainGenerationAlgorithm, EventKind,
+        EventMessage, Store,
+    };
     use bincode::Options;
-    use chrono::Utc;
+    use chrono::{TimeZone, Utc};
     use std::{
         net::{IpAddr, Ipv4Addr},
         sync::Arc,
@@ -1355,6 +1357,51 @@ mod tests {
         assert!(iter.next().is_some());
         assert!(iter.next().is_some());
         assert!(iter.next().is_none());
+    }
+
+    #[tokio::test]
+    async fn event_display_for_syslog() {
+        let fields = DgaFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 80,
+            proto: 6,
+            duration: Utc::now().timestamp_nanos(),
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            uri: "/uri/path".to_string(),
+            referer: "-".to_string(),
+            version: "1.1".to_string(),
+            user_agent: "browser".to_string(),
+            request_len: 100,
+            response_len: 100,
+            status_code: 200,
+            status_msg: "-".to_string(),
+            username: "-".to_string(),
+            password: "-".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "encoding type".to_string(),
+            content_type: "content type".to_string(),
+            cache_control: "no cache".to_string(),
+        };
+        let msg = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::DomainGenerationAlgorithm,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let syslog_message = format!("{msg}");
+        assert_eq!(syslog_message, "1970-01-01T00:01:01+00:00,DomainGenerationAlgorithm,127.0.0.1,10000,127.0.0.2,80,6,DGA,3,GET,example.com,/uri/path,-,200,browser".to_string());
+
+        let dga = DomainGenerationAlgorithm::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            fields,
+        );
+        let dga_display = format!("{dga}");
+        assert!(dga_display.ends_with(
+            ",127.0.0.1,10000,127.0.0.2,80,6,DGA,GET,example.com,/uri/path,-,200,browser"
+        ));
     }
 
     #[tokio::test]

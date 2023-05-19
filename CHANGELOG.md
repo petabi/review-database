@@ -11,6 +11,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Remove `policy` field from `DataSource`.
 
+### Fixed
+
+- Fix the bug writing `invalid event` to syslog for `DGA` event.
+- Fix `time: DateTime<Utc>` to `#[serde(with = "ts_nanoseconds")] time: DateTime<Utc>`
+  of `HttpThreatFields` event fields from REconverge.
+
 ## [0.11.0] - 2023-05-18
 
 ### Changed

@@ -371,6 +371,27 @@ pub struct DgaFields {
     pub cache_control: String,
 }
 
+impl fmt::Display for DgaFields {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let user_agent = self.user_agent.replace(',', " ");
+        write!(
+            f,
+            "{},{},{},{},{},DGA,3,{},{},{},{},{},{}",
+            self.src_addr,
+            self.src_port,
+            self.dst_addr,
+            self.dst_port,
+            self.proto,
+            self.method,
+            self.host,
+            self.uri,
+            self.referer,
+            self.status_code,
+            user_agent
+        )
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct DomainGenerationAlgorithm {
     #[serde(with = "ts_nanoseconds")]
