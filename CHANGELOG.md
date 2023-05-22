@@ -10,6 +10,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Remove `policy` field from `DataSource`.
+- Add `confidence` field to `DgaFields` event from Hog.
 
 ### Fixed
 
