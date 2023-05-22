@@ -369,6 +369,7 @@ pub struct DgaFields {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub confidence: f32,
 }
 
 impl fmt::Display for DgaFields {
@@ -419,6 +420,7 @@ pub struct DomainGenerationAlgorithm {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub confidence: f32,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -471,6 +473,7 @@ impl DomainGenerationAlgorithm {
             content_encoding: fields.content_encoding,
             content_type: fields.content_type,
             cache_control: fields.cache_control,
+            confidence: fields.confidence,
             triage_scores: None,
         }
     }
@@ -514,7 +517,7 @@ impl Match for DomainGenerationAlgorithm {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {

@@ -4,15 +4,13 @@ mod http;
 mod rdp;
 mod tor;
 
-use self::{
-    common::Match,
-    http::{DgaFields, RepeatedHttpSessionsFields},
-    rdp::RdpBruteForceFields,
-};
+use self::{common::Match, http::RepeatedHttpSessionsFields, rdp::RdpBruteForceFields};
 pub use self::{
     common::TriageScore,
     dns::{DnsCovertChannel, DnsEventFields},
-    http::{DomainGenerationAlgorithm, HttpThreat, HttpThreatFields, RepeatedHttpSessions},
+    http::{
+        DgaFields, DomainGenerationAlgorithm, HttpThreat, HttpThreatFields, RepeatedHttpSessions,
+    },
     rdp::RdpBruteForce,
     tor::{TorConnection, TorConnectionFields},
 };
@@ -1385,6 +1383,7 @@ mod tests {
             content_encoding: "encoding type".to_string(),
             content_type: "content type".to_string(),
             cache_control: "no cache".to_string(),
+            confidence: 0.8,
         };
         let msg = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
