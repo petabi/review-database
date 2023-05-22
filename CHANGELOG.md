@@ -9,14 +9,20 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Remove `policy` field from `DataSource`.
-- Add `confidence` field to `DgaFields` event from Hog.
+- Removed `policy` field from `DataSource`. This change has been made to
+  streamline the information flow and reduce redundancy in the data structure.
+  If you were previously relying on this field, use `source` field instead.
+- Added confidence field to `DgaFields`. This addition aims to provide a
+  numeric measure of the reliability of DGA (Domain Generation Algorithm)
+  detections, helping to make more informed decisions on potential threats.
+- Changed the storage format for the time field in `HttpThreatFields`.
+  Previously, the time field was stored as a `DateTime<Utc>`, but it's now
+  being stored as nanoseconds in `i64`.
 
 ### Fixed
 
-- Fix the bug writing `invalid event` to syslog for `DGA` event.
-- Fix `time: DateTime<Utc>` to `#[serde(with = "ts_nanoseconds")] time: DateTime<Utc>`
-  of `HttpThreatFields` event fields from REconverge.
+- Fixed a bug where an "invalid event" was incorrectly logged to syslog for DGA
+  events.
 
 ## [0.11.0] - 2023-05-18
 
