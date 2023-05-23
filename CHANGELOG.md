@@ -5,6 +5,13 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## Added
+
+- Retrieve information for existing database backups.
+- Restore database from a specific backup file.
+
 ## [0.12.0] - 2023-05-22
 
 ### Changed
@@ -191,6 +198,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.12.0...main
 [0.12.0]: https://github.com/petabi/review-database/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/petabi/review-database/compare/0.10.1...0.11.0
 [0.10.1]: https://github.com/petabi/review-database/compare/0.10.0...0.10.1
