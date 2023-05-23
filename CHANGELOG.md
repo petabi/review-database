@@ -9,8 +9,17 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Added
 
-- Retrieve information for existing database backups.
-- Restore database from a specific backup file.
+- New functions in `Store`:
+  - `Store::get_backup_info`: This new function retrieves the details of
+    backups stored on filesystem. The returned information is in the form of
+    `Vec<BackupEngineInfo>`. Each `BackupEngineInfo` instance contains details
+    like backup's timestamp, ID, size, and number of files. This will help
+    users to get detailed insights about each backup available on the
+    filesystem.
+  - `Store::restore_from_backup`: This new function allows users to restore
+    from a specific backup, given a backup ID. The feature adds significant
+    utility to the users by enabling them to restore data from the selected
+    backup easily and quickly.
 
 ## [0.12.0] - 2023-05-22
 
