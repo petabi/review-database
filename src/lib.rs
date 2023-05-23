@@ -67,6 +67,7 @@ use bb8_postgres::{
     bb8,
     tokio_postgres::{self, types::Type},
 };
+pub use rocksdb::backup::BackupEngineInfo;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -289,6 +290,25 @@ impl Store {
             num_of_backups_to_keep,
         )?;
         Ok(())
+    }
+
+    /// Get the backup information for backups on file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails.
+    pub fn get_backup_info(&self) -> Result<Vec<BackupEngineInfo>> {
+        StateDb::get_backup_info(&self.backup.join(DEFAULT_STATES))
+    }
+
+    /// Restore from the backup with `backup_id` on file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails or restoration fails.
+    pub fn restore_from_backup(&self, backup_id: u32) -> Result<()> {
+        self.states
+            .restore_from_backup(&self.backup.join(DEFAULT_STATES), backup_id)
     }
 
     /// Restore from the latest backup on file
