@@ -338,7 +338,7 @@ impl Store {
 /// # Errors
 ///
 /// Returns an error if backup fails.
-pub async fn backup(
+pub async fn start_periodic_backup(
     store: Arc<Store>,
     schedule: (Duration, Duration),
     backups_to_keep: u32,

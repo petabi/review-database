@@ -7,7 +7,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## Added
+### Added
 
 - New functions in `Store`:
   - `Store::get_backup_info`: This new function retrieves the details of
@@ -20,6 +20,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     from a specific backup, given a backup ID. The feature adds significant
     utility to the users by enabling them to restore data from the selected
     backup easily and quickly.
+
+### Changed
+
+- The `backup` function has been renamed to `start_periodic_backup` for better
+  clarity and to more accurately represent its functionality of initiating
+  periodic backups. Please update any references in your codebase accordingly.
 
 ## [0.12.0] - 2023-05-22
 
