@@ -9,6 +9,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `backup::create`: This new function creates a new RocksDB backup. In a future
+  release, this function will be enhanced to support creation of PostgreSQL
+  backups as well. This provides a centralized and consistent interface for
+  creating backups across different types of databases.
 - New functions in `Store`:
   - `Store::get_backup_info`: This new function retrieves the details of
     backups stored on filesystem. The returned information is in the form of
@@ -23,9 +27,17 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- The `backup` function has been renamed to `start_periodic_backup` for better
-  clarity and to more accurately represent its functionality of initiating
-  periodic backups. Please update any references in your codebase accordingly.
+- The `backup` function has been renamed to `backup::schedule_periodic` for
+  better clarity and to more accurately represent its functionality of
+  initiating periodic backups. Please update any references in your codebase
+  accordingly.
+
+### Removed
+
+- `Store::backup` has been removed from our API. It is replaced by the
+  `backup::create` function to streamline and centralize backup operations.
+  Please update your codebase to call `backup::create` for creating database
+  backups.
 
 ## [0.12.0] - 2023-05-22
 

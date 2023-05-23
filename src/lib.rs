@@ -3,6 +3,7 @@ extern crate diesel;
 
 mod account;
 mod backends;
+pub mod backup;
 mod category;
 mod cluster;
 mod collections;
@@ -68,13 +69,8 @@ use bb8_postgres::{
     tokio_postgres::{self, types::Type},
 };
 pub use rocksdb::backup::BackupEngineInfo;
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Duration,
-};
+use std::path::{Path, PathBuf};
 use thiserror::Error;
-use tokio::sync::Notify;
 
 #[derive(Clone)]
 pub struct Database {
@@ -283,7 +279,7 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error when backup engine fails.
-    pub fn backup(&self, num_of_backups_to_keep: u32) -> Result<()> {
+    pub(crate) fn backup(&self, num_of_backups_to_keep: u32) -> Result<()> {
         self.states.create_new_backup_flush(
             &self.backup.join(DEFAULT_STATES),
             false,
@@ -330,51 +326,6 @@ impl Store {
     pub fn purge_old_backups(&self, num_backups_to_keep: u32) -> Result<()> {
         StateDb::purge_old_backups(&self.backup.join(DEFAULT_STATES), num_backups_to_keep)?;
         Ok(())
-    }
-}
-
-/// Schedule and execute database backup.
-///
-/// # Errors
-///
-/// Returns an error if backup fails.
-pub async fn start_periodic_backup(
-    store: Arc<Store>,
-    schedule: (Duration, Duration),
-    backups_to_keep: u32,
-    stop: Arc<Notify>,
-) -> Result<()> {
-    use tokio::time::{sleep, Instant};
-    use tracing::{info, warn};
-
-    let (init, duration) = schedule;
-    let sleep = sleep(init);
-    tokio::pin!(sleep);
-
-    loop {
-        tokio::select! {
-            () = &mut sleep => {
-                sleep.as_mut().reset(Instant::now() + duration);
-                let res = store.backup(backups_to_keep);
-                if res.is_err() {
-                    warn!("scheduled backup failed. {:?}", res);
-                } else {
-                    info!("database backup is created.");
-                }
-
-            }
-            _ = stop.notified() => {
-                let res = store.backup(backups_to_keep);
-                if res.is_err() {
-                    warn!("backup before exit failed. {:?}", res);
-                } else {
-                    info!("database backup is created before exit");
-                }
-                stop.notify_one();
-                return Ok(());
-            }
-
-        }
     }
 }
 
