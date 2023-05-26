@@ -598,8 +598,9 @@ fn migrate_0_9_to_0_11<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn update_events_0_9_to_0_11(store: &crate::Store) -> Result<()> {
-    use crate::{event::HttpThreatFields, EventKind};
+    use crate::EventKind;
     use chrono::{DateTime, Utc};
     use num_traits::FromPrimitive;
 
@@ -623,7 +624,42 @@ fn update_events_0_9_to_0_11(store: &crate::Store) -> Result<()> {
         confidence: f32,
     }
 
-    impl From<OldHttpThreatFields> for HttpThreatFields {
+    #[derive(Deserialize, Serialize)]
+    #[allow(clippy::module_name_repetitions)]
+    pub struct NewHttpThreatFields {
+        pub time: DateTime<Utc>,
+        pub source: String,
+        pub src_addr: IpAddr,
+        pub src_port: u16,
+        pub dst_addr: IpAddr,
+        pub dst_port: u16,
+        pub proto: u8,
+        pub duration: i64,
+        pub method: String,
+        pub host: String,
+        pub uri: String,
+        pub referer: String,
+        pub version: String,
+        pub user_agent: String,
+        pub request_len: usize,
+        pub response_len: usize,
+        pub status_code: u16,
+        pub status_msg: String,
+        pub username: String,
+        pub password: String,
+        pub cookie: String,
+        pub content_encoding: String,
+        pub content_type: String,
+        pub cache_control: String,
+        pub db_name: String,
+        pub rule_id: u32,
+        pub matched_to: String,
+        pub cluster_id: usize,
+        pub attack_kind: String,
+        pub confidence: f32,
+    }
+
+    impl From<OldHttpThreatFields> for NewHttpThreatFields {
         fn from(input: OldHttpThreatFields) -> Self {
             Self {
                 time: input.time,
@@ -678,7 +714,7 @@ fn update_events_0_9_to_0_11(store: &crate::Store) -> Result<()> {
                 let Ok(fields) = bincode::deserialize::<OldHttpThreatFields>(v.as_ref()) else {
                     return Err(anyhow!("Failed to migrate events: Invalid Event value"));
                 };
-                let http_event: HttpThreatFields = fields.into();
+                let http_event: NewHttpThreatFields = fields.into();
                 let new = bincode::serialize(&http_event).unwrap_or_default();
                 event_db.update((&k, &v), (&k, &new))?;
             }

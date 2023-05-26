@@ -18,6 +18,20 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   Users can restore their data from a specific backup by providing the `Store`
   instance and the backup ID.
 
+### Fixed
+
+- Corrected an issue in the `migrate_0_9_to_0_11` function in the
+  review-database. The function was incorrectly updating `HttpThreatFields` to
+  its latest (0.12) version instead of the intended 0.11 version, causing
+  inconsistencies when `migrate_0_11_to_0_12` was subsequently applied. This
+  has been resolved by introducing a new struct `NewHttpThreatFields` that
+  correctly represents the `HttpThreatFields` structure at version 0.11. The
+  function now deserializes the old fields into `OldHttpThreatFields`, converts
+  it into `NewHttpThreatFields` (i.e., the 0.11 version), and then stores its
+  serialized form back into the database. This ensures that each migration
+  function behaves as expected and applies the correct changes respective to
+  its version.
+
 ## [0.13.0] - 2023-05-25
 
 ### Added
