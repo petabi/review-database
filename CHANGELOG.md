@@ -5,6 +5,15 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- New functions in `backup::crate`:
+  - `list`:  This new function retrieves the details of the backup stored on
+  the file system and passes them to `Vec<BackupInfo>`. Each `BackupInfo`
+  instance contains details like backup's DateTime, ID, size.
+
 ## [0.13.0] - 2023-05-25
 
 ### Added
@@ -225,6 +234,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.13.0...main
 [0.13.0]: https://github.com/petabi/review-database/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/petabi/review-database/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/petabi/review-database/compare/0.10.1...0.11.0
