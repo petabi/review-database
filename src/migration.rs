@@ -859,11 +859,12 @@ where
 #[allow(clippy::too_many_lines)]
 fn update_dgafields_httpthreatfields_0_11_to_0_12(store: &crate::Store) -> Result<()> {
     use crate::{event::DgaFields, event::HttpThreatFields, EventKind};
-    use chrono::{DateTime, Utc};
+    use chrono::{serde::ts_nanoseconds, DateTime, Utc};
     use num_traits::FromPrimitive;
 
     #[derive(Deserialize, Serialize)]
     struct OldHttpThreatFields {
+        #[serde(with = "ts_nanoseconds")]
         pub time: DateTime<Utc>,
         pub source: String,
         pub src_addr: IpAddr,
@@ -997,17 +998,17 @@ fn update_dgafields_httpthreatfields_0_11_to_0_12(store: &crate::Store) -> Resul
         let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
             key
         } else {
-            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         let key = i128::from_be_bytes(key);
         let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
         let Some(kind) = EventKind::from_i128(kind_num) else {
-            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         match kind {
             EventKind::HttpThreat => {
                 let Ok(fields) = bincode::deserialize::<OldHttpThreatFields>(v.as_ref()) else {
-                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                    return Err(anyhow!("Failed to migrate events: invalid HttpThreatFields event value"));
                 };
                 let http_event: HttpThreatFields = fields.into();
                 let new = bincode::serialize(&http_event).unwrap_or_default();
@@ -1015,7 +1016,7 @@ fn update_dgafields_httpthreatfields_0_11_to_0_12(store: &crate::Store) -> Resul
             }
             EventKind::DomainGenerationAlgorithm => {
                 let Ok(fields) = bincode::deserialize::<OldDgaFields>(v.as_ref()) else {
-                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                    return Err(anyhow!("Failed to migrate events: invalid DgaFields event value"));
                 };
                 let dga_event: DgaFields = fields.into();
                 let new = bincode::serialize(&dga_event).unwrap_or_default();
@@ -1324,10 +1325,9 @@ mod tests {
     fn migrate_0_11_to_0_12() {
         use crate::DataType;
         use crate::{EventKind, EventMessage};
-        use chrono::{DateTime, TimeZone, Utc};
+        use chrono::{serde::ts_nanoseconds, DateTime, TimeZone, Utc};
         use serde::{Deserialize, Serialize};
         use std::net::IpAddr;
-
         #[derive(Deserialize, Serialize, PartialEq)]
         struct OldDataSource {
             id: u32,
@@ -1380,6 +1380,7 @@ mod tests {
 
         #[derive(Deserialize, Serialize)]
         struct OldHttpThreatFields {
+            #[serde(with = "ts_nanoseconds")]
             pub time: DateTime<Utc>,
             pub source: String,
             pub src_addr: IpAddr,
