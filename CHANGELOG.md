@@ -9,10 +9,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- New functions in `backup::crate`:
-  - `list`:  This new function retrieves the details of the backup stored on
-  the file system and passes them to `Vec<BackupInfo>`. Each `BackupInfo`
-  instance contains details like backup's DateTime, ID, size.
+- New functions in `backup`:
+  - `list`: This function retrieves the details of backups stored on the file
+  system and returns a vector of `BackupInfo` instances. Each `BackupInfo`
+  instance contains details such as the backup's ID, creation timestamp, and
+  size.
+  - `restore`: This function enables the restoration of backups using their ID.
+  Users can restore their data from a specific backup by providing the `Store`
+  instance and the backup ID.
 
 ## [0.13.0] - 2023-05-25
 

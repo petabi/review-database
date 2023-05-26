@@ -93,6 +93,28 @@ pub fn list(store: &Store) -> Result<Vec<BackupInfo>> {
     Ok(backup_list)
 }
 
+/// Restores the database from a backup with the specified ID.
+///
+/// # Errors
+///
+/// Returns an error if the restore operation fails.
+pub fn restore(store: &Store, backup_id: u32) -> Result<()> {
+    // TODO: This function should be expanded to support PostgreSQL backups as well.
+    match store.restore_from_backup(backup_id) {
+        Ok(_) => {
+            info!("database restored from backup {}", backup_id);
+            Ok(())
+        }
+        Err(e) => {
+            warn!(
+                "failed to restore database from backup {}: {:?}",
+                backup_id, e
+            );
+            Err(e)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{event::DnsEventFields, EventKind, EventMessage, Store};
