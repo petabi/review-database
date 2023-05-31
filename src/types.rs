@@ -44,6 +44,8 @@ pub(crate) type Timestamp = i64;
 pub(crate) type Source = String;
 pub(crate) type Id = (Timestamp, Source);
 
+pub struct PretrainedModel(pub Vec<u8>);
+
 #[derive(
     Debug, Display, Copy, Clone, Eq, Hash, PartialEq, Deserialize, Serialize, PartialOrd, Ord,
 )]
