@@ -62,13 +62,14 @@ pub use self::types::{
     HostNetworkGroup, ModelIndicator, PacketAttr, Response, ResponseKind, Ti, TiCmpKind,
     TriagePolicy, ValueKind,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use backends::Value;
 use bb8_postgres::{
     bb8,
     tokio_postgres::{self, types::Type},
 };
 pub use rocksdb::backup::BackupEngineInfo;
+use std::io;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -97,9 +98,11 @@ const EXCLUSIVE: bool = true;
 pub struct Store {
     states: StateDb,
     backup: PathBuf,
+    pretrained: PathBuf,
 }
 
 impl Store {
+    const DEFAULT_PRETRAINED: &str = "pretrained";
     /// Opens a new key-value store and its backup.
     ///
     /// # Errors
@@ -108,10 +111,16 @@ impl Store {
     pub fn new(path: &Path, backup: &Path) -> Result<Self, anyhow::Error> {
         let db_path = path.join(DEFAULT_STATES);
         let states = StateDb::open(&db_path)?;
-
+        let pretrained = path.join(Self::DEFAULT_PRETRAINED);
+        if let Err(e) = std::fs::create_dir_all(&pretrained) {
+            if e.kind() != io::ErrorKind::AlreadyExists {
+                return Err(anyhow::anyhow!("{e}"));
+            }
+        }
         let store = Self {
             states,
             backup: backup.to_path_buf(),
+            pretrained,
         };
         Ok(store)
     }
@@ -274,6 +283,22 @@ impl Store {
             .expect("always available")
     }
 
+    /// Fetch the most recent pretrained model with `name`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when model cannot be located.
+    pub fn pretrained_model(&self, name: &str) -> Result<types::PretrainedModel> {
+        use std::io::Read;
+
+        let (_ts, most_recent) = get_most_recent(name, &self.pretrained)?;
+        let mut file = std::fs::File::open(most_recent)?;
+        let mut buf = vec![];
+        file.read_to_end(&mut buf)?;
+
+        Ok(types::PretrainedModel(buf))
+    }
+
     /// Backup current database and keep most recent `num_backups_to_keep` backups
     ///
     /// # Errors
@@ -329,6 +354,47 @@ impl Store {
     }
 }
 
+fn parse_pretrained_file_name(name: &str) -> Result<(&str, crate::types::Timestamp)> {
+    use crate::types::Timestamp;
+
+    let (name, ts) = name
+        .rsplit_once('-')
+        .ok_or(anyhow!("Malformated file name"))?;
+    let ts = ts.parse::<Timestamp>()?;
+
+    Ok((name, ts))
+}
+
+fn get_most_recent<P: AsRef<Path>>(name: &str, dir: P) -> Result<(i64, PathBuf)> {
+    use std::fs::read_dir;
+
+    let mut most_recent = None;
+    for entry in read_dir(&dir)? {
+        let entry = entry?.path();
+        if entry.is_dir() {
+            continue;
+        }
+        if let Some(file) = entry.file_name().and_then(std::ffi::OsStr::to_str) {
+            let (file, ts) = parse_pretrained_file_name(file)?;
+            if file != name {
+                continue;
+            }
+
+            if let Some((cur_ts, _)) = &most_recent {
+                if ts > *cur_ts {
+                    most_recent = Some((ts, entry));
+                }
+            } else {
+                most_recent = Some((ts, entry));
+            }
+        }
+    }
+    most_recent.ok_or(anyhow!(
+        "Fail to locate {name:?} under {}",
+        dir.as_ref().display()
+    ))
+}
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("diesel connection error: {0}")]
@@ -347,4 +413,36 @@ pub enum Error {
     SerdeJson(#[from] serde_json::Error),
     #[error("Certificate error: {0}")]
     Tls(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::TempDir;
+
+    fn pseudo_pretrained() -> anyhow::Result<(TempDir, Vec<&'static str>, Vec<i64>)> {
+        let dir = tempfile::tempdir().unwrap();
+        let names = vec!["test-model", "test_model01"];
+        let timestamps = vec![1, 2, 34567, 034568];
+
+        for name in &names {
+            for ts in &timestamps {
+                let file_name = format!("{name}-{ts}");
+                let file_path = dir.path().join(&file_name);
+                std::fs::File::create(file_path)?;
+            }
+        }
+        Ok((dir, names, timestamps))
+    }
+
+    #[test]
+    fn get_most_recent() {
+        let (dir, names, timestamps) = pseudo_pretrained().expect("fail to set up temp dir");
+        let most_recent = timestamps.iter().fold(0, |t, cur| std::cmp::max(t, *cur));
+        for name in names {
+            let (ts, p) = super::get_most_recent(name, dir.path()).unwrap();
+            assert_eq!(ts, most_recent);
+            let cur = p.file_name().and_then(std::ffi::OsStr::to_str).unwrap();
+            assert_eq!(cur, format!("{name}-{ts}"));
+        }
+    }
 }
