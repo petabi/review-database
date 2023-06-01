@@ -347,7 +347,7 @@ impl Store {
     ///
     /// Returns an error when all the available backups are not valid
     /// for restoration.
-    pub fn recover(&mut self) -> Result<()> {
+    pub fn recover(&mut self) -> Result<u32> {
         self.states.recover()
     }
 
