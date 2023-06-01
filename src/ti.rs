@@ -1,4 +1,4 @@
-use super::{Database, Error, IterableMap, Store, Type};
+use super::{IterableMap, Store};
 use anyhow::{bail, Context, Result};
 use bincode::Options;
 use data_encoding::BASE64;
@@ -231,21 +231,4 @@ pub enum TidbKind {
     Url,
     Token,
     Regex,
-}
-
-impl Database {
-    /// Updates the status of the agent.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if an underlying database operation fails.
-    pub async fn update_agent_status(&self, hostname: String, status: bool) -> Result<(), Error> {
-        let conn = self.pool.get().await?;
-        let id = conn
-            .select_one_from::<i32>("node", &["id"], &[("hostname", Type::TEXT)], &[&hostname])
-            .await?;
-        conn.update("node", id, &[("status", Type::BOOL)], &[&status])
-            .await?;
-        Ok(())
-    }
 }
