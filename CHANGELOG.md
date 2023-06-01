@@ -13,6 +13,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `{model_name}-{timestamp}.tmm`. It is now mandatory to use the .tmm extension
   for model files.
 
+### Removed
+
+- `Database::update_agent_status`: This function has been removed from the
+review-database. Previously, `Database::update_agent_status` was utilized when
+REview allowed its agents to forward messages from another agent who wasn't
+directly connected to REview. However, in the recent architecture change, every
+agent is now directly connected to REview, rendering this function obsolete. As
+such, `Database::update_agent_status` has been removed in this release,
+simplifying the overall architecture and reducing unnecessary function calls.
+
 ## [0.13.2] - 2023-05-31
 
 ### Added
