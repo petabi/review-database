@@ -365,6 +365,8 @@ fn parse_pretrained_file_name(name: &str) -> Result<(&str, crate::types::Timesta
     Ok((name, ts))
 }
 
+const DEFAULT_PRETRAINED_EXTENSION: &str = "tmm";
+
 fn get_most_recent<P: AsRef<Path>>(name: &str, dir: P) -> Result<(i64, PathBuf)> {
     use std::fs::read_dir;
 
@@ -374,7 +376,16 @@ fn get_most_recent<P: AsRef<Path>>(name: &str, dir: P) -> Result<(i64, PathBuf)>
         if entry.is_dir() {
             continue;
         }
-        if let Some(file) = entry.file_name().and_then(std::ffi::OsStr::to_str) {
+        match entry.extension().and_then(std::ffi::OsStr::to_str) {
+            Some(ext) => {
+                if ext != DEFAULT_PRETRAINED_EXTENSION {
+                    continue;
+                }
+            }
+            None => continue,
+        }
+
+        if let Some(file) = entry.file_stem().and_then(std::ffi::OsStr::to_str) {
             let (file, ts) = parse_pretrained_file_name(file)?;
             if file != name {
                 continue;
@@ -419,14 +430,18 @@ pub enum Error {
 mod tests {
     use tempfile::TempDir;
 
-    fn pseudo_pretrained() -> anyhow::Result<(TempDir, Vec<&'static str>, Vec<i64>)> {
+    fn pseudo_pretrained() -> anyhow::Result<(TempDir, Vec<(&'static str, bool)>, Vec<i64>)> {
         let dir = tempfile::tempdir().unwrap();
-        let names = vec!["test-model", "test_model01"];
+        let names = vec![("test-model", true), ("test_model01", false)];
         let timestamps = vec![1, 2, 34567, 034568];
 
-        for name in &names {
+        for (name, with_ext) in &names {
             for ts in &timestamps {
-                let file_name = format!("{name}-{ts}");
+                let file_name = if *with_ext {
+                    format!("{name}-{ts}.{}", super::DEFAULT_PRETRAINED_EXTENSION)
+                } else {
+                    format!("{name}-{ts}")
+                };
                 let file_path = dir.path().join(&file_name);
                 std::fs::File::create(file_path)?;
             }
@@ -438,11 +453,18 @@ mod tests {
     fn get_most_recent() {
         let (dir, names, timestamps) = pseudo_pretrained().expect("fail to set up temp dir");
         let most_recent = timestamps.iter().fold(0, |t, cur| std::cmp::max(t, *cur));
-        for name in names {
-            let (ts, p) = super::get_most_recent(name, dir.path()).unwrap();
-            assert_eq!(ts, most_recent);
-            let cur = p.file_name().and_then(std::ffi::OsStr::to_str).unwrap();
-            assert_eq!(cur, format!("{name}-{ts}"));
+        for (name, with_ext) in names {
+            if with_ext {
+                let (ts, p) = super::get_most_recent(name, dir.path()).unwrap();
+                assert_eq!(ts, most_recent);
+                let cur = p.file_name().and_then(std::ffi::OsStr::to_str).unwrap();
+                assert_eq!(
+                    cur,
+                    format!("{name}-{ts}.{}", super::DEFAULT_PRETRAINED_EXTENSION)
+                );
+            } else {
+                assert!(super::get_most_recent(name, dir.path()).is_err());
+            }
         }
     }
 }
