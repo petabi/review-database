@@ -10,6 +10,7 @@ use std::{
     net::IpAddr,
     path::{Path, PathBuf},
 };
+use tracing::info;
 
 /// The range of versions that use the current database format.
 ///
@@ -116,6 +117,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         .iter()
         .find(|(req, _to, _m)| req.matches(&version))
     {
+        info!("Migrating database to {to}");
         m(data_dir, backup_dir)?;
         version = to.clone();
         if compatible.matches(&version) {

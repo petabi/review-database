@@ -12,6 +12,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modified the model file naming convention from `{model_name}-{timestamp}` to
   `{model_name}-{timestamp}.tmm`. It is now mandatory to use the .tmm extension
   for model files.
+- Change to write log message `Migrating database to {version}` when migration
+  begins.
 
 ### Removed
 
