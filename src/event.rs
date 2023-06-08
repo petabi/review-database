@@ -1406,38 +1406,49 @@ mod tests {
     #[tokio::test]
     async fn event_db_backup() {
         use rocksdb::backup::{BackupEngine, BackupEngineOptions, RestoreOptions};
+        use tokio::sync::RwLock;
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
 
-        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
-        let db = store.events();
-        assert!(db.iter_forward().next().is_none());
-
-        let msg = example_message();
-
-        db.put(&msg).unwrap();
+        let store = Arc::new(RwLock::new(
+            Store::new(db_dir.path(), backup_dir.path()).unwrap(),
+        ));
         {
-            let mut iter = db.iter_forward();
-            assert!(iter.next().is_some());
-            assert!(iter.next().is_none());
-        }
+            let store = store.read().await;
+            let db = store.events();
+            assert!(db.iter_forward().next().is_none());
 
+            let msg = example_message();
+
+            db.put(&msg).unwrap();
+            {
+                let mut iter = db.iter_forward();
+                assert!(iter.next().is_some());
+                assert!(iter.next().is_none());
+            }
+        }
         // backing up
-        let res = store.backup(1);
-        assert!(res.is_ok());
+        {
+            let mut store = store.write().await;
+            let res = store.backup(1);
+            assert!(res.is_ok());
+        }
 
         // more operations
-        db.put(&msg).unwrap();
         {
-            let mut iter = db.iter_forward();
-            assert!(iter.next().is_some());
-            assert!(iter.next().is_some());
-            assert!(iter.next().is_none());
+            let store = store.read().await;
+            let db = store.events();
+            let msg = example_message();
+            db.put(&msg).unwrap();
+            {
+                let mut iter = db.iter_forward();
+                assert!(iter.next().is_some());
+                assert!(iter.next().is_some());
+                assert!(iter.next().is_none());
+            }
         }
-
         // restoring the backup
-        drop(db);
         drop(store);
 
         let mut backup = BackupEngine::open(
@@ -1454,12 +1465,16 @@ mod tests {
             )
             .is_ok());
 
-        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
-        let db = store.events();
-        let mut iter = db.iter_forward();
-        assert!(iter.next().is_some());
-        assert!(iter.next().is_none());
-
+        let store = Arc::new(RwLock::new(
+            Store::new(db_dir.path(), backup_dir.path()).unwrap(),
+        ));
+        {
+            let store = store.read().await;
+            let db = store.events();
+            let mut iter = db.iter_forward();
+            assert!(iter.next().is_some());
+            assert!(iter.next().is_none());
+        }
         let info = backup.get_backup_info();
         assert_eq!(info.len(), 1);
         assert_eq!(info[0].backup_id, 1);

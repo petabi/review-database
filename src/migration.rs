@@ -258,7 +258,7 @@ fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
     store.backup(1)?;
     let account_map = store.account_map();
 
@@ -331,7 +331,7 @@ fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
     store.backup(1)?;
     let filter_map = store.filter_map();
 
@@ -385,7 +385,7 @@ fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
     store.backup(1)?;
     let traffic_filter_map = store.traffic_filter_map();
 
@@ -416,7 +416,7 @@ fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         source: String,
     }
 
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
     store.backup(1)?;
 
     let map = store.outlier_map();
@@ -543,7 +543,7 @@ fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
     store.backup(1)?;
 
     let event_db = store.events();
@@ -584,7 +584,7 @@ fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
 }
 
 fn migrate_0_9_to_0_11<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
     store.backup(1)?;
 
     update_events_0_9_to_0_11(&store)?;
@@ -720,7 +720,7 @@ fn update_events_0_9_to_0_11(store: &crate::Store) -> Result<()> {
 }
 
 fn migrate_0_11_to_0_12<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
-    let store = super::Store::new(path.as_ref(), backup.as_ref())?;
+    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
     store.backup(1)?;
 
     update_data_source_0_11_to_0_12(&store)?;

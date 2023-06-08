@@ -97,7 +97,6 @@ const EXCLUSIVE: bool = true;
 /// A key-value store.
 pub struct Store {
     states: StateDb,
-    backup: PathBuf,
     pretrained: PathBuf,
 }
 
@@ -110,18 +109,15 @@ impl Store {
     /// Returns an error if the key-value store or its backup cannot be opened.
     pub fn new(path: &Path, backup: &Path) -> Result<Self, anyhow::Error> {
         let db_path = path.join(DEFAULT_STATES);
-        let states = StateDb::open(&db_path)?;
+        let backup_path = backup.join(DEFAULT_STATES);
+        let states = StateDb::open(&db_path, backup_path)?;
         let pretrained = path.join(Self::DEFAULT_PRETRAINED);
         if let Err(e) = std::fs::create_dir_all(&pretrained) {
             if e.kind() != io::ErrorKind::AlreadyExists {
                 return Err(anyhow::anyhow!("{e}"));
             }
         }
-        let store = Self {
-            states,
-            backup: backup.to_path_buf(),
-            pretrained,
-        };
+        let store = Self { states, pretrained };
         Ok(store)
     }
 
@@ -304,12 +300,10 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error when backup engine fails.
-    pub(crate) fn backup(&self, num_of_backups_to_keep: u32) -> Result<()> {
-        self.states.create_new_backup_flush(
-            &self.backup.join(DEFAULT_STATES),
-            false,
-            num_of_backups_to_keep,
-        )?;
+    pub(crate) fn backup(&mut self, num_of_backups_to_keep: u32) -> Result<()> {
+        dbg!(self
+            .states
+            .create_new_backup_flush(true, num_of_backups_to_keep))?;
         Ok(())
     }
 
@@ -319,7 +313,7 @@ impl Store {
     ///
     /// Returns an error when backup engine fails.
     pub fn get_backup_info(&self) -> Result<Vec<BackupEngineInfo>> {
-        StateDb::get_backup_info(&self.backup.join(DEFAULT_STATES))
+        self.states.get_backup_info()
     }
 
     /// Restore from the backup with `backup_id` on file
@@ -327,9 +321,8 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error when backup engine fails or restoration fails.
-    pub fn restore_from_backup(&self, backup_id: u32) -> Result<()> {
-        self.states
-            .restore_from_backup(&self.backup.join(DEFAULT_STATES), backup_id)
+    pub fn restore_from_backup(&mut self, backup_id: u32) -> Result<()> {
+        self.states.restore_from_backup(backup_id)
     }
 
     /// Restore from the latest backup on file
@@ -337,10 +330,8 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error when backup engine fails or restoration fails.
-    pub fn restore_from_latest_backup(&self) -> Result<()> {
-        self.states
-            .restore_from_latest_backup(&self.backup.join(DEFAULT_STATES))?;
-        Ok(())
+    pub fn restore_from_latest_backup(&mut self) -> Result<()> {
+        self.states.restore_from_latest_backup()
     }
 
     /// Purge old backups and only keep `num_backups_to_keep` backups on file
@@ -348,8 +339,8 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error when backup engine fails.
-    pub fn purge_old_backups(&self, num_backups_to_keep: u32) -> Result<()> {
-        StateDb::purge_old_backups(&self.backup.join(DEFAULT_STATES), num_backups_to_keep)?;
+    pub fn purge_old_backups(&mut self, num_backups_to_keep: u32) -> Result<()> {
+        self.states.purge_old_backups(num_backups_to_keep)?;
         Ok(())
     }
 }
