@@ -17,7 +17,6 @@ use std::{
     io::{BufReader, Read},
     net::IpAddr,
     ops::RangeInclusive,
-    sync::Arc,
 };
 use strum_macros::Display;
 
@@ -317,7 +316,7 @@ impl ModelIndicator {
     /// # Errors
     ///
     /// Returns an error if the database operation fails or the value in the database is invalid.
-    pub fn get(store: &Arc<Store>, name: &str) -> Result<Option<Self>> {
+    pub fn get(store: &Store, name: &str) -> Result<Option<Self>> {
         let map = store.model_indicator_map();
         Ok(match map.get(name.as_bytes())? {
             Some(v) => Some(
@@ -334,7 +333,7 @@ impl ModelIndicator {
     /// # Errors
     ///
     /// Returns an error if the database operation fails or the value in the database is invalid.
-    pub fn get_list(store: &Arc<Store>) -> Result<Vec<(String, ModelIndicator)>> {
+    pub fn get_list(store: &Store) -> Result<Vec<(String, ModelIndicator)>> {
         let map = store.model_indicator_map();
         let mut indicators = Vec::new();
         for (name, value) in map.iter_forward()? {
@@ -352,7 +351,7 @@ impl ModelIndicator {
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn remove(store: &Arc<Store>, names: &[String]) -> Result<Vec<String>> {
+    pub fn remove(store: &Store, names: &[String]) -> Result<Vec<String>> {
         let map = store.model_indicator_map();
         let mut removed = Vec::with_capacity(names.len());
         for name in names {
@@ -367,7 +366,7 @@ impl ModelIndicator {
     /// # Errors
     ///
     /// Returns an error if the serialization fails or the database operation fails.
-    pub fn insert(&self, store: &Arc<Store>, name: &str) -> Result<String> {
+    pub fn insert(&self, store: &Store, name: &str) -> Result<String> {
         let map = store.model_indicator_map();
         let value = bincode::DefaultOptions::new().serialize(self)?;
         map.put(name.as_bytes(), &value)?;
@@ -379,7 +378,7 @@ impl ModelIndicator {
     /// # Errors
     ///
     /// Returns an error if the serialization fails or the database operation fails.
-    pub fn update(&self, store: &Arc<Store>, name: &str) -> Result<String> {
+    pub fn update(&self, store: &Store, name: &str) -> Result<String> {
         let map = store.model_indicator_map();
         map.delete(name.as_bytes())?;
         let value = bincode::DefaultOptions::new().serialize(&self)?;

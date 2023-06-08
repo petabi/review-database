@@ -4,7 +4,7 @@ use crate::types::Account;
 
 use super::{event, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::Result;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -60,91 +60,151 @@ pub(super) const WORKFLOW_TAGS: &[u8] = b"workflow tags";
 
 #[allow(clippy::module_name_repetitions)]
 pub(crate) struct StateDb {
-    inner: rocksdb::OptimisticTransactionDB,
+    inner: Option<rocksdb::OptimisticTransactionDB>,
+    backup: PathBuf,
 }
 
 impl StateDb {
-    pub fn open(path: &Path) -> Result<Self, anyhow::Error> {
+    pub fn open(path: &Path, backup: PathBuf) -> Result<Self, anyhow::Error> {
         let mut opts = rocksdb::Options::default();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
         let db = rocksdb::OptimisticTransactionDB::open_cf(&opts, path, MAP_NAMES)?;
-        Ok(Self { inner: db })
+
+        Ok(Self {
+            inner: Some(db),
+            backup,
+        })
     }
 
     #[must_use]
     pub(crate) fn accounts(&self) -> Table<Account> {
-        Table::<Account>::open(&self.inner).expect("accounts table must be present")
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<Account>::open(inner).expect("accounts table must be present")
     }
 
     #[must_use]
     pub fn events(&self) -> event::EventDb {
-        event::EventDb::new(&self.inner)
+        let inner = self.inner.as_ref().expect("database must be open");
+        event::EventDb::new(inner)
     }
 
     #[must_use]
     pub(super) fn map(&self, name: &str) -> Option<Map> {
-        Map::open(&self.inner, name)
+        let inner = self.inner.as_ref().expect("database must be open");
+        Map::open(inner, name)
     }
 
     #[must_use]
     pub(super) fn indexed_map(&self, name: &str) -> Option<IndexedMap> {
-        IndexedMap::new(&self.inner, name).ok()
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedMap::new(inner, name).ok()
     }
 
     #[must_use]
     pub(super) fn indexed_multimap(&self, name: &str) -> Option<IndexedMultimap> {
-        IndexedMultimap::new(&self.inner, name).ok()
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedMultimap::new(inner, name).ok()
     }
 
     #[must_use]
     pub(super) fn indexed_set(&self, name: &'static [u8]) -> Option<IndexedSet> {
-        IndexedSet::new(&self.inner, META, name).ok()
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedSet::new(inner, META, name).ok()
     }
 
     pub(super) fn create_new_backup_flush(
-        &self,
-        engine: &Path,
+        &mut self,
         flush: bool,
         num_of_backups_to_keep: u32,
     ) -> Result<()> {
-        let opts = rocksdb::backup::BackupEngineOptions::new(engine)?;
+        let backup = self.backup.as_path();
+        let opts = rocksdb::backup::BackupEngineOptions::new(backup)?;
         let db_env = rocksdb::Env::new()?;
         let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
-        engine.create_new_backup_flush(&self.inner, flush)?;
-        Ok(engine.purge_old_backups(num_of_backups_to_keep as usize)?)
+        let inner = self.inner.as_ref().expect("database must be open");
+        engine.create_new_backup_flush(inner, flush)?;
+        engine
+            .purge_old_backups(num_of_backups_to_keep as usize)
+            .or_else(|_| self.reboot())
     }
 
-    pub fn restore_from_latest_backup(&self, location: &Path) -> Result<()> {
-        use rocksdb::backup::{BackupEngine, BackupEngineOptions, RestoreOptions};
-        let opts = BackupEngineOptions::new(location)?;
+    pub fn restore_from_latest_backup(&mut self) -> Result<()> {
+        let backup = self.backup.as_path();
+        let opts = rocksdb::backup::BackupEngineOptions::new(backup)?;
         let db_env = rocksdb::Env::new()?;
-        let mut engine = BackupEngine::open(&opts, &db_env)?;
-        let opts = RestoreOptions::default();
-        Ok(engine.restore_from_latest_backup(self.inner.path(), location, &opts)?)
+        tracing::error!("opening up backup engine");
+        let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
+
+        let opts = rocksdb::backup::RestoreOptions::default();
+        tracing::error!("cancelling all back ground");
+
+        let inner = self.inner.as_ref().expect("database must be open");
+        inner.cancel_all_background_work(true);
+        tracing::error!("restroing");
+        engine.restore_from_latest_backup(inner.path(), inner.path(), &opts)?;
+        tracing::error!("reboot");
+        self.reboot()
     }
 
-    pub fn restore_from_backup(&self, location: &Path, id: u32) -> Result<()> {
-        use rocksdb::backup::{BackupEngine, BackupEngineOptions, RestoreOptions};
-        let opts = BackupEngineOptions::new(location)?;
+    pub fn restore_from_backup(&mut self, id: u32) -> Result<()> {
+        let backup = self.backup.as_path();
+        let inner = self.inner.as_ref().expect("database must be open");
+        inner.cancel_all_background_work(true);
+
+        let opts = rocksdb::backup::BackupEngineOptions::new(backup)?;
         let db_env = rocksdb::Env::new()?;
-        let mut engine = BackupEngine::open(&opts, &db_env)?;
-        let opts = RestoreOptions::default();
-        Ok(engine.restore_from_backup(self.inner.path(), location, &opts, id)?)
+        let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
+
+        let opts = rocksdb::backup::RestoreOptions::default();
+        engine.restore_from_backup(inner.path(), inner.path(), &opts, id)?;
+
+        self.reboot()
     }
 
-    pub fn get_backup_info(engine: &Path) -> Result<Vec<rocksdb::backup::BackupEngineInfo>> {
-        let opts = rocksdb::backup::BackupEngineOptions::new(engine)?;
+    pub fn get_backup_info(&self) -> Result<Vec<rocksdb::backup::BackupEngineInfo>> {
+        let backup = self.backup.as_path();
+        let opts = rocksdb::backup::BackupEngineOptions::new(backup)?;
         let db_env = rocksdb::Env::new()?;
         let engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
+
         Ok(engine.get_backup_info())
     }
 
-    pub fn purge_old_backups(engine: &Path, num_of_backups_to_keep: u32) -> Result<()> {
-        let opts = rocksdb::backup::BackupEngineOptions::new(engine)?;
+    pub fn purge_old_backups(&mut self, num_of_backups_to_keep: u32) -> Result<()> {
+        let backup = self.backup.as_path();
+        let opts = rocksdb::backup::BackupEngineOptions::new(backup)?;
         let db_env = rocksdb::Env::new()?;
         let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
-        Ok(engine.purge_old_backups(num_of_backups_to_keep as usize)?)
+
+        if engine
+            .purge_old_backups(num_of_backups_to_keep as usize)
+            .is_err()
+        {
+            self.reboot()?;
+        }
+        Ok(())
+    }
+
+    fn reboot(&mut self) -> Result<()> {
+        let path = self
+            .inner
+            .as_ref()
+            .expect("database must be open")
+            .path()
+            .to_owned();
+        self.close();
+        let mut opts = rocksdb::Options::default();
+        opts.create_if_missing(true);
+        opts.create_missing_column_families(true);
+        let db = rocksdb::OptimisticTransactionDB::open_cf(&opts, path, MAP_NAMES)?;
+
+        self.inner = Some(db);
+        Ok(())
+    }
+
+    fn close(&mut self) {
+        self.inner = None;
     }
 }
 

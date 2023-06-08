@@ -5,7 +5,7 @@ use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
 use rocksdb::backup::BackupEngineInfo;
 use std::{sync::Arc, time::Duration};
-use tokio::sync::Notify;
+use tokio::sync::{Notify, RwLock};
 use tracing::{info, warn};
 
 #[allow(clippy::module_name_repetitions)]
@@ -28,7 +28,7 @@ impl From<BackupEngineInfo> for BackupInfo {
 /// Schedules periodic database backups.
 #[allow(clippy::module_name_repetitions)]
 pub async fn schedule_periodic(
-    store: Arc<Store>,
+    store: Arc<RwLock<Store>>,
     schedule: (Duration, Duration),
     backups_to_keep: u32,
     stop: Arc<Notify>,
@@ -61,12 +61,17 @@ pub async fn schedule_periodic(
 /// # Errors
 ///
 /// Returns an error if backup fails.
-pub fn create(store: &Store, backups_to_keep: u32) -> Result<()> {
+pub async fn create(store: &Arc<RwLock<Store>>, backups_to_keep: u32) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
+    tracing::error!("backing up");
+    let mut store = store.write().await;
+    tracing::error!("lock obtained");
     if let Err(e) = store.backup(backups_to_keep) {
+        drop(store);
         warn!("database backup failed: {:?}", e);
         return Err(e);
     }
+    drop(store);
     info!("database backup created");
     Ok(())
 }
@@ -76,11 +81,14 @@ pub fn create(store: &Store, backups_to_keep: u32) -> Result<()> {
 /// # Errors
 ///
 /// Returns an error if backup list fails to create
-pub fn list(store: &Store) -> Result<Vec<BackupInfo>> {
+pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
+    let store = store.read().await;
+    dbg!("listing backup");
     let backup_list = match store.get_backup_info() {
         Ok(backup) => backup,
         Err(e) => {
+            drop(store);
             warn!("failed to generate backup list: {:?}", e);
             return Err(e);
         }
@@ -98,16 +106,25 @@ pub fn list(store: &Store) -> Result<Vec<BackupInfo>> {
 /// # Errors
 ///
 /// Returns an error if the restore operation fails.
-pub fn restore(store: &Store, backup_id: u32) -> Result<()> {
+pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    match store.restore_from_backup(backup_id) {
+    dbg!("restore backup");
+    let mut store = store.write().await;
+    dbg!("lock obtained");
+    let res = match &backup_id {
+        Some(id) => store.restore_from_backup(*id),
+        None => store.restore_from_latest_backup(),
+    };
+    drop(store);
+    dbg!("lock released");
+    match res {
         Ok(_) => {
-            info!("database restored from backup {}", backup_id);
+            info!("database restored from backup {:?}", backup_id);
             Ok(())
         }
         Err(e) => {
             warn!(
-                "failed to restore database from backup {}: {:?}",
+                "failed to restore database from backup {:?}: {:?}",
                 backup_id, e
             );
             Err(e)
@@ -159,33 +176,51 @@ mod tests {
     #[tokio::test]
     async fn db_backup_list() {
         use crate::backup::list;
+        use tokio::sync::RwLock;
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
 
-        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
-        let db = store.events();
-        assert!(db.iter_forward().next().is_none());
+        let store = Arc::new(RwLock::new(
+            Store::new(db_dir.path(), backup_dir.path()).unwrap(),
+        ));
+
+        {
+            let store = store.read().await;
+            let db = store.events();
+            assert!(db.iter_forward().next().is_none());
+        }
 
         let msg = example_message();
 
         // backing up 1
-        db.put(&msg).unwrap();
-        let res = store.backup(3);
-        assert!(res.is_ok());
-
+        {
+            let mut store = store.write().await;
+            let db = store.events();
+            db.put(&msg).unwrap();
+            let res = store.backup(3);
+            assert!(res.is_ok());
+        }
         // backing up 2
-        db.put(&msg).unwrap();
-        let res = store.backup(3);
-        assert!(res.is_ok());
+        {
+            let mut store = store.write().await;
+            let db = store.events();
+            db.put(&msg).unwrap();
+            let res = store.backup(3);
+            assert!(res.is_ok());
+        }
 
         // backing up 3
-        db.put(&msg).unwrap();
-        let res = store.backup(3);
-        assert!(res.is_ok());
+        {
+            let mut store = store.write().await;
+            let db = store.events();
+            db.put(&msg).unwrap();
+            let res = store.backup(3);
+            assert!(res.is_ok());
+        }
 
         // get backup list
-        let backup_list = list(&store).unwrap();
+        let backup_list = list(&store).await.unwrap();
         assert_eq!(backup_list.len(), 3);
         assert_eq!(backup_list.get(0).unwrap().id, 1);
         assert_eq!(backup_list.get(1).unwrap().id, 2);
