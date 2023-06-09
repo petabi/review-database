@@ -5,25 +5,28 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.14.0] - 2023-06-08
 
 ### Changed
 
-- Modified the model file naming convention from `{model_name}-{timestamp}` to
-  `{model_name}-{timestamp}.tmm`. It is now mandatory to use the .tmm extension
-  for model files.
-- Change to write log message `Migrating database to {version}` when migration
-  begins.
+- Altered the model file naming convention: Files are now required to use the
+.tmm extension. The format has changed from `{model_name}-{timestamp}` to
+`{model_name}-{timestamp}.tmm`. This adjustment ensures consistency in model
+file formats and enhances our file identification and management system.
+- Updated the logging mechanism to include a message `Migrating database to
+{version}` when a database migration starts. This change enhances the
+visibility and traceability of our database migrations, aiding in system
+maintenance and debugging efforts.
 
 ### Removed
 
-- `Database::update_agent_status`: This function has been removed from the
-review-database. Previously, `Database::update_agent_status` was utilized when
-REview allowed its agents to forward messages from another agent who wasn't
-directly connected to REview. However, in the recent architecture change, every
-agent is now directly connected to REview, rendering this function obsolete. As
-such, `Database::update_agent_status` has been removed in this release,
-simplifying the overall architecture and reducing unnecessary function calls.
+- Removed `Database::update_agent_status` from the review-database. In prior
+versions, this function was used when REview allowed agents to forward messages
+from another agent not directly connected to REview. However, in the recent
+architectural changes, all agents now directly connect to REview, rendering
+this function obsolete. The removal of `Database::update_agent_status`
+simplifies the overall architecture and eliminates unnecessary function calls,
+leading to a more streamlined system.
 
 ## [0.13.2] - 2023-05-31
 
@@ -281,7 +284,7 @@ simplifying the overall architecture and reducing unnecessary function calls.
 
 - An initial version.
 
-[Unreleased]: https://github.com/petabi/review-database/compare/0.13.2...main
+[0.14.0]: https://github.com/petabi/review-database/compare/0.13.2...0.14.0
 [0.13.2]: https://github.com/petabi/review-database/compare/0.13.1...0.13.2
 [0.13.1]: https://github.com/petabi/review-database/compare/0.13.0...0.13.1
 [0.13.0]: https://github.com/petabi/review-database/compare/0.12.0...0.13.0
