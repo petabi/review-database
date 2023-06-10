@@ -421,18 +421,11 @@ fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
 
     let map = store.outlier_map();
 
-    let mut outliers = vec![];
-
-    for (k, v) in map.iter_forward()? {
-        let outlier_key: OutlierKey = bincode::DefaultOptions::new().deserialize(&k)?;
-
-        outliers.push((outlier_key, (k, v)));
-    }
-
     let mut prev = (-1, -1, -1);
     let mut rank = -1;
     let mut len = 0;
-    for (mut outlier_key, (k, v)) in outliers.into_iter().rev() {
+    for (k, v) in map.iter_backward()? {
+        let mut outlier_key: OutlierKey = bincode::DefaultOptions::new().deserialize(&k)?;
         if outlier_key.model_id != prev.0 || outlier_key.timestamp != prev.1 {
             len = 1;
             rank = 1;
