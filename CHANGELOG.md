@@ -5,6 +5,23 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The `migrate_0_6_to_0_7` method has been improved for increased performance
+  and memory usage. Previously, this method would first scan all outliers in
+  the database, deserializing them into memory, and then traverse them again in
+  reverse order to update each entry according to the new format of version
+  0.7. This two-pass approach could be memory intensive for large databases.
+
+  The updated method now directly traverses outliers in the database in reverse
+  order and updates each entry in a single pass. This reduces the memory
+  footprint and increases efficiency by removing the initial full scan of
+  outliers. This change is expected to significantly improve the speed and
+  memory consumption of migrations from version 0.6 to 0.7, especially for
+  larger databases.
+
 ## [0.14.0] - 2023-06-08
 
 ### Changed
@@ -284,6 +301,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.14.0...main
 [0.14.0]: https://github.com/petabi/review-database/compare/0.13.2...0.14.0
 [0.13.2]: https://github.com/petabi/review-database/compare/0.13.1...0.13.2
 [0.13.1]: https://github.com/petabi/review-database/compare/0.13.0...0.13.1
