@@ -411,6 +411,12 @@ fn migrate_0_6_to_0_7(store: &super::Store) -> Result<()> {
         source: String,
     }
 
+    #[derive(Deserialize)]
+    struct OutlierValue {
+        _distance: f64,
+        is_saved: bool,
+    }
+
     let map = store.outlier_map();
 
     let mut prev = (-1, -1, -1);
@@ -418,6 +424,8 @@ fn migrate_0_6_to_0_7(store: &super::Store) -> Result<()> {
     let mut len = 0;
     for (k, v) in map.iter_backward()? {
         let mut outlier_key: OutlierKey = bincode::DefaultOptions::new().deserialize(&k)?;
+        let value: OutlierValue = bincode::DefaultOptions::new().deserialize(&v)?;
+
         if outlier_key.model_id != prev.0 || outlier_key.timestamp != prev.1 {
             len = 1;
             rank = 1;
@@ -433,9 +441,13 @@ fn migrate_0_6_to_0_7(store: &super::Store) -> Result<()> {
             outlier_key.timestamp,
             outlier_key.rank,
         );
-        outlier_key.rank = rank;
-        let new_k = bincode::DefaultOptions::new().serialize(&outlier_key)?;
-        map.update((&k, &v), (&new_k, &v))?;
+        if value.is_saved {
+            outlier_key.rank = rank;
+            let new_k = bincode::DefaultOptions::new().serialize(&outlier_key)?;
+            map.update((&k, &v), (&new_k, &v))?;
+        } else {
+            map.delete(&k)?;
+        }
     }
 
     Ok(())
@@ -1124,6 +1136,14 @@ mod tests {
         let value = bincode::DefaultOptions::new()
             .serialize(&value)
             .expect("serialize error");
+        let value_saved = OutlierValue {
+            distance: 0.0,
+            is_saved: true,
+        };
+        let value_saved = bincode::DefaultOptions::new()
+            .serialize(&value_saved)
+            .expect("serialize error");
+
         let keys = vec![
             (1, 11, 1, 1, "a"),
             (1, 11, 2, 2, "a"),
@@ -1137,21 +1157,16 @@ mod tests {
             (2, 22, 2, 1, "a"),
         ];
         let reversed = vec![
-            (1, 11, 1, 4, "a"),
-            (1, 11, 2, 2, "a"),
             (1, 11, 2, 2, "b"),
             (1, 11, 4, 1, "a"),
-            (1, 22, 1, 2, "a"),
             (1, 22, 1, 3, "c"),
             (1, 22, 3, 1, "a"),
-            (2, 11, 1, 1, "a"),
-            (2, 22, 1, 1, "a"),
             (2, 22, 2, 2, "a"),
         ];
 
         let settings = TestSchema::new();
         let map = settings.store.outlier_map();
-        for (model_id, timestamp, rank, id, source) in keys {
+        for (i, (model_id, timestamp, rank, id, source)) in keys.into_iter().enumerate() {
             let key = OutlierKey {
                 model_id,
                 timestamp,
@@ -1162,7 +1177,11 @@ mod tests {
             let key = bincode::DefaultOptions::new()
                 .serialize(&key)
                 .expect("serialize error");
-            map.insert(&key, &value).expect("storing error");
+            if i % 2 == 0 {
+                map.insert(&key, &value_saved).expect("storing error");
+            } else {
+                map.insert(&key, &value).expect("storing error");
+            }
         }
 
         let (db_dir, backup_dir) = settings.close();

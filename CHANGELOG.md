@@ -71,6 +71,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   especially in scenarios involving a large number of migration steps or
   extensive data transformations.
 
+- The `migrate_0_6_to_0_7` method has been improved for increased performance
+  and memory usage. Previously, this method would migrate all the outlier in
+  database.
+
+  The updated method now removes outlier that is not marked as saved. This change
+  is expected to remove unnecessary outliers in the database.
+
 ## [0.14.1] - 2023-06-10
 
 ### Changed
