@@ -300,11 +300,9 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error when backup engine fails.
-    pub(crate) fn backup(&mut self, num_of_backups_to_keep: u32) -> Result<()> {
-        dbg!(self
-            .states
-            .create_new_backup_flush(true, num_of_backups_to_keep))?;
-        Ok(())
+    pub(crate) fn backup(&mut self, flush: bool, num_of_backups_to_keep: u32) -> Result<()> {
+        self.states
+            .create_new_backup_flush(flush, num_of_backups_to_keep)
     }
 
     /// Get the backup information for backups on file.
