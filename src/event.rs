@@ -1431,7 +1431,7 @@ mod tests {
         // backing up
         {
             let mut store = store.write().await;
-            let res = store.backup(1);
+            let res = store.backup(true, 1);
             assert!(res.is_ok());
         }
 

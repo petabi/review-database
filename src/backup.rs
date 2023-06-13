@@ -43,11 +43,11 @@ pub async fn schedule_periodic(
         tokio::select! {
             () = &mut sleep => {
                 sleep.as_mut().reset(Instant::now() + duration);
-                let _res = create(&store, backups_to_keep);
+                let _res = create(&store, false, backups_to_keep);
             }
             _ = stop.notified() => {
                 info!("creating a database backup before shutdown");
-                let _res = create(&store, backups_to_keep);
+                let _res = create(&store, false, backups_to_keep);
                 stop.notify_one();
                 return;
             }
@@ -61,12 +61,12 @@ pub async fn schedule_periodic(
 /// # Errors
 ///
 /// Returns an error if backup fails.
-pub async fn create(store: &Arc<RwLock<Store>>, backups_to_keep: u32) -> Result<()> {
+pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u32) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
     tracing::error!("backing up");
     let mut store = store.write().await;
     tracing::error!("lock obtained");
-    if let Err(e) = store.backup(backups_to_keep) {
+    if let Err(e) = store.backup(flush, backups_to_keep) {
         drop(store);
         warn!("database backup failed: {:?}", e);
         return Err(e);
@@ -84,7 +84,6 @@ pub async fn create(store: &Arc<RwLock<Store>>, backups_to_keep: u32) -> Result<
 pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
     let store = store.read().await;
-    dbg!("listing backup");
     let backup_list = match store.get_backup_info() {
         Ok(backup) => backup,
         Err(e) => {
@@ -108,15 +107,13 @@ pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
 /// Returns an error if the restore operation fails.
 pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    dbg!("restore backup");
     let mut store = store.write().await;
-    dbg!("lock obtained");
     let res = match &backup_id {
         Some(id) => store.restore_from_backup(*id),
         None => store.restore_from_latest_backup(),
     };
     drop(store);
-    dbg!("lock released");
+
     match res {
         Ok(_) => {
             info!("database restored from backup {:?}", backup_id);
@@ -198,7 +195,7 @@ mod tests {
             let mut store = store.write().await;
             let db = store.events();
             db.put(&msg).unwrap();
-            let res = store.backup(3);
+            let res = store.backup(true, 3);
             assert!(res.is_ok());
         }
         // backing up 2
@@ -206,7 +203,7 @@ mod tests {
             let mut store = store.write().await;
             let db = store.events();
             db.put(&msg).unwrap();
-            let res = store.backup(3);
+            let res = store.backup(true, 3);
             assert!(res.is_ok());
         }
 
@@ -215,7 +212,7 @@ mod tests {
             let mut store = store.write().await;
             let db = store.events();
             db.put(&msg).unwrap();
-            let res = store.backup(3);
+            let res = store.backup(true, 3);
             assert!(res.is_ok());
         }
 
