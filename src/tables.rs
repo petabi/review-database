@@ -133,30 +133,27 @@ impl StateDb {
         let backup = self.backup.as_path();
         let opts = rocksdb::backup::BackupEngineOptions::new(backup)?;
         let db_env = rocksdb::Env::new()?;
-        tracing::error!("opening up backup engine");
         let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
 
         let opts = rocksdb::backup::RestoreOptions::default();
-        tracing::error!("cancelling all back ground");
 
         let inner = self.inner.as_ref().expect("database must be open");
         inner.cancel_all_background_work(true);
-        tracing::error!("restroing");
         engine.restore_from_latest_backup(inner.path(), inner.path(), &opts)?;
-        tracing::error!("reboot");
+
         self.reboot()
     }
 
     pub fn restore_from_backup(&mut self, id: u32) -> Result<()> {
         let backup = self.backup.as_path();
-        let inner = self.inner.as_ref().expect("database must be open");
-        inner.cancel_all_background_work(true);
-
         let opts = rocksdb::backup::BackupEngineOptions::new(backup)?;
         let db_env = rocksdb::Env::new()?;
         let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
 
         let opts = rocksdb::backup::RestoreOptions::default();
+
+        let inner = self.inner.as_ref().expect("database must be open");
+        inner.cancel_all_background_work(true);
         engine.restore_from_backup(inner.path(), inner.path(), &opts, id)?;
 
         self.reboot()
