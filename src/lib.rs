@@ -266,6 +266,13 @@ impl Store {
     }
 
     #[must_use]
+    pub fn trusted_user_agent_map(&self) -> Map {
+        self.states
+            .map(tables::TRUSTED_USER_AGENTS)
+            .expect("always available")
+    }
+
+    #[must_use]
     pub fn traffic_filter_map(&self) -> Map {
         self.states
             .map(tables::TRAFFIC_FILTER_RULES)
