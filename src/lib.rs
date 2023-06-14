@@ -332,6 +332,16 @@ impl Store {
         self.states.restore_from_latest_backup()
     }
 
+    /// Recover from the latest valid backup on file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when all the available backups are not valid
+    /// for restoration.
+    pub fn recover(&mut self) -> Result<()> {
+        self.states.recover()
+    }
+
     /// Purge old backups and only keep `num_backups_to_keep` backups on file
     ///
     /// # Errors

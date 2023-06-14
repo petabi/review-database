@@ -189,6 +189,14 @@ impl StateDb {
         Ok(())
     }
 
+    pub fn recover(&mut self) -> Result<()> {
+        self.close();
+
+        let db = Self::recover_db(&self.db, &self.backup)?;
+        self.inner = Some(db);
+        Ok(())
+    }
+
     fn close(&mut self) {
         if let Some(db) = self.inner.as_ref() {
             db.cancel_all_background_work(true);
