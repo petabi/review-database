@@ -69,7 +69,49 @@ impl StateDb {
         let mut opts = rocksdb::Options::default();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
-        let db = rocksdb::OptimisticTransactionDB::open_cf(&opts, path, MAP_NAMES)?;
+        let db = match rocksdb::OptimisticTransactionDB::open_cf(&opts, path, MAP_NAMES) {
+            Ok(db) => db,
+            Err(e) => {
+                tracing::error!("fail to open db {e:?}");
+
+                let bopts = rocksdb::backup::BackupEngineOptions::new(&backup)?;
+                let db_env = rocksdb::Env::new()?;
+                let mut engine = rocksdb::backup::BackupEngine::open(&bopts, &db_env)?;
+                let list = engine.get_backup_info();
+                tracing::error!(
+                    "current backups available {}: {:?}",
+                    list.len(),
+                    list.iter().map(|b| b.backup_id).collect::<Vec<_>>()
+                );
+                for b in list.into_iter().rev() {
+                    let id = b.backup_id;
+                    tracing::error!("trying to restore from {id}");
+                    let restore_opts = rocksdb::backup::RestoreOptions::default();
+                    let db = match engine.restore_from_backup(path, path, &restore_opts, id) {
+                        Ok(_) => {
+                            match rocksdb::OptimisticTransactionDB::open_cf(&opts, path, MAP_NAMES)
+                            {
+                                Ok(db) => db,
+                                Err(e) => {
+                                    tracing::error!("opening restored {id} failed {e:?}");
+                                    continue;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("restoring {id} failed {e:?}");
+                            continue;
+                        }
+                    };
+                    tracing::error!("restored from {id}");
+                    return Ok(Self {
+                        inner: Some(db),
+                        backup,
+                    });
+                }
+                return Err(anyhow::anyhow!("all backup restoring failed"));
+            }
+        };
 
         Ok(Self {
             inner: Some(db),
@@ -122,11 +164,18 @@ impl StateDb {
         let opts = rocksdb::backup::BackupEngineOptions::new(backup)?;
         let db_env = rocksdb::Env::new()?;
         let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
+        let backup_id = engine.get_backup_info().last().map(|b| b.backup_id + 1);
+        tracing::error!("new backup_id {:?}", &backup_id);
         let inner = self.inner.as_ref().expect("database must be open");
         engine.create_new_backup_flush(inner, flush)?;
+        let db_path = inner.path().to_owned();
         engine
             .purge_old_backups(num_of_backups_to_keep as usize)
-            .or_else(|_| self.reboot())
+            .or_else(|_| self.reboot(&db_path))?;
+        if let Some(id) = backup_id {
+            tracing::error!("{:?}", engine.verify_backup(id));
+        }
+        Ok(())
     }
 
     pub fn restore_from_latest_backup(&mut self) -> Result<()> {
@@ -135,13 +184,17 @@ impl StateDb {
         let db_env = rocksdb::Env::new()?;
         let mut engine = rocksdb::backup::BackupEngine::open(&opts, &db_env)?;
 
-        let opts = rocksdb::backup::RestoreOptions::default();
+        let mut opts = rocksdb::backup::RestoreOptions::default();
+        opts.set_keep_log_files(true);
 
         let inner = self.inner.as_ref().expect("database must be open");
         inner.cancel_all_background_work(true);
-        engine.restore_from_latest_backup(inner.path(), inner.path(), &opts)?;
+        let path = inner.path().to_owned();
+        self.inner = None;
 
-        self.reboot()
+        engine.restore_from_latest_backup(&path, &path, &opts)?;
+
+        self.reboot(&path)
     }
 
     pub fn restore_from_backup(&mut self, id: u32) -> Result<()> {
@@ -154,9 +207,12 @@ impl StateDb {
 
         let inner = self.inner.as_ref().expect("database must be open");
         inner.cancel_all_background_work(true);
-        engine.restore_from_backup(inner.path(), inner.path(), &opts, id)?;
+        let path = inner.path().to_owned();
+        self.inner = None;
 
-        self.reboot()
+        engine.restore_from_backup(&path, &path, &opts, id)?;
+
+        self.reboot(&path)
     }
 
     pub fn get_backup_info(&self) -> Result<Vec<rocksdb::backup::BackupEngineInfo>> {
@@ -178,19 +234,16 @@ impl StateDb {
             .purge_old_backups(num_of_backups_to_keep as usize)
             .is_err()
         {
-            self.reboot()?;
+            if let Some(p) = self.inner.as_ref().map(|db| db.path().to_owned()) {
+                self.reboot(&p)?;
+            } else {
+                return Err(anyhow::anyhow!("unable to reboot after purging fails"));
+            }
         }
         Ok(())
     }
 
-    fn reboot(&mut self) -> Result<()> {
-        let path = self
-            .inner
-            .as_ref()
-            .expect("database must be open")
-            .path()
-            .to_owned();
-        self.close();
+    fn reboot(&mut self, path: &Path) -> Result<()> {
         let mut opts = rocksdb::Options::default();
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
@@ -198,10 +251,6 @@ impl StateDb {
 
         self.inner = Some(db);
         Ok(())
-    }
-
-    fn close(&mut self) {
-        self.inner = None;
     }
 }
 
