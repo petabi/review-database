@@ -63,7 +63,7 @@ pub async fn schedule_periodic(
 /// Returns an error if backup fails.
 pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u32) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    tracing::error!("database backing up started");
+    info!("backing up database...");
     let mut store = store.write().await;
     if let Err(e) = store.backup(flush, backups_to_keep) {
         drop(store);
@@ -71,7 +71,7 @@ pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u3
         return Err(e);
     }
     drop(store);
-    tracing::error!("database backup created");
+    info!("backing up database completed");
     Ok(())
 }
 
@@ -106,7 +106,7 @@ pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
 /// Returns an error if the restore operation fails.
 pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    tracing::error!("database restore started");
+    info!("restoring database from {:?}", backup_id);
     let mut store = store.write().await;
     let res = match &backup_id {
         Some(id) => store.restore_from_backup(*id),
@@ -116,7 +116,7 @@ pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Resu
 
     match res {
         Ok(_) => {
-            tracing::error!("database restored from backup {:?}", backup_id);
+            info!("database restored from backup {:?}", backup_id);
             Ok(())
         }
         Err(e) => {
