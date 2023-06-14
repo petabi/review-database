@@ -28,8 +28,9 @@ pub(super) const TRAFFIC_FILTER_RULES: &str = "traffic filter rules";
 pub(super) const TRIAGE_POLICY: &str = "triage policy";
 pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
+pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 21] = [
+const MAP_NAMES: [&str; 22] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -51,6 +52,7 @@ const MAP_NAMES: [&str; 21] = [
     TRIAGE_POLICY,
     TRIAGE_RESPONSE,
     TRUSTED_DNS_SERVERS,
+    TRUSTED_USER_AGENTS,
 ];
 
 // Keys for the meta map.

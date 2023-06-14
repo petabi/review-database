@@ -9,6 +9,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Introduced a new database table 'TRUSTED_USER_AGENTS' for handling
+  non-browser detections.
 - Added the ability to recover from the latest valid backup file.
   - In case of data loss or system failure, the new recovery feature allows
     users to automatically restore the system using the latest valid backup
