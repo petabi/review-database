@@ -5,6 +5,59 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added the ability to recover from the latest valid backup file.
+  - In case of data loss or system failure, the new recovery feature allows
+    users to automatically restore the system using the latest valid backup
+    file available.
+  - The recovery process identifies the most recent backup file that is valid
+    and consistent, ensuring the integrity of the recovered data.
+
+### Changed
+
+- Added a new flag, `flush`, to the backup functionality, allowing users to
+  control whether the database should be flushed before initiating the backup
+  process.
+  - When the flush flag is set to true, the database will be flushed before
+    initiating the backup. This ensures that all pending data is written to
+    disk, minimizing the risk of data loss during the backup process.
+  - When the flush flag is set to false (default), the database will not be
+    flushed before the backup, allowing for faster backup operations. However,
+    please note that there is a slight risk of potential data loss if there are
+    pending writes that have not been committed at the time of backup.
+
+- Modified the backup, `restore_from_latest_backup`, `restore_from_backup`, and
+  `purge_old_backups` functions to require a mutable reference of the database.
+  Exclusive access to the database directory and backup directory is necessary
+  for consistency and integrity. This prevents potential conflicts or data
+  corruption during these critical processes.
+  - It is recommended to schedule these operations during maintenance windows
+    or low-activity periods to minimize disruption to users and services.
+  - Ensure that appropriate permissions are granted to the executing user or
+    process to access and modify the database and backup directories.
+
+- Changed the argument `store` from `&Arc<Store>` to `&Arc<RwLock<Store>>` for
+  `create`, `schedule_periodic`, `restore`, and `list` functions to allow for
+  concurrent read and exclusive write access to the store, enabling better
+  thread safety and data consistency during these operations.
+
+- Modified the `restore` function argument `backup_id` from `u32` to `Option<u32>`.
+  - When `backup_id` is set to `Some(id)`, the function restores from the backup
+    with the provided `id`.
+  - When `backup_id` is set to `None`, the function restores from the latest
+    available backup. Please note that if the latest backup is invalid,
+    restoration will fail.
+  - To recover from the latest valid backup, a new `recover` function is introduced.
+
+- Changed the default path for storing state.db backup from "/backup/path/" to
+  "/backup/path/state.db/". The new default path provides better clarity and
+  specificity, making it easier for users to locate and manage the state.db
+  backup file. This change ensures consistency and aligns with best practices
+  for backup file naming and organization.
+
 ## [0.14.1] - 2023-06-10
 
 ### Changed
@@ -301,6 +354,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.14.1...main
 [0.14.1]: https://github.com/petabi/review-database/compare/0.14.0...0.14.1
 [0.14.0]: https://github.com/petabi/review-database/compare/0.13.2...0.14.0
 [0.13.2]: https://github.com/petabi/review-database/compare/0.13.1...0.13.2
