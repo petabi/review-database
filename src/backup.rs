@@ -64,15 +64,20 @@ pub async fn schedule_periodic(
 pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u32) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
     info!("backing up database...");
-    let mut store = store.write().await;
-    if let Err(e) = store.backup(flush, backups_to_keep) {
-        drop(store);
-        warn!("database backup failed: {:?}", e);
-        return Err(e);
+    let res = {
+        let mut store = store.write().await;
+        store.backup(flush, backups_to_keep)
+    };
+    match res {
+        Ok(_) => {
+            info!("backing up database completed");
+            Ok(())
+        }
+        Err(e) => {
+            warn!("database backup failed: {:?}", e);
+            Err(e)
+        }
     }
-    drop(store);
-    info!("backing up database completed");
-    Ok(())
 }
 
 /// Lists the backup information of the database.
@@ -82,21 +87,23 @@ pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u3
 /// Returns an error if backup list fails to create
 pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    let store = store.read().await;
-    let backup_list = match store.get_backup_info() {
-        Ok(backup) => backup,
-        Err(e) => {
-            drop(store);
-            warn!("failed to generate backup list: {:?}", e);
-            return Err(e);
-        }
+    let res = {
+        let store = store.read().await;
+        store.get_backup_info()
     };
-    let backup_list: Vec<BackupInfo> = backup_list
-        .into_iter()
-        .map(std::convert::Into::into)
-        .collect();
-    info!("generate database backup list");
-    Ok(backup_list)
+    match res {
+        Ok(backup_list) => {
+            info!("generate database backup list");
+            Ok(backup_list
+                .into_iter()
+                .map(std::convert::Into::into)
+                .collect())
+        }
+        Err(e) => {
+            warn!("failed to generate backup list: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 /// Restores the database from a backup with the specified ID.
@@ -107,12 +114,13 @@ pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
 pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
     info!("restoring database from {:?}", backup_id);
-    let mut store = store.write().await;
-    let res = match &backup_id {
-        Some(id) => store.restore_from_backup(*id),
-        None => store.restore_from_latest_backup(),
+    let res = {
+        let mut store = store.write().await;
+        match &backup_id {
+            Some(id) => store.restore_from_backup(*id),
+            None => store.restore_from_latest_backup(),
+        }
     };
-    drop(store);
 
     match res {
         Ok(_) => {
@@ -120,10 +128,9 @@ pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Resu
             Ok(())
         }
         Err(e) => {
-            tracing::error!(
+            warn!(
                 "failed to restore database from backup {:?}: {:?}",
-                backup_id,
-                e
+                backup_id, e
             );
             Err(e)
         }
