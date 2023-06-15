@@ -58,6 +58,19 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   backup file. This change ensures consistency and aligns with best practices
   for backup file naming and organization.
 
+- Modified the backup process during migration to occur once before the
+  migration starts and deleted after the entire process succeeds. Previously,
+  the backup and deletion of the backup were performed for each migration step.
+  With this update, the backup process occurs once before the migration starts,
+  ensuring a consistent starting point for the migration process. After the
+  migration process successfully completes, the backup is deleted to avoid
+  unnecessary duplication of backup files and reduce storage usage. This
+  approach ensures that the backup file represents the state of the database
+  before the entire migration process, providing a reliable fallback option if
+  needed. This optimization improves the efficiency of the migration process,
+  especially in scenarios involving a large number of migration steps or
+  extensive data transformations.
+
 ## [0.14.1] - 2023-06-10
 
 ### Changed
