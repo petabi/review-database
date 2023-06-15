@@ -417,18 +417,21 @@ fn migrate_0_6_to_0_7(store: &super::Store) -> Result<()> {
         is_saved: bool,
     }
 
+    let earliest = (chrono::Utc::now() - chrono::Duration::weeks(2)).timestamp_nanos();
+
     let map = store.outlier_map();
 
     let mut prev = (-1, -1, -1);
     let mut rank = -1;
     let mut len = 0;
+    let mut most_recent = -1;
     for (k, v) in map.iter_backward()? {
         let mut outlier_key: OutlierKey = bincode::DefaultOptions::new().deserialize(&k)?;
-        let value: OutlierValue = bincode::DefaultOptions::new().deserialize(&v)?;
 
         if outlier_key.model_id != prev.0 || outlier_key.timestamp != prev.1 {
             len = 1;
             rank = 1;
+            most_recent = outlier_key.timestamp;
         } else {
             len += 1;
             if prev.2 != outlier_key.rank {
@@ -441,7 +444,11 @@ fn migrate_0_6_to_0_7(store: &super::Store) -> Result<()> {
             outlier_key.timestamp,
             outlier_key.rank,
         );
-        if value.is_saved {
+
+        let value: OutlierValue = bincode::DefaultOptions::new().deserialize(&v)?;
+
+        if value.is_saved || outlier_key.timestamp > earliest || outlier_key.timestamp > most_recent
+        {
             outlier_key.rank = rank;
             let new_k = bincode::DefaultOptions::new().serialize(&outlier_key)?;
             map.update((&k, &v), (&new_k, &v))?;
@@ -1143,25 +1150,36 @@ mod tests {
         let value_saved = bincode::DefaultOptions::new()
             .serialize(&value_saved)
             .expect("serialize error");
+        let value_new = OutlierValue {
+            distance: 0.0,
+            is_saved: false,
+        };
+        let value_new = bincode::DefaultOptions::new()
+            .serialize(&value_new)
+            .expect("serialize error");
+
+        let new_ts = chrono::Utc::now().timestamp_nanos();
 
         let keys = vec![
-            (1, 11, 1, 1, "a"),
-            (1, 11, 2, 2, "a"),
+            (1, new_ts, 1, 1, "a"),
+            (1, 11, 1, 2, "a"),
             (1, 11, 2, 2, "b"),
-            (1, 11, 3, 4, "a"),
+            (1, new_ts, 3, 4, "a"),
             (1, 22, 1, 1, "a"),
             (1, 22, 2, 2, "a"),
-            (1, 22, 2, 3, "c"),
+            (1, new_ts, 2, 3, "c"),
             (2, 11, 1, 1, "a"),
             (2, 22, 1, 2, "a"),
-            (2, 22, 2, 1, "a"),
+            (2, new_ts, 2, 1, "a"),
         ];
         let reversed = vec![
-            (1, 11, 2, 2, "b"),
-            (1, 11, 4, 1, "a"),
-            (1, 22, 1, 3, "c"),
-            (1, 22, 3, 1, "a"),
-            (2, 22, 2, 2, "a"),
+            (1, 11, 2, 2, "a"),
+            (1, 22, 2, 1, "a"),
+            (1, new_ts, 1, 4, "a"),
+            (1, new_ts, 2, 3, "c"),
+            (1, new_ts, 3, 1, "a"),
+            (2, 11, 1, 1, "a"),
+            (2, new_ts, 1, 1, "a"),
         ];
 
         let settings = TestSchema::new();
@@ -1177,10 +1195,17 @@ mod tests {
             let key = bincode::DefaultOptions::new()
                 .serialize(&key)
                 .expect("serialize error");
-            if i % 2 == 0 {
-                map.insert(&key, &value_saved).expect("storing error");
-            } else {
-                map.insert(&key, &value).expect("storing error");
+            match i % 3 {
+                0 => {
+                    if i % 2 == 0 {
+                        map.insert(&key, &value_new).expect("storing error")
+                    } else {
+                        map.insert(&key, &value_saved).expect("storing error")
+                    }
+                }
+                1 => map.insert(&key, &value_saved).expect("storing error"),
+                2 => map.insert(&key, &value).expect("storing error"),
+                _ => panic!("unexpected"),
             }
         }
 
