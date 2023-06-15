@@ -75,7 +75,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<(_, _, fn(_, _) -> Result<_, _>)> = vec![
+    let migration: Vec<(_, _, fn(_) -> Result<_, _>)> = vec![
         (
             VersionReq::parse(">=0.2,<0.4.0").expect("valid version requirement"),
             Version::parse("0.3.0").expect("valid version"),
@@ -113,12 +113,15 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
     ];
 
+    let mut store = super::Store::new(data_dir, backup_dir)?;
+    store.backup(false, 1)?;
+
     while let Some((_req, to, m)) = migration
         .iter()
         .find(|(req, _to, _m)| req.matches(&version))
     {
         info!("Migrating database to {to}");
-        m(data_dir, backup_dir)?;
+        m(&store)?;
         version = to.clone();
         if compatible.matches(&version) {
             create_version_file(&backup).context("failed to update VERSION")?;
@@ -126,6 +129,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         }
     }
 
+    store.purge_old_backups(0)?;
     Err(anyhow!("migration from {version} is not supported",))
 }
 
@@ -187,7 +191,7 @@ fn read_version_file(path: &Path) -> Result<Version> {
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_2_to_0_3(store: &super::Store) -> Result<()> {
     use super::{account::Role, IterableMap};
     use chrono::{DateTime, Utc};
     use std::num::NonZeroU32;
@@ -258,8 +262,6 @@ fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(false, 1)?;
     let account_map = store.account_map();
 
     for (k, v) in account_map.iter_forward()? {
@@ -269,7 +271,6 @@ fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         account_map.update_raw((&k, &v), (&k, &new))?;
     }
 
-    store.purge_old_backups(0)?;
     Ok(())
 }
 
@@ -278,7 +279,7 @@ fn migrate_0_2_to_0_3<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_3_to_0_5(store: &super::Store) -> Result<()> {
     use super::{
         event::{Filter, FilterEndpoint, FlowKind},
         IterableMap,
@@ -331,8 +332,6 @@ fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(false, 1)?;
     let filter_map = store.filter_map();
 
     for (k, v) in filter_map.iter_forward()? {
@@ -342,7 +341,6 @@ fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         filter_map.update((&k, &v), (&k, &new))?;
     }
 
-    store.purge_old_backups(0)?;
     Ok(())
 }
 
@@ -351,7 +349,7 @@ fn migrate_0_3_to_0_5<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_5_to_0_6(store: &super::Store) -> Result<()> {
     use super::{
         traffic_filter::{ProtocolPorts, TrafficFilter},
         IterableMap,
@@ -385,8 +383,6 @@ fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(false, 1)?;
     let traffic_filter_map = store.traffic_filter_map();
 
     for (k, v) in traffic_filter_map.iter_forward()? {
@@ -396,7 +392,6 @@ fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         traffic_filter_map.update((&k, &v), (&k, &new))?;
     }
 
-    store.purge_old_backups(0)?;
     Ok(())
 }
 
@@ -405,7 +400,7 @@ fn migrate_0_5_to_0_6<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_6_to_0_7(store: &super::Store) -> Result<()> {
     use crate::IterableMap;
     #[derive(Deserialize, Serialize)]
     struct OutlierKey {
@@ -415,9 +410,6 @@ fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         id: i64,
         source: String,
     }
-
-    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(false, 1)?;
 
     let map = store.outlier_map();
 
@@ -446,7 +438,6 @@ fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         map.update((&k, &v), (&new_k, &v))?;
     }
 
-    store.purge_old_backups(0)?;
     Ok(())
 }
 
@@ -456,7 +447,7 @@ fn migrate_0_6_to_0_7<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
 ///
 /// Returns an error if database migration fails.
 #[allow(clippy::too_many_lines)]
-fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
+fn migrate_0_7_to_0_9(store: &super::Store) -> Result<()> {
     use crate::{
         event::{DnsEventFields, TorConnectionFields},
         EventKind,
@@ -543,9 +534,6 @@ fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
         }
     }
 
-    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(false, 1)?;
-
     let event_db = store.events();
     for item in event_db.raw_iter_forward() {
         let (k, v) = item.context("Failed to read events Database")?;
@@ -579,22 +567,12 @@ fn migrate_0_7_to_0_9<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
             _ => continue,
         }
     }
-    store.purge_old_backups(0)?;
-    Ok(())
-}
 
-fn migrate_0_9_to_0_11<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
-    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(false, 1)?;
-
-    update_events_0_9_to_0_11(&store)?;
-
-    store.purge_old_backups(0)?;
     Ok(())
 }
 
 #[allow(clippy::too_many_lines)]
-fn update_events_0_9_to_0_11(store: &crate::Store) -> Result<()> {
+fn migrate_0_9_to_0_11(store: &super::Store) -> Result<()> {
     use crate::EventKind;
     use chrono::{DateTime, Utc};
     use num_traits::FromPrimitive;
@@ -719,14 +697,10 @@ fn update_events_0_9_to_0_11(store: &crate::Store) -> Result<()> {
     Ok(())
 }
 
-fn migrate_0_11_to_0_12<P: AsRef<Path>>(path: P, backup: P) -> Result<()> {
-    let mut store = super::Store::new(path.as_ref(), backup.as_ref())?;
-    store.backup(false, 1)?;
+fn migrate_0_11_to_0_12(store: &super::Store) -> Result<()> {
+    update_data_source_0_11_to_0_12(store)?;
+    update_dgafields_httpthreatfields_0_11_to_0_12(store)?;
 
-    update_data_source_0_11_to_0_12(&store)?;
-    update_dgafields_httpthreatfields_0_11_to_0_12(&store)?;
-
-    store.purge_old_backups(0)?;
     Ok(())
 }
 
@@ -1192,9 +1166,10 @@ mod tests {
         }
 
         let (db_dir, backup_dir) = settings.close();
-        assert!(super::migrate_0_6_to_0_7(db_dir.path(), backup_dir.path()).is_ok());
-
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        assert!(super::migrate_0_6_to_0_7(&settings.store).is_ok());
+
         let map = settings.store.outlier_map();
         let updated: Vec<OutlierKey> = map
             .iter_forward()
@@ -1287,7 +1262,8 @@ mod tests {
         event_db.put(&tor_message).unwrap();
         let (db_dir, backup_dir) = settings.close();
 
-        assert!(super::migrate_0_7_to_0_9(db_dir.path(), backup_dir.path()).is_ok());
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_7_to_0_9(&settings.store).is_ok());
     }
 
     #[test]
@@ -1348,7 +1324,8 @@ mod tests {
         event_db.put(&message).unwrap();
         let (db_dir, backup_dir) = settings.close();
 
-        assert!(super::migrate_0_9_to_0_11(db_dir.path(), backup_dir.path()).is_ok());
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_9_to_0_11(&settings.store).is_ok());
     }
 
     #[test]
@@ -1548,6 +1525,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        assert!(super::migrate_0_11_to_0_12(db_dir.path(), backup_dir.path()).is_ok());
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        assert!(super::migrate_0_11_to_0_12(&settings.store).is_ok());
     }
 }
