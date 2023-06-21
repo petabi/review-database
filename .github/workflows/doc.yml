@@ -24,6 +24,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Build documentation
         run: cargo doc --no-deps
+      - name: Fix permissions
+        run: chmod a+r target/doc/.lock
       - name: Create the root index
         run: echo "<meta http-equiv=\"refresh\" content=\"0; url=review_database\">" > target/doc/index.html
       - name: Upload artifact
