@@ -5,6 +5,25 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added more event objects with `conn`, `ftp`, `http`, `ldap`.
+
+### Fixed
+
+- Fixed `Event::TorConnection` and `Event::DomainGenerationAlgorithm` in
+  `Event::count_network`.
+  - Adjusted the counting routine for `TorConnection` and
+    `DomainGenerationAlgorithm` events to address an issue of overcounting
+    destination IP addresses. Previously, the counter was incremented for each
+    destination address regardless of whether the event matched the specified
+    `locator` and `filter`. The logic has been updated so that now both source
+    and destination addresses are only considered if the event matches the
+    `locator` and `filter`. This change corrects the count by ensuring only
+    relevant events are considered in the total tally.
+
 ## [0.15.0] - 2023-06-14
 
 ### Added
