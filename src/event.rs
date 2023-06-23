@@ -1,16 +1,27 @@
+#![allow(clippy::too_many_lines)]
 mod common;
+mod conn;
 mod dns;
+mod ftp;
 mod http;
+mod ldap;
 mod rdp;
 mod tor;
 
 use self::{common::Match, http::RepeatedHttpSessionsFields, rdp::RdpBruteForceFields};
 pub use self::{
     common::TriageScore,
-    dns::{DnsCovertChannel, DnsEventFields},
-    http::{
-        DgaFields, DomainGenerationAlgorithm, HttpThreat, HttpThreatFields, RepeatedHttpSessions,
+    conn::{
+        ExternalDDos, ExternalDDosFields, MultiHostPortScan, MultiHostPortScanFields, PortScan,
+        PortScanFields,
     },
+    dns::{DnsCovertChannel, DnsEventFields},
+    ftp::{FtpBruteForce, FtpBruteForceFields, FtpPlainText, FtpPlainTextFields},
+    http::{
+        DgaFields, DomainGenerationAlgorithm, HttpThreat, HttpThreatFields, NonBrowser,
+        NonBrowserFields, RepeatedHttpSessions,
+    },
+    ldap::{LdapBruteForce, LdapBruteForceFields, LdapPlainText, LdapPlainTextFields},
     rdp::RdpBruteForce,
     tor::{TorConnection, TorConnectionFields},
 };
@@ -52,6 +63,14 @@ const RDP_BRUTE_FORCE: &str = "RDP Brute Force";
 const REPEATED_HTTP_SESSIONS: &str = "Repeated HTTP Sessions";
 const TOR_CONNECTION: &str = "Tor Connection";
 const DOMAIN_GENERATION_ALGIRITHM: &str = "Domain Generation Algorithm";
+const FTP_BRUTE_FORCE: &str = "FTP Brute Force";
+const FTP_PLAIN_TEXT: &str = "FTP Plain text";
+const PORT_SCAN: &str = "Port Scan";
+const MULTI_HOST_PORT_SCAN: &str = "Multi Host Port Scan";
+const EXTERNAL_DDOS: &str = "External Ddos";
+const NON_BROWSER: &str = "Non Browser";
+const LDAP_BRUTE_FORCE: &str = "LDAP Brute Force";
+const LDAP_PLAIN_TEXT: &str = "LDAP Plain Text";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -72,6 +91,31 @@ pub enum Event {
 
     /// DGA (Domain Generation Algorithm) generated hostname in HTTP request message
     DomainGenerationAlgorithm(DomainGenerationAlgorithm),
+
+    /// Brute force attacks against FTP.
+    FtpBruteForce(FtpBruteForce),
+
+    /// Plain text password is used for the FTP connection.
+    FtpPlainText(FtpPlainText),
+
+    /// Large number of connection attempts are made to multiple ports
+    /// on the same destination from the same source.
+    PortScan(PortScan),
+
+    /// Specific host inside attempts to connect to a specific port on multiple host inside.
+    MultiHostPortScan(MultiHostPortScan),
+
+    /// multiple internal host attempt a DDOS attack against a specific external host.
+    ExternalDDos(ExternalDDos),
+
+    /// Non-browser user agent detected in HTTP request message.
+    NonBrowser(NonBrowser),
+
+    /// Brute force attacks against LDAP.
+    LdapBruteForce(LdapBruteForce),
+
+    /// Plain text password is used for the LDAP connection.
+    LdapPlainText(LdapPlainText),
 }
 
 impl Event {
@@ -94,6 +138,14 @@ impl Event {
             Event::RepeatedHttpSessions(event) => event.matches(locator, filter),
             Event::TorConnection(event) => event.matches(locator, filter),
             Event::DomainGenerationAlgorithm(event) => event.matches(locator, filter),
+            Event::FtpBruteForce(event) => event.matches(locator, filter),
+            Event::FtpPlainText(event) => event.matches(locator, filter),
+            Event::PortScan(event) => event.matches(locator, filter),
+            Event::MultiHostPortScan(event) => event.matches(locator, filter),
+            Event::ExternalDDos(event) => event.matches(locator, filter),
+            Event::NonBrowser(event) => event.matches(locator, filter),
+            Event::LdapBruteForce(event) => event.matches(locator, filter),
+            Event::LdapPlainText(event) => event.matches(locator, filter),
         }
     }
 
@@ -151,6 +203,68 @@ impl Event {
                     common_count_country(&locator, counter, event.src_addr, event.dst_addr);
                 }
             }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::MultiHostPortScan(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    let src_country = locator.as_ref().map_or_else(
+                        || "ZZ".to_string(),
+                        |mutex| {
+                            if let Ok(mut locator) = mutex.lock() {
+                                find_ip_country(&mut locator, event.src_addr)
+                            } else {
+                                "ZZ".to_string()
+                            }
+                        },
+                    );
+                    let entry = counter.entry(src_country).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::ExternalDDos(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    let dst_country = locator.as_ref().map_or_else(
+                        || "ZZ".to_string(),
+                        |mutex| {
+                            if let Ok(mut locator) = mutex.lock() {
+                                find_ip_country(&mut locator, event.dst_addr)
+                            } else {
+                                "ZZ".to_string()
+                            }
+                        },
+                    );
+                    let entry = counter.entry(dst_country).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::NonBrowser(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::LdapPlainText(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
         }
         Ok(())
     }
@@ -203,6 +317,54 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::CredentialAccess).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::LateralMovement).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::Reconnaissance).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::MultiHostPortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::Reconnaissance).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::ExternalDDos(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::Impact).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::CommandAndControl).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::CredentialAccess).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::LateralMovement).or_insert(0);
+                    *entry += 1;
+                }
+            }
         }
         Ok(())
     }
@@ -250,6 +412,48 @@ impl Event {
                     common_count_ip_address(counter, event.src_addr, event.dst_addr);
                 }
             }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::MultiHostPortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::ExternalDDos(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
+            Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
         }
         Ok(())
     }
@@ -292,6 +496,44 @@ impl Event {
                 }
             }
             Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::MultiHostPortScan(_event) => {}
+            Event::ExternalDDos(_event) => {}
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
                     *entry += 1;
@@ -354,6 +596,56 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, FTP_BRUTE_FORCE))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, FTP_PLAIN_TEXT))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, PORT_SCAN))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::MultiHostPortScan(_event) => {}
+            Event::ExternalDDos(_event) => {}
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, NON_BROWSER))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, LDAP_BRUTE_FORCE))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, LDAP_PLAIN_TEXT))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
         }
         Ok(())
     }
@@ -406,6 +698,49 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::MultiHostPortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::ExternalDDos(_event) => {}
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
         }
         Ok(())
     }
@@ -448,6 +783,49 @@ impl Event {
                 }
             }
             Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::MultiHostPortScan(_event) => {}
+            Event::ExternalDDos(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(event.dst_addr).or_insert(0);
                     *entry += 1;
@@ -509,6 +887,54 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(FTP_BRUTE_FORCE.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(FTP_PLAIN_TEXT.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(PORT_SCAN.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::MultiHostPortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MULTI_HOST_PORT_SCAN.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::ExternalDDos(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EXTERNAL_DDOS.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(NON_BROWSER.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(LDAP_BRUTE_FORCE.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(LDAP_PLAIN_TEXT.to_string()).or_insert(0);
+                    *entry += 1;
+                }
+            }
         }
         Ok(())
     }
@@ -556,6 +982,54 @@ impl Event {
                 }
             }
             Event::DomainGenerationAlgorithm(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::MultiHostPortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::ExternalDDos(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::LdapPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(MEDIUM).or_insert(0);
                     *entry += 1;
@@ -628,10 +1102,10 @@ impl Event {
                         let entry = counter.entry(id).or_insert(0);
                         *entry += 1;
                     }
-                }
-                if let Some(id) = find_network(event.dst_addr, networks) {
-                    let entry = counter.entry(id).or_insert(0);
-                    *entry += 1;
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
                 }
             }
             Event::DomainGenerationAlgorithm(event) => {
@@ -640,10 +1114,98 @@ impl Event {
                         let entry = counter.entry(id).or_insert(0);
                         *entry += 1;
                     }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
                 }
-                if let Some(id) = find_network(event.dst_addr, networks) {
-                    let entry = counter.entry(id).or_insert(0);
-                    *entry += 1;
+            }
+            Event::FtpBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::FtpPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::PortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::MultiHostPortScan(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::ExternalDDos(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::NonBrowser(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::LdapBruteForce(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
+            Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
                 }
             }
         }
@@ -671,6 +1233,30 @@ impl Event {
             Event::DomainGenerationAlgorithm(event) => {
                 event.triage_scores = Some(triage_scores);
             }
+            Event::FtpBruteForce(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::FtpPlainText(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::PortScan(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::MultiHostPortScan(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::ExternalDDos(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::NonBrowser(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::LdapBruteForce(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::LdapPlainText(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
         }
     }
 }
@@ -694,6 +1280,14 @@ pub enum EventKind {
     Log,
     TorConnection,
     DomainGenerationAlgorithm,
+    FtpBruteForce,
+    FtpPlainText,
+    PortScan,
+    MultiHostPortScan,
+    NonBrowser,
+    LdapBruteForce,
+    LdapPlainText,
+    ExternalDDos,
 }
 
 /// Machine Learning Method.
@@ -771,6 +1365,18 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["rdp", "brute", "force"], "rdp brute force");
             moderate_kinds_by(kinds, &["tor", "connection"], "tor exit nodes");
             moderate_kinds_by(kinds, &["domain", "generation", "algorithm"], "dga");
+            moderate_kinds_by(kinds, &["ftp", "brute", "force"], "ftp brute force");
+            moderate_kinds_by(kinds, &["ftp", "plain", "text"], "ftp plain text");
+            moderate_kinds_by(kinds, &["ldap", "brute", "force"], "ldap brute force");
+            moderate_kinds_by(kinds, &["ldap", "plain", "text"], "ldap plain text");
+            moderate_kinds_by(
+                kinds,
+                &["multi", "host", "port", "scan"],
+                "multi host port scan",
+            );
+            moderate_kinds_by(kinds, &["external", "ddos"], "external ddos");
+            moderate_kinds_by(kinds, &["port", "scan"], "port scan");
+            moderate_kinds_by(kinds, &["non", "browser"], "non browser");
         }
     }
 }
@@ -843,6 +1449,62 @@ impl fmt::Display for EventMessage {
             EventKind::DomainGenerationAlgorithm => {
                 if let Ok(fields) = bincode::deserialize::<DgaFields>(&self.fields) {
                     write!(f, "DomainGenerationAlgorithm,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::FtpBruteForce => {
+                if let Ok(fields) = bincode::deserialize::<FtpBruteForceFields>(&self.fields) {
+                    write!(f, "FtpBruteForce,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::FtpPlainText => {
+                if let Ok(fields) = bincode::deserialize::<FtpPlainTextFields>(&self.fields) {
+                    write!(f, "FtpPlainText,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::PortScan => {
+                if let Ok(fields) = bincode::deserialize::<PortScanFields>(&self.fields) {
+                    write!(f, "PortScan,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::MultiHostPortScan => {
+                if let Ok(fields) = bincode::deserialize::<MultiHostPortScanFields>(&self.fields) {
+                    write!(f, "MultiHostPortScan,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::NonBrowser => {
+                if let Ok(fields) = bincode::deserialize::<NonBrowserFields>(&self.fields) {
+                    write!(f, "NonBrowser,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::LdapBruteForce => {
+                if let Ok(fields) = bincode::deserialize::<LdapBruteForceFields>(&self.fields) {
+                    write!(f, "LdapBruteForce,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::LdapPlainText => {
+                if let Ok(fields) = bincode::deserialize::<LdapPlainTextFields>(&self.fields) {
+                    write!(f, "LdapPlainText,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::ExternalDDos => {
+                if let Ok(fields) = bincode::deserialize::<ExternalDDosFields>(&self.fields) {
+                    write!(f, "ExternalDDos,{fields}")
                 } else {
                     write!(f, "invalid event")
                 }
@@ -1051,6 +1713,88 @@ impl<'i> Iterator for EventIterator<'i> {
                 Some(Ok((
                     key,
                     Event::DomainGenerationAlgorithm(DomainGenerationAlgorithm::new(time, fields)),
+                )))
+            }
+            EventKind::FtpBruteForce => {
+                let Ok(fields) =
+                    bincode::deserialize::<FtpBruteForceFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::FtpBruteForce(FtpBruteForce::new(time, &fields)),
+                )))
+            }
+            EventKind::FtpPlainText => {
+                let Ok(fields) =
+                    bincode::deserialize::<FtpPlainTextFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::FtpPlainText(FtpPlainText::new(time, fields)),
+                )))
+            }
+            EventKind::PortScan => {
+                let Ok(fields) =
+                    bincode::deserialize::<PortScanFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::PortScan(PortScan::new(time, &fields)))))
+            }
+            EventKind::MultiHostPortScan => {
+                let Ok(fields) =
+                    bincode::deserialize::<MultiHostPortScanFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::MultiHostPortScan(MultiHostPortScan::new(time, &fields)),
+                )))
+            }
+            EventKind::NonBrowser => {
+                let Ok(fields) =
+                    bincode::deserialize::<NonBrowserFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::NonBrowser(NonBrowser::new(time, &fields)))))
+            }
+            EventKind::LdapBruteForce => {
+                let Ok(fields) =
+                    bincode::deserialize::<LdapBruteForceFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::LdapBruteForce(LdapBruteForce::new(time, &fields)),
+                )))
+            }
+            EventKind::LdapPlainText => {
+                let Ok(fields) =
+                    bincode::deserialize::<LdapPlainTextFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::LdapPlainText(LdapPlainText::new(time, fields)),
+                )))
+            }
+            EventKind::ExternalDDos => {
+                let Ok(fields) =
+                    bincode::deserialize::<ExternalDDosFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::ExternalDDos(ExternalDDos::new(time, &fields)),
                 )))
             }
             EventKind::Log => None,
