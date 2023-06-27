@@ -37,9 +37,10 @@ pub use self::csv_column_extra::CsvColumnExtraConfig;
 pub use self::event::EventKind;
 pub use self::event::{
     find_ip_country, Direction, DnsCovertChannel, DomainGenerationAlgorithm, Event, EventDb,
-    EventFilter, EventIterator, EventMessage, Filter, FilterEndpoint, FlowKind, HttpThreat,
-    LearningMethod, Network, NetworkEntry, NetworkEntryValue, NetworkType, RdpBruteForce,
-    RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
+    EventFilter, EventIterator, EventMessage, ExternalDDos, Filter, FilterEndpoint, FlowKind,
+    FtpBruteForce, FtpPlainText, HttpThreat, LdapBruteForce, LdapPlainText, LearningMethod,
+    MultiHostPortScan, Network, NetworkEntry, NetworkEntryValue, NetworkType, NonBrowser, PortScan,
+    RdpBruteForce, RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
 };
 pub use self::migration::migrate_data_dir;
 pub use self::model::Model;
