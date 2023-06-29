@@ -5,6 +5,22 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Renamed `ExternalDDos` to `ExternalDdos` and `ExternalDDosFields` to
+  `ExternalDdosFields` in line with the Rust API Guidelines. This change
+  improves consistency with the way acronyms are capitalized in UpperCamelCase.
+  According to the guidelines, acronyms and contractions of compound words are
+  to be treated as one word. For example, use `Uuid` instead of `UUID`, `Usize`
+  instead of `USize`, or `Stdin` instead of `StdIn`.
+
+  Please note that this is a breaking change and you will need to update your
+  code if you have been using the old naming convention. We apologise for any
+  inconvenience this may cause, but we believe this change will bring greater
+  consistency and readability to the codebase.
+
 ## [0.15.1] - 2023-06-26
 
 ### Added
@@ -395,6 +411,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.15.1...main
 [0.15.1]: https://github.com/petabi/review-database/compare/0.15.0...0.15.1
 [0.15.0]: https://github.com/petabi/review-database/compare/0.14.1...0.15.0
 [0.14.1]: https://github.com/petabi/review-database/compare/0.14.0...0.14.1

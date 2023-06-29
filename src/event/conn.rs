@@ -226,7 +226,7 @@ impl Match for MultiHostPortScan {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ExternalDDosFields {
+pub struct ExternalDdosFields {
     pub src_addrs: Vec<IpAddr>,
     pub dst_addr: IpAddr,
     pub proto: u8,
@@ -234,7 +234,7 @@ pub struct ExternalDDosFields {
     pub last_time: DateTime<Utc>,
 }
 
-impl fmt::Display for ExternalDDosFields {
+impl fmt::Display for ExternalDdosFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -245,7 +245,7 @@ impl fmt::Display for ExternalDDosFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ExternalDDos {
+pub struct ExternalDdos {
     pub time: DateTime<Utc>,
     pub src_addrs: Vec<IpAddr>,
     pub dst_addr: IpAddr,
@@ -255,7 +255,7 @@ pub struct ExternalDDos {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for ExternalDDos {
+impl fmt::Display for ExternalDdos {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -269,9 +269,9 @@ impl fmt::Display for ExternalDDos {
     }
 }
 
-impl ExternalDDos {
-    pub(super) fn new(time: DateTime<Utc>, fields: &ExternalDDosFields) -> Self {
-        ExternalDDos {
+impl ExternalDdos {
+    pub(super) fn new(time: DateTime<Utc>, fields: &ExternalDdosFields) -> Self {
+        ExternalDdos {
             time,
             src_addrs: fields.src_addrs.clone(),
             dst_addr: fields.dst_addr,
@@ -283,7 +283,7 @@ impl ExternalDDos {
     }
 }
 
-impl Match for ExternalDDos {
+impl Match for ExternalDdos {
     fn src_addr(&self) -> IpAddr {
         IpAddr::V4(Ipv4Addr::UNSPECIFIED)
     }

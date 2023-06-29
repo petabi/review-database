@@ -12,7 +12,7 @@ use self::{common::Match, http::RepeatedHttpSessionsFields, rdp::RdpBruteForceFi
 pub use self::{
     common::TriageScore,
     conn::{
-        ExternalDDos, ExternalDDosFields, MultiHostPortScan, MultiHostPortScanFields, PortScan,
+        ExternalDdos, ExternalDdosFields, MultiHostPortScan, MultiHostPortScanFields, PortScan,
         PortScanFields,
     },
     dns::{DnsCovertChannel, DnsEventFields},
@@ -106,7 +106,7 @@ pub enum Event {
     MultiHostPortScan(MultiHostPortScan),
 
     /// multiple internal host attempt a DDOS attack against a specific external host.
-    ExternalDDos(ExternalDDos),
+    ExternalDdos(ExternalDdos),
 
     /// Non-browser user agent detected in HTTP request message.
     NonBrowser(NonBrowser),
@@ -142,7 +142,7 @@ impl Event {
             Event::FtpPlainText(event) => event.matches(locator, filter),
             Event::PortScan(event) => event.matches(locator, filter),
             Event::MultiHostPortScan(event) => event.matches(locator, filter),
-            Event::ExternalDDos(event) => event.matches(locator, filter),
+            Event::ExternalDdos(event) => event.matches(locator, filter),
             Event::NonBrowser(event) => event.matches(locator, filter),
             Event::LdapBruteForce(event) => event.matches(locator, filter),
             Event::LdapPlainText(event) => event.matches(locator, filter),
@@ -234,7 +234,7 @@ impl Event {
                     *entry += 1;
                 }
             }
-            Event::ExternalDDos(event) => {
+            Event::ExternalDdos(event) => {
                 if event.matches(locator.clone(), filter)?.0 {
                     let dst_country = locator.as_ref().map_or_else(
                         || "ZZ".to_string(),
@@ -341,7 +341,7 @@ impl Event {
                     *entry += 1;
                 }
             }
-            Event::ExternalDDos(event) => {
+            Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(EventCategory::Impact).or_insert(0);
                     *entry += 1;
@@ -433,7 +433,7 @@ impl Event {
                     *entry += 1;
                 }
             }
-            Event::ExternalDDos(event) => {
+            Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(event.dst_addr).or_insert(0);
                     *entry += 1;
@@ -520,7 +520,7 @@ impl Event {
                 }
             }
             Event::MultiHostPortScan(_event) => {}
-            Event::ExternalDDos(_event) => {}
+            Event::ExternalDdos(_event) => {}
             Event::NonBrowser(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
@@ -621,7 +621,7 @@ impl Event {
                 }
             }
             Event::MultiHostPortScan(_event) => {}
-            Event::ExternalDDos(_event) => {}
+            Event::ExternalDdos(_event) => {}
             Event::NonBrowser(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter
@@ -722,7 +722,7 @@ impl Event {
                     *entry += 1;
                 }
             }
-            Event::ExternalDDos(_event) => {}
+            Event::ExternalDdos(_event) => {}
             Event::NonBrowser(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(event.src_addr).or_insert(0);
@@ -807,7 +807,7 @@ impl Event {
                 }
             }
             Event::MultiHostPortScan(_event) => {}
-            Event::ExternalDDos(event) => {
+            Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(event.dst_addr).or_insert(0);
                     *entry += 1;
@@ -911,7 +911,7 @@ impl Event {
                     *entry += 1;
                 }
             }
-            Event::ExternalDDos(event) => {
+            Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(EXTERNAL_DDOS.to_string()).or_insert(0);
                     *entry += 1;
@@ -1011,7 +1011,7 @@ impl Event {
                     *entry += 1;
                 }
             }
-            Event::ExternalDDos(event) => {
+            Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(MEDIUM).or_insert(0);
                     *entry += 1;
@@ -1164,7 +1164,7 @@ impl Event {
                     }
                 }
             }
-            Event::ExternalDDos(event) => {
+            Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
                     if let Some(id) = find_network(event.dst_addr, networks) {
                         let entry = counter.entry(id).or_insert(0);
@@ -1245,7 +1245,7 @@ impl Event {
             Event::MultiHostPortScan(event) => {
                 event.triage_scores = Some(triage_scores);
             }
-            Event::ExternalDDos(event) => {
+            Event::ExternalDdos(event) => {
                 event.triage_scores = Some(triage_scores);
             }
             Event::NonBrowser(event) => {
@@ -1287,7 +1287,7 @@ pub enum EventKind {
     NonBrowser,
     LdapBruteForce,
     LdapPlainText,
-    ExternalDDos,
+    ExternalDdos,
 }
 
 /// Machine Learning Method.
@@ -1502,9 +1502,9 @@ impl fmt::Display for EventMessage {
                     write!(f, "invalid event")
                 }
             }
-            EventKind::ExternalDDos => {
-                if let Ok(fields) = bincode::deserialize::<ExternalDDosFields>(&self.fields) {
-                    write!(f, "ExternalDDos,{fields}")
+            EventKind::ExternalDdos => {
+                if let Ok(fields) = bincode::deserialize::<ExternalDdosFields>(&self.fields) {
+                    write!(f, "ExternalDdos,{fields}")
                 } else {
                     write!(f, "invalid event")
                 }
@@ -1786,15 +1786,15 @@ impl<'i> Iterator for EventIterator<'i> {
                     Event::LdapPlainText(LdapPlainText::new(time, fields)),
                 )))
             }
-            EventKind::ExternalDDos => {
+            EventKind::ExternalDdos => {
                 let Ok(fields) =
-                    bincode::deserialize::<ExternalDDosFields>(v.as_ref())
+                    bincode::deserialize::<ExternalDdosFields>(v.as_ref())
                 else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::ExternalDDos(ExternalDDos::new(time, &fields)),
+                    Event::ExternalDdos(ExternalDdos::new(time, &fields)),
                 )))
             }
             EventKind::Log => None,
