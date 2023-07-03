@@ -39,7 +39,7 @@ impl fmt::Display for RepeatedHttpSessions {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},Repeted HTTP Sessions",
+            "{},{},{},{},{},{},Repeated HTTP Sessions",
             DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
             self.src_addr,
             self.src_port,
