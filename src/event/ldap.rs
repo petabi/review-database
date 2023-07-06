@@ -8,7 +8,6 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 pub struct LdapBruteForceFields {
     pub source: String,
     pub src_addr: IpAddr,
-    pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
@@ -21,9 +20,8 @@ impl fmt::Display for LdapBruteForceFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},LDAP Brute Force,3,{},{}",
+            "{},-,{},{},{},LDAP Brute Force,3,{},{}",
             self.src_addr,
-            self.src_port,
             self.dst_addr,
             self.dst_port,
             self.proto,
@@ -37,7 +35,6 @@ pub struct LdapBruteForce {
     pub time: DateTime<Utc>,
     pub source: String,
     pub src_addr: IpAddr,
-    pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
@@ -51,10 +48,9 @@ impl fmt::Display for LdapBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},LDAP Brute Force,{},{}",
+            "{},{},-,{},{},{},LDAP Brute Force,{},{}",
             DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
             self.src_addr,
-            self.src_port,
             self.dst_addr,
             self.dst_port,
             self.proto,
@@ -70,7 +66,6 @@ impl LdapBruteForce {
             time,
             source: fields.source.clone(),
             src_addr: fields.src_addr,
-            src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
@@ -88,7 +83,7 @@ impl Match for LdapBruteForce {
     }
 
     fn src_port(&self) -> u16 {
-        self.src_port
+        0
     }
 
     fn dst_addr(&self) -> IpAddr {
@@ -138,32 +133,21 @@ pub struct LdapPlainTextFields {
     pub dst_port: u16,
     pub proto: u8,
     pub last_time: i64,
-    pub user: String,
-    pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
 }
 
 impl fmt::Display for LdapPlainTextFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},LDAP Plain Text,3,{},{}",
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            self.user,
-            self.password,
+            "{},{},{},{},{},LDAP Plain Text,3",
+            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto,
         )
     }
 }
@@ -178,18 +162,13 @@ pub struct LdapPlainText {
     pub dst_port: u16,
     pub proto: u8,
     pub last_time: i64,
-    pub user: String,
-    pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -197,15 +176,13 @@ impl fmt::Display for LdapPlainText {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},LDAP Plain Text,{},{}",
+            "{},{},{},{},{},{},LDAP Plain Text",
             DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
             self.src_addr,
             self.src_port,
             self.dst_addr,
             self.dst_port,
             self.proto,
-            self.user,
-            self.password,
         )
     }
 }
@@ -221,18 +198,13 @@ impl LdapPlainText {
             dst_port: fields.dst_port,
             proto: fields.proto,
             last_time: fields.last_time,
-            user: fields.user,
-            password: fields.password,
-            command: fields.command,
-            reply_code: fields.reply_code,
-            reply_msg: fields.reply_msg,
-            data_passive: fields.data_passive,
-            data_orig_addr: fields.data_orig_addr,
-            data_resp_addr: fields.data_resp_addr,
-            data_resp_port: fields.data_resp_port,
-            file: fields.file,
-            file_size: fields.file_size,
-            file_id: fields.file_id,
+            message_id: fields.message_id,
+            version: fields.version,
+            opcode: fields.opcode,
+            result: fields.result,
+            diagnostic_message: fields.diagnostic_message,
+            object: fields.object,
+            argument: fields.argument,
             triage_scores: None,
         }
     }

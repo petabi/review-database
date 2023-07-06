@@ -15,7 +15,9 @@ pub use self::{
         ExternalDdos, ExternalDdosFields, MultiHostPortScan, MultiHostPortScanFields, PortScan,
         PortScanFields,
     },
-    dns::{DnsCovertChannel, DnsEventFields},
+    dns::{
+        CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields, DnsCovertChannel, DnsEventFields,
+    },
     ftp::{FtpBruteForce, FtpBruteForceFields, FtpPlainText, FtpPlainTextFields},
     http::{
         DgaFields, DomainGenerationAlgorithm, HttpThreat, HttpThreatFields, NonBrowser,
@@ -71,6 +73,7 @@ const EXTERNAL_DDOS: &str = "External Ddos";
 const NON_BROWSER: &str = "Non Browser";
 const LDAP_BRUTE_FORCE: &str = "LDAP Brute Force";
 const LDAP_PLAIN_TEXT: &str = "LDAP Plain Text";
+const CRYPTOCURRENCY_MINING_POOL: &str = "Cryptocurrency Mining Pool";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -116,6 +119,9 @@ pub enum Event {
 
     /// Plain text password is used for the LDAP connection.
     LdapPlainText(LdapPlainText),
+
+    /// An event that occurs when it is determined that there is a connection to a cryptocurrency mining network
+    CryptocurrencyMiningPool(CryptocurrencyMiningPool),
 }
 
 impl Event {
@@ -146,6 +152,7 @@ impl Event {
             Event::NonBrowser(event) => event.matches(locator, filter),
             Event::LdapBruteForce(event) => event.matches(locator, filter),
             Event::LdapPlainText(event) => event.matches(locator, filter),
+            Event::CryptocurrencyMiningPool(event) => event.matches(locator, filter),
         }
     }
 
@@ -265,6 +272,11 @@ impl Event {
                     common_count_country(&locator, counter, event.src_addr, event.dst_addr);
                 }
             }
+            Event::CryptocurrencyMiningPool(event) => {
+                if event.matches(locator.clone(), filter)?.0 {
+                    common_count_country(&locator, counter, event.src_addr, event.dst_addr);
+                }
+            }
         }
         Ok(())
     }
@@ -365,6 +377,12 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::CryptocurrencyMiningPool(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(EventCategory::CommandAndControl).or_insert(0);
+                    *entry += 1;
+                }
+            }
         }
         Ok(())
     }
@@ -454,6 +472,11 @@ impl Event {
                     common_count_ip_address(counter, event.src_addr, event.dst_addr);
                 }
             }
+            Event::CryptocurrencyMiningPool(event) => {
+                if event.matches(locator, filter)?.0 {
+                    common_count_ip_address(counter, event.src_addr, event.dst_addr);
+                }
+            }
         }
         Ok(())
     }
@@ -534,6 +557,12 @@ impl Event {
                 }
             }
             Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::CryptocurrencyMiningPool(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry((event.src_addr, event.dst_addr)).or_insert(0);
                     *entry += 1;
@@ -646,6 +675,14 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::CryptocurrencyMiningPool(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry((event.src_addr, event.dst_addr, CRYPTOCURRENCY_MINING_POOL))
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
         }
         Ok(())
     }
@@ -741,6 +778,12 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::CryptocurrencyMiningPool(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.src_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
         }
         Ok(())
     }
@@ -826,6 +869,12 @@ impl Event {
                 }
             }
             Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(event.dst_addr).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::CryptocurrencyMiningPool(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(event.dst_addr).or_insert(0);
                     *entry += 1;
@@ -935,6 +984,14 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::CryptocurrencyMiningPool(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter
+                        .entry(CRYPTOCURRENCY_MINING_POOL.to_string())
+                        .or_insert(0);
+                    *entry += 1;
+                }
+            }
         }
         Ok(())
     }
@@ -1030,6 +1087,12 @@ impl Event {
                 }
             }
             Event::LdapPlainText(event) => {
+                if event.matches(locator, filter)?.0 {
+                    let entry = counter.entry(MEDIUM).or_insert(0);
+                    *entry += 1;
+                }
+            }
+            Event::CryptocurrencyMiningPool(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter.entry(MEDIUM).or_insert(0);
                     *entry += 1;
@@ -1208,6 +1271,18 @@ impl Event {
                     }
                 }
             }
+            Event::CryptocurrencyMiningPool(event) => {
+                if event.matches(locator, filter)?.0 {
+                    if let Some(id) = find_network(event.src_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                    if let Some(id) = find_network(event.dst_addr, networks) {
+                        let entry = counter.entry(id).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -1257,6 +1332,9 @@ impl Event {
             Event::LdapPlainText(event) => {
                 event.triage_scores = Some(triage_scores);
             }
+            Event::CryptocurrencyMiningPool(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
         }
     }
 }
@@ -1288,6 +1366,7 @@ pub enum EventKind {
     LdapBruteForce,
     LdapPlainText,
     ExternalDdos,
+    CryptocurrencyMiningPool,
 }
 
 /// Machine Learning Method.
@@ -1377,6 +1456,7 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["external", "ddos"], "external ddos");
             moderate_kinds_by(kinds, &["port", "scan"], "port scan");
             moderate_kinds_by(kinds, &["non", "browser"], "non browser");
+            moderate_kinds_by(kinds, &["crypto", "currency"], "crypto currency");
         }
     }
 }
@@ -1505,6 +1585,15 @@ impl fmt::Display for EventMessage {
             EventKind::ExternalDdos => {
                 if let Ok(fields) = bincode::deserialize::<ExternalDdosFields>(&self.fields) {
                     write!(f, "ExternalDdos,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::CryptocurrencyMiningPool => {
+                if let Ok(fields) =
+                    bincode::deserialize::<CryptocurrencyMiningPoolFields>(&self.fields)
+                {
+                    write!(f, "CryptocurrencyMiningPool,{fields}")
                 } else {
                     write!(f, "invalid event")
                 }
@@ -1795,6 +1884,17 @@ impl<'i> Iterator for EventIterator<'i> {
                 Some(Ok((
                     key,
                     Event::ExternalDdos(ExternalDdos::new(time, &fields)),
+                )))
+            }
+            EventKind::CryptocurrencyMiningPool => {
+                let Ok(fields) =
+                    bincode::deserialize::<CryptocurrencyMiningPoolFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::CryptocurrencyMiningPool(CryptocurrencyMiningPool::new(time, fields)),
                 )))
             }
             EventKind::Log => None,

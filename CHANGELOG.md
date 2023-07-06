@@ -7,6 +7,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added a `CryptocurrencyMiningPool` event with `dns` protocol.
+
 ### Changed
 
 - Renamed `ExternalDDos` to `ExternalDdos` and `ExternalDDosFields` to
@@ -20,6 +24,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   code if you have been using the old naming convention. We apologise for any
   inconvenience this may cause, but we believe this change will bring greater
   consistency and readability to the codebase.
+- Removed `src_port` field from `FtpBruteForce` and `LdapBruteForce` events.
+  to align with the event fields provided by hog.
+- Modified `LdapPlainText` fields to appropriate LDAP event fields from wrong
+  fields. This changes require updates in dependent projects due to complete
+  change of the fields.
+- Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
+  indicating whether it is internal or not.
 
 ## [0.15.1] - 2023-06-26
 

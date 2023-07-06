@@ -8,27 +8,27 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 pub struct FtpBruteForceFields {
     pub source: String,
     pub src_addr: IpAddr,
-    pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
     pub user_list: Vec<String>,
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
+    pub is_internal: bool,
 }
 
 impl fmt::Display for FtpBruteForceFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},FTP Brute Force,3,{},{}",
+            "{},-,{},{},{},FTP Brute Force,3,{},{},{}",
             self.src_addr,
-            self.src_port,
             self.dst_addr,
             self.dst_port,
             self.proto,
             self.start_time,
             self.last_time,
+            self.is_internal,
         )
     }
 }
@@ -37,13 +37,13 @@ pub struct FtpBruteForce {
     pub time: DateTime<Utc>,
     pub source: String,
     pub src_addr: IpAddr,
-    pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
     pub user_list: Vec<String>,
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
+    pub is_internal: bool,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -51,15 +51,15 @@ impl fmt::Display for FtpBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},FTP Brute Force,{},{}",
+            "{},{},-,{},{},{},FTP Brute Force,{},{},{}",
             DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
             self.src_addr,
-            self.src_port,
             self.dst_addr,
             self.dst_port,
             self.proto,
             self.start_time,
             self.last_time,
+            self.is_internal
         )
     }
 }
@@ -70,13 +70,13 @@ impl FtpBruteForce {
             time,
             source: fields.source.clone(),
             src_addr: fields.src_addr,
-            src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
             user_list: fields.user_list.clone(),
             start_time: fields.start_time,
             last_time: fields.last_time,
+            is_internal: fields.is_internal,
             triage_scores: None,
         }
     }
@@ -88,7 +88,7 @@ impl Match for FtpBruteForce {
     }
 
     fn src_port(&self) -> u16 {
-        self.src_port
+        0
     }
 
     fn dst_addr(&self) -> IpAddr {
