@@ -80,7 +80,10 @@ impl StateDb {
                     tracing::warn!("fail to open db {e:?}");
                     tracing::warn!("recovering from latest backup available");
 
-                    Self::recover_db(&path, &backup)?
+                    match Self::recover_db(&path, &backup) {
+                        Ok((db, _)) => db,
+                        Err(e) => return Err(e),
+                    }
                 } else {
                     return Err(e);
                 }
@@ -191,12 +194,12 @@ impl StateDb {
         Ok(())
     }
 
-    pub fn recover(&mut self) -> Result<()> {
+    pub fn recover(&mut self) -> Result<u32> {
         self.close();
 
-        let db = Self::recover_db(&self.db, &self.backup)?;
+        let (db, backup_id) = Self::recover_db(&self.db, &self.backup)?;
         self.inner = Some(db);
-        Ok(())
+        Ok(backup_id)
     }
 
     fn close(&mut self) {
@@ -226,7 +229,7 @@ impl StateDb {
         )?)
     }
 
-    fn recover_db(path: &Path, backup: &Path) -> Result<rocksdb::OptimisticTransactionDB> {
+    fn recover_db(path: &Path, backup: &Path) -> Result<(rocksdb::OptimisticTransactionDB, u32)> {
         let mut engine = Self::open_backup_engine(backup)?;
         let available = engine.get_backup_info();
         let restore_opts = rocksdb::backup::RestoreOptions::default();
@@ -235,7 +238,7 @@ impl StateDb {
                 Ok(_) => match Self::open_db(path) {
                     Ok(db) => {
                         tracing::info!("restored from backup (id: {backup_id})");
-                        return Ok(db);
+                        return Ok((db, backup_id));
                     }
                     Err(e) => {
                         tracing::warn!("opening restored backup (id: {backup_id}) failed {e:?}");
