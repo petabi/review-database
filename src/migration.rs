@@ -1,4 +1,5 @@
 //! Routines to check the database format version and migrate it if necessary.
+#![allow(clippy::too_many_lines)]
 
 use anyhow::{anyhow, Context, Result};
 use bincode::Options;
@@ -32,7 +33,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.12.0,<0.16.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.16.0,<0.17.0-alpha";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -110,6 +111,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             VersionReq::parse(">=0.11.0,<0.12.0").expect("valid version requirement"),
             Version::parse("0.12.0").expect("valid version"),
             migrate_0_11_to_0_12,
+        ),
+        (
+            VersionReq::parse(">=0.12.0,<0.16.0").expect("valid version requirement"),
+            Version::parse("0.16.0").expect("valid version"),
+            migrate_0_12_to_0_16,
         ),
     ];
 
@@ -465,7 +471,6 @@ fn migrate_0_6_to_0_7(store: &super::Store) -> Result<()> {
 /// # Errors
 ///
 /// Returns an error if database migration fails.
-#[allow(clippy::too_many_lines)]
 fn migrate_0_7_to_0_9(store: &super::Store) -> Result<()> {
     use crate::{
         event::{DnsEventFields, TorConnectionFields},
@@ -559,17 +564,17 @@ fn migrate_0_7_to_0_9(store: &super::Store) -> Result<()> {
         let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
             key
         } else {
-            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         let key = i128::from_be_bytes(key);
         let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
         let Some(kind) = EventKind::from_i128(kind_num) else {
-            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         match kind {
             EventKind::DnsCovertChannel => {
                 let Ok(fields) = bincode::deserialize::<OldDnsEventFields>(v.as_ref()) else {
-                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
                 };
                 let dns_event: DnsEventFields = fields.into();
                 let new = bincode::serialize(&dns_event).unwrap_or_default();
@@ -577,7 +582,7 @@ fn migrate_0_7_to_0_9(store: &super::Store) -> Result<()> {
             }
             EventKind::TorConnection => {
                 let Ok(fields) = bincode::deserialize::<OldTorConnectionFields>(v.as_ref()) else {
-                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
                 };
                 let tor_event: TorConnectionFields = fields.into();
                 let new = bincode::serialize(&tor_event).unwrap_or_default();
@@ -590,7 +595,6 @@ fn migrate_0_7_to_0_9(store: &super::Store) -> Result<()> {
     Ok(())
 }
 
-#[allow(clippy::too_many_lines)]
 fn migrate_0_9_to_0_11(store: &super::Store) -> Result<()> {
     use crate::EventKind;
     use chrono::{DateTime, Utc};
@@ -694,17 +698,17 @@ fn migrate_0_9_to_0_11(store: &super::Store) -> Result<()> {
         let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
             key
         } else {
-            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         let key = i128::from_be_bytes(key);
         let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
         let Some(kind) = EventKind::from_i128(kind_num) else {
-            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         match kind {
             EventKind::HttpThreat => {
                 let Ok(fields) = bincode::deserialize::<OldHttpThreatFields>(v.as_ref()) else {
-                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
                 };
                 let http_event: NewHttpThreatFields = fields.into();
                 let new = bincode::serialize(&http_event).unwrap_or_default();
@@ -880,7 +884,6 @@ where
 }
 
 // Update DgaFields, HttpThreatFields: migrate from 0.11 to 0.12
-#[allow(clippy::too_many_lines)]
 fn update_dgafields_httpthreatfields_0_11_to_0_12(store: &crate::Store) -> Result<()> {
     use crate::{event::DgaFields, event::HttpThreatFields, EventKind};
     use chrono::{DateTime, Utc};
@@ -1021,17 +1024,17 @@ fn update_dgafields_httpthreatfields_0_11_to_0_12(store: &crate::Store) -> Resul
         let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
             key
         } else {
-            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         let key = i128::from_be_bytes(key);
         let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
         let Some(kind) = EventKind::from_i128(kind_num) else {
-            return Err(anyhow!("Failed to migrate events: Invalid Event key"));
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         match kind {
             EventKind::HttpThreat => {
                 let Ok(fields) = bincode::deserialize::<OldHttpThreatFields>(v.as_ref()) else {
-                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
                 };
                 let http_event: HttpThreatFields = fields.into();
                 let new = bincode::serialize(&http_event).unwrap_or_default();
@@ -1039,10 +1042,142 @@ fn update_dgafields_httpthreatfields_0_11_to_0_12(store: &crate::Store) -> Resul
             }
             EventKind::DomainGenerationAlgorithm => {
                 let Ok(fields) = bincode::deserialize::<OldDgaFields>(v.as_ref()) else {
-                    return Err(anyhow!("Failed to migrate events: Invalid Event value"));
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
                 };
                 let dga_event: DgaFields = fields.into();
                 let new = bincode::serialize(&dga_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
+            }
+            _ => continue,
+        }
+    }
+    Ok(())
+}
+
+// Update FtpBruteForce, LdapBruteForce, RdpBruteForce fields.
+fn migrate_0_12_to_0_16(store: &super::Store) -> Result<()> {
+    use crate::{
+        event::{FtpBruteForceFields, LdapBruteForceFields, RdpBruteForceFields},
+        EventKind,
+    };
+    use chrono::{DateTime, TimeZone, Utc};
+    use num_traits::FromPrimitive;
+
+    #[derive(Deserialize, Serialize)]
+    struct OldRdpBruteForceFields {
+        pub source: String,
+        pub src_addr: IpAddr,
+        pub src_port: u16,
+        pub dst_addr: IpAddr,
+        pub dst_port: u16,
+        pub proto: u8,
+    }
+
+    impl From<(OldRdpBruteForceFields, DateTime<Utc>)> for RdpBruteForceFields {
+        fn from(input: (OldRdpBruteForceFields, DateTime<Utc>)) -> Self {
+            let (input, time) = input;
+            Self {
+                src_addr: input.src_addr,
+                dst_addrs: vec![input.dst_addr],
+                start_time: time,
+                last_time: time,
+                proto: input.proto,
+            }
+        }
+    }
+
+    #[derive(Deserialize, Serialize)]
+    struct OldFtpBruteForceFields {
+        pub source: String,
+        pub src_addr: IpAddr,
+        pub dst_addr: IpAddr,
+        pub dst_port: u16,
+        pub proto: u8,
+        pub user_list: Vec<String>,
+        pub start_time: DateTime<Utc>,
+        pub last_time: DateTime<Utc>,
+        pub is_internal: bool,
+    }
+
+    impl From<OldFtpBruteForceFields> for FtpBruteForceFields {
+        fn from(input: OldFtpBruteForceFields) -> Self {
+            Self {
+                src_addr: input.src_addr,
+                dst_addr: input.dst_addr,
+                dst_port: input.dst_port,
+                proto: input.proto,
+                user_list: input.user_list,
+                start_time: input.start_time,
+                last_time: input.last_time,
+                is_internal: input.is_internal,
+            }
+        }
+    }
+
+    #[derive(Deserialize, Serialize)]
+    struct OldLdapBruteForceFields {
+        pub source: String,
+        pub src_addr: IpAddr,
+        pub dst_addr: IpAddr,
+        pub dst_port: u16,
+        pub proto: u8,
+        pub user_pw_list: Vec<(String, String)>,
+        pub start_time: DateTime<Utc>,
+        pub last_time: DateTime<Utc>,
+    }
+
+    impl From<OldLdapBruteForceFields> for LdapBruteForceFields {
+        fn from(input: OldLdapBruteForceFields) -> Self {
+            Self {
+                src_addr: input.src_addr,
+                dst_addr: input.dst_addr,
+                dst_port: input.dst_port,
+                proto: input.proto,
+                user_pw_list: input.user_pw_list,
+                start_time: input.start_time,
+                last_time: input.last_time,
+            }
+        }
+    }
+
+    let event_db = store.events();
+    for item in event_db.raw_iter_forward() {
+        let (k, v) = item.context("Failed to read events Database")?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let key_timestamp = (key >> 64) as i64;
+        let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(kind) = EventKind::from_i128(kind_num) else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        match kind {
+            EventKind::FtpBruteForce => {
+                let Ok(fields) = bincode::deserialize::<OldFtpBruteForceFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
+                };
+                let ftp_event: FtpBruteForceFields = fields.into();
+                let new = bincode::serialize(&ftp_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
+            }
+            EventKind::LdapBruteForce => {
+                let Ok(fields) = bincode::deserialize::<OldLdapBruteForceFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
+                };
+                let ldap_event: LdapBruteForceFields = fields.into();
+                let new = bincode::serialize(&ldap_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
+            }
+            EventKind::RdpBruteForce => {
+                let Ok(fields) = bincode::deserialize::<OldRdpBruteForceFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
+                };
+                let dt = Utc.timestamp_nanos(key_timestamp);
+                let rdp_event: RdpBruteForceFields = (fields, dt).into();
+                let new = bincode::serialize(&rdp_event).unwrap_or_default();
                 event_db.update((&k, &v), (&k, &new))?;
             }
             _ => continue,
@@ -1572,5 +1707,114 @@ mod tests {
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
 
         assert!(super::migrate_0_11_to_0_12(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_12_to_0_16() {
+        use crate::{EventKind, EventMessage};
+        use chrono::{DateTime, Utc};
+        use serde::{Deserialize, Serialize};
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        #[derive(Deserialize, Serialize)]
+        struct OldRdpBruteForceFields {
+            source: String,
+            src_addr: IpAddr,
+            src_port: u16,
+            dst_addr: IpAddr,
+            dst_port: u16,
+            proto: u8,
+        }
+
+        let time = Utc::now();
+        let value = OldRdpBruteForceFields {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.100".parse::<IpAddr>().unwrap(),
+            src_port: 40000,
+            dst_addr: "31.3.245.100".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 10,
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::RdpBruteForce,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        #[derive(Deserialize, Serialize)]
+        struct OldFtpBruteForceFields {
+            source: String,
+            src_addr: IpAddr,
+            dst_addr: IpAddr,
+            dst_port: u16,
+            proto: u8,
+            user_list: Vec<String>,
+            start_time: DateTime<Utc>,
+            last_time: DateTime<Utc>,
+            is_internal: bool,
+        }
+
+        let value = OldFtpBruteForceFields {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.100".parse::<IpAddr>().unwrap(),
+            dst_addr: "31.3.245.100".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 10,
+            user_list: vec!["user_name".to_string()],
+            start_time: time,
+            last_time: time,
+            is_internal: false,
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::FtpBruteForce,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        #[derive(Deserialize, Serialize)]
+        struct OldLdapBruteForceFields {
+            source: String,
+            src_addr: IpAddr,
+            dst_addr: IpAddr,
+            dst_port: u16,
+            proto: u8,
+            user_pw_list: Vec<(String, String)>,
+            start_time: DateTime<Utc>,
+            last_time: DateTime<Utc>,
+        }
+
+        let value = OldLdapBruteForceFields {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.100".parse::<IpAddr>().unwrap(),
+            dst_addr: "31.3.245.100".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 10,
+            user_pw_list: vec![("user_name".to_string(), "".to_string())],
+            start_time: time,
+            last_time: time,
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::LdapBruteForce,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_12_to_0_16(&settings.store).is_ok());
     }
 }

@@ -6,7 +6,6 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForceFields {
-    pub source: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
@@ -33,7 +32,6 @@ impl fmt::Display for LdapBruteForceFields {
 
 pub struct LdapBruteForce {
     pub time: DateTime<Utc>,
-    pub source: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
@@ -64,7 +62,6 @@ impl LdapBruteForce {
     pub(super) fn new(time: DateTime<Utc>, fields: &LdapBruteForceFields) -> Self {
         LdapBruteForce {
             time,
-            source: fields.source.clone(),
             src_addr: fields.src_addr,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
@@ -111,7 +108,7 @@ impl Match for LdapBruteForce {
     }
 
     fn source(&self) -> &str {
-        self.source.as_str()
+        "-"
     }
 
     fn confidence(&self) -> Option<f32> {
