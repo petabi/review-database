@@ -158,7 +158,7 @@ impl Database {
             .select_in(
                 "column_description",
                 &["column_index", "type_id"],
-                &[("event_range_id", Type::INT4)],
+                &[("event_range_ids", Type::INT4)],
                 &[],
                 &[],
                 &[&event_range_id],
