@@ -154,7 +154,7 @@ impl<'a> Connection<'a> {
         columns: &[&str],
         variables: &[(&str, database::Type)],
         in_variables: &[(&str, database::Type)],
-        array_variables: &[(&str, database::Type)],
+        array_variables: &[(&str, database::Type, Option<&str>)],
         values: &[&(dyn ToSql + Sync)],
     ) -> Result<Vec<D>, Error> {
         let query = query_select(table, columns, variables, in_variables, array_variables);
@@ -539,7 +539,7 @@ fn query_select(
     columns: &[&str],
     variables: &[(&str, database::Type)],
     any_variables: &[(&str, database::Type)],
-    array_variables: &[(&str, database::Type)],
+    array_variables: &[(&str, database::Type, Option<&str>)],
 ) -> String {
     let mut query = "SELECT ".to_string();
     query.push_str(columns[0]);
@@ -581,7 +581,7 @@ fn query_select_one(
     columns: &[&str],
     variables: &[(&str, database::Type)],
     any_variables: &[(&str, database::Type)],
-    array_variables: &[(&str, database::Type)],
+    array_variables: &[(&str, database::Type, Option<&str>)],
 ) -> String {
     let mut query = "SELECT ".to_string();
     query.push_str(columns[0]);
@@ -704,22 +704,36 @@ fn query_any(query: &mut String, index: usize, variables: &[(&str, database::Typ
     }
 }
 
-/// Builds a query fragment for `@>` conditions.
-fn query_array(query: &mut String, index: usize, variables: &[(&str, database::Type)]) {
+/// Builds a query fragment for provided conditions,
+/// `@>` if None is provided.
+fn query_array(
+    query: &mut String,
+    index: usize,
+    variables: &[(&str, database::Type, Option<&str>)],
+) {
     if variables.is_empty() {
         return;
     }
 
     if !variables.is_empty() {
         query.push_str(variables[0].0);
-        query.push_str(" @> $");
+        if let Some(comparator) = variables[0].2 {
+            query.push_str(&format!(" {comparator} $"));
+        } else {
+            query.push_str(" @> $");
+        }
+
         query.push_str(&index.to_string());
         query.push_str("::");
         query.push_str(&variables[0].1.to_string());
         for (i, var) in variables.iter().enumerate().skip(1) {
             query.push_str(" AND ");
             query.push_str(var.0);
-            query.push_str(" @> $");
+            if let Some(comparator) = var.2 {
+                query.push_str(&format!(" {comparator} $"));
+            } else {
+                query.push_str(" @> $");
+            }
             query.push_str(&(index + i).to_string());
             query.push_str("::");
             query.push_str(&var.1.to_string());
@@ -796,7 +810,10 @@ mod tests {
             &["f3"],
             &[("f2", Type::TEXT), ("f5", Type::TEXT)],
             &[("f1", Type::INT4_ARRAY), ("f4", Type::INT8_ARRAY)],
-            &[("f6", Type::INT4_ARRAY), ("f7", Type::INT8_ARRAY)],
+            &[
+                ("f6", Type::INT4_ARRAY, None),
+                ("f7", Type::INT8_ARRAY, None),
+            ],
         );
         assert_eq!(
             query,
@@ -808,7 +825,7 @@ mod tests {
 
     #[test]
     fn query_select_in_array() {
-        let query = super::query_select("t1", &["f3"], &[], &[], &[("f6", Type::INT4_ARRAY)]);
+        let query = super::query_select("t1", &["f3"], &[], &[], &[("f6", Type::INT4_ARRAY, None)]);
         assert_eq!(query, "SELECT f3 FROM t1 WHERE f6 @> $1::_int4");
     }
 

@@ -172,8 +172,8 @@ impl Database {
                 "column_description",
                 &["id"],
                 &[],
-                &[("event_range_ids", Type::INT4_ARRAY)],
                 &[],
+                &[("event_range_ids", Type::INT4_ARRAY, Some("&&"))],
                 &[&event_range_ids],
             )
             .await?;
@@ -181,7 +181,7 @@ impl Database {
             "column_description",
             &[],
             &[("id", Type::INT4_ARRAY)],
-            &[&event_range_ids],
+            &[&column_description_ids],
         )
         .await?;
 

@@ -54,7 +54,7 @@ impl<'a> Transaction<'a> {
         columns: &[&str],
         variables: &[(&str, Type)],
         in_variables: &[(&str, Type)],
-        array_variables: &[(&str, Type)],
+        array_variables: &[(&str, Type, Option<&str>)],
         params: &[&(dyn ToSql + Sync)],
     ) -> Result<Vec<Row>, Error> {
         let query = super::query_select(table, columns, variables, in_variables, array_variables);

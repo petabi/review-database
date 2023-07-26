@@ -5,6 +5,14 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed a critical issue that caused a PostgreSQL database error when attempting
+  to delete a model from the system. The error occurred due to improper handling
+  of foreign key constraints during the deletion process.
+
 ## [0.15.2] - 2023-07-06
 
 ### Added
@@ -422,6 +430,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.15.2...main
 [0.15.2]: https://github.com/petabi/review-database/compare/0.15.1...0.15.2
 [0.15.1]: https://github.com/petabi/review-database/compare/0.15.0...0.15.1
 [0.15.0]: https://github.com/petabi/review-database/compare/0.14.1...0.15.0
