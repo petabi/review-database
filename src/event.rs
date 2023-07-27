@@ -8,7 +8,7 @@ mod ldap;
 mod rdp;
 mod tor;
 
-use self::{common::Match, http::RepeatedHttpSessionsFields, rdp::RdpBruteForceFields};
+use self::{common::Match, http::RepeatedHttpSessionsFields};
 pub use self::{
     common::TriageScore,
     conn::{
@@ -24,7 +24,7 @@ pub use self::{
         NonBrowserFields, RepeatedHttpSessions,
     },
     ldap::{LdapBruteForce, LdapBruteForceFields, LdapPlainText, LdapPlainTextFields},
-    rdp::RdpBruteForce,
+    rdp::{RdpBruteForce, RdpBruteForceFields},
     tor::{TorConnection, TorConnectionFields},
 };
 use super::{
@@ -64,7 +64,7 @@ const HTTP_THREAT: &str = "HTTP Threat";
 const RDP_BRUTE_FORCE: &str = "RDP Brute Force";
 const REPEATED_HTTP_SESSIONS: &str = "Repeated HTTP Sessions";
 const TOR_CONNECTION: &str = "Tor Connection";
-const DOMAIN_GENERATION_ALGIRITHM: &str = "Domain Generation Algorithm";
+const DOMAIN_GENERATION_ALGORITHM: &str = "Domain Generation Algorithm";
 const FTP_BRUTE_FORCE: &str = "FTP Brute Force";
 const FTP_PLAIN_TEXT: &str = "FTP Plain text";
 const PORT_SCAN: &str = "Port Scan";
@@ -620,7 +620,7 @@ impl Event {
             Event::DomainGenerationAlgorithm(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter
-                        .entry((event.src_addr, event.dst_addr, DOMAIN_GENERATION_ALGIRITHM))
+                        .entry((event.src_addr, event.dst_addr, DOMAIN_GENERATION_ALGORITHM))
                         .or_insert(0);
                     *entry += 1;
                 }
@@ -931,7 +931,7 @@ impl Event {
             Event::DomainGenerationAlgorithm(event) => {
                 if event.matches(locator, filter)?.0 {
                     let entry = counter
-                        .entry(DOMAIN_GENERATION_ALGIRITHM.to_string())
+                        .entry(DOMAIN_GENERATION_ALGORITHM.to_string())
                         .or_insert(0);
                     *entry += 1;
                 }
