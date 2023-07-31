@@ -5,7 +5,11 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.17.0] - 2023-08-07
+
+### Added
+
+- Added a 'blockList' event with `conn`, `ftp` protocol.
 
 ### Removed
 
@@ -451,7 +455,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
-[Unreleased]: https://github.com/petabi/review-database/compare/0.16.0...main
+[0.17.0]: https://github.com/petabi/review-database/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/petabi/review-database/compare/0.15.2...0.16.0
 [0.15.2]: https://github.com/petabi/review-database/compare/0.15.1...0.15.2
 [0.15.1]: https://github.com/petabi/review-database/compare/0.15.0...0.15.1
