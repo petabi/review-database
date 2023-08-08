@@ -72,20 +72,6 @@ impl<'d> Table<'d, Account> {
         self.map.insert(account.username.as_bytes(), &value)
     }
 
-    /// Replaces an old key-value pair with a new one.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the old value does not match the value in the database, the old key does
-    /// not exist, or the database operation fails.
-    pub(crate) fn update_raw(
-        &self,
-        old: (&[u8], &[u8]),
-        new: (&[u8], &[u8]),
-    ) -> Result<(), anyhow::Error> {
-        self.map.update(old, new)
-    }
-
     /// Updates an entry in account map.
     ///
     /// # Errors
