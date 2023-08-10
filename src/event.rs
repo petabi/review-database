@@ -1,11 +1,20 @@
 #![allow(clippy::too_many_lines)]
 mod common;
 mod conn;
+mod dcerpc;
 mod dns;
 mod ftp;
 mod http;
+mod kerberos;
 mod ldap;
+mod mqtt;
+mod nfs;
+mod ntlm;
 mod rdp;
+mod smb;
+mod smtp;
+mod ssh;
+mod tls;
 mod tor;
 
 use self::{common::Match, http::RepeatedHttpSessionsFields};
@@ -15,17 +24,32 @@ pub use self::{
         BlockListConn, BlockListConnFields, ExternalDdos, ExternalDdosFields, MultiHostPortScan,
         MultiHostPortScanFields, PortScan, PortScanFields,
     },
+    dcerpc::{BlockListDceRpc, BlockListDceRpcFields},
     dns::{
         BlockListDns, BlockListDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
         DnsCovertChannel, DnsEventFields,
     },
-    ftp::{FtpBruteForce, FtpBruteForceFields, FtpPlainText, FtpPlainTextFields},
-    http::{
-        DgaFields, DomainGenerationAlgorithm, HttpThreat, HttpThreatFields, NonBrowser,
-        NonBrowserFields, RepeatedHttpSessions,
+    ftp::{
+        BlockListFtp, BlockListFtpFields, FtpBruteForce, FtpBruteForceFields, FtpPlainText,
+        FtpPlainTextFields,
     },
-    ldap::{LdapBruteForce, LdapBruteForceFields, LdapPlainText, LdapPlainTextFields},
-    rdp::{RdpBruteForce, RdpBruteForceFields},
+    http::{
+        BlockListHttp, BlockListHttpFields, DgaFields, DomainGenerationAlgorithm, HttpThreat,
+        HttpThreatFields, NonBrowser, NonBrowserFields, RepeatedHttpSessions,
+    },
+    kerberos::{BlockListKerberos, BlockListKerberosFields},
+    ldap::{
+        BlockListLdap, BlockListLdapFields, LdapBruteForce, LdapBruteForceFields, LdapPlainText,
+        LdapPlainTextFields,
+    },
+    mqtt::{BlockListMqtt, BlockListMqttFields},
+    nfs::{BlockListNfs, BlockListNfsFields},
+    ntlm::{BlockListNtlm, BlockListNtlmFields},
+    rdp::{BlockListRdp, BlockListRdpFields, RdpBruteForce, RdpBruteForceFields},
+    smb::{BlockListSmb, BlockListSmbFields},
+    smtp::{BlockListSmtp, BlockListSmtpFields},
+    ssh::{BlockListSsh, BlockListSshFields},
+    tls::{BlockListTls, BlockListTlsFields},
     tor::{TorConnection, TorConnectionFields},
 };
 use super::{
@@ -131,6 +155,19 @@ pub enum Event {
 pub enum RecordType {
     Conn(BlockListConn),
     Dns(BlockListDns),
+    DceRpc(BlockListDceRpc),
+    Ftp(BlockListFtp),
+    Http(BlockListHttp),
+    Kerberos(BlockListKerberos),
+    Ldap(BlockListLdap),
+    Mqtt(BlockListMqtt),
+    Nfs(BlockListNfs),
+    Ntlm(BlockListNtlm),
+    Rdp(BlockListRdp),
+    Smb(BlockListSmb),
+    Smtp(BlockListSmtp),
+    Ssh(BlockListSsh),
+    Tls(BlockListTls),
 }
 
 impl Event {
@@ -165,6 +202,19 @@ impl Event {
             Event::BlockList(record_type) => match record_type {
                 RecordType::Conn(conn_event) => conn_event.matches(locator, filter),
                 RecordType::Dns(dns_event) => dns_event.matches(locator, filter),
+                RecordType::DceRpc(dcerpc_event) => dcerpc_event.matches(locator, filter),
+                RecordType::Ftp(ftp_event) => ftp_event.matches(locator, filter),
+                RecordType::Http(http_event) => http_event.matches(locator, filter),
+                RecordType::Kerberos(kerberos_event) => kerberos_event.matches(locator, filter),
+                RecordType::Ldap(ldap_event) => ldap_event.matches(locator, filter),
+                RecordType::Mqtt(mqtt_event) => mqtt_event.matches(locator, filter),
+                RecordType::Nfs(nfs_event) => nfs_event.matches(locator, filter),
+                RecordType::Ntlm(ntlm_event) => ntlm_event.matches(locator, filter),
+                RecordType::Rdp(rdp_event) => rdp_event.matches(locator, filter),
+                RecordType::Smb(smb_event) => smb_event.matches(locator, filter),
+                RecordType::Smtp(smtp_event) => smtp_event.matches(locator, filter),
+                RecordType::Ssh(ssh_event) => ssh_event.matches(locator, filter),
+                RecordType::Tls(tls_event) => tls_event.matches(locator, filter),
             },
         }
     }
@@ -262,6 +312,71 @@ impl Event {
                         addr_pair = (Some(dns_event.src_addr), Some(dns_event.dst_addr));
                     }
                 }
+                RecordType::DceRpc(dcerpc_event) => {
+                    if dcerpc_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(dcerpc_event.src_addr), Some(dcerpc_event.dst_addr));
+                    }
+                }
+                RecordType::Ftp(ftp_event) => {
+                    if ftp_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(ftp_event.src_addr), Some(ftp_event.dst_addr));
+                    }
+                }
+                RecordType::Http(http_event) => {
+                    if http_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(http_event.src_addr), Some(http_event.dst_addr));
+                    }
+                }
+                RecordType::Kerberos(kerberos_event) => {
+                    if kerberos_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(kerberos_event.src_addr), Some(kerberos_event.dst_addr));
+                    }
+                }
+                RecordType::Ldap(ldap_event) => {
+                    if ldap_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(ldap_event.src_addr), Some(ldap_event.dst_addr));
+                    }
+                }
+                RecordType::Mqtt(mqtt_event) => {
+                    if mqtt_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(mqtt_event.src_addr), Some(mqtt_event.dst_addr));
+                    }
+                }
+                RecordType::Nfs(nfs_event) => {
+                    if nfs_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(nfs_event.src_addr), Some(nfs_event.dst_addr));
+                    }
+                }
+                RecordType::Ntlm(ntlm_event) => {
+                    if ntlm_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(ntlm_event.src_addr), Some(ntlm_event.dst_addr));
+                    }
+                }
+                RecordType::Rdp(rdp_event) => {
+                    if rdp_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(rdp_event.src_addr), Some(rdp_event.dst_addr));
+                    }
+                }
+                RecordType::Smb(smb_event) => {
+                    if smb_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(smb_event.src_addr), Some(smb_event.dst_addr));
+                    }
+                }
+                RecordType::Smtp(smtp_event) => {
+                    if smtp_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(smtp_event.src_addr), Some(smtp_event.dst_addr));
+                    }
+                }
+                RecordType::Ssh(ssh_event) => {
+                    if ssh_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(ssh_event.src_addr), Some(ssh_event.dst_addr));
+                    }
+                }
+                RecordType::Tls(tls_event) => {
+                    if tls_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(tls_event.src_addr), Some(tls_event.dst_addr));
+                    }
+                }
             },
         }
         Ok(addr_pair)
@@ -357,6 +472,71 @@ impl Event {
                 }
                 RecordType::Dns(dns_event) => {
                     if dns_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::DceRpc(dcerpc_event) => {
+                    if dcerpc_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Ftp(ftp_event) => {
+                    if ftp_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Http(http_event) => {
+                    if http_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Kerberos(kerberos_event) => {
+                    if kerberos_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Ldap(ldap_event) => {
+                    if ldap_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Mqtt(mqtt_event) => {
+                    if mqtt_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Nfs(nfs_event) => {
+                    if nfs_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Ntlm(ntlm_event) => {
+                    if ntlm_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Rdp(rdp_event) => {
+                    if rdp_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Smb(smb_event) => {
+                    if smb_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Smtp(smtp_event) => {
+                    if smtp_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Ssh(ssh_event) => {
+                    if ssh_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Tls(tls_event) => {
+                    if tls_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCK_LIST);
                     }
                 }
@@ -503,6 +683,71 @@ impl Event {
                 }
                 RecordType::Dns(dns_event) => {
                     if dns_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::DceRpc(dcerpc_event) => {
+                    if dcerpc_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Ftp(ftp_event) => {
+                    if ftp_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Http(http_event) => {
+                    if http_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Kerberos(kerberos_event) => {
+                    if kerberos_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Ldap(ldap_event) => {
+                    if ldap_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Mqtt(mqtt_event) => {
+                    if mqtt_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Nfs(nfs_event) => {
+                    if nfs_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Ntlm(ntlm_event) => {
+                    if ntlm_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Rdp(rdp_event) => {
+                    if rdp_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Smb(smb_event) => {
+                    if smb_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Smtp(smtp_event) => {
+                    if smtp_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Ssh(ssh_event) => {
+                    if ssh_event.matches(locator, filter)?.0 {
+                        category = Some(EventCategory::InitialAccess);
+                    }
+                }
+                RecordType::Tls(tls_event) => {
+                    if tls_event.matches(locator, filter)?.0 {
                         category = Some(EventCategory::InitialAccess);
                     }
                 }
@@ -759,6 +1004,71 @@ impl Event {
                         level = Some(MEDIUM);
                     }
                 }
+                RecordType::DceRpc(dcerpc_event) => {
+                    if dcerpc_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Ftp(ftp_event) => {
+                    if ftp_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Http(http_event) => {
+                    if http_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Kerberos(kerberos_event) => {
+                    if kerberos_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Ldap(ldap_event) => {
+                    if ldap_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Mqtt(mqtt_event) => {
+                    if mqtt_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Nfs(nfs_event) => {
+                    if nfs_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Ntlm(ntlm_event) => {
+                    if ntlm_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Rdp(rdp_event) => {
+                    if rdp_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Smb(smb_event) => {
+                    if smb_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Smtp(smtp_event) => {
+                    if smtp_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Ssh(ssh_event) => {
+                    if ssh_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Tls(tls_event) => {
+                    if tls_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
             },
         }
 
@@ -852,6 +1162,45 @@ impl Event {
                 RecordType::Dns(dns_event) => {
                     dns_event.triage_scores = Some(triage_scores);
                 }
+                RecordType::DceRpc(dcerpc_event) => {
+                    dcerpc_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Ftp(ftp_event) => {
+                    ftp_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Http(http_event) => {
+                    http_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Kerberos(kerberos_event) => {
+                    kerberos_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Ldap(ldap_event) => {
+                    ldap_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Mqtt(mqtt_event) => {
+                    mqtt_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Nfs(nfs_event) => {
+                    nfs_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Ntlm(ntlm_event) => {
+                    ntlm_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Rdp(rdp_event) => {
+                    rdp_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Smb(smb_event) => {
+                    smb_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Smtp(smtp_event) => {
+                    smtp_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Ssh(ssh_event) => {
+                    ssh_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Tls(tls_event) => {
+                    tls_event.triage_scores = Some(triage_scores);
+                }
             },
         }
     }
@@ -887,6 +1236,19 @@ pub enum EventKind {
     CryptocurrencyMiningPool,
     BlockListConn,
     BlockListDns,
+    BlockListDceRpc,
+    BlockListFtp,
+    BlockListHttp,
+    BlockListKerberos,
+    BlockListLdap,
+    BlockListMqtt,
+    BlockListNfs,
+    BlockListNtlm,
+    BlockListRdp,
+    BlockListSmb,
+    BlockListSmtp,
+    BlockListSsh,
+    BlockListTls,
 }
 
 /// Machine Learning Method.
@@ -979,6 +1341,19 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["crypto", "currency"], "crypto currency");
             moderate_kinds_by(kinds, &["block", "list", "conn"], "block list conn");
             moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
+            moderate_kinds_by(kinds, &["block", "list", "dcerpc"], "block list dcerpc");
+            moderate_kinds_by(kinds, &["block", "list", "ftp"], "block list ftp");
+            moderate_kinds_by(kinds, &["block", "list", "http"], "block list http");
+            moderate_kinds_by(kinds, &["block", "list", "kerberos"], "block list kerberos");
+            moderate_kinds_by(kinds, &["block", "list", "ldap"], "block list ldap");
+            moderate_kinds_by(kinds, &["block", "list", "mqtt"], "block list mqtt");
+            moderate_kinds_by(kinds, &["block", "list", "nfs"], "block list nfs");
+            moderate_kinds_by(kinds, &["block", "list", "ntlm"], "block list ntlm");
+            moderate_kinds_by(kinds, &["block", "list", "rdp"], "block list rdp");
+            moderate_kinds_by(kinds, &["block", "list", "smb"], "block list smb");
+            moderate_kinds_by(kinds, &["block", "list", "smtp"], "block list stmp");
+            moderate_kinds_by(kinds, &["block", "list", "ssh"], "block list ssh");
+            moderate_kinds_by(kinds, &["block", "list", "tls"], "block list tls");
         }
     }
 }
@@ -1130,6 +1505,97 @@ impl fmt::Display for EventMessage {
             EventKind::BlockListDns => {
                 if let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(&self.fields) {
                     write!(f, "BlockListDns,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListDceRpc => {
+                if let Ok(fields) = bincode::deserialize::<BlockListDceRpcFields>(&self.fields) {
+                    write!(f, "BlockListDceRpc,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListFtp => {
+                if let Ok(fields) = bincode::deserialize::<BlockListFtpFields>(&self.fields) {
+                    write!(f, "BlockListFtp,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListHttp => {
+                if let Ok(fields) = bincode::deserialize::<BlockListHttpFields>(&self.fields) {
+                    write!(f, "BlockListHttp,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListKerberos => {
+                if let Ok(fields) = bincode::deserialize::<BlockListKerberosFields>(&self.fields) {
+                    write!(f, "BlockListKerberos,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListLdap => {
+                if let Ok(fields) = bincode::deserialize::<BlockListLdapFields>(&self.fields) {
+                    write!(f, "BlockListLdap,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListMqtt => {
+                if let Ok(fields) = bincode::deserialize::<BlockListMqttFields>(&self.fields) {
+                    write!(f, "BlcokListMqtt,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListNfs => {
+                if let Ok(fields) = bincode::deserialize::<BlockListNfsFields>(&self.fields) {
+                    write!(f, "BlockListNfs,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListNtlm => {
+                if let Ok(fields) = bincode::deserialize::<BlockListNtlmFields>(&self.fields) {
+                    write!(f, "BlockListNtlm,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListRdp => {
+                if let Ok(fields) = bincode::deserialize::<BlockListRdpFields>(&self.fields) {
+                    write!(f, "BlockListRdp,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListSmb => {
+                if let Ok(fields) = bincode::deserialize::<BlockListSmbFields>(&self.fields) {
+                    write!(f, "BlockListSmb,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListSmtp => {
+                if let Ok(fields) = bincode::deserialize::<BlockListSmtpFields>(&self.fields) {
+                    write!(f, "BlockListSmtp,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListSsh => {
+                if let Ok(fields) = bincode::deserialize::<BlockListSshFields>(&self.fields) {
+                    write!(f, "BlockListSsh,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListTls => {
+                if let Ok(fields) = bincode::deserialize::<BlockListTlsFields>(&self.fields) {
+                    write!(f, "BlockListTls,{fields}")
                 } else {
                     write!(f, "invalid event")
                 }
@@ -1434,6 +1900,123 @@ impl<'i> Iterator for EventIterator<'i> {
                 Some(Ok((
                     key,
                     Event::BlockList(RecordType::Dns(BlockListDns::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListDceRpc => {
+                let Ok(fields) = bincode::deserialize::<BlockListDceRpcFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::DceRpc(BlockListDceRpc::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListFtp => {
+                let Ok(fields) = bincode::deserialize::<BlockListFtpFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Ftp(BlockListFtp::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListHttp => {
+                let Ok(fields) = bincode::deserialize::<BlockListHttpFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Http(BlockListHttp::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListKerberos => {
+                let Ok(fields) = bincode::deserialize::<BlockListKerberosFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Kerberos(BlockListKerberos::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListLdap => {
+                let Ok(fields) = bincode::deserialize::<BlockListLdapFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Ldap(BlockListLdap::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListMqtt => {
+                let Ok(fields) = bincode::deserialize::<BlockListMqttFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Mqtt(BlockListMqtt::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListNfs => {
+                let Ok(fields) = bincode::deserialize::<BlockListNfsFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Nfs(BlockListNfs::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListNtlm => {
+                let Ok(fields) = bincode::deserialize::<BlockListNtlmFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Ntlm(BlockListNtlm::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListRdp => {
+                let Ok(fields) = bincode::deserialize::<BlockListRdpFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Rdp(BlockListRdp::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListSmb => {
+                let Ok(fields) = bincode::deserialize::<BlockListSmbFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Smb(BlockListSmb::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListSmtp => {
+                let Ok(fields) = bincode::deserialize::<BlockListSmtpFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Smtp(BlockListSmtp::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListSsh => {
+                let Ok(fields) = bincode::deserialize::<BlockListSshFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Ssh(BlockListSsh::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListTls => {
+                let Ok(fields) = bincode::deserialize::<BlockListTlsFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Tls(BlockListTls::new(time, fields))),
                 )))
             }
             EventKind::Log => None,
