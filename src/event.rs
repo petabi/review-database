@@ -12,11 +12,12 @@ use self::{common::Match, http::RepeatedHttpSessionsFields};
 pub use self::{
     common::TriageScore,
     conn::{
-        ExternalDdos, ExternalDdosFields, MultiHostPortScan, MultiHostPortScanFields, PortScan,
-        PortScanFields,
+        BlockListConn, BlockListConnFields, ExternalDdos, ExternalDdosFields, MultiHostPortScan,
+        MultiHostPortScanFields, PortScan, PortScanFields,
     },
     dns::{
-        CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields, DnsCovertChannel, DnsEventFields,
+        BlockListDns, BlockListDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
+        DnsCovertChannel, DnsEventFields,
     },
     ftp::{FtpBruteForce, FtpBruteForceFields, FtpPlainText, FtpPlainTextFields},
     http::{
@@ -74,6 +75,7 @@ const NON_BROWSER: &str = "Non Browser";
 const LDAP_BRUTE_FORCE: &str = "LDAP Brute Force";
 const LDAP_PLAIN_TEXT: &str = "LDAP Plain Text";
 const CRYPTOCURRENCY_MINING_POOL: &str = "Cryptocurrency Mining Pool";
+pub const BLOCK_LIST: &str = "Block List";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -122,6 +124,13 @@ pub enum Event {
 
     /// An event that occurs when it is determined that there is a connection to a cryptocurrency mining network
     CryptocurrencyMiningPool(CryptocurrencyMiningPool),
+
+    BlockList(RecordType),
+}
+
+pub enum RecordType {
+    Conn(BlockListConn),
+    Dns(BlockListDns),
 }
 
 impl Event {
@@ -153,6 +162,10 @@ impl Event {
             Event::LdapBruteForce(event) => event.matches(locator, filter),
             Event::LdapPlainText(event) => event.matches(locator, filter),
             Event::CryptocurrencyMiningPool(event) => event.matches(locator, filter),
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => conn_event.matches(locator, filter),
+                RecordType::Dns(dns_event) => dns_event.matches(locator, filter),
+            },
         }
     }
 
@@ -277,6 +290,28 @@ impl Event {
                     common_count_country(&locator, counter, event.src_addr, event.dst_addr);
                 }
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator.clone(), filter)?.0 {
+                        common_count_country(
+                            &locator,
+                            counter,
+                            conn_event.src_addr,
+                            conn_event.dst_addr,
+                        );
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator.clone(), filter)?.0 {
+                        common_count_country(
+                            &locator,
+                            counter,
+                            dns_event.src_addr,
+                            dns_event.dst_addr,
+                        );
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -383,6 +418,20 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(EventCategory::InitialAccess).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(EventCategory::InitialAccess).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -477,6 +526,18 @@ impl Event {
                     common_count_ip_address(counter, event.src_addr, event.dst_addr);
                 }
             }
+            Event::BlockList(record) => match record {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        common_count_ip_address(counter, conn_event.src_addr, conn_event.dst_addr);
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        common_count_ip_address(counter, dns_event.src_addr, dns_event.dst_addr);
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -568,6 +629,24 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        let entry = counter
+                            .entry((conn_event.src_addr, conn_event.dst_addr))
+                            .or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        let entry = counter
+                            .entry((dns_event.src_addr, dns_event.dst_addr))
+                            .or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -683,6 +762,24 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        let entry = counter
+                            .entry((conn_event.src_addr, conn_event.dst_addr, BLOCK_LIST))
+                            .or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        let entry = counter
+                            .entry((dns_event.src_addr, dns_event.dst_addr, BLOCK_LIST))
+                            .or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -784,6 +881,20 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::BlockList(record) => match record {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(conn_event.src_addr).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(dns_event.src_addr).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -880,6 +991,20 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(conn_event.dst_addr).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(dns_event.dst_addr).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -992,6 +1117,20 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(BLOCK_LIST.to_string()).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(BLOCK_LIST.to_string()).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -1098,6 +1237,20 @@ impl Event {
                     *entry += 1;
                 }
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(MEDIUM).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        let entry = counter.entry(MEDIUM).or_insert(0);
+                        *entry += 1;
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -1283,6 +1436,32 @@ impl Event {
                     }
                 }
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    if conn_event.matches(locator, filter)?.0 {
+                        if let Some(id) = find_network(conn_event.src_addr, networks) {
+                            let entry = counter.entry(id).or_insert(0);
+                            *entry += 1;
+                        }
+                        if let Some(id) = find_network(conn_event.dst_addr, networks) {
+                            let entry = counter.entry(id).or_insert(0);
+                            *entry += 1;
+                        }
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        if let Some(id) = find_network(dns_event.src_addr, networks) {
+                            let entry = counter.entry(id).or_insert(0);
+                            *entry += 1;
+                        }
+                        if let Some(id) = find_network(dns_event.dst_addr, networks) {
+                            let entry = counter.entry(id).or_insert(0);
+                            *entry += 1;
+                        }
+                    }
+                }
+            },
         }
         Ok(())
     }
@@ -1335,6 +1514,14 @@ impl Event {
             Event::CryptocurrencyMiningPool(event) => {
                 event.triage_scores = Some(triage_scores);
             }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(conn_event) => {
+                    conn_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Dns(dns_event) => {
+                    dns_event.triage_scores = Some(triage_scores);
+                }
+            },
         }
     }
 }
@@ -1367,6 +1554,8 @@ pub enum EventKind {
     LdapPlainText,
     ExternalDdos,
     CryptocurrencyMiningPool,
+    BlockListConn,
+    BlockListDns,
 }
 
 /// Machine Learning Method.
@@ -1457,6 +1646,8 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["port", "scan"], "port scan");
             moderate_kinds_by(kinds, &["non", "browser"], "non browser");
             moderate_kinds_by(kinds, &["crypto", "currency"], "crypto currency");
+            moderate_kinds_by(kinds, &["block", "list", "conn"], "block list conn");
+            moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
         }
     }
 }
@@ -1594,6 +1785,20 @@ impl fmt::Display for EventMessage {
                     bincode::deserialize::<CryptocurrencyMiningPoolFields>(&self.fields)
                 {
                     write!(f, "CryptocurrencyMiningPool,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListConn => {
+                if let Ok(fields) = bincode::deserialize::<BlockListConnFields>(&self.fields) {
+                    write!(f, "BlockListConn,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::BlockListDns => {
+                if let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(&self.fields) {
+                    write!(f, "BlockListDns,{fields}")
                 } else {
                     write!(f, "invalid event")
                 }
@@ -1895,6 +2100,28 @@ impl<'i> Iterator for EventIterator<'i> {
                 Some(Ok((
                     key,
                     Event::CryptocurrencyMiningPool(CryptocurrencyMiningPool::new(time, fields)),
+                )))
+            }
+            EventKind::BlockListConn => {
+                let Ok(fields) =
+                    bincode::deserialize::<BlockListConnFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Conn(BlockListConn::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListDns => {
+                let Ok(fields) =
+                    bincode::deserialize::<BlockListDnsFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Dns(BlockListDns::new(time, fields))),
                 )))
             }
             EventKind::Log => None,
