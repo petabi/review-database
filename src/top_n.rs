@@ -14,7 +14,6 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::pg::AsyncPgConnection;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
-use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 
 const DEFAULT_PORTION_OF_CLUSTER: f64 = 0.3;
@@ -299,8 +298,8 @@ fn filter_by_whitelists(
                     })
                 })
                 .collect();
-            top_n.sort_by(|a, b| a.value.cmp(&b.value)); // this makes lists in the same alphabetical order
-            top_n.sort_by_key(|a| Reverse(a.count));
+            top_n
+                .sort_unstable_by(|a, b| b.count.cmp(&a.count).then_with(|| a.value.cmp(&b.value)));
             top_n.truncate(number_of_top_n);
             TopElementCountsByColumn {
                 column_index,
