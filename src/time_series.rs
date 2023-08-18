@@ -255,7 +255,7 @@ impl Database {
                             count: count.to_usize().unwrap_or(usize::MAX),
                         })
                         .collect();
-                    series.sort_by(|a, b| a.time.cmp(&b.time));
+                    series.sort_by_key(|v| v.time);
                     let series = fill_vacant_time_slots(&series);
 
                     Some(ColumnTimeSeries {
@@ -265,7 +265,7 @@ impl Database {
                 }
             })
             .collect();
-        series.sort_by(|a, b| a.column_index.cmp(&b.column_index));
+        series.sort_by_key(|v| v.column_index);
 
         Ok(TimeSeriesResult {
             earliest,

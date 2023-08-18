@@ -8,7 +8,7 @@ use diesel::{dsl::max, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, Quer
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{cmp::Reverse, collections::HashMap};
 
 #[derive(Debug, Queryable)]
 struct TimeSeriesLoadByCluster {
@@ -100,7 +100,7 @@ impl Database {
                                     count: count.to_usize().unwrap_or(usize::MAX),
                                 })
                                 .collect();
-                            series.sort_by(|a, b| a.time.cmp(&b.time));
+                            series.sort_by_key(|v| v.time);
                             if time.is_some() && series.len() > 2 {
                                 series.pop();
                                 series.remove(0);
@@ -114,7 +114,7 @@ impl Database {
             .collect();
 
         for s in &mut series {
-            s.trends.sort_by(|a, b| b.series.len().cmp(&a.series.len())); // for fixed order
+            s.trends.sort_by_key(|v| Reverse(v.series.len())); // for fixed order
         }
         Ok(series)
     }

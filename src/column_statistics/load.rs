@@ -18,7 +18,7 @@ use diesel::{
 use diesel_async::RunQueryDsl;
 use futures::future::join_all;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::{cmp::Reverse, collections::HashMap};
 use structured::{ColumnStatistics, Description, ElementCount, NLargestCount};
 use tracing::error;
 
@@ -135,7 +135,7 @@ impl Database {
         .flatten()
         .collect::<Vec<_>>();
 
-        results.sort_by(|a, b| a.column_index.cmp(&b.column_index));
+        results.sort_by_key(|v| v.column_index);
         Ok(results)
     }
 }
@@ -182,10 +182,10 @@ where
     let mut element_count = element_count
         .into_iter()
         .map(|mut ec| {
-            ec.1.sort_by(|a, b| b.count.cmp(&a.count));
+            ec.1.sort_by_key(|v| Reverse(v.count));
             ec
         })
         .collect::<Vec<_>>();
-    element_count.sort_by(|a, b| a.0.cmp(&b.0));
+    element_count.sort_by_key(|v| v.0);
     element_count.into_iter().map(|(_, e)| e).collect()
 }
