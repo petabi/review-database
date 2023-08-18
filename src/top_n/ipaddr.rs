@@ -16,7 +16,7 @@ use diesel::{
 };
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
-use std::collections::HashMap;
+use std::{cmp::Reverse, collections::HashMap};
 
 use cluster::dsl as c_d;
 use column_description::dsl as col_d;
@@ -121,7 +121,7 @@ impl Database {
                             count: t.1,
                         })
                         .collect();
-                top_n.sort_by(|a, b| b.count.cmp(&a.count));
+                top_n.sort_by_key(|v| Reverse(v.count));
                 top_n.truncate(size);
                 TopElementCountsByColumn {
                     column_index: t.0,
@@ -129,7 +129,7 @@ impl Database {
                 }
             })
             .collect();
-        top_n.sort_by(|a, b| a.column_index.cmp(&b.column_index));
+        top_n.sort_by_key(|v| v.column_index);
         Ok(top_n)
     }
 

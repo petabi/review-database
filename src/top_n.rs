@@ -14,6 +14,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::pg::AsyncPgConnection;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
+use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 
 const DEFAULT_PORTION_OF_CLUSTER: f64 = 0.3;
@@ -247,7 +248,7 @@ fn limited_top_n_of_clusters(
         for (column_index, t) in top_n {
             let total_sizes: i64 = t.iter().map(|v| v.1).sum();
             let mut top_n: Vec<(String, i64)> = t.into_iter().collect();
-            top_n.sort_by(|a, b| b.1.cmp(&a.1));
+            top_n.sort_by_key(|v| Reverse(v.1));
 
             let size_including_ips =
                 i64::from_f64((total_sizes.to_f64().unwrap_or(0.0) * limit_rate).trunc())
@@ -307,7 +308,7 @@ fn filter_by_whitelists(
             }
         })
         .collect();
-    top_n.sort_by(|a, b| a.column_index.cmp(&b.column_index));
+    top_n.sort_by_key(|v| v.column_index);
 
     top_n
 }
