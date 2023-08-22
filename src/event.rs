@@ -395,13 +395,13 @@ impl Event {
             counter
                 .entry(src_country)
                 .and_modify(|e| *e += 1)
-                .or_insert(0);
+                .or_insert(1);
         }
         if addr_pair.1.is_some() {
             counter
                 .entry(dst_country)
                 .and_modify(|e| *e += 1)
-                .or_insert(0);
+                .or_insert(1);
         }
 
         Ok(())
@@ -510,7 +510,7 @@ impl Event {
         };
 
         if let Some(category) = category {
-            counter.entry(category).and_modify(|e| *e += 1).or_insert(0);
+            counter.entry(category).and_modify(|e| *e += 1).or_insert(1);
         }
 
         Ok(())
@@ -530,10 +530,10 @@ impl Event {
         let addr_pair = self.address_pair(locator, filter)?;
 
         if let Some(src_addr) = addr_pair.0 {
-            counter.entry(src_addr).and_modify(|e| *e += 1).or_insert(0);
+            counter.entry(src_addr).and_modify(|e| *e += 1).or_insert(1);
         }
         if let Some(dst_addr) = addr_pair.1 {
-            counter.entry(dst_addr).and_modify(|e| *e += 1).or_insert(0);
+            counter.entry(dst_addr).and_modify(|e| *e += 1).or_insert(1);
         }
 
         Ok(())
@@ -557,7 +557,7 @@ impl Event {
                 counter
                     .entry((src_addr, dst_addr))
                     .and_modify(|e| *e += 1)
-                    .or_insert(0);
+                    .or_insert(1);
             }
         }
 
@@ -584,7 +584,7 @@ impl Event {
                     counter
                         .entry((src_addr, dst_addr, kind))
                         .and_modify(|e| *e += 1)
-                        .or_insert(0);
+                        .or_insert(1);
                 }
             }
         }
@@ -606,7 +606,7 @@ impl Event {
         let addr_pair = self.address_pair(locator, filter)?;
 
         if let Some(src_addr) = addr_pair.0 {
-            counter.entry(src_addr).and_modify(|e| *e += 1).or_insert(0);
+            counter.entry(src_addr).and_modify(|e| *e += 1).or_insert(1);
         }
 
         Ok(())
@@ -626,7 +626,7 @@ impl Event {
         let addr_pair = self.address_pair(locator, filter)?;
 
         if let Some(dst_addr) = addr_pair.1 {
-            counter.entry(dst_addr).and_modify(|e| *e += 1).or_insert(0);
+            counter.entry(dst_addr).and_modify(|e| *e += 1).or_insert(1);
         }
 
         Ok(())
@@ -654,7 +654,7 @@ impl Event {
         };
 
         if let Some(kind) = kind {
-            counter.entry(kind).and_modify(|e| *e += 1).or_insert(0);
+            counter.entry(kind).and_modify(|e| *e += 1).or_insert(1);
         }
 
         Ok(())
@@ -763,7 +763,7 @@ impl Event {
         }
 
         if let Some(level) = level {
-            counter.entry(level).and_modify(|e| *e += 1).or_insert(0);
+            counter.entry(level).and_modify(|e| *e += 1).or_insert(1);
         }
 
         Ok(())
@@ -785,12 +785,12 @@ impl Event {
 
         if let Some(src_addr) = addr_pair.0 {
             if let Some(id) = find_network(src_addr, networks) {
-                counter.entry(id).and_modify(|e| *e += 1).or_insert(0);
+                counter.entry(id).and_modify(|e| *e += 1).or_insert(1);
             }
         }
         if let Some(dst_addr) = addr_pair.1 {
             if let Some(id) = find_network(dst_addr, networks) {
-                counter.entry(id).and_modify(|e| *e += 1).or_insert(0);
+                counter.entry(id).and_modify(|e| *e += 1).or_insert(1);
             }
         }
 
