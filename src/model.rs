@@ -1,17 +1,29 @@
 use super::{Database, Error, Type};
 use num_traits::ToPrimitive;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-const DEFAULT_MAX_EVENT_ID_NUM_I32: i32 = 25;
+// const DEFAULT_MAX_EVENT_ID_NUM_I32: i32 = 25;
 const DEFAULT_MAX_EVENT_ID_NUM_U32: u32 = 25;
-const LIMIT_MAX_EVENT_ID_NUM: i32 = 100;
+// const LIMIT_MAX_EVENT_ID_NUM: i32 = 100;
 
 #[derive(Deserialize, Queryable)]
-pub struct Model {
+pub struct Digest {
     pub id: i32,
     pub name: String,
+    pub versioin: i32,
     pub data_source_id: i32,
     pub classification_id: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Queryable)]
+pub struct Model<'a> {
+    name: &'a str,
+    version: i32,
+    kind: &'a str,
+    serialized_classifier: &'a [u8],
+    max_event_id_num: i32,
+    data_source_id: i32,
+    classification_id: i64,
 }
 
 impl Database {
@@ -31,28 +43,14 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model already exists or if a database operation fails.
-    pub async fn add_model(
-        &self,
-        name: &str,
-        kind: &str,
-        serialized_classifier: &[u8],
-        max_event_id_num: u32,
-        data_source_id: i32,
-        classification_id: i64,
-    ) -> Result<i32, Error> {
-        let max_event_id_num = i32::min(
-            max_event_id_num
-                .to_i32()
-                .unwrap_or(DEFAULT_MAX_EVENT_ID_NUM_I32),
-            LIMIT_MAX_EVENT_ID_NUM,
-        );
-
+    pub async fn add_model<'a>(&self, model: &Model<'a>) -> Result<i32, Error> {
         let conn = self.pool.get().await?;
         let n = conn
             .insert_into(
                 "model",
                 &[
                     ("name", Type::TEXT),
+                    ("version", Type::INT4),
                     ("kind", Type::TEXT),
                     ("classifier", Type::BYTEA),
                     ("max_event_id_num", Type::INT4),
@@ -60,16 +58,17 @@ impl Database {
                     ("classification_id", Type::INT8),
                 ],
                 &[
-                    &name,
-                    &kind,
-                    &serialized_classifier,
-                    &max_event_id_num,
-                    &data_source_id,
-                    &classification_id,
+                    &model.name.to_string(),
+                    &model.version,
+                    &model.kind,
+                    &model.serialized_classifier.to_vec(),
+                    &model.max_event_id_num,
+                    &model.data_source_id,
+                    &model.classification_id,
                 ],
             )
             .await
-            .map_err(|_| Error::InvalidInput(format!("model \"{name}\" already exists")))?;
+            .map_err(|_| Error::InvalidInput(format!("model \"{}\" already exists", model.name)))?;
         if n == 0 {
             Err(Error::InvalidInput("failed to insert model".into()))
         } else {
@@ -233,11 +232,17 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn load_model(&self, id: i32) -> Result<Model, Error> {
+    pub async fn load_model(&self, id: i32) -> Result<Digest, Error> {
         let conn = self.pool.get().await?;
-        conn.select_one_from::<Model>(
+        conn.select_one_from::<Digest>(
             "model",
-            &["id", "name", "data_source_id", "classification_id"],
+            &[
+                "id",
+                "name",
+                "version",
+                "data_source_id",
+                "classification_id",
+            ],
             &[("id", super::Type::INT4)],
             &[&id],
         )
@@ -252,10 +257,11 @@ impl Database {
     pub async fn load_model_by_name(
         &self,
         name: &str,
-    ) -> Result<(i32, String, Vec<u8>, u32, u32), Error> {
+    ) -> Result<(i32, i32, String, Vec<u8>, u32, u32), Error> {
         #[derive(Deserialize)]
         struct Model {
             id: i32,
+            version: i32,
             kind: String,
             max_event_id_num: i32,
             #[serde(with = "serde_bytes")]
@@ -269,6 +275,7 @@ impl Database {
                 "model",
                 &[
                     "id",
+                    "version",
                     "kind",
                     "max_event_id_num",
                     "classifier",
@@ -280,6 +287,7 @@ impl Database {
             .await?;
         Ok((
             model.id,
+            model.version,
             model.kind,
             model.classifier,
             model
@@ -304,7 +312,7 @@ impl Database {
         before: &Option<(i32, String)>,
         is_first: bool,
         limit: usize,
-    ) -> Result<Vec<Model>, Error> {
+    ) -> Result<Vec<Digest>, Error> {
         use super::schema::model::dsl;
         use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
         use diesel_async::RunQueryDsl;
@@ -314,6 +322,7 @@ impl Database {
             .select((
                 dsl::id,
                 dsl::name,
+                dsl::version,
                 dsl::data_source_id,
                 dsl::classification_id,
             ))
@@ -345,7 +354,7 @@ impl Database {
         }
 
         let mut conn = self.pool.get_diesel_conn().await?;
-        let mut rows: Vec<Model> = query.get_results(&mut conn).await?;
+        let mut rows: Vec<Digest> = query.get_results(&mut conn).await?;
         if !is_first {
             rows = rows.into_iter().rev().collect();
         }
@@ -357,31 +366,20 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn update_model(
-        &self,
-        name: &str,
-        kind: &str,
-        serialized_classifier: Vec<u8>,
-        max_event_id_num: u32,
-        data_source_id: i32,
-        classification_id: i64,
-    ) -> Result<i32, Error> {
-        let max_event_id_num = i32::min(
-            max_event_id_num
-                .to_i32()
-                .unwrap_or(DEFAULT_MAX_EVENT_ID_NUM_I32),
-            LIMIT_MAX_EVENT_ID_NUM,
-        );
-
+    pub async fn update_model<'a>(&self, model: &Model<'a>) -> Result<i32, Error> {
         let conn = self.pool.get().await?;
         let id = conn
-            .select_one_from::<i32>("model", &["id"], &[("name", Type::TEXT)], &[&name])
+            .select_one_from::<i32>("model", &["id"], &[("name", Type::TEXT)], &[&model.name])
             .await
-            .map_err(|e| Error::InvalidInput(format!("cannot find model \"{name}\": {e}")))?;
+            .map_err(|e| {
+                Error::InvalidInput(format!("cannot find model \"{}\": {e}", model.name))
+            })?;
         conn.update(
             "model",
             id,
             &[
+                ("name", Type::TEXT),
+                ("version", Type::INT4),
                 ("kind", super::Type::TEXT),
                 ("classifier", Type::BYTEA),
                 ("max_event_id_num", Type::INT4),
@@ -389,15 +387,19 @@ impl Database {
                 ("classification_id", Type::INT8),
             ],
             &[
-                &kind,
-                &serialized_classifier,
-                &max_event_id_num,
-                &data_source_id,
-                &classification_id,
+                &model.name.to_string(),
+                &model.version,
+                &model.kind,
+                &model.serialized_classifier.to_vec(),
+                &model.max_event_id_num,
+                &model.data_source_id,
+                &model.classification_id,
             ],
         )
         .await
-        .map_err(|e| Error::InvalidInput(format!("failed to update model \"{name}\": {e}")))?;
+        .map_err(|e| {
+            Error::InvalidInput(format!("failed to update model \"{}\": {e}", model.name))
+        })?;
         Ok(id)
     }
 }

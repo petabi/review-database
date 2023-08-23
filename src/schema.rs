@@ -163,6 +163,7 @@ diesel::table! {
         data_source_id -> Int4,
         classifier -> Bytea,
         classification_id -> Nullable<Int8>,
+        version -> Int4,
     }
 }
 
