@@ -5,6 +5,19 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Introduced a new column `version` within the model table of the database. It
+  indicates the specific version associated with each model. Existing model entry
+  will have default version 0.
+
+### Removed
+
+- Removed `update_outliers`, `load_outliers`, `count_outliers`. They have been
+  obsoleted since outliers now stores in rocksdb.
+
 ## [0.17.1] - 2023-08-22
 
 ### Fixed
@@ -461,6 +474,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.17.1...main
 [0.17.1]: https://github.com/petabi/review-database/compare/0.17.0...0.17.1
 [0.17.0]: https://github.com/petabi/review-database/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/petabi/review-database/compare/0.15.2...0.16.0

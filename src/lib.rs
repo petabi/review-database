@@ -45,7 +45,7 @@ pub use self::event::{
     TrafficDirection, TriageScore,
 };
 pub use self::migration::migrate_data_dir;
-pub use self::model::Model;
+pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 pub use self::qualifier::Qualifier;
 pub use self::status::Status;
