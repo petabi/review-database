@@ -30,8 +30,9 @@ impl<'a> IndexedSet<'a> {
         let Some(value) = self
             .db
             .get_cf(self.cf, self.key)
-            .context("database error")? else {
-            return Ok(KeyIndex::default())
+            .context("database error")?
+        else {
+            return Ok(KeyIndex::default());
         };
         KeyIndex::from_bytes(value).context("invalid index in database")
     }
@@ -211,7 +212,10 @@ impl<'a> IndexedSet<'a> {
     ) -> Result<KeyIndex> {
         let Some(value) = txn
             .get_for_update_cf(self.cf, self.key, EXCLUSIVE)
-            .context("database error")? else { return Ok(KeyIndex::default()) };
+            .context("database error")?
+        else {
+            return Ok(KeyIndex::default());
+        };
         KeyIndex::from_bytes(value).context("invalid index in database")
     }
 }

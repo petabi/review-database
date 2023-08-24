@@ -858,7 +858,7 @@ impl Event {
 }
 
 fn find_network(ip: IpAddr, networks: &[Network]) -> Option<u32> {
-    for net in networks.iter() {
+    for net in networks {
         if net.contains(ip) {
             return Some(net.id);
         }
@@ -1180,8 +1180,13 @@ impl<'a> EventDb<'a> {
     ///
     /// Returns an error if a database operation fails.
     pub fn put(&self, event: &EventMessage) -> Result<i128> {
+        use anyhow::anyhow;
         let mut key = i128::from(event.time.timestamp_nanos()) << 64
-            | event.kind.to_i128().expect("should not exceed i128::MAX") << 32;
+            | event
+                .kind
+                .to_i128()
+                .ok_or(anyhow!("`EventKind` exceeds i128::MAX"))?
+                << 32;
         loop {
             let txn = self.inner.transaction();
             if txn
@@ -1293,8 +1298,8 @@ impl<'i> Iterator for EventIterator<'i> {
             }
             EventKind::HttpThreat => {
                 let Ok(fields) = bincode::deserialize::<HttpThreatFields>(v.as_ref()) else {
-                        return Some(Err(InvalidEvent::Value(v)))
-                    };
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
                 Some(Ok((
                     key,
                     Event::HttpThreat(HttpThreat::new(fields.time, fields)),
@@ -1302,16 +1307,15 @@ impl<'i> Iterator for EventIterator<'i> {
             }
             EventKind::RdpBruteForce => {
                 let Ok(fields) = bincode::deserialize::<RdpBruteForceFields>(v.as_ref()) else {
-                        return Some(Err(InvalidEvent::Value(v)))
-                    };
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
                 Some(Ok((
                     key,
                     Event::RdpBruteForce(RdpBruteForce::new(time, &fields)),
                 )))
             }
             EventKind::RepeatedHttpSessions => {
-                let Ok(fields) =
-                    bincode::deserialize::<RepeatedHttpSessionsFields>(v.as_ref())
+                let Ok(fields) = bincode::deserialize::<RepeatedHttpSessionsFields>(v.as_ref())
                 else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
@@ -1322,17 +1326,15 @@ impl<'i> Iterator for EventIterator<'i> {
             }
             EventKind::TorConnection => {
                 let Ok(fields) = bincode::deserialize::<TorConnectionFields>(v.as_ref()) else {
-                        return Some(Err(InvalidEvent::Value(v)));
-                    };
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
                 Some(Ok((
                     key,
                     Event::TorConnection(TorConnection::new(time, &fields)),
                 )))
             }
             EventKind::DomainGenerationAlgorithm => {
-                let Ok(fields) =
-                    bincode::deserialize::<DgaFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<DgaFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -1341,9 +1343,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::FtpBruteForce => {
-                let Ok(fields) =
-                    bincode::deserialize::<FtpBruteForceFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<FtpBruteForceFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -1352,9 +1352,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::FtpPlainText => {
-                let Ok(fields) =
-                    bincode::deserialize::<FtpPlainTextFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<FtpPlainTextFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -1363,17 +1361,13 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::PortScan => {
-                let Ok(fields) =
-                    bincode::deserialize::<PortScanFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<PortScanFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((key, Event::PortScan(PortScan::new(time, &fields)))))
             }
             EventKind::MultiHostPortScan => {
-                let Ok(fields) =
-                    bincode::deserialize::<MultiHostPortScanFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<MultiHostPortScanFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -1382,17 +1376,13 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::NonBrowser => {
-                let Ok(fields) =
-                    bincode::deserialize::<NonBrowserFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<NonBrowserFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((key, Event::NonBrowser(NonBrowser::new(time, &fields)))))
             }
             EventKind::LdapBruteForce => {
-                let Ok(fields) =
-                    bincode::deserialize::<LdapBruteForceFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<LdapBruteForceFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -1401,9 +1391,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::LdapPlainText => {
-                let Ok(fields) =
-                    bincode::deserialize::<LdapPlainTextFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<LdapPlainTextFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -1412,9 +1400,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::ExternalDdos => {
-                let Ok(fields) =
-                    bincode::deserialize::<ExternalDdosFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<ExternalDdosFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -1423,8 +1409,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::CryptocurrencyMiningPool => {
-                let Ok(fields) =
-                    bincode::deserialize::<CryptocurrencyMiningPoolFields>(v.as_ref())
+                let Ok(fields) = bincode::deserialize::<CryptocurrencyMiningPoolFields>(v.as_ref())
                 else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
@@ -1434,9 +1419,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::BlockListConn => {
-                let Ok(fields) =
-                    bincode::deserialize::<BlockListConnFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<BlockListConnFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -1445,9 +1428,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::BlockListDns => {
-                let Ok(fields) =
-                    bincode::deserialize::<BlockListDnsFields>(v.as_ref())
-                else {
+                let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((

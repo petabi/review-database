@@ -125,11 +125,13 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn events(&self) -> EventDb {
         self.states.events()
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn access_token_map(&self) -> Map {
         self.states
             .map(tables::ACCESS_TOKENS)
@@ -137,11 +139,13 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn account_map(&self) -> Table<types::Account> {
         self.states.accounts()
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn account_policy_map(&self) -> Map {
         self.states
             .map(tables::ACCOUNT_POLICY)
@@ -149,6 +153,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn allow_network_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::ALLOW_NETWORKS)
@@ -156,6 +161,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn block_network_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::BLOCK_NETWORKS)
@@ -163,6 +169,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn customer_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::CUSTOMERS)
@@ -170,6 +177,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn data_source_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::DATA_SOURCES)
@@ -177,6 +185,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn event_tag_set(&self) -> IndexedSet {
         self.states
             .indexed_set(tables::EVENT_TAGS)
@@ -184,11 +193,13 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn filter_map(&self) -> Map {
         self.states.map(tables::FILTERS).expect("always available")
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn model_indicator_map(&self) -> Map {
         self.states
             .map(tables::MODEL_INDICATORS)
@@ -196,6 +207,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn network_map(&self) -> IndexedMultimap {
         self.states
             .indexed_multimap(tables::NETWORKS)
@@ -203,6 +215,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn network_tag_set(&self) -> IndexedSet {
         self.states
             .indexed_set(tables::NETWORK_TAGS)
@@ -210,6 +223,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn node_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::NODES)
@@ -217,11 +231,13 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn outlier_map(&self) -> Map {
         self.states.map(tables::OUTLIERS).expect("always available")
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn sampling_policy_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::SAMPLING_POLICY)
@@ -229,6 +245,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn template_map(&self) -> Map {
         self.states
             .map(tables::TEMPLATES)
@@ -236,11 +253,13 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn tidb_map(&self) -> Map {
         self.states.map(tables::TIDB).expect("always available")
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn tor_exit_node_map(&self) -> Map {
         self.states
             .map(tables::TOR_EXIT_NODES)
@@ -248,6 +267,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn triage_policy_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::TRIAGE_POLICY)
@@ -255,6 +275,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn triage_response_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::TRIAGE_RESPONSE)
@@ -262,6 +283,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn trusted_dns_server_map(&self) -> Map {
         self.states
             .map(tables::TRUSTED_DNS_SERVERS)
@@ -269,6 +291,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn trusted_user_agent_map(&self) -> Map {
         self.states
             .map(tables::TRUSTED_USER_AGENTS)
@@ -276,6 +299,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn traffic_filter_map(&self) -> Map {
         self.states
             .map(tables::TRAFFIC_FILTER_RULES)
@@ -283,6 +307,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn workflow_tag_set(&self) -> IndexedSet {
         self.states
             .indexed_set(tables::WORKFLOW_TAGS)

@@ -370,6 +370,10 @@ async fn get_top_n(
 impl Database {
     /// Gets the top N multimaps of a model.
     ///
+    /// # Panics
+    ///
+    /// Will panic if `usize` is smaller than 4 bytes.
+    ///
     /// # Errors
     ///
     /// Returns an error if an underlying database error occurs.

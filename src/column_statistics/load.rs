@@ -148,7 +148,7 @@ where
     let element_counts = top_n_to_element_counts(top_n);
     column_descriptions
         .into_iter()
-        .zip(element_counts.into_iter())
+        .zip(element_counts)
         .map(|(cd, ec)| {
             let column_index = cd.column_index();
             let description = cd.to_description();

@@ -221,7 +221,9 @@ pub trait Indexed {
     ///
     /// Returns an error if the index is not found or the database operation fails.
     fn index(&self) -> Result<KeyIndex> {
-        let Some(value) = self.db().get_cf(self.cf(), []).context("database error")? else { return Ok(KeyIndex::default()) };
+        let Some(value) = self.db().get_cf(self.cf(), []).context("database error")? else {
+            return Ok(KeyIndex::default());
+        };
         KeyIndex::from_bytes(value).context("invalid index in database")
     }
 
@@ -236,7 +238,10 @@ pub trait Indexed {
     ) -> Result<KeyIndex> {
         let Some(value) = txn
             .get_for_update_cf(self.cf(), [], EXCLUSIVE)
-            .context("database error")? else { return Ok(KeyIndex::default()) };
+            .context("database error")?
+        else {
+            return Ok(KeyIndex::default());
+        };
         KeyIndex::from_bytes(value).context("invalid index in database")
     }
 

@@ -104,6 +104,10 @@ pub struct ClusterScoreSet {
 impl Database {
     /// Gets top N clusters by score.
     ///
+    /// # Panics
+    ///
+    /// Will panic if `usize` is smaller than 4 bytes.
+    ///
     /// # Errors
     ///
     /// Returns an error if an underlying database operation fails.
@@ -136,8 +140,9 @@ impl Database {
             let column_type: &str = &column_types[column_index].data_type;
             let Some(indicator) = indicators
                 .get(&column_index)
-                .and_then(|indi| serde_json::from_str::<HashMap<String, f64>>(indi).ok()) else {
-                continue
+                .and_then(|indi| serde_json::from_str::<HashMap<String, f64>>(indi).ok())
+            else {
+                continue;
             };
 
             let mut top_n_by_cluster: HashMap<(i32, String), Vec<ElementCount>> = HashMap::new(); // i32, String = id, cluster_id

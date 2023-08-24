@@ -134,7 +134,7 @@ impl Tidb {
         let mut ret = Vec::new();
         for (db_name, db_version) in dbnames {
             let Some(value) = tidb_map.get(db_name.as_bytes())? else {
-              return Ok(Vec::new())
+                return Ok(Vec::new());
             };
 
             let tidb = bincode::DefaultOptions::new()

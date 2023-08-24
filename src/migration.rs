@@ -43,12 +43,12 @@ const COMPATIBLE_VERSION_REQ: &str = ">=0.16.0,<=0.17.1";
 ///
 /// Returns an error if the data directory doesn't exist and cannot be created,
 /// or if the data directory exists but is in the format incompatible with the
-/// current version.
+/// current version. Or if `COMPATIBLE_VERSION_REQ` cannot be properly parsed.
 pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()> {
     let data_dir = data_dir.as_ref();
     let backup_dir = backup_dir.as_ref();
 
-    let compatible = VersionReq::parse(COMPATIBLE_VERSION_REQ).expect("valid version requirement");
+    let compatible = VersionReq::parse(COMPATIBLE_VERSION_REQ)?;
 
     let (data, data_ver) = retrieve_or_create_version(data_dir)?;
     let (backup, backup_ver) = retrieve_or_create_version(backup_dir)?;
@@ -76,8 +76,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
     let migration: Vec<(_, _, fn(_) -> Result<_, _>)> = vec![(
-        VersionReq::parse(">=0.12.0,<0.16.0").expect("valid version requirement"),
-        Version::parse("0.16.0").expect("valid version"),
+        VersionReq::parse(">=0.12.0,<0.16.0")?,
+        Version::parse("0.16.0")?,
         migrate_0_12_to_0_16,
     )];
 
