@@ -51,6 +51,10 @@ use time_series::dsl as t_d;
 impl Database {
     /// Returns the top trends of a model.
     ///
+    /// # Panics
+    ///
+    /// Will panic if `usize` is smaller than 4 bytes.
+    ///
     /// # Errors
     ///
     /// Returns an error if an underlying database operation fails.

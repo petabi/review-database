@@ -102,6 +102,10 @@ pub(crate) fn fill_vacant_time_slots(series: &[TimeCount]) -> Vec<TimeCount> {
 impl Database {
     /// Adds a time series for the given model.
     ///
+    /// # Panics
+    ///
+    /// Will panic if `MAX_CSV_COLUMNS` exceeds `i32::MAX`.
+    ///
     /// # Errors
     ///
     /// Returns an error if an underlying database error occurs.
@@ -172,6 +176,10 @@ impl Database {
     }
 
     /// Gets the top time series of the given cluster.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `usize` is smaller than 4 bytes.
     ///
     /// # Errors
     ///

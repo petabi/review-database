@@ -86,8 +86,9 @@ pub(super) async fn get_columns_for_top_n(
         .filter(column_d::model_id.eq(model_id))
         .first::<Option<Vec<Option<bool>>>>(conn)
         .await
-        .optional()? else {
-            return Ok(HashSet::new())
+        .optional()?
+    else {
+        return Ok(HashSet::new());
     };
 
     Ok(columns

@@ -44,7 +44,7 @@ impl<'a> IndexedMap<'a> {
     pub fn get_by_id(&self, id: u32) -> Result<Option<impl AsRef<[u8]>>> {
         let index = self.index()?;
         let Some(key) = index.get(id).context("invalid ID")? else {
-            return Ok(None)
+            return Ok(None);
         };
         self.db.get_cf(self.cf, key).context("cannot read entry")
     }

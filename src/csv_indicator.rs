@@ -19,8 +19,10 @@ pub(crate) async fn get_whitelists(
         .filter(list_d::model_id.eq(model_id))
         .get_result::<Option<Vec<Option<String>>>>(conn)
         .await
-        .optional()?.flatten() else {
-            return Ok(HashMap::new());
+        .optional()?
+        .flatten()
+    else {
+        return Ok(HashMap::new());
     };
 
     let whitelist_names_indices: HashMap<String, usize> = column_indices
@@ -69,8 +71,9 @@ pub(crate) async fn get_csv_indicators(
         .filter(list_d::model_id.eq(model_id))
         .get_result::<Option<Vec<Option<String>>>>(conn)
         .await
-        .optional()? else {
-            return Ok(HashMap::new());
+        .optional()?
+    else {
+        return Ok(HashMap::new());
     };
     let indicator_names_indices: HashMap<String, usize> = column_indices
         .iter()
