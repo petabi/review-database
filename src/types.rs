@@ -1,5 +1,6 @@
 use super::{Indexable, IterableMap, NetworkType, Store, TrafficDirection};
 pub use crate::account::{Account, Role};
+pub use crate::batch_info::BatchInfo;
 use anyhow::{bail, Context, Result};
 use bincode::Options;
 use chrono::{

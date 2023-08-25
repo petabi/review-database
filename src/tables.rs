@@ -1,9 +1,11 @@
 mod accounts;
+mod batch_info;
 
-use crate::types::Account;
+use crate::{batch_info::BatchInfo, types::Account};
 
 use super::{event, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 // Key-value map names in `Database`.
@@ -11,6 +13,7 @@ pub(super) const ACCESS_TOKENS: &str = "access_tokens";
 pub(super) const ACCOUNTS: &str = "accounts";
 pub(super) const ACCOUNT_POLICY: &str = "account policy";
 pub(super) const ALLOW_NETWORKS: &str = "allow networks";
+pub(super) const BATCH_INFO: &str = "batch_info";
 pub(super) const BLOCK_NETWORKS: &str = "block networks";
 pub(super) const CUSTOMERS: &str = "customers";
 pub(super) const DATA_SOURCES: &str = "data sources";
@@ -30,11 +33,12 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 22] = [
+const MAP_NAMES: [&str; 23] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
     ALLOW_NETWORKS,
+    BATCH_INFO,
     BLOCK_NETWORKS,
     CUSTOMERS,
     DATA_SOURCES,
@@ -98,6 +102,12 @@ impl StateDb {
     pub(crate) fn accounts(&self) -> Table<Account> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Account>::open(inner).expect("accounts table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn batch_info(&self) -> Table<BatchInfo> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<BatchInfo>::open(inner).expect("accounts table must be present")
     }
 
     #[must_use]
@@ -295,4 +305,14 @@ impl<'i, R> TableIter<'i, R> {
             _phantom: std::marker::PhantomData,
         }
     }
+}
+
+fn serialize<I: Serialize>(input: &I) -> anyhow::Result<Vec<u8>> {
+    use bincode::Options;
+    Ok(bincode::DefaultOptions::new().serialize(input)?)
+}
+
+fn deserialize<'de, O: Deserialize<'de>>(input: &'de [u8]) -> anyhow::Result<O> {
+    use bincode::Options;
+    Ok(bincode::DefaultOptions::new().deserialize(input)?)
 }

@@ -3,7 +3,6 @@
 use std::net::IpAddr;
 
 use anyhow::{bail, Context};
-use bincode::Options;
 use rocksdb::{Direction, IteratorMode, OptimisticTransactionDB};
 
 use crate::{types::Account, IterableMap, Map, MapIterator, Role, Table, EXCLUSIVE};
@@ -46,9 +45,7 @@ impl<'d> Table<'d, Account> {
         let Some(value) = self.map.get(username.as_bytes())? else {
             return Ok(None);
         };
-        Ok(Some(
-            bincode::DefaultOptions::new().deserialize::<Account>(value.as_ref())?,
-        ))
+        Ok(Some(super::deserialize::<Account>(value.as_ref())?))
     }
 
     /// Stores an account into the database.
@@ -57,7 +54,7 @@ impl<'d> Table<'d, Account> {
     ///
     /// Returns an error if the serialization of the account fails or the database operation fails.
     pub fn put(&self, account: &Account) -> Result<(), anyhow::Error> {
-        let value = bincode::DefaultOptions::new().serialize(account)?;
+        let value = super::serialize(account)?;
         self.map.put(account.username.as_bytes(), &value)
     }
 
@@ -68,7 +65,7 @@ impl<'d> Table<'d, Account> {
     /// Returns an error if the serialization of the account fails, the account with the same
     /// username exists, or the database operation fails.
     pub fn insert(&self, account: &Account) -> Result<(), anyhow::Error> {
-        let value = bincode::DefaultOptions::new().serialize(account)?;
+        let value = super::serialize(account)?;
         self.map.insert(account.username.as_bytes(), &value)
     }
 
@@ -99,8 +96,7 @@ impl<'d> Table<'d, Account> {
                 .get_for_update_cf(self.map.cf, username, EXCLUSIVE)
                 .context("cannot read old entry")?
             {
-                let mut account =
-                    bincode::DefaultOptions::new().deserialize::<Account>(old_value.as_ref())?;
+                let mut account = super::deserialize::<Account>(old_value.as_ref())?;
 
                 if let Some(password) = &new_password {
                     account.update_password(password)?;
@@ -137,7 +133,7 @@ impl<'d> Table<'d, Account> {
                     account.max_parallel_sessions = *new;
                 }
 
-                let value = bincode::DefaultOptions::new().serialize(&account)?;
+                let value = super::serialize(&account)?;
                 txn.put_cf(self.map.cf, username, value)
                     .context("failed to write new entry")?;
             } else {
@@ -189,7 +185,7 @@ impl<'i> Iterator for TableIter<'i, Account> {
         let serialized_item = self.inner.next()?;
         match serialized_item {
             Ok((_key, value)) => {
-                let item = bincode::DefaultOptions::new().deserialize::<Account>(&value);
+                let item = super::deserialize::<Account>(&value);
                 Some(item.map_err(Into::into))
             }
             Err(e) => Some(Err(e.into())),
