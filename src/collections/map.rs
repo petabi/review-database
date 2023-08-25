@@ -157,7 +157,7 @@ impl<'a> Map<'a> {
         MapIterator { inner: iter }
     }
 
-    fn inner_prefix_iterator(&self, mode: IteratorMode, prefix: &[u8]) -> MapIterator {
+    pub(crate) fn inner_prefix_iterator(&self, mode: IteratorMode, prefix: &[u8]) -> MapIterator {
         let mut readopts = rocksdb::ReadOptions::default();
         readopts.set_iterate_range(rocksdb::PrefixRange(prefix));
         let iter = self.db.iterator_cf_opt(self.cf, readopts, mode);

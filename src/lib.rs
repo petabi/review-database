@@ -4,6 +4,7 @@ extern crate diesel;
 mod account;
 mod backends;
 pub mod backup;
+mod batch_info;
 mod category;
 mod cluster;
 mod collections;
@@ -158,6 +159,12 @@ impl Store {
         self.states
             .indexed_map(tables::ALLOW_NETWORKS)
             .expect("always available")
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn batch_info_map(&self) -> Table<types::BatchInfo> {
+        self.states.batch_info()
     }
 
     #[must_use]
