@@ -13,11 +13,6 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   indicates the specific version associated with each model. Existing model entry
   will have default version 0.
 
-### Removed
-
-- Removed `update_outliers`, `load_outliers`, `count_outliers`. They have been
-  obsoleted since outliers now stores in rocksdb.
-
 ## [0.17.1] - 2023-08-22
 
 ### Fixed
