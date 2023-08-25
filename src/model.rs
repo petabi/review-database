@@ -10,20 +10,20 @@ const DEFAULT_MAX_EVENT_ID_NUM_U32: u32 = 25;
 pub struct Digest {
     pub id: i32,
     pub name: String,
-    pub versioin: i32,
+    pub version: i32,
     pub data_source_id: i32,
     pub classification_id: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Queryable)]
 pub struct Model<'a> {
-    name: &'a str,
-    version: i32,
-    kind: &'a str,
-    serialized_classifier: &'a [u8],
-    max_event_id_num: i32,
-    data_source_id: i32,
-    classification_id: i64,
+    pub name: &'a str,
+    pub version: i32,
+    pub kind: &'a str,
+    pub serialized_classifier: &'a [u8],
+    pub max_event_id_num: i32,
+    pub data_source_id: i32,
+    pub classification_id: i64,
 }
 
 impl Database {
