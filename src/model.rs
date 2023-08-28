@@ -1,3 +1,5 @@
+use crate::batch_info::BatchInfo;
+
 use super::{Database, Error, Type};
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
@@ -13,6 +15,29 @@ pub struct Digest {
     pub version: i32,
     pub data_source_id: i32,
     pub classification_id: Option<i64>,
+    pub batch_info: Vec<BatchInfo>,
+}
+
+#[derive(Deserialize, Queryable)]
+struct SqlDigest {
+    id: i32,
+    name: String,
+    version: i32,
+    data_source_id: i32,
+    classification_id: Option<i64>,
+}
+
+impl From<SqlDigest> for Digest {
+    fn from(input: SqlDigest) -> Self {
+        Self {
+            id: input.id,
+            name: input.name,
+            version: input.version,
+            data_source_id: input.data_source_id,
+            classification_id: input.classification_id,
+            batch_info: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Queryable)]
@@ -24,6 +49,7 @@ pub struct Model<'a> {
     pub max_event_id_num: i32,
     pub data_source_id: i32,
     pub classification_id: i64,
+    pub batch_info: Vec<BatchInfo>,
 }
 
 impl Database {
@@ -81,7 +107,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn delete_model(&self, name: &str) -> Result<(), Error> {
+    pub async fn delete_model(&self, name: &str) -> Result<i32, Error> {
         let conn = self.pool.get().await?;
         let query_result = conn
             .select_one_opt_from::<i32>("model", &["id"], &[("name", Type::TEXT)], &[&name])
@@ -100,7 +126,7 @@ impl Database {
 
         self.delete_stats(id).await?;
 
-        Ok(())
+        Ok(id)
     }
 
     async fn delete_csv_entries_under_model_name(&self, model_name: &str) -> Result<(), Error> {
@@ -354,11 +380,16 @@ impl Database {
         }
 
         let mut conn = self.pool.get_diesel_conn().await?;
-        let mut rows: Vec<Digest> = query.get_results(&mut conn).await?;
-        if !is_first {
-            rows = rows.into_iter().rev().collect();
+        let rows = query
+            .get_results::<SqlDigest>(&mut conn)
+            .await?
+            .into_iter()
+            .map(std::convert::Into::into);
+        if is_first {
+            Ok(rows.collect())
+        } else {
+            Ok(rows.rev().collect())
         }
-        Ok(rows)
     }
 
     /// Updates the model with the given name.
