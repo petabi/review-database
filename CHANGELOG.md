@@ -13,6 +13,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   indicates the specific version associated with each model. Existing model entry
   will have default version 0.
 
+### Changed
+
+- Return deleted model id for `delete_model`.
+- Add `batch_info` for `Model` and `ModelDigest`.
+
 ## [0.17.1] - 2023-08-22
 
 ### Fixed
