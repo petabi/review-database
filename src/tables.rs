@@ -1,7 +1,8 @@
 mod accounts;
 mod batch_info;
+mod scores;
 
-use crate::{batch_info::BatchInfo, types::Account};
+use crate::{batch_info::BatchInfo, scores::Scores, types::Account};
 
 use super::{event, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
@@ -24,6 +25,7 @@ pub(super) const NETWORKS: &str = "networks";
 pub(super) const NODES: &str = "nodes";
 pub(super) const OUTLIERS: &str = "outliers";
 pub(super) const SAMPLING_POLICY: &str = "sampling policy";
+pub(super) const SCORES: &str = "scores";
 pub(super) const TEMPLATES: &str = "templates";
 pub(super) const TIDB: &str = "TI database";
 pub(super) const TOR_EXIT_NODES: &str = "Tor exit nodes";
@@ -33,7 +35,7 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 23] = [
+const MAP_NAMES: [&str; 24] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -49,6 +51,7 @@ const MAP_NAMES: [&str; 23] = [
     NODES,
     OUTLIERS,
     SAMPLING_POLICY,
+    SCORES,
     TEMPLATES,
     TIDB,
     TOR_EXIT_NODES,
@@ -108,6 +111,12 @@ impl StateDb {
     pub(crate) fn batch_info(&self) -> Table<BatchInfo> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<BatchInfo>::open(inner).expect("accounts table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn scores(&self) -> Table<Scores> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<Scores>::open(inner).expect("accounts table must be present")
     }
 
     #[must_use]
@@ -305,6 +314,20 @@ impl<'i, R> TableIter<'i, R> {
             _phantom: std::marker::PhantomData,
         }
     }
+}
+
+pub trait Key {
+    type Output<'a>
+    where
+        Self: 'a;
+    fn key(&self) -> Self::Output<'_>;
+}
+
+pub trait Value {
+    type Output<'a>
+    where
+        Self: 'a;
+    fn value(&self) -> Self::Output<'_>;
 }
 
 fn serialize<I: Serialize>(input: &I) -> anyhow::Result<Vec<u8>> {

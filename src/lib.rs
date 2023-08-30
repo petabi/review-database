@@ -17,6 +17,7 @@ mod model;
 mod outlier;
 mod qualifier;
 mod schema;
+mod scores;
 mod status;
 mod tables;
 mod ti;
@@ -163,7 +164,7 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn batch_info_map(&self) -> Table<types::BatchInfo> {
+    pub fn batch_info_map(&self) -> Table<batch_info::BatchInfo> {
         self.states.batch_info()
     }
 
@@ -249,6 +250,12 @@ impl Store {
         self.states
             .indexed_map(tables::SAMPLING_POLICY)
             .expect("always available")
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn scores_map(&self) -> Table<scores::Scores> {
+        self.states.scores()
     }
 
     #[must_use]

@@ -3,9 +3,11 @@
 use anyhow::Result;
 use rocksdb::{IteratorMode, OptimisticTransactionDB};
 
-use crate::{types::BatchInfo, Map, Table};
+use crate::{batch_info::BatchInfo, Map, Table};
 
-impl<'d> Table<'d, BatchInfo> {
+use super::{Key, Value};
+
+impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// Opens the batch info table in the database.
     ///
     /// Returns `None` if the table does not exist.
@@ -13,27 +15,49 @@ impl<'d> Table<'d, BatchInfo> {
         Map::open(db, super::BATCH_INFO).map(Table::new)
     }
 
-    /// Adds a `batch_info` entry into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization of the batch info fails, the batch info entry with the
-    /// same model and id exists, or the database operation fails.
-    pub fn insert(&self, batch_info: &BatchInfo) -> Result<()> {
-        let key = super::serialize(&batch_info.key())?;
-        let value = super::serialize(&batch_info.value())?;
-        self.map.insert(&key, &value)
-    }
-
-    /// Stores a a `batch_info` entry into the database.
+    /// Stores `batch_info` into the database.
     ///
     /// # Errors
     ///
     /// Returns an error if the serialization of the `batch_info` fails or the database operation fails.
-    pub fn put(&self, batch_info: &BatchInfo) -> Result<()> {
-        let key = super::serialize(&batch_info.key())?;
-        let value = super::serialize(&batch_info.value())?;
+    pub fn put(&self, input: &BatchInfo) -> Result<()> {
+        let key = super::serialize(&input.key())?;
+        let value = super::serialize(&input.value())?;
         self.map.put(&key, &value)
+    }
+
+    /// Adds `batch_info` into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the serialization of the `batch_info` fails, the `batch_info` with the same
+    /// key exists, or the database operation fails.
+    pub fn insert(&self, input: &BatchInfo) -> Result<()> {
+        let key = super::serialize(&input.key())?;
+        let value = super::serialize(&input.value())?;
+        self.map.insert(&key, &value)
+    }
+
+    /// Returns all `batch_info` with the given model id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account does not exist or the database operation fails.
+    pub fn get_all_for(&self, model: i32) -> Result<Vec<BatchInfo>> {
+        let prefix = super::serialize(&model)?;
+        let mut batch_info = vec![];
+        for (k, v) in self.map.inner_prefix_iterator(IteratorMode::Start, &prefix) {
+            let (_, id): (i32, i64) = super::deserialize(&k)?;
+            let (earliest, latest, sources) = super::deserialize(&v)?;
+            let inner = crate::types::ModelBatchInfo {
+                id,
+                earliest,
+                latest,
+                sources,
+            };
+            batch_info.push(BatchInfo::new(model, inner));
+        }
+        Ok(batch_info)
     }
 
     /// Deletes all `batch_info`s with the given model id.
@@ -53,8 +77,71 @@ impl<'d> Table<'d, BatchInfo> {
                     ))
                 }
             }
-            deleted += 1;
         }
         Ok(deleted)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::{batch_info::BatchInfo, types::ModelBatchInfo, Store};
+
+    #[test]
+    fn put_delete() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.batch_info_map();
+
+        assert_eq!(table.get_all_for(1).unwrap().len(), 0);
+        assert_eq!(table.get_all_for(2).unwrap().len(), 0);
+
+        let entry1 = BatchInfo::new(
+            1,
+            ModelBatchInfo {
+                id: 321,
+                earliest: 1,
+                latest: 2,
+                sources: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+            },
+        );
+        let entry2 = BatchInfo::new(
+            1,
+            ModelBatchInfo {
+                id: 121,
+                earliest: 1,
+                latest: 2,
+                sources: vec!["a".to_string(), "b".to_string()],
+            },
+        );
+        let entry3 = BatchInfo::new(
+            2,
+            ModelBatchInfo {
+                id: 123,
+                earliest: 1,
+                latest: 2,
+                sources: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+            },
+        );
+
+        let entries = vec![&entry1, &entry2, &entry3];
+
+        for entry in &entries {
+            assert!(table.put(entry).is_ok());
+        }
+
+        let res = table.get_all_for(1).unwrap();
+        assert_eq!(res.len(), 2);
+        for (r, e) in res.into_iter().zip(vec![&entry2, &entry1].into_iter()) {
+            assert_eq!(&r, e);
+        }
+
+        assert_eq!(2, table.delete_all_for(1).unwrap());
+        assert_eq!(1, table.delete_all_for(2).unwrap());
+
+        assert_eq!(table.get_all_for(1).unwrap().len(), 0);
+        assert_eq!(table.get_all_for(2).unwrap().len(), 0);
     }
 }

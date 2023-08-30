@@ -1,5 +1,3 @@
-use crate::batch_info::BatchInfo;
-
 use super::{Database, Error, Type};
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +12,7 @@ pub struct Digest {
     pub version: i32,
     pub data_source_id: i32,
     pub classification_id: Option<i64>,
-    pub batch_info: Vec<BatchInfo>,
+    pub batch_info: Vec<crate::types::ModelBatchInfo>,
 }
 
 #[derive(Deserialize, Queryable)]
@@ -49,12 +47,69 @@ pub struct Model {
     pub max_event_id_num: i32,
     pub data_source_id: i32,
     pub classification_id: i64,
-    pub batch_info: Vec<BatchInfo>,
+    pub batch_info: Vec<crate::types::ModelBatchInfo>,
+    pub scores: crate::types::ModelScores,
+}
+
+impl Model {
+    #[must_use]
+    pub fn into_storage(
+        self,
+    ) -> (
+        SqlModel,
+        Vec<crate::batch_info::BatchInfo>,
+        crate::scores::Scores,
+    ) {
+        let sql = SqlModel {
+            id: self.id,
+            name: self.name,
+            version: self.version,
+            kind: self.kind,
+            serialized_classifier: self.serialized_classifier,
+            max_event_id_num: self.max_event_id_num,
+            data_source_id: self.data_source_id,
+            classification_id: self.classification_id,
+        };
+        let batch_info = self
+            .batch_info
+            .into_iter()
+            .map(|b| crate::batch_info::BatchInfo::new(self.id, b))
+            .collect();
+        let scores = crate::scores::Scores::new(self.id, self.scores);
+        (sql, batch_info, scores)
+    }
+
+    pub fn from_storage(
+        (model, batch_info, scores): (
+            SqlModel,
+            Vec<crate::batch_info::BatchInfo>,
+            crate::scores::Scores,
+        ),
+    ) -> Self {
+        let batch_info = batch_info
+            .into_iter()
+            .map(crate::batch_info::BatchInfo::into_inner)
+            .collect();
+        let scores = scores.into_inner();
+        Self {
+            id: model.id,
+            name: model.name,
+            version: model.version,
+            kind: model.kind,
+            serialized_classifier: model.serialized_classifier,
+            max_event_id_num: model.max_event_id_num,
+            data_source_id: model.data_source_id,
+            classification_id: model.classification_id,
+            batch_info,
+            scores,
+        }
+    }
 }
 
 #[derive(Deserialize, Queryable)]
-struct SqlModel {
-    id: i32,
+#[allow(clippy::module_name_repetitions)]
+pub struct SqlModel {
+    pub id: i32,
     name: String,
     version: i32,
     kind: String,
@@ -64,21 +119,22 @@ struct SqlModel {
     classification_id: i64,
 }
 
-impl From<SqlModel> for Model {
-    fn from(input: SqlModel) -> Self {
-        Self {
-            id: input.id,
-            name: input.name,
-            version: input.version,
-            kind: input.kind,
-            serialized_classifier: input.serialized_classifier,
-            max_event_id_num: input.max_event_id_num,
-            data_source_id: input.data_source_id,
-            classification_id: input.classification_id,
-            batch_info: Vec::new(),
-        }
-    }
-}
+// impl From<SqlModel> for Model {
+//     fn from(input: SqlModel) -> Self {
+//         Self {
+//             id: input.id,
+//             name: input.name,
+//             version: input.version,
+//             kind: input.kind,
+//             serialized_classifier: input.serialized_classifier,
+//             max_event_id_num: input.max_event_id_num,
+//             data_source_id: input.data_source_id,
+//             classification_id: input.classification_id,
+//             batch_info: Vec::new(),
+//             scores: crate::types::ModelScores::default(),
+//         }
+//     }
+// }
 
 impl Database {
     const CSV_COLUMN_TYPES: &[&'static str] = &[
@@ -97,7 +153,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model already exists or if a database operation fails.
-    pub async fn add_model(&self, model: &Model) -> Result<i32, Error> {
+    pub async fn add_model(&self, model: &SqlModel) -> Result<i32, Error> {
         let conn = self.pool.get().await?;
         let n = conn
             .insert_into(
@@ -308,27 +364,24 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn load_model_by_name(&self, name: &str) -> Result<Model, Error> {
+    pub async fn load_model_by_name(&self, name: &str) -> Result<SqlModel, Error> {
         let conn = self.pool.get().await?;
-        let model = conn
-            .select_one_from::<SqlModel>(
-                "model",
-                &[
-                    "id",
-                    "name",
-                    "version",
-                    "kind",
-                    "classifier",
-                    "max_event_id_num",
-                    "data_source_id",
-                    "classification_id",
-                ],
-                &[("name", super::Type::TEXT)],
-                &[&name],
-            )
-            .await?;
-
-        Ok(model.into())
+        conn.select_one_from::<SqlModel>(
+            "model",
+            &[
+                "id",
+                "name",
+                "version",
+                "kind",
+                "classifier",
+                "max_event_id_num",
+                "data_source_id",
+                "classification_id",
+            ],
+            &[("name", super::Type::TEXT)],
+            &[&name],
+        )
+        .await
     }
 
     /// Returns the models between `after` and `before`.
@@ -401,7 +454,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn update_model<'a>(&self, model: &Model) -> Result<i32, Error> {
+    pub async fn update_model<'a>(&self, model: &SqlModel) -> Result<i32, Error> {
         let conn = self.pool.get().await?;
 
         conn.update(
