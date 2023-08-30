@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 use std::{net::IpAddr, num::NonZeroU32};
 use strum_macros::{Display, EnumString};
 
+use crate::tables::{Key, Value};
+
 /// Possible role types of `Account`.
 #[derive(Clone, Copy, Debug, Display, Eq, PartialEq, Deserialize, Serialize, EnumString)]
 pub enum Role {
@@ -102,6 +104,22 @@ impl Account {
     #[must_use]
     pub fn last_signin_time(&self) -> Option<DateTime<Utc>> {
         self.last_signin_time
+    }
+}
+
+impl Key for Account {
+    type Output<'a> = &'a [u8];
+
+    fn key(&self) -> Self::Output<'_> {
+        self.username.as_bytes()
+    }
+}
+
+impl Value for Account {
+    type Output<'a> = &'a Self;
+
+    fn value(&self) -> Self::Output<'_> {
+        self
     }
 }
 

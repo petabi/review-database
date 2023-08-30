@@ -1,6 +1,5 @@
 use super::{Indexable, IterableMap, NetworkType, Store, TrafficDirection};
 pub use crate::account::{Account, Role};
-pub use crate::batch_info::BatchInfo;
 use anyhow::{bail, Context, Result};
 use bincode::Options;
 use chrono::{
@@ -397,6 +396,17 @@ pub struct Outlier {
     pub event_sources: Vec<Source>,
     pub size: i64,
     pub model_id: i32,
+}
+
+pub type SeqNo = usize;
+pub type ModelScores = std::collections::HashMap<SeqNo, f64>;
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct ModelBatchInfo {
+    pub id: i64,
+    pub earliest: i64,
+    pub latest: i64,
+    pub sources: Vec<String>,
 }
 
 #[derive(Deserialize)]

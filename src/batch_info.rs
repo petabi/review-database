@@ -1,20 +1,44 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug)]
+use crate::tables::{Key, Value};
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct BatchInfo {
     model: i32,
-    id: i64,
-    earliest: i64,
-    latest: i64,
-    sources: Vec<String>,
+    inner: crate::types::ModelBatchInfo,
 }
 
 impl BatchInfo {
-    pub(crate) fn key(&self) -> (i32, i64) {
-        (self.model, self.id)
+    pub fn new(model: i32, inner: crate::types::ModelBatchInfo) -> Self {
+        Self { model, inner }
     }
 
-    pub(crate) fn value(&self) -> (i64, i64, &[String]) {
-        (self.earliest, self.latest, &self.sources)
+    pub fn into_inner(self) -> crate::types::ModelBatchInfo {
+        self.inner
+    }
+}
+
+impl From<crate::types::ModelBatchInfo> for BatchInfo {
+    fn from(inner: crate::types::ModelBatchInfo) -> Self {
+        Self {
+            model: i32::default(),
+            inner,
+        }
+    }
+}
+
+impl Key for BatchInfo {
+    type Output<'a> = (i32, i64);
+
+    fn key(&self) -> Self::Output<'_> {
+        (self.model, self.inner.id)
+    }
+}
+
+impl Value for BatchInfo {
+    type Output<'a> = (i64, i64, &'a [String]);
+
+    fn value(&self) -> Self::Output<'_> {
+        (self.inner.earliest, self.inner.latest, &self.inner.sources)
     }
 }
