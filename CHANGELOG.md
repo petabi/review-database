@@ -12,11 +12,26 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced a new column `version` within the model table of the database. It
   indicates the specific version associated with each model. Existing model entry
   will have default version 0.
+- Introduced new database tables `BATCH_INFO` and `SCORES` to facilitate the
+  recording of batch information and scores.
+- Introduced the `ModelSql` struct, aimed at encapsulating all information related
+  to models stored in the PostgreSQL database.
+- Introduced the `ModelDigest` struct, designed to encapsulate all the information
+  necessary for the web user interface.
 
 ### Changed
 
+- Updated the `Model` struct, encompassing all the information pertinent to a model.
 - Return deleted model id for `delete_model`.
-- Add `batch_info` for `Model` and `ModelDigest`.
+- Enhanced and Modified `add_model`, `update_model` for improved usability and
+  clarity. The functions now accept a single parameter of type `SqlModel`
+  encapsulating various attributes that are required for adding or updating a model.
+- Updated `load_model_by_name` to return a `SqlModel` struct, encapsulating
+  various attributes that are required by user.
+
+### Removed
+
+- Removed obsoleted PostgresQL function `attempt_outlier_upsert`
 
 ## [0.17.1] - 2023-08-22
 
