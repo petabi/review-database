@@ -36,9 +36,9 @@ impl Key for BatchInfo {
 }
 
 impl Value for BatchInfo {
-    type Output<'a> = (i64, i64, &'a [String]);
+    type Output<'a> = &'a crate::types::ModelBatchInfo;
 
     fn value(&self) -> Self::Output<'_> {
-        (self.inner.earliest, self.inner.latest, &self.inner.sources)
+        &self.inner
     }
 }

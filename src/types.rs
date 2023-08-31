@@ -406,6 +406,7 @@ pub struct ModelBatchInfo {
     pub id: i64,
     pub earliest: i64,
     pub latest: i64,
+    pub size: usize,
     pub sources: Vec<String>,
 }
 

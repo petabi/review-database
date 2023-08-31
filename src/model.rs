@@ -1,10 +1,6 @@
 use super::{Database, Error, Type};
 use serde::{Deserialize, Serialize};
 
-// const DEFAULT_MAX_EVENT_ID_NUM_I32: i32 = 25;
-// const DEFAULT_MAX_EVENT_ID_NUM_U32: u32 = 25;
-// const LIMIT_MAX_EVENT_ID_NUM: i32 = 100;
-
 #[derive(Deserialize, Queryable)]
 pub struct Digest {
     pub id: i32,
@@ -12,29 +8,6 @@ pub struct Digest {
     pub version: i32,
     pub data_source_id: i32,
     pub classification_id: Option<i64>,
-    pub batch_info: Vec<crate::types::ModelBatchInfo>,
-}
-
-#[derive(Deserialize, Queryable)]
-struct SqlDigest {
-    id: i32,
-    name: String,
-    version: i32,
-    data_source_id: i32,
-    classification_id: Option<i64>,
-}
-
-impl From<SqlDigest> for Digest {
-    fn from(input: SqlDigest) -> Self {
-        Self {
-            id: input.id,
-            name: input.name,
-            version: input.version,
-            data_source_id: input.data_source_id,
-            classification_id: input.classification_id,
-            batch_info: Vec::new(),
-        }
-    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Queryable)]
@@ -118,23 +91,6 @@ pub struct SqlModel {
     data_source_id: i32,
     classification_id: i64,
 }
-
-// impl From<SqlModel> for Model {
-//     fn from(input: SqlModel) -> Self {
-//         Self {
-//             id: input.id,
-//             name: input.name,
-//             version: input.version,
-//             kind: input.kind,
-//             serialized_classifier: input.serialized_classifier,
-//             max_event_id_num: input.max_event_id_num,
-//             data_source_id: input.data_source_id,
-//             classification_id: input.classification_id,
-//             batch_info: Vec::new(),
-//             scores: crate::types::ModelScores::default(),
-//         }
-//     }
-// }
 
 impl Database {
     const CSV_COLUMN_TYPES: &[&'static str] = &[
@@ -437,15 +393,11 @@ impl Database {
         }
 
         let mut conn = self.pool.get_diesel_conn().await?;
-        let rows = query
-            .get_results::<SqlDigest>(&mut conn)
-            .await?
-            .into_iter()
-            .map(std::convert::Into::into);
+        let rows = query.get_results::<Digest>(&mut conn).await?;
         if is_first {
-            Ok(rows.collect())
+            Ok(rows)
         } else {
-            Ok(rows.rev().collect())
+            Ok(rows.into_iter().rev().collect())
         }
     }
 

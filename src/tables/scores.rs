@@ -91,8 +91,10 @@ mod tests {
             assert!(table.put(entry).is_ok());
         }
 
+        assert!(table.put(&entries[1].1).is_ok());
+        assert!(table.insert(&entries[1].1).is_err());
+
         for (id, entry) in &entries {
-            dbg!(id);
             assert_eq!(table.get(*id).unwrap().as_ref(), Some(entry));
         }
 
