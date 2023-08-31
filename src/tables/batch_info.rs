@@ -46,15 +46,9 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     pub fn get_all_for(&self, model: i32) -> Result<Vec<BatchInfo>> {
         let prefix = super::serialize(&model)?;
         let mut batch_info = vec![];
-        for (k, v) in self.map.inner_prefix_iterator(IteratorMode::Start, &prefix) {
-            let (_, id): (i32, i64) = super::deserialize(&k)?;
-            let (earliest, latest, sources) = super::deserialize(&v)?;
-            let inner = crate::types::ModelBatchInfo {
-                id,
-                earliest,
-                latest,
-                sources,
-            };
+        for (_k, v) in self.map.inner_prefix_iterator(IteratorMode::Start, &prefix) {
+            let inner = super::deserialize(&v)?;
+
             batch_info.push(BatchInfo::new(model, inner));
         }
         Ok(batch_info)
@@ -104,6 +98,7 @@ mod tests {
                 id: 321,
                 earliest: 1,
                 latest: 2,
+                size: 1,
                 sources: vec!["a".to_string(), "b".to_string(), "c".to_string()],
             },
         );
@@ -113,6 +108,7 @@ mod tests {
                 id: 121,
                 earliest: 1,
                 latest: 2,
+                size: 1,
                 sources: vec!["a".to_string(), "b".to_string()],
             },
         );
@@ -122,6 +118,7 @@ mod tests {
                 id: 123,
                 earliest: 1,
                 latest: 2,
+                size: 1,
                 sources: vec!["a".to_string(), "b".to_string(), "c".to_string()],
             },
         );
@@ -131,6 +128,9 @@ mod tests {
         for entry in &entries {
             assert!(table.put(entry).is_ok());
         }
+
+        assert!(table.put(&entry2).is_ok());
+        assert!(table.insert(&entry2).is_err());
 
         let res = table.get_all_for(1).unwrap();
         assert_eq!(res.len(), 2);
