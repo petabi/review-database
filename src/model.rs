@@ -1,5 +1,8 @@
 use super::{Database, Error, Type};
-use serde::{Deserialize, Serialize};
+use anyhow::Result;
+use bincode::Options;
+use serde::{Deserialize, Serialize, Serializer};
+use strum_macros::{Display, EnumString};
 
 #[derive(Deserialize, Queryable)]
 pub struct Digest {
@@ -10,7 +13,7 @@ pub struct Digest {
     pub classification_id: Option<i64>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Queryable)]
+#[derive(Debug, Queryable)]
 pub struct Model {
     pub id: i32,
     pub name: String,
@@ -77,6 +80,170 @@ impl Model {
             scores,
         }
     }
+
+    fn header(&self) -> Result<MagicHeader> {
+        use std::str::FromStr;
+        Ok(MagicHeader {
+            tag: MagicHeader::MAGIC_STRING.to_vec(),
+            format: MagicHeader::FORMAT_VERSION,
+            kind: ClusteringMethod::from_str(&self.kind)?,
+            version: self.version,
+        })
+    }
+
+    /// # Errors
+    ///
+    /// Returns an error if format version doesn't match `MagicHeader::FORMAT_VERSION` or
+    /// if deserialization process failed.  
+    pub fn from_serialized(serialized: &[u8]) -> Result<Self> {
+        use anyhow::anyhow;
+
+        let header = MagicHeader::try_from(&serialized[..MagicHeader::MAGIC_SIZE])?;
+        if header.format != MagicHeader::FORMAT_VERSION {
+            return Err(anyhow!(
+                "Model format mismatch: {:?} (Expecting: {:?})",
+                header.format,
+                MagicHeader::FORMAT_VERSION
+            ));
+        }
+        let version = header.version;
+        let kind = header.kind.to_string();
+        let model: Body =
+            bincode::DefaultOptions::new().deserialize(&serialized[MagicHeader::MAGIC_SIZE..])?;
+        Ok(Self {
+            id: model.id,
+            name: model.name,
+            version,
+            kind,
+            serialized_classifier: model.serialized_classifier,
+            max_event_id_num: model.max_event_id_num,
+            data_source_id: model.data_source_id,
+            classification_id: model.classification_id,
+            batch_info: model.batch_info,
+            scores: model.scores,
+        })
+    }
+
+    /// # Errors
+    ///
+    /// Returns an error if serialization process failed.  
+    pub fn into_serialized(self) -> Result<Vec<u8>> {
+        let mut buf = <Vec<u8>>::from(self.header()?);
+        let model = Body {
+            id: self.id,
+            name: self.name,
+            serialized_classifier: self.serialized_classifier,
+            max_event_id_num: self.max_event_id_num,
+            data_source_id: self.data_source_id,
+            classification_id: self.classification_id,
+            batch_info: self.batch_info,
+            scores: self.scores,
+        };
+        buf.extend(bincode::DefaultOptions::new().serialize(&model)?);
+        Ok(buf)
+    }
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize, EnumString, Display)]
+enum ClusteringMethod {
+    Distribution = 0,
+    Multifield = 1, // This corresponds to ClusteringMethod::Multidimention in REconverge
+    Prefix = 2,
+    Timeseries = 3,
+}
+
+impl TryFrom<u32> for ClusteringMethod {
+    type Error = anyhow::Error;
+
+    fn try_from(input: u32) -> Result<Self> {
+        use anyhow::anyhow;
+
+        match input {
+            0 => Ok(Self::Distribution),
+            1 => Ok(Self::Multifield),
+            2 => Ok(Self::Prefix),
+            3 => Ok(Self::Timeseries),
+            _ => Err(anyhow!("Unexpected clustering method {input}")),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct MagicHeader {
+    tag: Vec<u8>,
+    format: u32,
+    kind: ClusteringMethod,
+    version: i32,
+}
+
+impl MagicHeader {
+    const FORMAT_VERSION: u32 = 1;
+    const MAGIC_STRING: &'static [u8] = b"RCM\0";
+    const MAGIC_SIZE: usize = 16;
+}
+
+impl Serialize for MagicHeader {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut buf = self.tag.clone();
+        buf.extend(self.format.to_le_bytes().iter());
+        buf.extend((self.kind as u32).to_le_bytes().iter());
+        buf.extend(self.version.to_le_bytes().iter());
+
+        serializer.serialize_bytes(&buf)
+    }
+}
+
+impl From<MagicHeader> for Vec<u8> {
+    fn from(val: MagicHeader) -> Self {
+        let mut buf = val.tag.clone();
+        buf.extend(val.format.to_le_bytes().iter());
+        buf.extend((val.kind as u32).to_le_bytes().iter());
+        buf.extend(val.version.to_le_bytes().iter());
+        buf
+    }
+}
+
+impl TryFrom<&[u8]> for MagicHeader {
+    type Error = anyhow::Error;
+
+    fn try_from(v: &[u8]) -> Result<Self, Self::Error> {
+        use anyhow::anyhow;
+
+        if v.len() < MagicHeader::MAGIC_SIZE {
+            return Err(anyhow!("length should be > {}", MagicHeader::MAGIC_SIZE));
+        }
+
+        let tag = (v[..4]).to_vec();
+        if tag.as_slice() != MagicHeader::MAGIC_STRING {
+            return Err(anyhow!("wrong magic string"));
+        }
+        let format = u32::from_le_bytes(v[4..8].try_into()?);
+        let kind = u32::from_le_bytes(v[8..12].try_into()?).try_into()?;
+        let version = i32::from_le_bytes(v[12..].try_into()?);
+
+        Ok(MagicHeader {
+            tag,
+            format,
+            kind,
+            version,
+        })
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+struct Body {
+    id: i32,
+    name: String,
+    serialized_classifier: Vec<u8>,
+    max_event_id_num: i32,
+    data_source_id: i32,
+    classification_id: i64,
+    batch_info: Vec<crate::types::ModelBatchInfo>,
+    scores: crate::types::ModelScores,
 }
 
 #[derive(Deserialize, Queryable)]
