@@ -18,6 +18,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   to models stored in the PostgreSQL database.
 - Introduced the `ModelDigest` struct, designed to encapsulate all the information
   necessary for the web user interface.
+- Requires a 16 bytes long header for serializing or deserializing `Model`, encoded
+  with version, kind, format version information for `Model`.
 
 ### Changed
 
