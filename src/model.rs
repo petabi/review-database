@@ -1,7 +1,7 @@
 use super::{Database, Error, Type};
 use anyhow::Result;
 use bincode::Options;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 #[derive(Deserialize, Queryable)]
@@ -181,20 +181,6 @@ impl MagicHeader {
     const FORMAT_VERSION: u32 = 1;
     const MAGIC_STRING: &'static [u8] = b"RCM\0";
     const MAGIC_SIZE: usize = 16;
-}
-
-impl Serialize for MagicHeader {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut buf = self.tag.clone();
-        buf.extend(self.format.to_le_bytes().iter());
-        buf.extend((self.kind as u32).to_le_bytes().iter());
-        buf.extend(self.version.to_le_bytes().iter());
-
-        serializer.serialize_bytes(&buf)
-    }
 }
 
 impl From<MagicHeader> for Vec<u8> {
@@ -603,5 +589,79 @@ impl Database {
             Error::InvalidInput(format!("failed to update model \"{}\": {e}", model.name))
         })?;
         Ok(model.id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    fn example() -> (super::Model, super::Body) {
+        (
+            super::Model {
+                id: 1,
+                name: "example".to_owned(),
+                version: 2,
+                kind: "Multifield".to_owned(),
+                serialized_classifier: b"test".to_vec(),
+                max_event_id_num: 123,
+                data_source_id: 1,
+                classification_id: 0,
+                batch_info: vec![],
+                scores: crate::types::ModelScores::default(),
+            },
+            super::Body {
+                id: 1,
+                name: "example".to_owned(),
+                serialized_classifier: b"test".to_vec(),
+                max_event_id_num: 123,
+                data_source_id: 1,
+                classification_id: 0,
+                batch_info: vec![],
+                scores: crate::types::ModelScores::default(),
+            },
+        )
+    }
+
+    #[test]
+    fn header() {
+        let (model, _) = example();
+        let header = model.header().unwrap();
+        assert_eq!(header.kind, super::ClusteringMethod::Multifield);
+        assert_eq!(header.version, 2);
+        assert_eq!(header.format, super::MagicHeader::FORMAT_VERSION);
+
+        let serialized: Vec<u8> = header.try_into().unwrap();
+        assert_eq!(&serialized[..4], super::MagicHeader::MAGIC_STRING);
+        assert_eq!(
+            &serialized[4..8],
+            super::MagicHeader::FORMAT_VERSION.to_le_bytes()
+        );
+        assert_eq!(
+            &serialized[8..12],
+            (super::ClusteringMethod::Multifield as u32).to_le_bytes()
+        );
+        assert_eq!(&serialized[12..], 2_u32.to_le_bytes());
+
+        let deserialized = super::MagicHeader::try_from(serialized.as_slice()).unwrap();
+        assert_eq!(deserialized, model.header().unwrap());
+    }
+
+    #[test]
+    fn serialized_model() {
+        use bincode::Options;
+
+        let (model, body) = example();
+        let header = model.header().unwrap();
+        let s_header: Vec<u8> = header.try_into().unwrap();
+        let s_body = bincode::DefaultOptions::new().serialize(&body).unwrap();
+
+        let serialized = model.into_serialized().unwrap();
+        assert_eq!(&serialized[..super::MagicHeader::MAGIC_SIZE], &s_header);
+        assert_eq!(&serialized[super::MagicHeader::MAGIC_SIZE..], &s_body);
+
+        let d_model = super::Model::from_serialized(&serialized).unwrap();
+        let (model, _body) = example();
+        assert_eq!(d_model.id, model.id);
+        assert_eq!(d_model.serialized_classifier, model.serialized_classifier);
     }
 }
