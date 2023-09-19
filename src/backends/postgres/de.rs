@@ -94,7 +94,7 @@ impl<'a, 'de> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             .or_else(|e| {
                 self.input
                     .try_get::<'_, _, NaiveDateTime>(self.index)
-                    .map(|t| t.timestamp_nanos())
+                    .map(|t| t.timestamp_nanos_opt().unwrap_or(i64::MAX))
                     .map_err(|_| e)
             })
             .map_err(|e| Error::Type(e.to_string()))?;

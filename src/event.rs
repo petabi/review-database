@@ -1181,7 +1181,7 @@ impl<'a> EventDb<'a> {
     /// Returns an error if a database operation fails.
     pub fn put(&self, event: &EventMessage) -> Result<i128> {
         use anyhow::anyhow;
-        let mut key = i128::from(event.time.timestamp_nanos()) << 64
+        let mut key = i128::from(event.time.timestamp_nanos_opt().unwrap_or(i64::MAX)) << 64
             | event
                 .kind
                 .to_i128()
@@ -1703,7 +1703,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            duration: Utc::now().timestamp_nanos(),
+            duration: Utc::now().timestamp_nanos_opt().unwrap(),
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),

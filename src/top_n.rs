@@ -158,10 +158,10 @@ impl Database {
             .select_in(
                 "column_description",
                 &["column_index", "type_id"],
-                &[("event_range_ids", Type::INT4)],
                 &[],
                 &[],
-                &[&event_range_id],
+                &[("event_range_ids", Type::INT4_ARRAY, None)],
+                &[&vec![event_range_id]],
             )
             .await?
             .into_iter()
