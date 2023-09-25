@@ -337,14 +337,8 @@ impl fmt::Display for BlockListDnsFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},3,{}",
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            BLOCK_LIST,
-            self.query,
+            "{},{},{},{},{},BlockListDns,3,{}",
+            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto, self.query,
         )
     }
 }
@@ -377,14 +371,13 @@ impl fmt::Display for BlockListDns {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},BlockListDns,{}",
             DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
             self.src_addr,
             self.src_port,
             self.dst_addr,
             self.dst_port,
             self.proto,
-            BLOCK_LIST,
             self.query,
         )
     }

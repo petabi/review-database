@@ -351,14 +351,8 @@ impl fmt::Display for BlockListConnFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},3,{}",
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            BLOCK_LIST,
-            self.duration,
+            "{},{},{},{},{},BlockListConn,3,{}",
+            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto, self.duration,
         )
     }
 }
@@ -385,14 +379,13 @@ impl fmt::Display for BlockListConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},BlockListConn,{}",
             DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
             self.src_addr,
             self.src_port,
             self.dst_addr,
             self.dst_port,
             self.proto,
-            BLOCK_LIST,
             self.duration,
         )
     }

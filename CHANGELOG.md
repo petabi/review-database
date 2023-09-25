@@ -7,6 +7,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added a 'BlockList' event with `dcerpc`, `dns`, `http`, `kerberos`, `ldap`,
+  `mqtt`, `nfs`, `ntlm`, `rdp`, `smb`, `smtp`, `ssh`, `tls` protocol.
+
 ### Fixed
 
 - Fixed PostgreSQL Error when query column statistics on Web UI.
