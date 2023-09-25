@@ -5,7 +5,7 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.19.0] - 2023-09-25
 
 ### Added
 
@@ -502,7 +502,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
-[Unreleased]: https://github.com/petabi/review-database/compare/0.18.0...main
+[0.19.0]: https://github.com/petabi/review-database/compare/0.18.0...0.19.0
 [0.18.0]: https://github.com/petabi/review-database/compare/0.17.1...0.18.0
 [0.17.1]: https://github.com/petabi/review-database/compare/0.17.0...0.17.1
 [0.17.0]: https://github.com/petabi/review-database/compare/0.16.0...0.17.0
