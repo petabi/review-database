@@ -80,9 +80,9 @@ impl Database {
             );
             *series
                 .entry(count_index)
-                .or_insert_with(HashMap::<String, HashMap<NaiveDateTime, i64>>::new)
+                .or_default()
                 .entry(v.cluster_id)
-                .or_insert_with(HashMap::<NaiveDateTime, i64>::new)
+                .or_default()
                 .entry(value)
                 .or_insert(0) += count;
         }

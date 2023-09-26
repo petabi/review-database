@@ -32,7 +32,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.16.0,<0.20.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.16.0,<=0.20.0-alpha.1";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -75,11 +75,18 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<(_, _, fn(_) -> Result<_, _>)> = vec![(
-        VersionReq::parse(">=0.12.0,<0.16.0")?,
-        Version::parse("0.16.0")?,
-        migrate_0_12_to_0_16,
-    )];
+    let migration: Vec<(_, _, fn(_) -> Result<_, _>)> = vec![
+        (
+            VersionReq::parse(">=0.12.0,<0.16.0")?,
+            Version::parse("0.16.0")?,
+            migrate_0_12_to_0_16,
+        ),
+        (
+            VersionReq::parse(">=0.16.0,<0.20.0")?,
+            Version::parse("0.20.0")?,
+            migrate_0_16_to_0_20,
+        ),
+    ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
     store.backup(false, 1)?;
@@ -286,6 +293,87 @@ fn migrate_0_12_to_0_16(store: &super::Store) -> Result<()> {
     Ok(())
 }
 
+// Update BlockListKerberos fields.
+fn migrate_0_16_to_0_20(store: &super::Store) -> Result<()> {
+    use crate::{event::BlockListKerberosFields, EventKind};
+    use chrono::Utc;
+    use num_traits::FromPrimitive;
+
+    #[derive(Deserialize, Serialize)]
+    struct OldBlockListKerberosFields {
+        pub source: String,
+        pub src_addr: IpAddr,
+        pub src_port: u16,
+        pub dst_addr: IpAddr,
+        pub dst_port: u16,
+        pub proto: u8,
+        pub last_time: i64,
+        pub request_type: String,
+        pub client: String,
+        pub service: String,
+        pub success: String,
+        pub error_msg: String,
+        pub from: i64,
+        pub till: i64,
+        pub cipher: String,
+        pub forwardable: String,
+        pub renewable: String,
+        pub client_cert_subject: String,
+        pub server_cert_subject: String,
+    }
+
+    impl From<OldBlockListKerberosFields> for BlockListKerberosFields {
+        fn from(input: OldBlockListKerberosFields) -> Self {
+            Self {
+                source: input.source,
+                src_addr: input.src_addr,
+                src_port: input.src_port,
+                dst_addr: input.dst_addr,
+                dst_port: input.dst_port,
+                proto: input.proto,
+                last_time: input.last_time,
+                client_time: Utc::now().timestamp_nanos_opt().unwrap_or_default(),
+                server_time: Utc::now().timestamp_nanos_opt().unwrap_or_default(),
+                error_code: 0,
+                client_realm: String::new(),
+                cname_type: 0,
+                client_name: Vec::new(),
+                realm: String::new(),
+                sname_type: 0,
+                service_name: Vec::new(),
+            }
+        }
+    }
+
+    let event_db = store.events();
+    for item in event_db.raw_iter_forward() {
+        let (k, v) = item.context("Failed to read events Database")?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(kind) = EventKind::from_i128(kind_num) else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        match kind {
+            EventKind::BlockListKerberos => {
+                let Ok(fields) = bincode::deserialize::<OldBlockListKerberosFields>(v.as_ref())
+                else {
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
+                };
+                let block_list_kerberos_event: BlockListKerberosFields = fields.into();
+                let new = bincode::serialize(&block_list_kerberos_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
+            }
+            _ => continue,
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::COMPATIBLE_VERSION_REQ;
@@ -460,5 +548,74 @@ mod tests {
 
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
         assert!(super::migrate_0_12_to_0_16(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_16_to_0_20() {
+        use crate::{EventKind, EventMessage};
+        use chrono::Utc;
+        use serde::{Deserialize, Serialize};
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        #[derive(Deserialize, Serialize)]
+        struct OldBlockListKerberosFields {
+            pub source: String,
+            pub src_addr: IpAddr,
+            pub src_port: u16,
+            pub dst_addr: IpAddr,
+            pub dst_port: u16,
+            pub proto: u8,
+            pub last_time: i64,
+            pub request_type: String,
+            pub client: String,
+            pub service: String,
+            pub success: String,
+            pub error_msg: String,
+            pub from: i64,
+            pub till: i64,
+            pub cipher: String,
+            pub forwardable: String,
+            pub renewable: String,
+            pub client_cert_subject: String,
+            pub server_cert_subject: String,
+        }
+
+        let time = Utc::now();
+        let value = OldBlockListKerberosFields {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.100".parse::<IpAddr>().unwrap(),
+            src_port: 40000,
+            dst_addr: "31.3.245.100".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 10,
+            last_time: time.timestamp_nanos_opt().unwrap_or_default(),
+            request_type: "req_type".to_string(),
+            client: "client".to_string(),
+            service: "service".to_string(),
+            success: "tf".to_string(),
+            error_msg: "err_msg".to_string(),
+            from: 3000,
+            till: 1000,
+            cipher: "cipher".to_string(),
+            forwardable: "forwardable".to_string(),
+            renewable: "renewable".to_string(),
+            client_cert_subject: "client_cert".to_string(),
+            server_cert_subject: "server_cert".to_string(),
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::BlockListKerberos,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_16_to_0_20(&settings.store).is_ok());
     }
 }

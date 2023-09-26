@@ -16,6 +16,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Use a Rust struct that matches the Postgres table schema when loading a model
   from the Postgres database.
 
+### Changed
+
+- Modified `Kerberos` event fields.
+
 ## [0.19.0] - 2023-09-25
 
 ### Added

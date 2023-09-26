@@ -292,7 +292,7 @@ pub trait Indexed {
             txn.delete_cf(self.cf(), &key)
                 .context("failed to remove entry")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to remove entry");
@@ -324,7 +324,7 @@ pub trait Indexed {
             )
             .context("failed to update database index")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to remove entry");
@@ -368,7 +368,7 @@ pub trait Indexed {
             txn.put_cf(self.cf(), entry.indexed_key(), entry.value())
                 .context("failed to write new entry")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to store new entry");
@@ -407,7 +407,7 @@ pub trait Indexed {
             txn.delete_cf(self.cf(), indexed_key)
                 .context("failed to remove entry")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to remove entry");
@@ -436,7 +436,7 @@ pub trait Indexed {
             txn.put_cf(self.cf(), entry.indexed_key(), entry.value())
                 .context("failed to write new entry")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to store new entry");
@@ -514,7 +514,7 @@ pub trait Indexed {
             )
             .context("failed to update database index")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to update entry");

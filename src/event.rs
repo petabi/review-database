@@ -1678,7 +1678,7 @@ impl<'a> EventDb<'a> {
             txn.put(key.to_be_bytes(), event.fields.as_slice())
                 .context("cannot write event")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to store event");
@@ -1715,7 +1715,7 @@ impl<'a> EventDb<'a> {
             }
 
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to update entry");

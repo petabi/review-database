@@ -228,9 +228,9 @@ fn total_of_top_n(
         if let (Some(column_index), value, count) = (v.column_index.to_usize(), v.value, v.count) {
             *top_n_of_clusters
                 .entry(v.cluster_id)
-                .or_insert_with(HashMap::<usize, HashMap<String, i64>>::new)
+                .or_default()
                 .entry(column_index)
-                .or_insert_with(HashMap::<String, i64>::new)
+                .or_default()
                 .entry(value)
                 .or_insert(0) += count;
         }
@@ -261,7 +261,7 @@ fn limited_top_n_of_clusters(
                 sum_sizes += size;
                 *top_n_total
                     .entry(column_index)
-                    .or_insert_with(HashMap::<String, i64>::new)
+                    .or_default()
                     .entry(ip)
                     .or_insert(0) += size;
                 if sum_sizes > size_including_ips {

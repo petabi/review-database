@@ -358,7 +358,7 @@ fn run_migrations(url: &str) -> Result<(), Error> {
 
     let mut conn = PgConnection::establish(url)?;
     conn.run_pending_migrations(MIGRATIONS)
-        .map_err(|e| Error::Migration(e))?;
+        .map_err(Error::Migration)?;
 
     Ok(())
 }
