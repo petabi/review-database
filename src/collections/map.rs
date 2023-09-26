@@ -64,7 +64,7 @@ impl<'a> Map<'a> {
             .context("failed to write new entry")?;
 
         match txn.commit() {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(e) => {
                 if e.as_ref().starts_with("Resource busy:") {
                     Err(anyhow!("already exists"))
@@ -95,7 +95,7 @@ impl<'a> Map<'a> {
             }
 
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to replace entries");
@@ -135,7 +135,7 @@ impl<'a> Map<'a> {
             }
 
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to update entry");

@@ -59,7 +59,7 @@ impl<'a> IndexedSet<'a> {
             )
             .context("failed to update database index")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to remove entry");
@@ -91,7 +91,7 @@ impl<'a> IndexedSet<'a> {
             )
             .context("failed to update database index")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to remove entry");
@@ -122,7 +122,7 @@ impl<'a> IndexedSet<'a> {
             )
             .context("failed to update database index")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to store new entry");
@@ -153,7 +153,7 @@ impl<'a> IndexedSet<'a> {
             )
             .context("failed to update database index")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to remove entry");
@@ -195,7 +195,7 @@ impl<'a> IndexedSet<'a> {
             )
             .context("failed to update database index")?;
             match txn.commit() {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
                         return Err(e).context("failed to update entry");

@@ -277,7 +277,7 @@ async fn get_top_n(
 
                 top_n_by_cluster
                     .entry(t.cluster_id.clone())
-                    .or_insert_with(Vec::<ElementCount>::new)
+                    .or_default()
                     .push(ElementCount {
                         value: Element::FloatRange(FloatRange { smallest, largest }).to_string(),
                         count: t.count,
@@ -476,7 +476,7 @@ impl Database {
             for cluster in selected_clusters {
                 sorted_clusters
                     .entry(cluster.cluster_id)
-                    .or_insert_with(Vec::<(i64, i64, i64)>::new)
+                    .or_default()
                     .push((cluster.first_event_id, cluster.last_event_id, cluster.count));
             }
             for top_n in sorted_clusters.values_mut() {
@@ -521,13 +521,12 @@ impl Database {
                 )
                 .await?;
                 for (cluster_id, top_n) in top_n {
-                    top_n_of_clusters
-                        .entry(cluster_id)
-                        .or_insert_with(Vec::<TopElementCountsByColumn>::new)
-                        .push(TopElementCountsByColumn {
+                    top_n_of_clusters.entry(cluster_id).or_default().push(
+                        TopElementCountsByColumn {
                             column_index: *column_1,
                             counts: top_n,
-                        });
+                        },
+                    );
                 }
             }
 
@@ -553,13 +552,12 @@ impl Database {
                 )
                 .await?;
                 for (cluster_id, top_n) in top_n {
-                    top_n_of_clusters
-                        .entry(cluster_id)
-                        .or_insert_with(Vec::<TopElementCountsByColumn>::new)
-                        .push(TopElementCountsByColumn {
+                    top_n_of_clusters.entry(cluster_id).or_default().push(
+                        TopElementCountsByColumn {
                             column_index: *column_n,
                             counts: top_n,
-                        });
+                        },
+                    );
                 }
             }
 

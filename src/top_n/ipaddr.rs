@@ -105,7 +105,7 @@ impl Database {
             {
                 *top_n
                     .entry(column_index)
-                    .or_insert_with(HashMap::<String, i64>::new)
+                    .or_default()
                     .entry(value)
                     .or_insert(0) += count;
             }

@@ -64,7 +64,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
         let prefix = super::serialize(&model)?;
         for (k, _v) in self.map.inner_prefix_iterator(IteratorMode::End, &prefix) {
             match self.map.delete(&k) {
-                Ok(_) => deleted += 1,
+                Ok(()) => deleted += 1,
                 Err(e) => {
                     return Err(anyhow::anyhow!(
                         "Deleted: {deleted}\nDeletion ended due to: {e}"

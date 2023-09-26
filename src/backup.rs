@@ -45,7 +45,7 @@ pub async fn schedule_periodic(
                 sleep.as_mut().reset(Instant::now() + duration);
                 let _res = create(&store, false, backups_to_keep);
             }
-            _ = stop.notified() => {
+            () = stop.notified() => {
                 info!("creating a database backup before shutdown");
                 let _res = create(&store, false, backups_to_keep);
                 stop.notify_one();
@@ -69,7 +69,7 @@ pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u3
         store.backup(flush, backups_to_keep)
     };
     match res {
-        Ok(_) => {
+        Ok(()) => {
             info!("backing up database completed");
             Ok(())
         }
@@ -123,7 +123,7 @@ pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Resu
     };
 
     match res {
-        Ok(_) => {
+        Ok(()) => {
             info!("database restored from backup {:?}", backup_id);
             Ok(())
         }
@@ -151,7 +151,7 @@ pub async fn recover(store: &Arc<RwLock<Store>>) -> Result<()> {
     };
 
     match res {
-        Ok(_) => {
+        Ok(()) => {
             info!("database recovered from backup");
             Ok(())
         }

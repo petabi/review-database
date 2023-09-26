@@ -105,7 +105,7 @@ impl Database {
 
         let mut columns: HashMap<i32, Vec<i32>> = HashMap::new();
         for c in &column_info {
-            columns.entry(c.type_id).or_insert_with(Vec::new).push(c.id);
+            columns.entry(c.type_id).or_default().push(c.id);
         }
 
         let mut results = join_all(columns.iter().map(|(type_id, description_ids)| async move {

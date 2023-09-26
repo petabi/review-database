@@ -251,7 +251,7 @@ impl StateDb {
         let restore_opts = rocksdb::backup::RestoreOptions::default();
         for backup_id in available.into_iter().rev().map(|b| b.backup_id) {
             match engine.restore_from_backup(path, path, &restore_opts, backup_id) {
-                Ok(_) => match Self::open_db(path) {
+                Ok(()) => match Self::open_db(path) {
                     Ok(db) => {
                         tracing::info!("restored from backup (id: {backup_id})");
                         return Ok(db);
