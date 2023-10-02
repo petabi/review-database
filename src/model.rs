@@ -41,10 +41,10 @@ impl Model {
             name: self.name,
             version: self.version,
             kind: self.kind,
-            serialized_classifier: self.serialized_classifier,
+            classifier: self.serialized_classifier,
             max_event_id_num: self.max_event_id_num,
             data_source_id: self.data_source_id,
-            classification_id: self.classification_id,
+            classification_id: Some(self.classification_id),
         };
         let batch_info = self
             .batch_info
@@ -72,10 +72,10 @@ impl Model {
             name: model.name,
             version: model.version,
             kind: model.kind,
-            serialized_classifier: model.serialized_classifier,
+            serialized_classifier: model.classifier,
             max_event_id_num: model.max_event_id_num,
             data_source_id: model.data_source_id,
-            classification_id: model.classification_id,
+            classification_id: model.classification_id.unwrap_or_default(),
             batch_info,
             scores,
         }
@@ -239,10 +239,10 @@ pub struct SqlModel {
     name: String,
     version: i32,
     kind: String,
-    serialized_classifier: Vec<u8>,
+    classifier: Vec<u8>,
     max_event_id_num: i32,
     data_source_id: i32,
-    classification_id: i64,
+    classification_id: Option<i64>,
 }
 
 impl Database {
@@ -280,7 +280,7 @@ impl Database {
                     &model.name,
                     &model.version,
                     &model.kind,
-                    &model.serialized_classifier,
+                    &model.classifier,
                     &model.max_event_id_num,
                     &model.data_source_id,
                     &model.classification_id,
@@ -474,23 +474,25 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn load_model_by_name(&self, name: &str) -> Result<SqlModel, Error> {
-        let conn = self.pool.get().await?;
-        conn.select_one_from::<SqlModel>(
-            "model",
-            &[
-                "id",
-                "name",
-                "version",
-                "kind",
-                "classifier",
-                "max_event_id_num",
-                "data_source_id",
-                "classification_id",
-            ],
-            &[("name", super::Type::TEXT)],
-            &[&name],
-        )
-        .await
+        use super::schema::model::dsl;
+        use diesel::{ExpressionMethods, QueryDsl};
+        use diesel_async::RunQueryDsl;
+
+        let query = dsl::model
+            .select((
+                dsl::id,
+                dsl::name,
+                dsl::version,
+                dsl::kind,
+                dsl::classifier,
+                dsl::max_event_id_num,
+                dsl::data_source_id,
+                dsl::classification_id,
+            ))
+            .filter(dsl::name.eq(name));
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        Ok(query.get_result::<SqlModel>(&mut conn).await?)
     }
 
     /// Returns the models between `after` and `before`.
@@ -578,7 +580,7 @@ impl Database {
                 &model.name,
                 &model.version,
                 &model.kind,
-                &model.serialized_classifier,
+                &model.classifier,
                 &model.max_event_id_num,
                 &model.data_source_id,
                 &model.classification_id,
