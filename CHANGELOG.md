@@ -7,6 +7,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added public accessors for the `model` field in the `BatchInfo` and `Scores` structs.
+
 ### Fixed
 
 - Use a Rust struct that matches the Postgres table schema when loading a model
