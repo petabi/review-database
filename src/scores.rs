@@ -4,7 +4,7 @@ use crate::tables::{Key, Value};
 
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct Scores {
-    model: i32,
+    pub model: i32,
     inner: crate::types::ModelScores,
 }
 
