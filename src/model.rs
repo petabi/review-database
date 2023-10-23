@@ -55,18 +55,8 @@ impl Model {
         (sql, batch_info, scores)
     }
 
-    pub fn from_storage(
-        (model, batch_info, scores): (
-            SqlModel,
-            Vec<crate::batch_info::BatchInfo>,
-            crate::scores::Scores,
-        ),
-    ) -> Self {
-        let batch_info = batch_info
-            .into_iter()
-            .map(crate::batch_info::BatchInfo::into_inner)
-            .collect();
-        let scores = scores.into_inner();
+    #[must_use]
+    pub fn from_storage(model: SqlModel) -> Self {
         Self {
             id: model.id,
             name: model.name,
@@ -76,8 +66,8 @@ impl Model {
             max_event_id_num: model.max_event_id_num,
             data_source_id: model.data_source_id,
             classification_id: model.classification_id.unwrap_or_default(),
-            batch_info,
-            scores,
+            batch_info: vec![],
+            scores: crate::types::ModelScores::new(),
         }
     }
 
