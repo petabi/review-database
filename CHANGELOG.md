@@ -5,6 +5,17 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Removed `batch_info` and `scores` arguments from `Model::from_storage` function.
+  These arguments were previously used for custom initialization of the
+  `batch_info` and `scores` fields within the model. This change means that when
+  you create a model using `Model::from_storage`, the  `batch_info` and `scores`
+  fields will now be initialized with their default values. If you previously
+  relied on custom values for these fields, you will need to update your code accordingly.
+
 ## [0.20.0] - 2023-10-06
 
 ### Added
@@ -517,6 +528,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.20.0...main
 [0.20.0]: https://github.com/petabi/review-database/compare/0.19.0...0.20.0
 [0.19.0]: https://github.com/petabi/review-database/compare/0.18.0...0.19.0
 [0.18.0]: https://github.com/petabi/review-database/compare/0.17.1...0.18.0
