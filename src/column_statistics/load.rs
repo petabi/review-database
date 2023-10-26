@@ -7,14 +7,11 @@ mod ipaddr;
 mod text;
 
 use crate::{
-    schema::{self, column_description::dsl as cd_d, event_range::dsl as e_d},
+    schema::{self, column_description::dsl as cd_d},
     Database, Error,
 };
 use chrono::NaiveDateTime;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, PgArrayExpressionMethods,
-    QueryDsl,
-};
+use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use futures::future::join_all;
 use serde::Serialize;
@@ -59,47 +56,18 @@ impl Database {
     pub async fn get_column_statistics(
         &self,
         cluster: i32,
-        time: Option<NaiveDateTime>,
-        event_ranges: Option<Vec<crate::EventRange>>,
+        time: Vec<NaiveDateTime>,
     ) -> Result<Vec<Statistics>, Error> {
         let mut conn = self.pool.get_diesel_conn().await?;
 
-        let query = cd_d::column_description
+        let mut query = cd_d::column_description
             .select((cd_d::id, cd_d::type_id))
-            .order_by(cd_d::column_index.asc());
-        let query = match (time, event_ranges) {
-            (Some(time), _) => {
-                let ids: Vec<Option<i32>> = e_d::event_range
-                    .select(e_d::id.nullable())
-                    .filter(e_d::cluster_id.eq(cluster).and(e_d::time.eq(time)))
-                    .get_results(&mut conn)
-                    .await?;
-                query
-                    .filter(cd_d::event_range_ids.contains(ids))
-                    .into_boxed()
-            }
-            (_, Some(event_ranges)) => {
-                let mut eids = e_d::event_range
-                    .select(e_d::id.nullable())
-                    .filter(e_d::cluster_id.eq(cluster))
-                    .into_boxed();
-                eids = event_ranges.into_iter().fold(eids, |eids, e| {
-                    eids.or_filter(
-                        e_d::first_event_id
-                            .eq(e.first_event_id)
-                            .and(e_d::last_event_id.eq(e.last_event_id))
-                            .and(e_d::event_source.eq(e.event_source)),
-                    )
-                });
-                let eids: Vec<Option<i32>> = eids.get_results(&mut conn).await?;
-                query
-                    .filter(cd_d::event_range_ids.contains(eids))
-                    .into_boxed()
-            }
-            _ => {
-                return Ok(vec![]);
-            }
-        };
+            .filter(cd_d::cluster_id.eq(cluster))
+            .order_by(cd_d::column_index.asc())
+            .into_boxed();
+        query = time
+            .iter()
+            .fold(query, |query, ts| query.or_filter(cd_d::batch_ts.eq(ts)));
 
         let column_info = query.load::<ColumnDescriptionLoad>(&mut conn).await?;
 

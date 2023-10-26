@@ -2,17 +2,16 @@ use super::{ElementCount, StructuredColumnType, TopElementCountsByColumn};
 use crate::{
     self as database,
     schema::{
-        cluster, column_description, csv_column_extra, event_range, model, top_n_binary,
-        top_n_datetime, top_n_enum, top_n_float, top_n_int, top_n_ipaddr, top_n_text,
+        cluster, column_description, csv_column_extra, model, top_n_binary, top_n_datetime,
+        top_n_enum, top_n_float, top_n_int, top_n_ipaddr, top_n_text,
     },
     Database, Error,
 };
 use chrono::NaiveDateTime;
 use diesel::{
     sql_query,
-    sql_types::{BigInt, Integer, Text},
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    PgArrayExpressionMethods, QueryDsl,
+    sql_types::{BigInt, Integer, Text, Timestamp},
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
 };
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
@@ -28,10 +27,8 @@ pub struct SelectedCluster {
     column_index: i32,
     #[diesel(sql_type = Text)]
     cluster_id: String,
-    #[diesel(sql_type = BigInt)]
-    first_event_id: i64,
-    #[diesel(sql_type = BigInt)]
-    last_event_id: i64,
+    #[diesel(sql_type = Timestamp)]
+    batch_ts: NaiveDateTime,
     #[diesel(sql_type = Integer)]
     description_id: i32,
     #[diesel(sql_type = BigInt)]
@@ -53,8 +50,7 @@ pub struct TopMultimaps {
 #[derive(Debug, Queryable)]
 struct TopNIntRound {
     cluster_id: String,
-    _first_event_id: i64,
-    _last_event_id: i64,
+    _batch_ts: NaiveDateTime,
     _description_id: i32,
     value: i64,
     count: i64,
@@ -63,8 +59,7 @@ struct TopNIntRound {
 #[derive(Debug, Queryable)]
 struct TopNEnumRound {
     cluster_id: String,
-    _first_event_id: i64,
-    _last_event_id: i64,
+    _batch_ts: NaiveDateTime,
     _description_id: i32,
     value: String,
     count: i64,
@@ -73,8 +68,7 @@ struct TopNEnumRound {
 #[derive(Debug, Queryable)]
 struct TopNFloatRound {
     cluster_id: String,
-    _first_event_id: i64,
-    _last_event_id: i64,
+    _batch_ts: NaiveDateTime,
     _description_id: i32,
     value_smallest: f64,
     value_largest: f64,
@@ -84,8 +78,7 @@ struct TopNFloatRound {
 #[derive(Debug, Queryable)]
 struct TopNTextRound {
     cluster_id: String,
-    _first_event_id: i64,
-    _last_event_id: i64,
+    _batch_ts: NaiveDateTime,
     _description_id: i32,
     value: String,
     count: i64,
@@ -94,8 +87,7 @@ struct TopNTextRound {
 #[derive(Debug, Queryable)]
 struct TopNBinaryRound {
     cluster_id: String,
-    _first_event_id: i64,
-    _last_event_id: i64,
+    _batch_ts: NaiveDateTime,
     _description_id: i32,
     value: Vec<u8>,
     count: i64,
@@ -104,8 +96,7 @@ struct TopNBinaryRound {
 #[derive(Debug, Queryable)]
 struct TopNIpAddrRound {
     cluster_id: String,
-    _first_event_id: i64,
-    _last_event_id: i64,
+    _batch_ts: NaiveDateTime,
     _description_id: i32,
     value: String,
     count: i64,
@@ -114,8 +105,7 @@ struct TopNIpAddrRound {
 #[derive(Debug, Queryable)]
 struct TopNDateTimeRound {
     cluster_id: String,
-    _first_event_id: i64,
-    _last_event_id: i64,
+    _batch_ts: NaiveDateTime,
     _description_id: i32,
     value: NaiveDateTime,
     count: i64,
@@ -124,28 +114,24 @@ struct TopNDateTimeRound {
 use cluster::dsl as c_d;
 use column_description::dsl as cd_d;
 use csv_column_extra::dsl as column_d;
-use event_range::dsl as e_d;
 use model::dsl as m_d;
 
 macro_rules! get_top_n_of_column_by_round {
-    ($conn:expr, $top_d:ident, $top_table:ident, $load_type:ty, $d:expr, $c:expr, $f_ei:expr, $l_ei:expr, $index:expr, $func:tt, $top_n:expr) => {{
+    ($conn:expr, $top_d:ident, $top_table:ident, $load_type:ty, $d:expr, $c:expr, $b_ts:expr, $index:expr, $func:tt, $top_n:expr) => {{
         let top_n = $top_d::$top_table
             .inner_join(cd_d::column_description.on(cd_d::id.eq($top_d::description_id)))
-            .inner_join(e_d::event_range.on(cd_d::event_range_ids.index(1).eq(e_d::id.nullable())))
-            .inner_join(c_d::cluster.on(c_d::id.eq(e_d::cluster_id)))
+            .inner_join(c_d::cluster.on(c_d::id.eq(cd_d::cluster_id)))
             .inner_join(m_d::model.on(m_d::id.eq(c_d::model_id)))
             .filter(
                 m_d::id
                     .eq($d)
                     .and(c_d::cluster_id.eq_any($c))
-                    .and(e_d::first_event_id.eq_any($f_ei))
-                    .and(e_d::last_event_id.eq_any($l_ei))
+                    .and(cd_d::batch_ts.eq_any($b_ts))
                     .and(cd_d::column_index.eq($index)),
             )
             .select((
                 c_d::cluster_id,
-                e_d::first_event_id,
-                e_d::last_event_id,
+                cd_d::batch_ts,
                 $top_d::description_id,
                 $top_d::value,
                 $top_d::count,
@@ -199,8 +185,7 @@ async fn get_top_n(
     conn: &mut AsyncPgConnection,
     model_id: i32,
     cluster_ids: &[String],
-    first_event_ids: &[i64],
-    last_event_ids: &[i64],
+    batch_ts: &[NaiveDateTime],
     column_index: i32,
     column_type: &str,
 ) -> Result<HashMap<String, Vec<ElementCount>>, database::Error> {
@@ -215,8 +200,7 @@ async fn get_top_n(
                 TopNIntRound,
                 model_id,
                 cluster_ids,
-                first_event_ids,
-                last_event_ids,
+                batch_ts,
                 &column_index,
                 get_value_of_top_n_round_by_to_string,
                 top_n
@@ -233,8 +217,7 @@ async fn get_top_n(
                 TopNEnumRound,
                 model_id,
                 cluster_ids,
-                first_event_ids,
-                last_event_ids,
+                batch_ts,
                 &column_index,
                 get_value_of_top_n_round_by_clone,
                 top_n
@@ -245,23 +228,18 @@ async fn get_top_n(
             use top_n_float::dsl as ti_d;
             let top_n = ti_d::top_n_float
                 .inner_join(cd_d::column_description.on(cd_d::id.eq(ti_d::description_id)))
-                .inner_join(
-                    e_d::event_range.on(cd_d::event_range_ids.index(1).eq(e_d::id.nullable())),
-                )
-                .inner_join(c_d::cluster.on(c_d::id.eq(e_d::cluster_id)))
+                .inner_join(c_d::cluster.on(c_d::id.eq(cd_d::cluster_id)))
                 .inner_join(m_d::model.on(m_d::id.eq(c_d::model_id)))
                 .filter(
                     m_d::id
                         .eq(model_id)
                         .and(c_d::cluster_id.eq_any(cluster_ids))
-                        .and(e_d::first_event_id.eq_any(first_event_ids))
-                        .and(e_d::last_event_id.eq_any(last_event_ids))
+                        .and(cd_d::batch_ts.eq_any(batch_ts))
                         .and(cd_d::column_index.eq(&column_index)),
                 )
                 .select((
                     c_d::cluster_id,
-                    e_d::first_event_id,
-                    e_d::last_event_id,
+                    cd_d::batch_ts,
                     ti_d::description_id,
                     ti_d::value_smallest,
                     ti_d::value_largest,
@@ -301,8 +279,7 @@ async fn get_top_n(
                 TopNTextRound,
                 model_id,
                 cluster_ids,
-                first_event_ids,
-                last_event_ids,
+                batch_ts,
                 &column_index,
                 get_value_of_top_n_round_by_clone,
                 top_n
@@ -319,8 +296,7 @@ async fn get_top_n(
                 TopNIpAddrRound,
                 model_id,
                 cluster_ids,
-                first_event_ids,
-                last_event_ids,
+                batch_ts,
                 &column_index,
                 get_value_of_top_n_round_by_clone,
                 top_n
@@ -337,8 +313,7 @@ async fn get_top_n(
                 TopNDateTimeRound,
                 model_id,
                 cluster_ids,
-                first_event_ids,
-                last_event_ids,
+                batch_ts,
                 &column_index,
                 get_value_of_top_n_round_by_to_string,
                 top_n
@@ -355,8 +330,7 @@ async fn get_top_n(
                 TopNBinaryRound,
                 model_id,
                 cluster_ids,
-                first_event_ids,
-                last_event_ids,
+                batch_ts,
                 &column_index,
                 get_value_of_top_n_round_by_utf8,
                 top_n
@@ -444,26 +418,25 @@ impl Database {
 
             let q = if let Some(time) = time {
                 format!(
-                    r#"SELECT model.id as model_id, col.column_index, cluster.cluster_id, first_event_id, last_event_id, top.description_id, COUNT(top.id) as count
+                    r#"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
                         FROM {} AS top
                         INNER JOIN column_description AS col ON top.description_id = col.id
-                        INNER JOIN event_range AS ev ON ev.id = col.event_range_id
-                        INNER JOIN cluster ON cluster.id = ev.cluster_id
+                        INNER JOIN cluster ON cluster.id = col.cluster_id
                         INNER JOIN model ON cluster.model_id = model.id
-                        GROUP BY model.id, cluster.cluster_id, col.column_index, first_event_id, last_event_id, top.description_id, cluster.category_id, ev.time
-                        HAVING COUNT(top.id) > {} AND model.id = {} AND col.column_index = {} AND cluster.category_id != 2 AND ev.time = '{}'
+                        GROUP BY model.id, cluster.cluster_id, col.column_index, top.description_id, cluster.category_id, col.batch_ts
+                        HAVING COUNT(top.id) > {} AND model.id = {} AND col.column_index = {} AND cluster.category_id != 2 AND col.batch_ts = '{}'
                         ORDER BY COUNT(top.id) DESC"#,
                     top_table, min_top_n_of_1_to_n, model_id, *column_n, time
                 )
             } else {
                 format!(
-                    r#"SELECT model.id as model_id, col.column_index, cluster.cluster_id, first_event_id, last_event_id, top.description_id, COUNT(top.id) as count
+                    r#"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
                         FROM {} AS top
                         INNER JOIN column_description AS col ON top.description_id = col.id
                         INNER JOIN event_range AS ev ON ev.id = col.event_range_id
-                        INNER JOIN cluster ON cluster.id = ev.cluster_id
+                        INNER JOIN cluster ON cluster.id = col.cluster_id
                         INNER JOIN model ON cluster.model_id = model.id
-                        GROUP BY model.id, cluster.cluster_id, col.column_index, first_event_id, last_event_id, top.description_id, cluster.category_id, ev.time
+                        GROUP BY model.id, cluster.cluster_id, col.column_index, top.description_id, cluster.category_id, col.time
                         HAVING COUNT(top.id) > {} AND model.id = {} AND col.column_index = {} AND cluster.category_id != 2
                         ORDER BY COUNT(top.id) DESC"#,
                     top_table, min_top_n_of_1_to_n, model_id, *column_n
@@ -472,30 +445,30 @@ impl Database {
 
             let selected_clusters = sql_query(q).load::<SelectedCluster>(&mut conn).await?;
 
-            let mut sorted_clusters: HashMap<String, Vec<(i64, i64, i64)>> = HashMap::new();
+            let mut sorted_clusters: HashMap<String, Vec<(NaiveDateTime, i64)>> = HashMap::new();
             for cluster in selected_clusters {
                 sorted_clusters
                     .entry(cluster.cluster_id)
                     .or_default()
-                    .push((cluster.first_event_id, cluster.last_event_id, cluster.count));
+                    .push((cluster.batch_ts, cluster.count));
             }
             for top_n in sorted_clusters.values_mut() {
                 top_n.sort_by(|a, b| b.0.cmp(&a.0)); // recent one among rounds is more important. (assuming recent event id is bigger)
-                top_n.sort_by(|a, b| b.2.cmp(&a.2));
+                top_n.sort_by(|a, b| b.1.cmp(&a.1));
             }
 
-            let mut sorted_clusters: Vec<(String, i64, i64, i64)> = sorted_clusters // cluster_id, first_event_id, last_event_id, count
-                .into_iter()
-                .map(|(cluster_id, top_n)| (cluster_id, top_n[0].0, top_n[0].1, top_n[0].2))
-                .collect();
+            let mut sorted_clusters: Vec<(String, NaiveDateTime, i64)> =
+                sorted_clusters // cluster_id, batch_ts, count
+                    .into_iter()
+                    .map(|(cluster_id, top_n)| (cluster_id, top_n[0].0, top_n[0].1))
+                    .collect();
             // HIGHLIGHT: take the biggest round only in each cluster
             sorted_clusters.sort_by(|a, b| a.0.cmp(&b.0)); // first, sort clusters by alphabetical order
-            sorted_clusters.sort_by(|a, b| b.3.cmp(&a.3)); // then, sort by count
+            sorted_clusters.sort_by(|a, b| b.2.cmp(&a.2)); // then, sort by count
             sorted_clusters.truncate(number_of_top_n);
 
             let cluster_ids: Vec<String> = sorted_clusters.iter().map(|c| c.0.clone()).collect();
-            let first_event_ids: Vec<i64> = sorted_clusters.iter().map(|c| c.1).collect();
-            let last_event_ids: Vec<i64> = sorted_clusters.iter().map(|c| c.2).collect();
+            let batch_ts: Vec<NaiveDateTime> = sorted_clusters.iter().map(|c| c.1).collect();
 
             let mut top_n_of_clusters: HashMap<String, Vec<TopElementCountsByColumn>> =
                 HashMap::new();
@@ -514,8 +487,7 @@ impl Database {
                     &mut conn,
                     model_id,
                     &cluster_ids,
-                    &first_event_ids,
-                    &last_event_ids,
+                    &batch_ts,
                     column_index,
                     column_type,
                 )
@@ -545,8 +517,7 @@ impl Database {
                     &mut conn,
                     model_id,
                     &cluster_ids,
-                    &first_event_ids,
-                    &last_event_ids,
+                    &batch_ts,
                     column_index,
                     column_type,
                 )
