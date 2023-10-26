@@ -6,14 +6,12 @@ use super::{
 use crate::{
     csv_indicator::get_whitelists,
     schema::{
-        cluster, column_description, csv_column_extra, event_range, top_n_binary, top_n_datetime,
-        top_n_enum, top_n_float, top_n_int, top_n_ipaddr, top_n_text,
+        cluster, column_description, csv_column_extra, top_n_binary, top_n_datetime, top_n_enum,
+        top_n_float, top_n_int, top_n_ipaddr, top_n_text,
     },
     Database, Error,
 };
 use chrono::NaiveDateTime;
-use diesel::NullableExpressionMethods;
-use diesel::PgArrayExpressionMethods;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
@@ -22,19 +20,14 @@ use structured::{Element, FloatRange};
 
 use cluster::dsl as c_d;
 use column_description::dsl as col_d;
-use event_range::dsl as e_d;
 
 macro_rules! get_top_n_of_column {
     ($conn:expr, $top_d:ident, $top_table:ident, $value_type:ty, $c:expr, $i:expr, $tc:expr, $time:expr) => {{
         let query = c_d::cluster
-            .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-            .inner_join(
-                col_d::column_description
-                    .on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
-            )
+            .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
             .inner_join($top_d::$top_table.on(top_d::description_id.eq(col_d::id)))
             .select((
-                e_d::cluster_id,
+                col_d::cluster_id,
                 col_d::column_index,
                 col_d::id,
                 top_d::value,
@@ -46,7 +39,7 @@ macro_rules! get_top_n_of_column {
                 .filter(
                     c_d::id
                         .eq_any($c)
-                        .and(e_d::time.eq(time))
+                        .and(col_d::batch_ts.eq(time))
                         .and(col_d::column_index.eq($i)),
                 )
                 .load::<(i32, i32, i32, $value_type, i64)>($conn)
@@ -114,13 +107,10 @@ async fn top_n_of_float(
     use top_n_float::dsl as top_d;
 
     let query = c_d::cluster
-        .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-        .inner_join(
-            col_d::column_description.on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
-        )
+        .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
         .inner_join(top_d::top_n_float.on(top_d::description_id.eq(col_d::id)))
         .select((
-            e_d::cluster_id,
+            col_d::cluster_id,
             col_d::column_index,
             col_d::id,
             top_d::value_smallest,
@@ -133,7 +123,7 @@ async fn top_n_of_float(
             .filter(
                 c_d::id
                     .eq_any(cluster_ids)
-                    .and(e_d::time.eq(time))
+                    .and(col_d::batch_ts.eq(time))
                     .and(col_d::column_index.eq(&index)),
             )
             .load::<(i32, i32, i32, f64, f64, i64)>(conn)

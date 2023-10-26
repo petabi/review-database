@@ -1,16 +1,13 @@
 use crate::{
     csv_indicator::get_csv_indicators,
     schema::{
-        cluster, column_description, event_range, model, top_n_binary, top_n_datetime, top_n_enum,
-        top_n_int, top_n_ipaddr, top_n_text,
+        cluster, column_description, model, top_n_binary, top_n_datetime, top_n_enum, top_n_int,
+        top_n_ipaddr, top_n_text,
     },
     Database, Error, StructuredColumnType,
 };
 use chrono::NaiveDateTime;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    PgArrayExpressionMethods, QueryDsl,
-};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::RunQueryDsl;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
@@ -20,7 +17,6 @@ use structured::Element;
 
 use cluster::dsl as c_d;
 use column_description::dsl as cd_d;
-use event_range::dsl as e_d;
 use model::dsl as m_d;
 
 // As structured::ElementCount has count as usize, redefine this here.
@@ -50,22 +46,16 @@ macro_rules! load_top_n {
         let top_n: Vec<(i32, String, $value, i64)> = if let Some(time) = $time {
             t_d::$top_n
                 .inner_join(cd_d::column_description.on(t_d::description_id.eq(cd_d::id)))
-                .inner_join(
-                    e_d::event_range.on(cd_d::event_range_ids.index(1).eq(e_d::id.nullable())),
-                )
-                .inner_join(c_d::cluster.on(e_d::cluster_id.eq(c_d::id)))
+                .inner_join(c_d::cluster.on(cd_d::cluster_id.eq(c_d::id)))
                 .inner_join(m_d::model.on(c_d::model_id.eq(m_d::id)))
                 .select((c_d::id, c_d::cluster_id, t_d::value, t_d::count))
-                .filter(m_d::id.eq($model_id).and(e_d::time.eq(time)))
+                .filter(m_d::id.eq($model_id).and(cd_d::batch_ts.eq(time)))
                 .load::<(i32, String, $value, i64)>($conn)
                 .await?
         } else {
             t_d::$top_n
                 .inner_join(cd_d::column_description.on(t_d::description_id.eq(cd_d::id)))
-                .inner_join(
-                    e_d::event_range.on(cd_d::event_range_ids.index(1).eq(e_d::id.nullable())),
-                )
-                .inner_join(c_d::cluster.on(e_d::cluster_id.eq(c_d::id)))
+                .inner_join(c_d::cluster.on(cd_d::cluster_id.eq(c_d::id)))
                 .inner_join(m_d::model.on(c_d::model_id.eq(m_d::id)))
                 .select((c_d::id, c_d::cluster_id, t_d::value, t_d::count))
                 .filter(m_d::id.eq($model_id))

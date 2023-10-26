@@ -33,7 +33,8 @@ diesel::table! {
         type_id -> Int4,
         count -> Int8,
         unique_count -> Int8,
-        event_range_ids -> Array<Nullable<Int4>>,
+        cluster_id -> Int4,
+        batch_ts -> Timestamp,
     }
 }
 

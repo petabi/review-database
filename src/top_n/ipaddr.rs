@@ -6,21 +6,17 @@ use super::{
 use crate::{
     self as database,
     csv_indicator::get_whitelists,
-    schema::{cluster, column_description, event_range, top_n_ipaddr},
+    schema::{cluster, column_description, top_n_ipaddr},
     Database, Error,
 };
 use chrono::NaiveDateTime;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    PgArrayExpressionMethods, QueryDsl,
-};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
 use std::{cmp::Reverse, collections::HashMap};
 
 use cluster::dsl as c_d;
 use column_description::dsl as col_d;
-use event_range::dsl as e_d;
 use top_n_ipaddr::dsl as top_d;
 
 async fn get_top_n_of_multiple_clusters(
@@ -30,11 +26,7 @@ async fn get_top_n_of_multiple_clusters(
 ) -> Result<Vec<TopNOfMultipleCluster>, database::Error> {
     let top_n_of_multiple_clusters = if let Some(time) = time {
         c_d::cluster
-            .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-            .inner_join(
-                col_d::column_description
-                    .on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
-            )
+            .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
             .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
             .select((
                 c_d::id,
@@ -43,16 +35,12 @@ async fn get_top_n_of_multiple_clusters(
                 top_d::value,
                 top_d::count,
             ))
-            .filter(e_d::time.eq(time).and(c_d::id.eq_any(cluster_ids)))
+            .filter(col_d::batch_ts.eq(time).and(c_d::id.eq_any(cluster_ids)))
             .load::<TopNOfMultipleCluster>(conn)
             .await?
     } else {
         c_d::cluster
-            .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-            .inner_join(
-                col_d::column_description
-                    .on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
-            )
+            .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
             .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
             .select((
                 c_d::id,
@@ -83,11 +71,7 @@ impl Database {
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
         let mut conn = self.pool.get_diesel_conn().await?;
         let values = c_d::cluster
-            .inner_join(e_d::event_range.on(c_d::id.eq(e_d::cluster_id)))
-            .inner_join(
-                col_d::column_description
-                    .on(col_d::event_range_ids.index(1).eq(e_d::id.nullable())),
-            )
+            .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
             .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
             .select((col_d::column_index, col_d::id, top_d::value, top_d::count))
             .filter(

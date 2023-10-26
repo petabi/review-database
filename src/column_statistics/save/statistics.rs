@@ -1,7 +1,5 @@
 use super::{binary, datetime, float_range, int, ipaddr, r#enum, text};
-use crate::schema::{
-    cluster::dsl as cluster_d, column_description::dsl as cd_d, event_range::dsl as e_d,
-};
+use crate::schema::{cluster::dsl as cluster_d, column_description::dsl as cd_d};
 use crate::Database;
 use anyhow::Result;
 use chrono::NaiveDateTime;
@@ -15,28 +13,7 @@ use structured::{ColumnStatistics, Element};
 #[derive(Deserialize)]
 pub struct ColumnStatisticsUpdate {
     cluster_id: String, // NOT cluster_id but id of cluster table
-    time: NaiveDateTime,
-    first_event_id: crate::types::Timestamp,
-    last_event_id: crate::types::Timestamp,
-    sources: Vec<crate::types::Source>,
     column_statistics: Vec<ColumnStatistics>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct EventRange {
-    pub first_event_id: crate::types::Timestamp,
-    pub last_event_id: crate::types::Timestamp,
-    pub event_source: crate::types::Source,
-}
-
-#[derive(Debug, Insertable, PartialEq)]
-#[diesel(table_name = crate::schema::event_range)]
-pub(crate) struct EventRangeInsert<'a> {
-    cluster_id: i32,
-    time: NaiveDateTime,
-    first_event_id: crate::types::Timestamp,
-    last_event_id: crate::types::Timestamp,
-    event_source: &'a crate::types::Source,
 }
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]
@@ -46,7 +23,8 @@ struct ColumnDescriptionInput {
     type_id: i32,
     count: i64,
     unique_count: i64,
-    event_range_ids: Option<Vec<i32>>,
+    cluster_id: i32,
+    batch_ts: NaiveDateTime,
 }
 
 #[derive(Deserialize, Debug, Insertable, PartialEq, Identifiable, Queryable)]
@@ -57,7 +35,8 @@ struct ColumnDescription {
     type_id: i32,
     count: i64,
     unique_count: i64,
-    event_range_ids: Vec<Option<i32>>,
+    cluster_id: i32,
+    batch_ts: NaiveDateTime,
 }
 
 fn check_column_types(stats: &[ColumnStatisticsUpdate]) -> Vec<i32> {
@@ -92,6 +71,7 @@ impl Database {
         &self,
         statistics: Vec<ColumnStatisticsUpdate>,
         model_id: i32,
+        batch_ts: NaiveDateTime,
     ) -> Result<()> {
         let mut conn = self.pool.get_diesel_conn().await?;
 
@@ -107,21 +87,6 @@ impl Database {
             );
             let cluster_id = query.load::<i32>(&mut conn).await?[0];
 
-            let event_ranges: Vec<_> = stat
-                .sources
-                .iter()
-                .map(|src| EventRangeInsert {
-                    cluster_id,
-                    time: stat.time,
-                    first_event_id: stat.first_event_id,
-                    last_event_id: stat.last_event_id,
-                    event_source: src,
-                })
-                .collect();
-            let query = diesel::insert_into(e_d::event_range)
-                .values(&event_ranges)
-                .returning(e_d::id);
-            let event_ranges = query.get_results(&mut conn).await?;
             let column_types_cloned = column_types.clone();
             let column_descriptions: Vec<_> = (0..)
                 .zip(&column_types_cloned)
@@ -136,7 +101,8 @@ impl Database {
                         type_id,
                         count,
                         unique_count,
-                        event_range_ids: Some(event_ranges.clone()),
+                        cluster_id,
+                        batch_ts,
                     }
                 })
                 .collect();
