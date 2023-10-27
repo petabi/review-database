@@ -380,9 +380,9 @@ impl Database {
                 "column_description",
                 &["id"],
                 &[],
+                &[("cluster_id", Type::INT4_ARRAY)],
                 &[],
-                &[("event_range_ids", Type::INT4_ARRAY, Some("&&"))],
-                &[&event_range_ids],
+                &[&cluster_ids],
             )
             .await?;
         conn.delete_in(
