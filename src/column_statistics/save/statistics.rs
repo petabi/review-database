@@ -39,13 +39,13 @@ struct ColumnDescription {
     batch_ts: NaiveDateTime,
 }
 
-fn check_column_types(stats: &[ColumnStatisticsUpdate]) -> Vec<i32> {
+fn check_column_types(stats: &[ColumnStatisticsUpdate]) -> Vec<Option<i32>> {
     stats
         .first()
         .map(|stat| {
             stat.column_statistics
                 .iter()
-                .filter_map(|column_stats| match &column_stats.n_largest_count.mode() {
+                .map(|column_stats| match &column_stats.n_largest_count.mode() {
                     Some(Element::Int(_)) => Some(1),
                     Some(Element::Enum(_)) => Some(2),
                     Some(Element::FloatRange(_)) => Some(3),
@@ -87,22 +87,26 @@ impl Database {
             );
             let cluster_id = query.load::<i32>(&mut conn).await?[0];
 
-            let column_types_cloned = column_types.clone();
             let column_descriptions: Vec<_> = (0..)
-                .zip(&column_types_cloned)
+                .zip(&column_types)
                 .zip(&stat.column_statistics)
-                .map(|((column_index, &type_id), column_stats)| {
-                    let count = i64::try_from(column_stats.description.count()).unwrap_or_default();
-                    let unique_count =
-                        i64::try_from(column_stats.n_largest_count.number_of_elements())
-                            .unwrap_or_default();
-                    ColumnDescriptionInput {
-                        column_index,
-                        type_id,
-                        count,
-                        unique_count,
-                        cluster_id,
-                        batch_ts,
+                .filter_map(|((column_index, &type_id), column_stats)| {
+                    if let Some(type_id) = type_id {
+                        let count =
+                            i64::try_from(column_stats.description.count()).unwrap_or_default();
+                        let unique_count =
+                            i64::try_from(column_stats.n_largest_count.number_of_elements())
+                                .unwrap_or_default();
+                        Some(ColumnDescriptionInput {
+                            column_index,
+                            type_id,
+                            count,
+                            unique_count,
+                            cluster_id,
+                            batch_ts,
+                        })
+                    } else {
+                        None
                     }
                 })
                 .collect();
