@@ -2,7 +2,8 @@ use super::{
     schema::{
         column_description::dsl as cd, description_int::dsl as desc, top_n_int::dsl as top_n,
     },
-    ColumnIndex, Error, Statistics, ToDescription, ToElementCount, ToNLargestCount,
+    ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription, ToElementCount,
+    ToNLargestCount,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
@@ -10,6 +11,7 @@ use structured::{Description, Element, ElementCount, NLargestCount};
 
 #[derive(Debug, Queryable)]
 struct DescriptionInt {
+    id: i32,
     column_index: i32,
     count: i64,
     unique_count: i64,
@@ -23,6 +25,12 @@ struct DescriptionInt {
 impl ColumnIndex for DescriptionInt {
     fn column_index(&self) -> i32 {
         self.column_index
+    }
+}
+
+impl DescriptionIndex for DescriptionInt {
+    fn description_index(&self) -> i32 {
+        self.id
     }
 }
 
@@ -50,14 +58,14 @@ impl ToNLargestCount for DescriptionInt {
 
 #[derive(Debug, Queryable)]
 struct TopNInt {
-    column_index: i32,
+    description_id: i32,
     value: i64,
     count: i64,
 }
 
-impl ColumnIndex for TopNInt {
-    fn column_index(&self) -> i32 {
-        self.column_index
+impl DescriptionIndex for TopNInt {
+    fn description_index(&self) -> i32 {
+        self.description_id
     }
 }
 
@@ -77,6 +85,7 @@ pub(super) async fn get_int_statistics(
     let column_descriptions = desc::description_int
         .inner_join(cd::column_description.on(cd::id.eq(desc::description_id)))
         .select((
+            cd::id,
             cd::column_index,
             cd::count,
             cd::unique_count,
@@ -87,15 +96,14 @@ pub(super) async fn get_int_statistics(
             desc::s_deviation,
         ))
         .filter(cd::id.eq_any(description_ids))
-        .order_by((cd::column_index.asc(), cd::count.desc()))
+        .order_by((cd::id.asc(), cd::column_index.asc(), cd::count.desc()))
         .load::<DescriptionInt>(&mut conn)
         .await?;
 
     let top_n = top_n::top_n_int
-        .inner_join(cd::column_description.on(cd::id.eq(top_n::description_id)))
-        .select((cd::column_index, top_n::value, top_n::count))
-        .filter(cd::id.eq_any(description_ids))
-        .order_by(cd::column_index.asc())
+        .select((top_n::description_id, top_n::value, top_n::count))
+        .filter(top_n::description_id.eq_any(description_ids))
+        .order_by(top_n::description_id.asc())
         .load::<TopNInt>(&mut conn)
         .await?;
 
@@ -108,9 +116,9 @@ mod tests {
     use super::*;
 
     impl TopNInt {
-        fn new(column_index: i32, value: i64, count: i64) -> Self {
+        fn new(description_id: i32, value: i64, count: i64) -> Self {
             Self {
-                column_index,
+                description_id,
                 value,
                 count,
             }
@@ -149,6 +157,10 @@ mod tests {
         };
 
         let element_counts = vec![vec![ec3, ec4, ec2], vec![ec5], vec![ec1]];
+        let element_counts = vec![1, 3, 5]
+            .into_iter()
+            .zip(element_counts.into_iter())
+            .collect();
         assert_eq!(top_n_to_element_counts(top_n), element_counts);
     }
 }
