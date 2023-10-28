@@ -35,6 +35,10 @@ trait ColumnIndex {
     fn column_index(&self) -> i32;
 }
 
+trait DescriptionIndex {
+    fn description_index(&self) -> i32;
+}
+
 trait ToDescription {
     fn to_description(&self) -> Description;
 }
@@ -63,11 +67,11 @@ impl Database {
         let mut query = cd_d::column_description
             .select((cd_d::id, cd_d::type_id))
             .filter(cd_d::cluster_id.eq(cluster))
-            .order_by(cd_d::column_index.asc())
+            .order_by(cd_d::type_id)
             .into_boxed();
-        query = time
-            .iter()
-            .fold(query, |query, ts| query.or_filter(cd_d::batch_ts.eq(ts)));
+        if !time.is_empty() {
+            query = query.filter(cd_d::batch_ts.eq_any(&time));
+        }
 
         let column_info = query.load::<ColumnDescriptionLoad>(&mut conn).await?;
 
@@ -110,24 +114,28 @@ impl Database {
 
 fn build_column_statistics<T, U>(column_descriptions: Vec<T>, top_n: Vec<U>) -> Vec<Statistics>
 where
-    T: ToDescription + ToNLargestCount + ColumnIndex,
-    U: ToElementCount + ColumnIndex,
+    T: ToDescription + ToNLargestCount + ColumnIndex + DescriptionIndex,
+    U: ToElementCount + DescriptionIndex,
 {
     let element_counts = top_n_to_element_counts(top_n);
     column_descriptions
         .into_iter()
-        .zip(element_counts)
-        .map(|(cd, ec)| {
-            let column_index = cd.column_index();
+        .filter_map(|cd| {
+            let id = cd.description_index();
             let description = cd.to_description();
-            let n_largest_count = cd.to_n_largest_count(ec);
-            let cs = ColumnStatistics {
-                description,
-                n_largest_count,
-            };
-            Statistics {
-                column_index,
-                statistics: cs,
+            if let Some(ec) = element_counts.get(&id) {
+                let column_index = cd.column_index();
+                let n_largest_count = cd.to_n_largest_count(ec.clone());
+                let cs = ColumnStatistics {
+                    description,
+                    n_largest_count,
+                };
+                Some(Statistics {
+                    column_index,
+                    statistics: cs,
+                })
+            } else {
+                None
             }
         })
         .collect()
@@ -136,24 +144,20 @@ where
 // Converts Vec<TopN> to Vec<Vec<ElementCount>>.
 // Sorts the value of `count` of each `ElementCount` in descending order and the
 // values of `column_index` in ascending order.
-fn top_n_to_element_counts<T>(top_n: Vec<T>) -> Vec<Vec<ElementCount>>
+fn top_n_to_element_counts<T>(top_n: Vec<T>) -> HashMap<i32, Vec<ElementCount>>
 where
-    T: ToElementCount + ColumnIndex,
+    T: ToElementCount + DescriptionIndex,
 {
     let mut element_count = HashMap::new();
     for record in top_n {
         element_count
-            .entry(record.column_index())
+            .entry(record.description_index())
             .or_insert_with(Vec::new)
             .push(record.to_element_count());
     }
-    let mut element_count = element_count
-        .into_iter()
-        .map(|mut ec| {
-            ec.1.sort_by_key(|v| Reverse(v.count));
-            ec
-        })
-        .collect::<Vec<_>>();
-    element_count.sort_by_key(|v| v.0);
-    element_count.into_iter().map(|(_, e)| e).collect()
+
+    for val in element_count.values_mut() {
+        val.sort_by_key(|v| Reverse(v.count));
+    }
+    element_count
 }

@@ -2,7 +2,8 @@ use super::{
     schema::{
         column_description::dsl as cd, description_ipaddr::dsl as desc, top_n_ipaddr::dsl as top_n,
     },
-    ColumnIndex, Error, Statistics, ToDescription, ToElementCount, ToNLargestCount,
+    ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription, ToElementCount,
+    ToNLargestCount,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
@@ -14,6 +15,7 @@ use structured::{Description, Element, ElementCount, NLargestCount};
 
 #[derive(Debug, Queryable)]
 struct DescriptionIpAddr {
+    id: i32,
     column_index: i32,
     count: i64,
     unique_count: i64,
@@ -23,6 +25,12 @@ struct DescriptionIpAddr {
 impl ColumnIndex for DescriptionIpAddr {
     fn column_index(&self) -> i32 {
         self.column_index
+    }
+}
+
+impl DescriptionIndex for DescriptionIpAddr {
+    fn description_index(&self) -> i32 {
+        self.id
     }
 }
 
@@ -53,14 +61,14 @@ impl ToNLargestCount for DescriptionIpAddr {
 
 #[derive(Debug, Queryable)]
 struct TopNIpAddr {
-    column_index: i32,
+    description_id: i32,
     value: String,
     count: i64,
 }
 
-impl ColumnIndex for TopNIpAddr {
-    fn column_index(&self) -> i32 {
-        self.column_index
+impl DescriptionIndex for TopNIpAddr {
+    fn description_index(&self) -> i32 {
+        self.description_id
     }
 }
 
@@ -82,17 +90,22 @@ pub(super) async fn get_ipaddr_statistics(
 ) -> Result<Vec<Statistics>, Error> {
     let column_descriptions = desc::description_ipaddr
         .inner_join(cd::column_description.on(cd::id.eq(desc::description_id)))
-        .select((cd::column_index, cd::count, cd::unique_count, desc::mode))
+        .select((
+            cd::id,
+            cd::column_index,
+            cd::count,
+            cd::unique_count,
+            desc::mode,
+        ))
         .filter(cd::id.eq_any(description_ids))
-        .order_by((cd::column_index.asc(), cd::count.desc()))
+        .order_by((cd::id, cd::column_index.asc(), cd::count.desc()))
         .load::<DescriptionIpAddr>(&mut conn)
         .await?;
 
     let top_n = top_n::top_n_ipaddr
-        .inner_join(cd::column_description.on(cd::id.eq(top_n::description_id)))
-        .select((cd::column_index, top_n::value, top_n::count))
-        .filter(cd::id.eq_any(description_ids))
-        .order_by(cd::column_index.asc())
+        .select((top_n::description_id, top_n::value, top_n::count))
+        .filter(top_n::description_id.eq_any(description_ids))
+        .order_by(top_n::description_id.asc())
         .load::<TopNIpAddr>(&mut conn)
         .await?;
 
