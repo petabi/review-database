@@ -13,3 +13,5 @@ ALTER TABLE IF EXISTS column_description
     ALTER COLUMN cluster_id SET NOT NULL,
     ALTER COLUMN batch_ts SET NOT NULL,
     DROP COLUMN event_range_ids;
+
+DROP TABLE IF EXISTS event_range CASCADE;

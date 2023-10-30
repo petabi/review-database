@@ -357,24 +357,6 @@ impl Database {
         )
         .await?;
 
-        let event_range_ids: Vec<i32> = conn
-            .select_in(
-                "event_range",
-                &["id"],
-                &[],
-                &[("cluster_id", Type::INT4_ARRAY)],
-                &[],
-                &[&cluster_ids],
-            )
-            .await?;
-        conn.delete_in(
-            "event_range",
-            &[],
-            &[("id", Type::INT4_ARRAY)],
-            &[&event_range_ids],
-        )
-        .await?;
-
         let column_description_ids: Vec<i32> = conn
             .select_in(
                 "column_description",
