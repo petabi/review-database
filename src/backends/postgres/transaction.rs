@@ -1,11 +1,11 @@
-use crate::{Error, Type};
+use crate::Error;
 use bb8_postgres::{
     bb8::PooledConnection,
     tokio_postgres::{
         self,
         tls::{MakeTlsConnect, TlsConnect},
         types::ToSql,
-        Row, Socket, ToStatement,
+        Socket, ToStatement,
     },
     PostgresConnectionManager,
 };
@@ -46,18 +46,5 @@ impl<'a> Transaction<'a> {
         T: ?Sized + ToStatement,
     {
         Ok(self.0.execute(stmt, params).await?)
-    }
-
-    pub async fn select_in(
-        &self,
-        table: &str,
-        columns: &[&str],
-        variables: &[(&str, Type)],
-        in_variables: &[(&str, Type)],
-        array_variables: &[(&str, Type, Option<&str>)],
-        params: &[&(dyn ToSql + Sync)],
-    ) -> Result<Vec<Row>, Error> {
-        let query = super::query_select(table, columns, variables, in_variables, array_variables);
-        Ok(self.0.query(&query, params).await?)
     }
 }

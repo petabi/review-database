@@ -7,8 +7,7 @@ mod time_series;
 pub use self::one_to_n::{TopColumnsOfCluster, TopMultimaps};
 pub use self::score::{ClusterScore, ClusterScoreSet};
 pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByColumn};
-use super::{Database, Error, Type};
-use bb8_postgres::tokio_postgres::row::Row;
+use super::{Database, Error};
 use chrono::NaiveDateTime;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::pg::AsyncPgConnection;
@@ -50,10 +49,8 @@ impl ValueType for Vec<u8> {
     }
 }
 
-impl From<Row> for StructuredColumnType {
-    fn from(row: Row) -> Self {
-        let column_index = row.get("column_index");
-        let type_id: i32 = row.get("type_id");
+impl From<(i32, i32)> for StructuredColumnType {
+    fn from((column_index, type_id): (i32, i32)) -> Self {
         let data_type = match type_id {
             1 => "int64",
             2 => "enum",
@@ -122,52 +119,43 @@ impl Database {
         &self,
         model_id: i32,
     ) -> Result<Vec<StructuredColumnType>, Error> {
-        let mut conn = self.pool.get().await?;
-        let txn = conn.build_transaction().await?;
-        let cluster_ids = txn
-            .select_in(
-                "cluster",
-                &["id"],
-                &[("model_id", Type::INT4)],
-                &[],
-                &[],
-                &[&model_id],
-            )
-            .await?
-            .into_iter()
-            .map(|r| r.get(0))
-            .collect::<Vec<i32>>();
-        let event_range_ids = txn
-            .select_in(
-                "event_range",
-                &["id"],
-                &[],
-                &[("cluster_id", Type::INT4_ARRAY)],
-                &[],
-                &[&cluster_ids],
-            )
+        use crate::schema::{
+            cluster::dsl as cluster_d, column_description::dsl as cd_d, model::dsl as m_d,
+        };
+        use diesel_async::RunQueryDsl;
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let cluster_ids = cluster_d::cluster
+            .select(cluster_d::id)
+            .filter(cluster_d::model_id.eq(model_id))
+            .limit(1)
+            .load::<i32>(&mut conn)
             .await?;
-        let Some(event_range_id) = event_range_ids.first() else {
-            return Ok(Vec::new());
-        };
-        let event_range_id: i32 = match event_range_id.get(0) {
-            Some(id) => id,
-            None => return Ok(Vec::new()),
-        };
-        let result = txn
-            .select_in(
-                "column_description",
-                &["column_index", "type_id"],
-                &[],
-                &[],
-                &[("event_range_ids", Type::INT4_ARRAY, None)],
-                &[&vec![event_range_id]],
-            )
+        let classification_id: Vec<_> = m_d::model
+            .select(m_d::classification_id)
+            .filter(m_d::id.eq(model_id))
+            .load::<Option<i64>>(&mut conn)
             .await?
             .into_iter()
-            .map(Into::into)
-            .collect::<Vec<_>>();
-        txn.commit().await?;
+            .flatten()
+            .filter_map(|t| {
+                const A_BILLION: i64 = 1_000_000_000;
+                if let Ok(ns) = u32::try_from(t % A_BILLION) {
+                    chrono::NaiveDateTime::from_timestamp_opt(t / A_BILLION, ns)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let result = cd_d::column_description
+            .select((cd_d::column_index, cd_d::type_id))
+            .filter(cd_d::cluster_id.eq_any(cluster_ids))
+            .filter(cd_d::batch_ts.eq_any(classification_id))
+            .load::<(i32, i32)>(&mut conn)
+            .await?
+            .into_iter()
+            .map(StructuredColumnType::from)
+            .collect();
 
         Ok(result)
     }

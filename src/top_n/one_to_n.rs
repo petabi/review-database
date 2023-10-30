@@ -433,7 +433,6 @@ impl Database {
                     r#"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
                         FROM {} AS top
                         INNER JOIN column_description AS col ON top.description_id = col.id
-                        INNER JOIN event_range AS ev ON ev.id = col.event_range_id
                         INNER JOIN cluster ON cluster.id = col.cluster_id
                         INNER JOIN model ON cluster.model_id = model.id
                         GROUP BY model.id, cluster.cluster_id, col.column_index, top.description_id, cluster.category_id, col.time

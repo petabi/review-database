@@ -145,17 +145,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    event_range (id) {
-        id -> Int4,
-        cluster_id -> Int4,
-        time -> Timestamp,
-        first_event_id -> Int8,
-        last_event_id -> Int8,
-        event_source -> Text,
-    }
-}
-
-diesel::table! {
     model (id) {
         id -> Int4,
         name -> Text,
@@ -283,7 +272,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     description_int,
     description_ipaddr,
     description_text,
-    event_range,
     model,
     outlier,
     qualifier,
