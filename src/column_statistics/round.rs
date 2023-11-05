@@ -47,7 +47,7 @@ impl Database {
         cluster_id: i32,
         after: &Option<NaiveDateTime>,
         before: &Option<NaiveDateTime>,
-        _is_first: bool,
+        is_first: bool,
         limit: usize,
     ) -> Result<(i32, Vec<NaiveDateTime>), Error> {
         let mut conn = self.pool.get_diesel_conn().await?;
@@ -62,8 +62,6 @@ impl Database {
             .select(cd_d::batch_ts)
             .distinct()
             .filter(cd_d::cluster_id.eq(cluster_id))
-            .limit(limit)
-            .order_by(cd_d::batch_ts.asc())
             .into_boxed();
 
         if let Some(after) = after {
@@ -71,6 +69,12 @@ impl Database {
         }
         if let Some(before) = before {
             query = query.filter(cd_d::batch_ts.eq(before).or(cd_d::batch_ts.lt(before)));
+        }
+
+        if is_first {
+            query = query.order_by(cd_d::batch_ts.asc()).limit(limit);
+        } else {
+            query = query.order_by(cd_d::batch_ts.desc()).limit(limit);
         }
 
         let rounds: Vec<NaiveDateTime> = query.get_results(&mut conn).await?;

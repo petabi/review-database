@@ -28,6 +28,7 @@ pub mod types;
 
 pub use self::account::Role;
 use self::backends::ConnectionPool;
+pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
 pub use self::cluster::*;
 pub use self::collections::{
