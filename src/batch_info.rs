@@ -5,14 +5,16 @@ use crate::tables::{Key, Value};
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct BatchInfo {
     pub model: i32,
-    inner: crate::types::ModelBatchInfo,
+    pub inner: crate::types::ModelBatchInfo,
 }
 
 impl BatchInfo {
+    #[must_use]
     pub fn new(model: i32, inner: crate::types::ModelBatchInfo) -> Self {
         Self { model, inner }
     }
 
+    #[must_use]
     pub fn into_inner(self) -> crate::types::ModelBatchInfo {
         self.inner
     }

@@ -94,11 +94,6 @@ pub(super) async fn get_datetime_statistics(
         .load::<DescriptionDateTime>(&mut conn)
         .await?;
 
-    dbg!(column_descriptions
-        .iter()
-        .map(|c| c.column_index)
-        .collect::<Vec<_>>());
-
     let top_n = top_n::top_n_datetime
         .select((top_n::description_id, top_n::value, top_n::count))
         .filter(top_n::description_id.eq_any(description_ids))
