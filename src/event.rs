@@ -2206,8 +2206,14 @@ fn eq_ip_country(
 fn get_record_country_short_name(record: &ip2location::Record) -> Option<String> {
     use ip2location::Record;
     match record {
-        Record::ProxyDb(r) => r.country.as_ref().map(|c| c.short_name.clone()),
-        Record::LocationDb(r) => r.country.as_ref().map(|c| c.short_name.clone()),
+        Record::ProxyDb(r) => r
+            .country
+            .as_ref()
+            .map(|c| c.short_name.clone().into_owned()),
+        Record::LocationDb(r) => r
+            .country
+            .as_ref()
+            .map(|c| c.short_name.clone().into_owned()),
     }
 }
 
