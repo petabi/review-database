@@ -111,7 +111,7 @@ pub struct Store {
 }
 
 impl Store {
-    const DEFAULT_PRETRAINED: &str = "pretrained";
+    const DEFAULT_PRETRAINED: &'static str = "pretrained";
     /// Opens a new key-value store and its backup.
     ///
     /// # Errors
