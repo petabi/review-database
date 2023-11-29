@@ -15,6 +15,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   you create a model using `Model::from_storage`, the  `batch_info` and `scores`
   fields will now be initialized with their default values. If you previously
   relied on custom values for these fields, you will need to update your code accordingly.
+  
+### Removed
+
+- `event_range` Table Removal:
+  - The `event_range` table has been removed from the database schema.
+  - Information previously stored in `event_range` is now managed using the
+    `column_description` and `batch_info` tables.
 
 ## [0.20.0] - 2023-10-06
 
