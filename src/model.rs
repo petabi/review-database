@@ -246,7 +246,7 @@ pub struct SqlModel {
 }
 
 impl Database {
-    const CSV_COLUMN_TYPES: &[&'static str] = &[
+    const CSV_COLUMN_TYPES: &'static [&'static str] = &[
         "binary", "datetime", "enum", "float", "int", "ipaddr", "text",
     ];
 

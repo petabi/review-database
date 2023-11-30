@@ -14,6 +14,7 @@ mod rdp;
 mod smb;
 mod smtp;
 mod ssh;
+mod sysmon;
 mod tls;
 mod tor;
 
@@ -49,6 +50,7 @@ pub use self::{
     smb::{BlockListSmb, BlockListSmbFields},
     smtp::{BlockListSmtp, BlockListSmtpFields},
     ssh::{BlockListSsh, BlockListSshFields},
+    sysmon::WindowsThreat,
     tls::{BlockListTls, BlockListTlsFields},
     tor::{TorConnection, TorConnectionFields},
 };
@@ -100,6 +102,7 @@ const LDAP_BRUTE_FORCE: &str = "LDAP Brute Force";
 const LDAP_PLAIN_TEXT: &str = "LDAP Plain Text";
 const CRYPTOCURRENCY_MINING_POOL: &str = "Cryptocurrency Mining Pool";
 pub const BLOCK_LIST: &str = "Block List";
+const WINDOWS_THREAT_EVENT: &str = "Windows Threat Events";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -150,6 +153,8 @@ pub enum Event {
     CryptocurrencyMiningPool(CryptocurrencyMiningPool),
 
     BlockList(RecordType),
+
+    WindowsThreat(WindowsThreat),
 }
 
 pub enum RecordType {
@@ -216,6 +221,7 @@ impl Event {
                 RecordType::Ssh(ssh_event) => ssh_event.matches(locator, filter),
                 RecordType::Tls(tls_event) => tls_event.matches(locator, filter),
             },
+            Event::WindowsThreat(event) => event.matches(locator, filter),
         }
     }
 
@@ -378,6 +384,7 @@ impl Event {
                     }
                 }
             },
+            Event::WindowsThreat(_event) => {}
         }
         Ok(addr_pair)
     }
@@ -541,10 +548,16 @@ impl Event {
                     }
                 }
             },
+            Event::WindowsThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(WINDOWS_THREAT_EVENT);
+                }
+            }
         }
         Ok(kind)
     }
 
+    // TODO: Count country as KR for Windows Event
     /// Counts the number of events per country.
     ///
     /// # Errors
@@ -752,6 +765,11 @@ impl Event {
                     }
                 }
             },
+            Event::WindowsThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(EventCategory::Impact);
+                }
+            }
         };
 
         if let Some(category) = category {
@@ -1070,6 +1088,11 @@ impl Event {
                     }
                 }
             },
+            Event::WindowsThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(MEDIUM);
+                }
+            }
         }
 
         if let Some(level) = level {
@@ -1202,6 +1225,9 @@ impl Event {
                     tls_event.triage_scores = Some(triage_scores);
                 }
             },
+            Event::WindowsThreat(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
         }
     }
 }
@@ -1249,6 +1275,7 @@ pub enum EventKind {
     BlockListSmtp,
     BlockListSsh,
     BlockListTls,
+    WindowsThreat,
 }
 
 /// Machine Learning Method.
@@ -1354,6 +1381,7 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["block", "list", "smtp"], "block list stmp");
             moderate_kinds_by(kinds, &["block", "list", "ssh"], "block list ssh");
             moderate_kinds_by(kinds, &["block", "list", "tls"], "block list tls");
+            moderate_kinds_by(kinds, &["windows", "threat"], "windows threat");
         }
     }
 }
@@ -1600,6 +1628,14 @@ impl fmt::Display for EventMessage {
                     write!(f, "invalid event")
                 }
             }
+            EventKind::WindowsThreat => {
+                if let Ok(fields) = bincode::deserialize::<WindowsThreat>(&self.fields) {
+                    write!(f, "WindowsThreat,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+
             EventKind::Log => Ok(()),
         }
     }
@@ -2018,6 +2054,12 @@ impl<'i> Iterator for EventIterator<'i> {
                     key,
                     Event::BlockList(RecordType::Tls(BlockListTls::new(time, fields))),
                 )))
+            }
+            EventKind::WindowsThreat => {
+                let Ok(fields) = bincode::deserialize::<WindowsThreat>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::WindowsThreat(fields))))
             }
             EventKind::Log => None,
         }

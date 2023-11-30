@@ -49,7 +49,7 @@ pub use self::event::{
     ExternalDdos, Filter, FilterEndpoint, FlowKind, FtpBruteForce, FtpPlainText, HttpThreat,
     LdapBruteForce, LdapPlainText, LearningMethod, MultiHostPortScan, Network, NetworkEntry,
     NetworkEntryValue, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
-    RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
+    RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore, WindowsThreat,
 };
 pub use self::migration::migrate_data_dir;
 pub use self::model::{Digest as ModelDigest, Model};
@@ -111,7 +111,7 @@ pub struct Store {
 }
 
 impl Store {
-    const DEFAULT_PRETRAINED: &str = "pretrained";
+    const DEFAULT_PRETRAINED: &'static str = "pretrained";
     /// Opens a new key-value store and its backup.
     ///
     /// # Errors

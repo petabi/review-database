@@ -11,6 +11,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+// TODO: Make new Match trait to support Windows Events
+
 pub(super) trait Match {
     fn src_addr(&self) -> IpAddr;
     fn src_port(&self) -> u16;
