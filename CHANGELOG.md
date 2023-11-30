@@ -7,6 +7,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Introduced the `batch_ts` attribute to the `Statistics` module, providing users
+  with the ability to retrieve the timestamp associated with the batch of column
+  statistics. This information is valuable for tracking changes over time and
+  aligning statistical insights with specific data batches.
+
 ### Changed
 
 - Removed `batch_info` and `scores` arguments from `Model::from_storage` function.

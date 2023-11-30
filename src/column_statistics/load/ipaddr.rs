@@ -2,9 +2,10 @@ use super::{
     schema::{
         column_description::dsl as cd, description_ipaddr::dsl as desc, top_n_ipaddr::dsl as top_n,
     },
-    ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription, ToElementCount,
-    ToNLargestCount,
+    BatchTimestamp, ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription,
+    ToElementCount, ToNLargestCount,
 };
+use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use std::{
@@ -17,6 +18,7 @@ use structured::{Description, Element, ElementCount, NLargestCount};
 struct DescriptionIpAddr {
     id: i32,
     column_index: i32,
+    batch_ts: NaiveDateTime,
     count: i64,
     unique_count: i64,
     mode: String,
@@ -25,6 +27,12 @@ struct DescriptionIpAddr {
 impl ColumnIndex for DescriptionIpAddr {
     fn column_index(&self) -> i32 {
         self.column_index
+    }
+}
+
+impl BatchTimestamp for DescriptionIpAddr {
+    fn batch_ts(&self) -> NaiveDateTime {
+        self.batch_ts
     }
 }
 
@@ -93,6 +101,7 @@ pub(super) async fn get_ipaddr_statistics(
         .select((
             cd::id,
             cd::column_index,
+            cd::batch_ts,
             cd::count,
             cd::unique_count,
             desc::mode,
