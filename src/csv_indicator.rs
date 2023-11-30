@@ -29,15 +29,13 @@ pub(crate) async fn get_whitelists(
         .iter()
         .filter_map(|i| {
             whitelist_names.get(*i).and_then(|n| {
-                if let Some(n) = n {
+                n.as_ref().and_then(|n| {
                     if n.is_empty() {
                         None
                     } else {
                         Some((n.clone(), *i))
                     }
-                } else {
-                    None
-                }
+                })
             })
         })
         .collect();
@@ -79,15 +77,13 @@ pub(crate) async fn get_csv_indicators(
         .iter()
         .filter_map(|i| {
             indicator_names.get(*i).and_then(|n| {
-                if let Some(n) = n {
+                n.as_ref().and_then(|n| {
                     if n.is_empty() {
                         None
                     } else {
                         Some((n.clone(), *i))
                     }
-                } else {
-                    None
-                }
+                })
             })
         })
         .collect();
