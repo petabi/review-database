@@ -2,9 +2,10 @@ use super::{
     schema::{
         column_description::dsl as cd, description_int::dsl as desc, top_n_int::dsl as top_n,
     },
-    ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription, ToElementCount,
-    ToNLargestCount,
+    BatchTimestamp, ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription,
+    ToElementCount, ToNLargestCount,
 };
+use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use structured::{Description, Element, ElementCount, NLargestCount};
@@ -13,6 +14,7 @@ use structured::{Description, Element, ElementCount, NLargestCount};
 struct DescriptionInt {
     id: i32,
     column_index: i32,
+    batch_ts: NaiveDateTime,
     count: i64,
     unique_count: i64,
     mode: i64,
@@ -25,6 +27,11 @@ struct DescriptionInt {
 impl ColumnIndex for DescriptionInt {
     fn column_index(&self) -> i32 {
         self.column_index
+    }
+}
+impl BatchTimestamp for DescriptionInt {
+    fn batch_ts(&self) -> NaiveDateTime {
+        self.batch_ts
     }
 }
 
@@ -87,6 +94,7 @@ pub(super) async fn get_int_statistics(
         .select((
             cd::id,
             cd::column_index,
+            cd::batch_ts,
             cd::count,
             cd::unique_count,
             desc::mode,

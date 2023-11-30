@@ -27,12 +27,17 @@ struct ColumnDescriptionLoad {
 
 #[derive(Serialize)]
 pub struct Statistics {
+    batch_ts: NaiveDateTime,
     column_index: i32,
     statistics: ColumnStatistics,
 }
 
 trait ColumnIndex {
     fn column_index(&self) -> i32;
+}
+
+trait BatchTimestamp {
+    fn batch_ts(&self) -> NaiveDateTime;
 }
 
 trait DescriptionIndex {
@@ -107,14 +112,14 @@ impl Database {
         .flatten()
         .collect::<Vec<_>>();
 
-        results.sort_by_key(|v| v.column_index);
+        results.sort_by_key(|v| (v.batch_ts, v.column_index));
         Ok(results)
     }
 }
 
 fn build_column_statistics<T, U>(column_descriptions: Vec<T>, top_n: Vec<U>) -> Vec<Statistics>
 where
-    T: ToDescription + ToNLargestCount + ColumnIndex + DescriptionIndex,
+    T: ToDescription + ToNLargestCount + ColumnIndex + DescriptionIndex + BatchTimestamp,
     U: ToElementCount + DescriptionIndex,
 {
     let element_counts = top_n_to_element_counts(top_n);
@@ -125,12 +130,14 @@ where
             let description = cd.to_description();
             if let Some(ec) = element_counts.get(&id) {
                 let column_index = cd.column_index();
+                let batch_ts = cd.batch_ts();
                 let n_largest_count = cd.to_n_largest_count(ec.clone());
                 let cs = ColumnStatistics {
                     description,
                     n_largest_count,
                 };
                 Some(Statistics {
+                    batch_ts,
                     column_index,
                     statistics: cs,
                 })

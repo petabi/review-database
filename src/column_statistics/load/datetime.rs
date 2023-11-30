@@ -3,8 +3,8 @@ use super::{
         column_description::dsl as cd, description_datetime::dsl as desc,
         top_n_datetime::dsl as top_n,
     },
-    ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription, ToElementCount,
-    ToNLargestCount,
+    BatchTimestamp, ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription,
+    ToElementCount, ToNLargestCount,
 };
 use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
@@ -15,6 +15,7 @@ use structured::{Description, Element, ElementCount, NLargestCount};
 struct DescriptionDateTime {
     id: i32,
     column_index: i32,
+    batch_ts: NaiveDateTime,
     count: i64,
     unique_count: i64,
     mode: NaiveDateTime,
@@ -23,6 +24,12 @@ struct DescriptionDateTime {
 impl ColumnIndex for DescriptionDateTime {
     fn column_index(&self) -> i32 {
         self.column_index
+    }
+}
+
+impl BatchTimestamp for DescriptionDateTime {
+    fn batch_ts(&self) -> NaiveDateTime {
+        self.batch_ts
     }
 }
 
@@ -85,6 +92,7 @@ pub(super) async fn get_datetime_statistics(
         .select((
             cd::id,
             cd::column_index,
+            cd::batch_ts,
             cd::count,
             cd::unique_count,
             desc::mode,
