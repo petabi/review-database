@@ -13,6 +13,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced a new database table `SEMI_MODELS` to store semi supervised models.
 - Added functionality to filter `agent_id` when search eventlist.
 - Add new `WindowsThreat` detected event for Windows Sysmon events.
+- Add new `NetworkThreat` detected event for network events.
 
 ## [0.20.0] - 2023-10-06
 

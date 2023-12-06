@@ -1414,6 +1414,7 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["block", "list", "ssh"], "block list ssh");
             moderate_kinds_by(kinds, &["block", "list", "tls"], "block list tls");
             moderate_kinds_by(kinds, &["windows", "threat"], "windows threat");
+            moderate_kinds_by(kinds, &["network", "threat"], "network threat");
         }
     }
 }
@@ -1669,7 +1670,7 @@ impl fmt::Display for EventMessage {
             }
             EventKind::NetworkThreat => {
                 if let Ok(fields) = bincode::deserialize::<NetworkThreat>(&self.fields) {
-                    write!(f, "MetwprlThreat,{fields}")
+                    write!(f, "NetworkThreat,{fields}")
                 } else {
                     write!(f, "invalid event")
                 }
