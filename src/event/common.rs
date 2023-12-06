@@ -14,6 +14,9 @@ use std::{
 // TODO: Make new Match trait to support Windows Events
 
 pub(super) trait Match {
+    fn agent_id(&self) -> String {
+        "".to_string()
+    }
     fn src_addr(&self) -> IpAddr;
     fn src_port(&self) -> u16;
     fn dst_addr(&self) -> IpAddr;
@@ -176,6 +179,12 @@ pub(super) trait Match {
                 if event_confidence < *confidence {
                     return Ok((false, None));
                 }
+            }
+        }
+
+        if let Some(agent_id) = &filter.agent_id {
+            if !self.agent_id().eq(agent_id) {
+                return Ok((false, None));
             }
         }
 

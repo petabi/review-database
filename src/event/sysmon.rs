@@ -102,4 +102,8 @@ impl Match for WindowsThreat {
         // TODO: implement
         0.0
     }
+
+    fn agent_id(&self) -> String {
+        self.agent_id.clone()
+    }
 }
