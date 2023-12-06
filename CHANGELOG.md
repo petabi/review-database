@@ -9,6 +9,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Introduced a new database table `TRIAGE` to store triage result.
 - Add new `WindowsThreat` detected event for Windows Sysmon events.
 
 ## [0.20.0] - 2023-10-06
