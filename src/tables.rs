@@ -35,8 +35,9 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 pub(super) const TRIAGE: &str = "triage";
+pub(super) const SEMI_MODELS: &str = "semi models";
 
-const MAP_NAMES: [&str; 25] = [
+const MAP_NAMES: [&str; 26] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -62,6 +63,7 @@ const MAP_NAMES: [&str; 25] = [
     TRUSTED_DNS_SERVERS,
     TRUSTED_USER_AGENTS,
     TRIAGE,
+    SEMI_MODELS,
 ];
 
 // Keys for the meta map.

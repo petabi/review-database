@@ -286,6 +286,13 @@ impl Store {
     }
 
     #[must_use]
+    pub fn semi_models_map(&self) -> Map {
+        self.states
+            .map(tables::SEMI_MODELS)
+            .expect("always available")
+    }
+
+    #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn triage_policy_map(&self) -> IndexedMap {
         self.states
