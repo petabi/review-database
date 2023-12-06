@@ -15,7 +15,7 @@ use std::{
 
 pub(super) trait Match {
     fn agent_id(&self) -> String {
-        "".to_string()
+        String::new()
     }
     fn src_addr(&self) -> IpAddr;
     fn src_port(&self) -> u16;

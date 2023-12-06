@@ -8,6 +8,7 @@ mod http;
 mod kerberos;
 mod ldap;
 mod mqtt;
+mod network;
 mod nfs;
 mod ntlm;
 mod rdp;
@@ -44,6 +45,7 @@ pub use self::{
         LdapPlainTextFields,
     },
     mqtt::{BlockListMqtt, BlockListMqttFields},
+    network::NetworkThreat,
     nfs::{BlockListNfs, BlockListNfsFields},
     ntlm::{BlockListNtlm, BlockListNtlmFields},
     rdp::{BlockListRdp, BlockListRdpFields, RdpBruteForce, RdpBruteForceFields},
@@ -103,6 +105,7 @@ const LDAP_PLAIN_TEXT: &str = "LDAP Plain Text";
 const CRYPTOCURRENCY_MINING_POOL: &str = "Cryptocurrency Mining Pool";
 pub const BLOCK_LIST: &str = "Block List";
 const WINDOWS_THREAT_EVENT: &str = "Windows Threat Events";
+const NETWORK_THREAT_EVENT: &str = "Network Threat Events";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -155,6 +158,7 @@ pub enum Event {
     BlockList(RecordType),
 
     WindowsThreat(WindowsThreat),
+    NetworkThreat(NetworkThreat),
 }
 
 pub enum RecordType {
@@ -222,6 +226,7 @@ impl Event {
                 RecordType::Tls(tls_event) => tls_event.matches(locator, filter),
             },
             Event::WindowsThreat(event) => event.matches(locator, filter),
+            Event::NetworkThreat(event) => event.matches(locator, filter),
         }
     }
 
@@ -385,6 +390,11 @@ impl Event {
                 }
             },
             Event::WindowsThreat(_event) => {}
+            Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    addr_pair = (Some(event.orig_addr), Some(event.resp_addr));
+                }
+            }
         }
         Ok(addr_pair)
     }
@@ -551,6 +561,11 @@ impl Event {
             Event::WindowsThreat(event) => {
                 if event.matches(locator, filter)?.0 {
                     kind = Some(WINDOWS_THREAT_EVENT);
+                }
+            }
+            Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(NETWORK_THREAT_EVENT);
                 }
             }
         }
@@ -768,6 +783,11 @@ impl Event {
             Event::WindowsThreat(event) => {
                 if event.matches(locator, filter)?.0 {
                     category = Some(EventCategory::Impact);
+                }
+            }
+            Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(EventCategory::Reconnaissance);
                 }
             }
         };
@@ -1093,6 +1113,11 @@ impl Event {
                     level = Some(MEDIUM);
                 }
             }
+            Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(MEDIUM);
+                }
+            }
         }
 
         if let Some(level) = level {
@@ -1228,6 +1253,9 @@ impl Event {
             Event::WindowsThreat(event) => {
                 event.triage_scores = Some(triage_scores);
             }
+            Event::NetworkThreat(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
         }
     }
 }
@@ -1276,6 +1304,7 @@ pub enum EventKind {
     BlockListSsh,
     BlockListTls,
     WindowsThreat,
+    NetworkThreat,
 }
 
 /// Machine Learning Method.
@@ -1638,7 +1667,13 @@ impl fmt::Display for EventMessage {
                     write!(f, "invalid event")
                 }
             }
-
+            EventKind::NetworkThreat => {
+                if let Ok(fields) = bincode::deserialize::<NetworkThreat>(&self.fields) {
+                    write!(f, "MetwprlThreat,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
             EventKind::Log => Ok(()),
         }
     }
@@ -2063,6 +2098,12 @@ impl<'i> Iterator for EventIterator<'i> {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((key, Event::WindowsThreat(fields))))
+            }
+            EventKind::NetworkThreat => {
+                let Ok(fields) = bincode::deserialize::<NetworkThreat>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::NetworkThreat(fields))))
             }
             EventKind::Log => None,
         }

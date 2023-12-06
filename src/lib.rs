@@ -48,7 +48,7 @@ pub use self::event::{
     DomainGenerationAlgorithm, Event, EventDb, EventFilter, EventIterator, EventMessage,
     ExternalDdos, Filter, FilterEndpoint, FlowKind, FtpBruteForce, FtpPlainText, HttpThreat,
     LdapBruteForce, LdapPlainText, LearningMethod, MultiHostPortScan, Network, NetworkEntry,
-    NetworkEntryValue, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
+    NetworkEntryValue, NetworkThreat, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
     RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore, WindowsThreat,
 };
 pub use self::migration::migrate_data_dir;
@@ -286,6 +286,7 @@ impl Store {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn semi_models_map(&self) -> Map {
         self.states
             .map(tables::SEMI_MODELS)
