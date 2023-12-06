@@ -295,6 +295,12 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
+    pub fn triage_map(&self) -> Map {
+        self.states.map(tables::TRIAGE).expect("always available")
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn triage_response_map(&self) -> IndexedMap {
         self.states
             .indexed_map(tables::TRIAGE_RESPONSE)
