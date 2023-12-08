@@ -7,7 +7,7 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 #[derive(Serialize, Deserialize)]
 pub struct NetworkThreat {
     #[serde(with = "ts_nanoseconds")]
-    pub timestamp: DateTime<Utc>,
+    pub time: DateTime<Utc>,
     pub source: String,
     pub orig_addr: IpAddr,
     pub orig_port: u16,
@@ -31,7 +31,7 @@ impl fmt::Display for NetworkThreat {
         write!(
             f,
             "{},{},{},{},{},{},NetworkThreat,{},{},{},{},{},{},{},{},{}",
-            DateTime::<Local>::from(self.timestamp).format("%Y-%m-%d %H:%M:%S"),
+            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
             self.orig_addr,
             self.orig_port,
             self.resp_addr,
@@ -80,7 +80,7 @@ impl Match for NetworkThreat {
     }
 
     fn kind(&self) -> &str {
-        "NetworkThreat"
+        "network threat"
     }
 
     fn source(&self) -> &str {

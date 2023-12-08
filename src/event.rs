@@ -7,6 +7,7 @@ mod ftp;
 mod http;
 mod kerberos;
 mod ldap;
+mod log;
 mod mqtt;
 mod network;
 mod nfs;
@@ -44,6 +45,7 @@ pub use self::{
         BlockListLdap, BlockListLdapFields, LdapBruteForce, LdapBruteForceFields, LdapPlainText,
         LdapPlainTextFields,
     },
+    log::LogThreat,
     mqtt::{BlockListMqtt, BlockListMqttFields},
     network::NetworkThreat,
     nfs::{BlockListNfs, BlockListNfsFields},
@@ -103,9 +105,10 @@ const NON_BROWSER: &str = "Non Browser";
 const LDAP_BRUTE_FORCE: &str = "LDAP Brute Force";
 const LDAP_PLAIN_TEXT: &str = "LDAP Plain Text";
 const CRYPTOCURRENCY_MINING_POOL: &str = "Cryptocurrency Mining Pool";
-pub const BLOCK_LIST: &str = "Block List";
+const BLOCK_LIST: &str = "Block List";
 const WINDOWS_THREAT_EVENT: &str = "Windows Threat Events";
 const NETWORK_THREAT_EVENT: &str = "Network Threat Events";
+const MISC_LOG_THREAT: &str = "Log Threat";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -159,6 +162,7 @@ pub enum Event {
 
     WindowsThreat(WindowsThreat),
     NetworkThreat(NetworkThreat),
+    LogThreat(LogThreat),
 }
 
 pub enum RecordType {
@@ -227,6 +231,7 @@ impl Event {
             },
             Event::WindowsThreat(event) => event.matches(locator, filter),
             Event::NetworkThreat(event) => event.matches(locator, filter),
+            Event::LogThreat(event) => event.matches(locator, filter),
         }
     }
 
@@ -395,6 +400,7 @@ impl Event {
                     addr_pair = (Some(event.orig_addr), Some(event.resp_addr));
                 }
             }
+            Event::LogThreat(_event) => {}
         }
         Ok(addr_pair)
     }
@@ -566,6 +572,11 @@ impl Event {
             Event::NetworkThreat(event) => {
                 if event.matches(locator, filter)?.0 {
                     kind = Some(NETWORK_THREAT_EVENT);
+                }
+            }
+            Event::LogThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(MISC_LOG_THREAT);
                 }
             }
         }
@@ -786,6 +797,11 @@ impl Event {
                 }
             }
             Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(EventCategory::Reconnaissance);
+                }
+            }
+            Event::LogThreat(event) => {
                 if event.matches(locator, filter)?.0 {
                     category = Some(EventCategory::Reconnaissance);
                 }
@@ -1118,6 +1134,11 @@ impl Event {
                     level = Some(MEDIUM);
                 }
             }
+            Event::LogThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(MEDIUM);
+                }
+            }
         }
 
         if let Some(level) = level {
@@ -1256,6 +1277,9 @@ impl Event {
             Event::NetworkThreat(event) => {
                 event.triage_scores = Some(triage_scores);
             }
+            Event::LogThreat(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
         }
     }
 }
@@ -1276,7 +1300,7 @@ pub enum EventKind {
     HttpThreat,
     RdpBruteForce,
     RepeatedHttpSessions,
-    Log,
+    LogThreat,
     TorConnection,
     DomainGenerationAlgorithm,
     FtpBruteForce,
@@ -1377,6 +1401,7 @@ impl EventFilter {
     pub fn moderate_kinds(&mut self) {
         if let Some(kinds) = self.kinds.as_mut() {
             moderate_kinds_by(kinds, &["dns", "covert", "channel"], "dns covert channel");
+            moderate_kinds_by(kinds, &["http", "threat"], "http threat");
             moderate_kinds_by(
                 kinds,
                 &["http", "covert", "channel"],
@@ -1415,6 +1440,7 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["block", "list", "tls"], "block list tls");
             moderate_kinds_by(kinds, &["windows", "threat"], "windows threat");
             moderate_kinds_by(kinds, &["network", "threat"], "network threat");
+            moderate_kinds_by(kinds, &["log", "threat"], "log threat");
         }
     }
 }
@@ -1675,7 +1701,13 @@ impl fmt::Display for EventMessage {
                     write!(f, "invalid event")
                 }
             }
-            EventKind::Log => Ok(()),
+            EventKind::LogThreat => {
+                if let Ok(fields) = bincode::deserialize::<LogThreat>(&self.fields) {
+                    write!(f, "LogThreat,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
         }
     }
 }
@@ -2106,7 +2138,12 @@ impl<'i> Iterator for EventIterator<'i> {
                 };
                 Some(Ok((key, Event::NetworkThreat(fields))))
             }
-            EventKind::Log => None,
+            EventKind::LogThreat => {
+                let Ok(fields) = bincode::deserialize::<LogThreat>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::LogThreat(fields))))
+            }
         }
     }
 }

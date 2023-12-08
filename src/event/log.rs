@@ -9,17 +9,11 @@ use std::{
 };
 
 #[derive(Serialize, Deserialize)]
-pub struct WindowsThreat {
+pub struct LogThreat {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub source: String,
     pub service: String,
-    pub agent_name: String,
-    pub agent_id: String,
-    pub process_guid: String,
-    pub process_id: u32,
-    pub image: String,
-    pub user: String,
     pub content: String,
     pub db_name: String,
     pub rule_id: u32,
@@ -30,20 +24,13 @@ pub struct WindowsThreat {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for WindowsThreat {
+impl fmt::Display for LogThreat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "-,-,-,-,-,WindowsThreat,3,{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "-,-,-,-,-,-,LogThreat,{},{},{},{},{},{},{},{},{}",
             DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.source,
             self.service,
-            self.agent_name,
-            self.agent_id,
-            self.process_guid,
-            self.process_id,
-            self.image,
-            self.user,
             self.content,
             self.db_name,
             self.rule_id,
@@ -55,12 +42,7 @@ impl fmt::Display for WindowsThreat {
     }
 }
 
-// TODO: Make new Match trait for Windows threat events
-impl Match for WindowsThreat {
-    fn source(&self) -> &str {
-        &self.source
-    }
-
+impl Match for LogThreat {
     fn src_addr(&self) -> IpAddr {
         IpAddr::V4(Ipv4Addr::UNSPECIFIED)
     }
@@ -81,9 +63,8 @@ impl Match for WindowsThreat {
         0
     }
 
-    // TODO: choose event category with service and attack_kind value
     fn category(&self) -> EventCategory {
-        EventCategory::Impact
+        EventCategory::Reconnaissance
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -91,19 +72,19 @@ impl Match for WindowsThreat {
     }
 
     fn kind(&self) -> &str {
-        "windows threat"
+        "log threat"
+    }
+
+    fn source(&self) -> &str {
+        self.source.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
         // TODO: implement
         0.0
-    }
-
-    fn agent_id(&self) -> String {
-        self.agent_id.clone()
     }
 }
