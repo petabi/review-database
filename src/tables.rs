@@ -1,10 +1,11 @@
 mod accounts;
 mod batch_info;
+mod category;
 mod scores;
 
-use crate::{batch_info::BatchInfo, scores::Scores, types::Account};
+use crate::{batch_info::BatchInfo, category::Category, scores::Scores, types::Account, Indexable};
 
-use super::{event, IndexedMap, IndexedMultimap, IndexedSet, Map};
+use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -16,6 +17,7 @@ pub(super) const ACCOUNT_POLICY: &str = "account policy";
 pub(super) const ALLOW_NETWORKS: &str = "allow networks";
 pub(super) const BATCH_INFO: &str = "batch_info";
 pub(super) const BLOCK_NETWORKS: &str = "block networks";
+pub(super) const CATEGORY: &str = "category";
 pub(super) const CUSTOMERS: &str = "customers";
 pub(super) const DATA_SOURCES: &str = "data sources";
 pub(super) const FILTERS: &str = "filters";
@@ -35,13 +37,14 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 24] = [
+const MAP_NAMES: [&str; 25] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
     ALLOW_NETWORKS,
     BATCH_INFO,
     BLOCK_NETWORKS,
+    CATEGORY,
     CUSTOMERS,
     DATA_SOURCES,
     FILTERS,
@@ -117,6 +120,12 @@ impl StateDb {
     pub(crate) fn scores(&self) -> Table<Scores> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Scores>::open(inner).expect("accounts table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn category(&self) -> IndexedTable<Category> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<Category>::open(inner).expect("category table must be present")
     }
 
     #[must_use]
@@ -313,6 +322,50 @@ impl<'i, R> TableIter<'i, R> {
             inner,
             _phantom: std::marker::PhantomData,
         }
+    }
+}
+
+pub struct IndexedTable<'d, R: Indexable> {
+    indexed_map: IndexedMap<'d>,
+    _phantom: std::marker::PhantomData<R>,
+}
+
+impl<'d, R> IndexedTable<'d, R>
+where
+    R: Indexable,
+{
+    fn new(indexed_map: IndexedMap<'d>) -> Self {
+        Self {
+            indexed_map,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Returns the number of entries.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the map index is not found or the database operation fails.    
+    pub fn count(&self) -> Result<usize> {
+        self.indexed_map.count()
+    }
+
+    /// Inserts a new record.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the record key already exists.
+    pub fn insert(&self, record: R) -> Result<u32> {
+        self.indexed_map.insert(record)
+    }
+
+    /// Removes a record with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn remove(&self, id: u32) -> Result<Vec<u8>> {
+        self.indexed_map.remove(id)
     }
 }
 
