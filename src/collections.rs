@@ -498,6 +498,15 @@ pub trait Indexed {
             } else {
                 key
             };
+
+            if txn
+                .get_pinned_cf(self.cf(), &new_key)
+                .context("cannot read from database")?
+                .is_some()
+            {
+                bail!("new key already exists");
+            }
+
             let new_entry = new.apply(entry.into());
             txn.put_cf(
                 self.cf(),
