@@ -61,3 +61,112 @@ impl<'a> IndexedMap<'a> {
         self.db.get_cf(self.cf, key).context("cannot read entry")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{Indexable, Indexed, IndexedMapUpdate, Store};
+
+    #[derive(serde::Deserialize, serde::Serialize, Clone)]
+    struct TestEntry {
+        id: u32,
+        name: String,
+    }
+
+    impl Indexable for TestEntry {
+        fn key(&self) -> &[u8] {
+            self.name.as_bytes()
+        }
+
+        fn value(&self) -> Vec<u8> {
+            use bincode::Options;
+
+            bincode::DefaultOptions::new()
+                .serialize(self)
+                .expect("serializable")
+        }
+
+        fn set_index(&mut self, index: u32) {
+            self.id = index;
+        }
+    }
+
+    impl IndexedMapUpdate for TestEntry {
+        type Entry = TestEntry;
+
+        fn key(&self) -> Option<&[u8]> {
+            Some(self.name.as_bytes())
+        }
+
+        fn apply(&self, mut value: Self::Entry) -> Result<Self::Entry, anyhow::Error> {
+            value.name.clear();
+            value.name.push_str(&self.name);
+
+            Ok(value)
+        }
+
+        fn verify(&self, value: &Self::Entry) -> bool {
+            self.name == value.name
+        }
+    }
+
+    #[test]
+    fn indexed_map_insert() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let db = Store::new(&db_dir.path(), &backup_dir.path()).unwrap();
+        let indexed = db.allow_network_map();
+
+        assert!(indexed
+            .insert(TestEntry {
+                id: u32::MAX,
+                name: "a".to_string()
+            })
+            .is_ok());
+        assert!(indexed
+            .insert(TestEntry {
+                id: u32::MAX,
+                name: "a".to_string()
+            })
+            .is_err());
+        assert!(indexed
+            .insert(TestEntry {
+                id: u32::MAX,
+                name: "b".to_string()
+            })
+            .is_ok());
+    }
+
+    #[test]
+    #[should_panic]
+    fn indexed_map_update() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let db = Store::new(&db_dir.path(), &backup_dir.path()).unwrap();
+        let indexed = db.allow_network_map();
+
+        let a = TestEntry {
+            id: u32::MAX,
+            name: "a".to_string(),
+        };
+        let b = TestEntry {
+            id: u32::MAX,
+            name: "b".to_string(),
+        };
+        let c = TestEntry {
+            id: u32::MAX,
+            name: "c".to_string(),
+        };
+        assert_eq!(indexed.insert(a.clone()).unwrap(), 0);
+        assert_eq!(indexed.insert(b.clone()).unwrap(), 1);
+
+        assert!(indexed.update(0, &a, &c).is_ok());
+        assert_eq!(indexed.count().unwrap(), 2);
+
+        assert!(indexed.update(0, &a, &c).is_err());
+        assert_eq!(indexed.count().unwrap(), 2);
+
+        // Currently the following panic
+        assert!(indexed.update(0, &c, &b).is_err());
+        assert_eq!(indexed.count().unwrap(), 2);
+    }
+}
