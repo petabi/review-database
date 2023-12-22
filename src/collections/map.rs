@@ -232,3 +232,40 @@ impl<'i> Iterator for MapIterator<'i> {
         self.inner.next().transpose().ok().flatten()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::Store;
+
+    #[test]
+    fn map_insert() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let db = Store::new(&db_dir.path(), &backup_dir.path()).unwrap();
+        let map = db.filter_map();
+
+        assert!(map.insert(b"a", b"A").is_ok());
+        assert!(map.insert(b"a", b"A").is_err());
+        assert!(map.insert(b"b", b"A").is_ok());
+        assert!(map.insert(b"a", b"B").is_err());
+    }
+
+    #[test]
+    #[should_panic]
+    fn map_update() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let db = Store::new(&db_dir.path(), &backup_dir.path()).unwrap();
+        let map = db.filter_map();
+
+        assert!(map.insert(b"a", b"A").is_ok());
+        assert!(map.insert(b"b", b"B").is_ok());
+
+        assert!(map.update((b"a", b"A"), (b"a", b"B")).is_ok());
+        assert!(map.update((b"a", b"B"), (b"c", b"B")).is_ok());
+        assert!(map.update((b"c", b"X"), (b"c", b"A")).is_err());
+
+        // Update to existing key should fail
+        assert!(map.update((b"c", b"B"), (b"b", b"D")).is_err());
+    }
+}
