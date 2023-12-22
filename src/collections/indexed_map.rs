@@ -137,7 +137,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn indexed_map_update() {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
@@ -162,10 +161,11 @@ mod tests {
         assert!(indexed.update(0, &a, &c).is_ok());
         assert_eq!(indexed.count().unwrap(), 2);
 
+        // Old entry must match existing entry
         assert!(indexed.update(0, &a, &c).is_err());
         assert_eq!(indexed.count().unwrap(), 2);
 
-        // Currently the following panic
+        // No duplicated keys
         assert!(indexed.update(0, &c, &b).is_err());
         assert_eq!(indexed.count().unwrap(), 2);
     }

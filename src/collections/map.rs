@@ -127,12 +127,19 @@ impl<'a> Map<'a> {
                 bail!("no such entry");
             };
 
-            txn.put_cf(self.cf, new.0, new.1)
-                .context("failed to write new entry")?;
             if old.0 != new.0 {
                 txn.delete_cf(self.cf, old.0)
                     .context("failed to delete old entry")?;
+                if txn
+                    .get_pinned_cf(self.cf, new.0)
+                    .context("cannot read from database")?
+                    .is_some()
+                {
+                    bail!("new key already exists");
+                }
             }
+            txn.put_cf(self.cf, new.0, new.1)
+                .context("failed to write new entry")?;
 
             match txn.commit() {
                 Ok(()) => break,
@@ -251,7 +258,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn map_update() {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
@@ -263,9 +269,13 @@ mod tests {
 
         assert!(map.update((b"a", b"A"), (b"a", b"B")).is_ok());
         assert!(map.update((b"a", b"B"), (b"c", b"B")).is_ok());
+        assert!(map.update((b"c", b"B"), (b"c", b"D")).is_ok());
+
+        // Old (key, value) must match the existing entry
+        assert!(map.update((b"x", b"B"), (b"c", b"A")).is_err());
         assert!(map.update((b"c", b"X"), (b"c", b"A")).is_err());
 
-        // Update to existing key should fail
-        assert!(map.update((b"c", b"B"), (b"b", b"D")).is_err());
+        // No duplicated keys
+        assert!(map.update((b"c", b"D"), (b"b", b"D")).is_err());
     }
 }
