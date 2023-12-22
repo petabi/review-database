@@ -5,6 +5,15 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Ensures that when updating elements in `Map` and `IndexedMap`, the system now
+  checks whether the new key already exists in the database. This prevents
+  unintentional overwrites or conflicts, providing a more robust and reliable
+  update mechanism.
+
 ## [0.21.0] - 2023-12-01
 
 ### Added
@@ -542,6 +551,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.21.0...main
 [0.21.0]: https://github.com/petabi/review-database/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/petabi/review-database/compare/0.19.0...0.20.0
 [0.19.0]: https://github.com/petabi/review-database/compare/0.18.0...0.19.0
