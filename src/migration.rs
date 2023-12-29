@@ -32,7 +32,72 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.16.0,<0.22.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.16.0,<=0.22.0-alpha.1";
+
+/// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
+///
+/// Migration is supported for current released version only. And the migrated data
+/// and related interface should be removed from `PostgresQL` database in the next released
+/// version.
+///
+/// # Errors
+///
+/// Returns an error if the data hasn't been migrated successfully to Rocksdb.
+pub async fn migrate_backend(db: &super::Database, store: &super::Store) -> Result<()> {
+    backend_0_22(db, store).await
+}
+
+async fn backend_0_22(db: &super::Database, store: &super::Store) -> Result<()> {
+    let mut after = None;
+    let mut categories = vec![];
+    while let Ok(cats) = db.load_categories(&after, &None, true, 100).await {
+        if cats.is_empty() {
+            break;
+        }
+        after = cats.last().map(|c| {
+            (
+                i32::try_from(c.id).expect("id out of range"),
+                c.name.clone(),
+            )
+        });
+        categories.extend(cats);
+    }
+
+    let max_id = categories
+        .iter()
+        .map(|c| c.id)
+        .max()
+        .expect("maximum id doesn't exist");
+
+    let mut table = store.category_map();
+    for id in 0..max_id {
+        let added = table.add(&format!("dummy{id}"))?;
+        if added != id {
+            return Err(anyhow!("corrupted rocksdb category table"));
+        }
+    }
+
+    for cat in &categories {
+        table.update(cat.id, &format!("dummy{}", cat.id), &cat.name)?;
+    }
+
+    if categories.len() != usize::try_from(max_id).expect("max id out of range") + 1 {
+        let mut flags = vec![false; usize::try_from(max_id + 1).expect("max_id out of range")];
+        for c in categories {
+            flags[usize::try_from(c.id).expect("max_id out of range")] = true;
+        }
+
+        for id in flags
+            .into_iter()
+            .enumerate()
+            .filter_map(|(id, exists)| if exists { Some(id) } else { None })
+        {
+            table.remove(u32::try_from(id).expect("id out of range"))?;
+        }
+    }
+
+    Ok(())
+}
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///

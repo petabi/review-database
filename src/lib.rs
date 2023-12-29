@@ -52,7 +52,7 @@ pub use self::event::{
     NetworkEntryValue, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
     RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
 };
-pub use self::migration::migrate_data_dir;
+pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 pub use self::qualifier::Qualifier;
