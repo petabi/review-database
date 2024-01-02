@@ -43,11 +43,23 @@ const COMPATIBLE_VERSION_REQ: &str = ">=0.16.0,<=0.22.0-alpha.1";
 /// # Errors
 ///
 /// Returns an error if the data hasn't been migrated successfully to Rocksdb.
-pub async fn migrate_backend(db: &super::Database, store: &super::Store) -> Result<()> {
-    backend_0_22(db, store).await
+pub async fn migrate_backend<P: AsRef<Path>>(
+    db: &super::Database,
+    store: &super::Store,
+    data_dir: P,
+) -> Result<()> {
+    let (_data, cur_ver) = retrieve_or_create_version(data_dir)?;
+    backend_0_22(db, store, cur_ver).await
 }
 
-async fn backend_0_22(db: &super::Database, store: &super::Store) -> Result<()> {
+async fn backend_0_22(db: &super::Database, store: &super::Store, version: Version) -> Result<()> {
+    let acceptable = VersionReq::parse(">=0.22.0,<=0.22.0-alpha.1")?;
+    if !acceptable.matches(&version) {
+        return Err(anyhow!(
+            "{version} is not acceptable, ignoring the error might incur data loss"
+        ));
+    }
+
     let mut after = None;
     let mut categories = vec![];
     while let Ok(cats) = db.load_categories(&after, &None, true, 100).await {
