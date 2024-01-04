@@ -48,20 +48,23 @@ pub async fn migrate_backend<P: AsRef<Path>>(
     store: &super::Store,
     data_dir: P,
 ) -> Result<()> {
-    let (_data, cur_ver) = retrieve_or_create_version(data_dir)?;
-    backend_0_22(db, store, cur_ver).await
+    let path = data_dir.as_ref();
+    let file = path.join("VERSION");
+
+    let version = read_version_file(&file)?;
+
+    if VersionReq::parse(COMPATIBLE_VERSION_REQ)?.matches(&version) {
+        backend_0_22(db, store).await?;
+    }
+    Ok(())
 }
 
-async fn backend_0_22(db: &super::Database, store: &super::Store, version: Version) -> Result<()> {
-    let acceptable = VersionReq::parse(">=0.22.0,<=0.22.0-alpha.1")?;
-    if !acceptable.matches(&version) {
-        return Err(anyhow!(
-            "{version} is not acceptable, ignoring the error might incur data loss"
-        ));
-    }
-
+async fn backend_0_22(db: &super::Database, store: &super::Store) -> Result<()> {
+    tracing::info!("starting to transfer category data...");
     let mut after = None;
     let mut categories = vec![];
+
+    // retrieve categories from Postgres
     while let Ok(cats) = db.load_categories(&after, &None, true, 100).await {
         if cats.is_empty() {
             break;
@@ -75,17 +78,29 @@ async fn backend_0_22(db: &super::Database, store: &super::Store, version: Versi
         categories.extend(cats);
     }
 
+    let mut table = store.category_map();
+
+    if table.count()? > 0 {
+        tracing::info!("category data migration completed.");
+        return Ok(());
+    }
+
     let max_id = categories
         .iter()
         .map(|c| c.id)
         .max()
         .expect("maximum id doesn't exist");
 
-    let mut table = store.category_map();
-    for id in 0..max_id {
+    for id in 0..=max_id {
+        if let Ok(_c) = table.get(id) {
+            continue;
+        }
+
         let added = table.add(&format!("dummy{id}"))?;
         if added != id {
-            return Err(anyhow!("corrupted rocksdb category table"));
+            return Err(anyhow!(
+                "corrupted category table: inserting {id} and asigned with {added}"
+            ));
         }
     }
 
@@ -93,21 +108,25 @@ async fn backend_0_22(db: &super::Database, store: &super::Store, version: Versi
         table.update(cat.id, &format!("dummy{}", cat.id), &cat.name)?;
     }
 
-    if categories.len() != usize::try_from(max_id).expect("max id out of range") + 1 {
+    if categories.len() != usize::try_from(max_id + 1).expect("max id out of range") {
         let mut flags = vec![false; usize::try_from(max_id + 1).expect("max_id out of range")];
-        for c in categories {
+        for c in &categories {
             flags[usize::try_from(c.id).expect("max_id out of range")] = true;
         }
 
         for id in flags
             .into_iter()
             .enumerate()
-            .filter_map(|(id, exists)| if exists { Some(id) } else { None })
+            .filter_map(|(id, exists)| if exists { None } else { Some(id) })
         {
-            table.remove(u32::try_from(id).expect("id out of range"))?;
+            table.deactivate(u32::try_from(id).expect("id out of range"))?;
         }
     }
 
+    tracing::info!(
+        "{} categories are migrated with {max_id} as largest id",
+        categories.len()
+    );
     Ok(())
 }
 

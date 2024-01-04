@@ -367,6 +367,15 @@ where
     pub fn remove(&self, id: u32) -> Result<Vec<u8>> {
         self.indexed_map.remove(id)
     }
+
+    /// Deactivates a key-value pair with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn deactivate(&self, id: u32) -> Result<Vec<u8>> {
+        self.indexed_map.deactivate(id)
+    }
 }
 
 pub trait Key {

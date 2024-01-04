@@ -7,12 +7,26 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `migrate_backend` function is provided for user to transfer data between
+  PostgreSQL and RocksDB for a seamless backend transition.
+
 ### Changed
 
 - Ensures that when updating elements in `Map` and `IndexedMap`, the system now
   checks whether the new key already exists in the database. This prevents
   unintentional overwrites or conflicts, providing a more robust and reliable
   update mechanism.
+- Moved the category table from the PostgreSQL database to RocksDB.
+  - The category table data is now stored in RocksDB for improved performance
+    and scalability.
+  - A migration function has been provided to seamlessly transition data from
+    the old PostgreSQL table to RocksDB.
+
+### Deprecated
+
+- `category` table from PostgreSQL database is now deprecated.
 
 ## [0.21.0] - 2023-12-01
 
