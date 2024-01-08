@@ -5,7 +5,7 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.22.0] - 2023-01-09
 
 ### Changed
 
@@ -13,6 +13,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   checks whether the new key already exists in the database. This prevents
   unintentional overwrites or conflicts, providing a more robust and reliable
   update mechanism.
+- `nodes` table's fields are modified. Migration of data is supported by function
+  `migrate_0_20_to_0_22`.
 
 ## [0.21.0] - 2023-12-01
 
@@ -31,7 +33,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   you create a model using `Model::from_storage`, the  `batch_info` and `scores`
   fields will now be initialized with their default values. If you previously
   relied on custom values for these fields, you will need to update your code accordingly.
-  
+
 ### Removed
 
 - `event_range` Table Removal:
@@ -551,7 +553,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
-[Unreleased]: https://github.com/petabi/review-database/compare/0.21.0...main
+[0.22.0]: https://github.com/petabi/review-database/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/petabi/review-database/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/petabi/review-database/compare/0.19.0...0.20.0
 [0.19.0]: https://github.com/petabi/review-database/compare/0.18.0...0.19.0
