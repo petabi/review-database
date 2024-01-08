@@ -182,6 +182,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.20.0")?,
             migrate_0_16_to_0_20,
         ),
+        (
+            VersionReq::parse(">=0.20.0,<0.22.0")?,
+            Version::parse("0.22.0")?,
+            migrate_0_20_to_0_22,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -470,10 +475,160 @@ fn migrate_0_16_to_0_20(store: &super::Store) -> Result<()> {
     Ok(())
 }
 
+fn migrate_0_20_to_0_22(store: &super::Store) -> Result<()> {
+    use crate::collections::Indexed;
+    use crate::node::Node;
+    use crate::{Indexable, IterableMap};
+    use bincode::Options;
+    use chrono::{DateTime, Utc};
+    use ipnet::Ipv4Net;
+    use std::collections::HashMap;
+
+    type PortNumber = u16;
+
+    #[derive(Deserialize, Serialize)]
+    struct Nic {
+        name: String,
+        interface: Ipv4Net,
+        gateway: IpAddr,
+    }
+
+    #[allow(clippy::struct_excessive_bools)]
+    #[derive(Deserialize, Serialize)]
+    struct OldNode {
+        id: u32,
+        name: String,
+        customer_id: u32,
+        description: String,
+        hostname: String,
+        nics: Vec<Nic>,                         // abandoned in new Node
+        disk_usage_limit: Option<f32>,          // abandoned in new Node
+        allow_access_from: Option<Vec<IpAddr>>, // abandoned in new Node
+        review_id: Option<u32>,                 // abandoned in new Node
+        ssh_port: PortNumber,                   // abandoned in new Node
+        dns_server_ip: Option<IpAddr>,          // abandoned in new Node
+        dns_server_port: Option<PortNumber>,    // abandoned in new Node
+        syslog_server_ip: Option<IpAddr>,       // abandoned in new Node
+        syslog_server_port: Option<PortNumber>, // abandoned in new Node
+        review: bool,
+        review_nics: Option<Vec<String>>,
+        review_port: Option<PortNumber>,
+        review_web_port: Option<PortNumber>,
+        ntp_server_ip: Option<IpAddr>,       // abandoned in new Node
+        ntp_server_port: Option<PortNumber>, // abandoned in new Node
+        piglet: bool,
+        giganto: bool,
+        giganto_ingestion_nics: Option<Vec<String>>, // replaced with `giganto_ingestion_ip`
+        giganto_ingestion_port: Option<PortNumber>,
+        giganto_publish_nics: Option<Vec<String>>, // replaced with `giganto_publish_ip`
+        giganto_publish_port: Option<PortNumber>,
+        giganto_graphql_nics: Option<Vec<String>>, // replaced with `giganto_graphql_ip`
+        giganto_graphql_port: Option<PortNumber>,
+        reconverge: bool,
+        hog: bool,
+        creation_time: DateTime<Utc>,
+    }
+
+    impl Indexable for OldNode {
+        fn key(&self) -> &[u8] {
+            self.name.as_bytes()
+        }
+
+        fn value(&self) -> Vec<u8> {
+            bincode::DefaultOptions::new()
+                .serialize(self)
+                .expect("serializable")
+        }
+
+        fn set_index(&mut self, index: u32) {
+            self.id = index;
+        }
+    }
+
+    fn extract_ip_from_nics(all_nics: &[Nic], target_nics: Option<Vec<String>>) -> Option<IpAddr> {
+        target_nics.and_then(|target_nics| {
+            all_nics
+                .iter()
+                .find(|nic| target_nics.contains(&nic.name))
+                .map(|nic| std::net::IpAddr::V4(nic.interface.addr()))
+        })
+    }
+
+    impl From<OldNode> for Node {
+        fn from(input: OldNode) -> Self {
+            let extracted_giganto_ingestion_ip =
+                extract_ip_from_nics(input.nics.as_slice(), input.giganto_ingestion_nics);
+            let extracted_giganto_publish_ip =
+                extract_ip_from_nics(input.nics.as_slice(), input.giganto_publish_nics);
+            let extracted_giganto_graphql_ip =
+                extract_ip_from_nics(input.nics.as_slice(), input.giganto_graphql_nics);
+
+            Self {
+                id: input.id,
+                name: input.name,
+                customer_id: input.customer_id,
+                description: input.description,
+                hostname: input.hostname,
+                review: input.review,
+                review_port: input.review_port,
+                review_web_port: input.review_web_port,
+                piglet: input.piglet,
+                piglet_giganto_ip: None,
+                piglet_giganto_port: None,
+                piglet_review_ip: None,
+                piglet_review_port: None,
+                save_packets: false,
+                http: false,
+                office: false,
+                exe: false,
+                pdf: false,
+                html: false,
+                txt: false,
+                smtp_eml: false,
+                ftp: false,
+                giganto: input.giganto,
+                giganto_ingestion_ip: extracted_giganto_ingestion_ip,
+                giganto_ingestion_port: input.giganto_ingestion_port,
+                giganto_publish_ip: extracted_giganto_publish_ip,
+                giganto_publish_port: input.giganto_publish_port,
+                giganto_graphql_ip: extracted_giganto_graphql_ip,
+                giganto_graphql_port: input.giganto_graphql_port,
+                retention_period: None,
+                reconverge: input.reconverge,
+                reconverge_review_ip: None,
+                reconverge_review_port: None,
+                reconverge_giganto_ip: None,
+                reconverge_giganto_port: None,
+                hog: input.hog,
+                hog_review_ip: None,
+                hog_review_port: None,
+                hog_giganto_ip: None,
+                hog_giganto_port: None,
+                protocols: false,
+                protocol_list: HashMap::new(),
+                sensors: false,
+                sensor_list: HashMap::new(),
+                creation_time: input.creation_time,
+            }
+        }
+    }
+
+    let node_db = store.node_map();
+    for (_key, old_value) in node_db.iter_forward()? {
+        let old_node = bincode::DefaultOptions::new()
+            .deserialize::<OldNode>(&old_value)
+            .context("Failed to migrate node database: invalid node value")?;
+        let new_node: Node = old_node.into();
+        node_db.overwrite(&new_node)?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::Store;
+    use crate::{node::Node, Store};
     use semver::{Version, VersionReq};
 
     struct TestSchema {
@@ -713,5 +868,190 @@ mod tests {
 
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
         assert!(super::migrate_0_16_to_0_20(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_20_to_0_22() {
+        type PortNumber = u16;
+        use crate::collections::Indexed;
+        use crate::Indexable;
+        use bincode::Options;
+        use chrono::{DateTime, Utc};
+        use ipnet::Ipv4Net;
+        use serde::{Deserialize, Serialize};
+        use std::collections::HashMap;
+        use std::net::IpAddr;
+        use std::net::Ipv4Addr;
+
+        #[derive(Deserialize, Serialize, Clone)]
+        struct Nic {
+            name: String,
+            interface: Ipv4Net,
+            gateway: IpAddr,
+        }
+
+        #[derive(Deserialize, Serialize, Clone)]
+        struct OldNode {
+            id: u32,
+            name: String,
+            customer_id: u32,
+            description: String,
+            hostname: String,
+            nics: Vec<Nic>,                         // abandoned in new Node
+            disk_usage_limit: Option<f32>,          // abandoned in new Node
+            allow_access_from: Option<Vec<IpAddr>>, // abandoned in new Node
+            review_id: Option<u32>,                 // abandoned in new Node
+            ssh_port: PortNumber,                   // abandoned in new Node
+            dns_server_ip: Option<IpAddr>,          // abandoned in new Node
+            dns_server_port: Option<PortNumber>,    // abandoned in new Node
+            syslog_server_ip: Option<IpAddr>,       // abandoned in new Node
+            syslog_server_port: Option<PortNumber>, // abandoned in new Node
+            review: bool,
+            review_nics: Option<Vec<String>>, // abandoned in new Node
+            review_port: Option<PortNumber>,
+            review_web_port: Option<PortNumber>,
+            ntp_server_ip: Option<IpAddr>, // abandoned in new Node
+            ntp_server_port: Option<PortNumber>, // abandoned in new Node
+            piglet: bool,
+            giganto: bool,
+            giganto_ingestion_nics: Option<Vec<String>>, // replaced with `giganto_ingestion_ip`
+            giganto_ingestion_port: Option<PortNumber>,
+            giganto_publish_nics: Option<Vec<String>>, // replaced with `giganto_publish_ip`
+            giganto_publish_port: Option<PortNumber>,
+            giganto_graphql_nics: Option<Vec<String>>, // replaced with `giganto_graphql_ip`
+            giganto_graphql_port: Option<PortNumber>,
+            reconverge: bool,
+            hog: bool,
+            creation_time: DateTime<Utc>,
+        }
+
+        impl Indexable for OldNode {
+            fn key(&self) -> &[u8] {
+                self.name.as_bytes()
+            }
+
+            fn value(&self) -> Vec<u8> {
+                bincode::DefaultOptions::new()
+                    .serialize(self)
+                    .expect("serializable")
+            }
+
+            fn set_index(&mut self, index: u32) {
+                self.id = index;
+            }
+        }
+
+        let settings = TestSchema::new();
+        let node_db = settings.store.node_map();
+        let old_node = OldNode {
+            id: 0,
+            name: "node-name".to_string(),
+            customer_id: 42,
+            description: "description".to_string(),
+            hostname: "test-node-host".to_string(),
+            nics: vec![
+                Nic {
+                    name: "eth1".to_string(),
+                    interface: "10.1.1.1/32".parse().unwrap(),
+                    gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 254)),
+                },
+                Nic {
+                    name: "eth12".to_string(),
+                    interface: "10.1.1.12/32".parse().unwrap(),
+                    gateway: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 254)),
+                },
+            ],
+            disk_usage_limit: Some(100.0),
+            allow_access_from: Some(vec![IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1))]),
+            review_id: Some(123),
+            ssh_port: 22,
+            dns_server_ip: Some(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8))),
+            dns_server_port: Some(53),
+            syslog_server_ip: Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 2))),
+            syslog_server_port: Some(514),
+            review: true,
+            review_nics: Some(vec!["eth1".to_string()]),
+            review_port: Some(8080),
+            review_web_port: Some(8443),
+            ntp_server_ip: Some(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))),
+            ntp_server_port: Some(123),
+            piglet: true,
+            giganto: true,
+            giganto_ingestion_nics: Some(vec!["eth11".to_string()]),
+            giganto_ingestion_port: Some(9090),
+            giganto_publish_nics: Some(vec!["eth12".to_string()]),
+            giganto_publish_port: Some(9191),
+            giganto_graphql_nics: Some(vec!["eth13".to_string()]),
+            giganto_graphql_port: Some(9292),
+            reconverge: false,
+            hog: false,
+            creation_time: Utc::now(),
+        };
+        assert!(node_db.insert(old_node.clone()).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_20_to_0_22(&settings.store).is_ok());
+
+        let node_db = settings.store.node_map();
+
+        let new_value = node_db.get_by_key(old_node.key()).unwrap().unwrap();
+
+        let new_node = bincode::DefaultOptions::new()
+            .deserialize::<Node>(new_value.as_ref())
+            .unwrap();
+
+        assert_eq!(new_node.id, old_node.id);
+        assert_eq!(new_node.name, old_node.name);
+        assert_eq!(new_node.customer_id, old_node.customer_id);
+        assert_eq!(new_node.description, old_node.description);
+        assert_eq!(new_node.hostname, old_node.hostname);
+        assert_eq!(new_node.review, old_node.review);
+        assert_eq!(new_node.review_port, old_node.review_port);
+        assert_eq!(new_node.review_web_port, old_node.review_web_port);
+        assert_eq!(new_node.piglet, old_node.piglet);
+        assert_eq!(new_node.piglet_giganto_ip, None);
+        assert_eq!(new_node.piglet_giganto_port, None);
+        assert_eq!(new_node.piglet_review_ip, None);
+        assert_eq!(new_node.piglet_review_port, None);
+        assert_eq!(new_node.save_packets, false);
+        assert_eq!(new_node.http, false);
+        assert_eq!(new_node.office, false);
+        assert_eq!(new_node.exe, false);
+        assert_eq!(new_node.pdf, false);
+        assert_eq!(new_node.html, false);
+        assert_eq!(new_node.txt, false);
+        assert_eq!(new_node.smtp_eml, false);
+        assert_eq!(new_node.ftp, false);
+        assert_eq!(new_node.giganto, old_node.giganto);
+        assert_eq!(new_node.giganto_ingestion_ip, None);
+        assert_eq!(
+            new_node.giganto_ingestion_port,
+            old_node.giganto_ingestion_port
+        );
+        assert_eq!(
+            new_node.giganto_publish_ip,
+            Some(IpAddr::V4(Ipv4Addr::new(10, 1, 1, 12)))
+        );
+        assert_eq!(new_node.giganto_publish_port, old_node.giganto_publish_port);
+        assert_eq!(new_node.giganto_graphql_ip, None);
+        assert_eq!(new_node.giganto_graphql_port, old_node.giganto_graphql_port);
+        assert_eq!(new_node.retention_period, None);
+        assert_eq!(new_node.reconverge, old_node.reconverge);
+        assert_eq!(new_node.reconverge_review_ip, None);
+        assert_eq!(new_node.reconverge_review_port, None);
+        assert_eq!(new_node.reconverge_giganto_ip, None);
+        assert_eq!(new_node.reconverge_giganto_port, None);
+        assert_eq!(new_node.hog, old_node.hog);
+        assert_eq!(new_node.hog_review_ip, None);
+        assert_eq!(new_node.hog_review_port, None);
+        assert_eq!(new_node.hog_giganto_ip, None);
+        assert_eq!(new_node.hog_giganto_port, None);
+        assert_eq!(new_node.protocols, false);
+        assert_eq!(new_node.protocol_list, HashMap::new());
+        assert_eq!(new_node.sensors, false);
+        assert_eq!(new_node.sensor_list, HashMap::new());
+        assert_eq!(new_node.creation_time, old_node.creation_time);
     }
 }

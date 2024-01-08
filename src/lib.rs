@@ -14,6 +14,7 @@ mod csv_indicator;
 pub mod event;
 mod migration;
 mod model;
+mod node;
 mod outlier;
 mod qualifier;
 mod schema;
