@@ -53,13 +53,13 @@ pub use self::event::{
     NetworkEntryValue, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
     RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
 };
-pub use self::migration::migrate_data_dir;
+pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 pub use self::qualifier::Qualifier;
 pub use self::status::Status;
 use self::tables::StateDb;
-pub use self::tables::Table;
+pub use self::tables::{IndexedTable, Table};
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -181,6 +181,12 @@ impl Store {
         self.states
             .indexed_map(tables::BLOCK_NETWORKS)
             .expect("always available")
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn category_map(&self) -> IndexedTable<category::Category> {
+        self.states.category()
     }
 
     #[must_use]
