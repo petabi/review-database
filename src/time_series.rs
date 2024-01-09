@@ -4,18 +4,17 @@ use super::{
 };
 use anyhow::anyhow;
 use chrono::{Duration, NaiveDateTime, Utc};
+use cluster::dsl as c_d;
 use diesel::{
     dsl::{max, min},
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
 };
 use diesel_async::RunQueryDsl;
 use futures::future::join_all;
+use log_broker::{error, LogLocation};
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::error;
-
-use cluster::dsl as c_d;
 use time_series::dsl as t_d;
 
 const MAX_CSV_COLUMNS: usize = 200;
@@ -152,7 +151,7 @@ impl Database {
         if join_all(tasks).await.into_iter().all(|r| r.is_ok()) {
             Ok(())
         } else {
-            error!("failed to insert time series");
+            error!(LogLocation::Both, "failed to insert time series");
             Err(anyhow!("failed to insert the entire time series"))
         }
     }

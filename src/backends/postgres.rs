@@ -15,6 +15,7 @@ use bb8_postgres::{
 };
 use diesel_async::AsyncPgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use log_broker::{debug, error, LogLocation};
 use rustls::{Certificate, CertificateError, ClientConfig, RootCertStore};
 use serde::de::DeserializeOwned;
 use std::{
@@ -314,7 +315,10 @@ impl ConnectionPoolType {
                         root_store.add(&Certificate(cert.0))?;
                     }
                 }
-                Err(e) => tracing::error!("Could not load platform certificates: {:#}", e),
+                Err(e) => error!(
+                    LogLocation::Both,
+                    "Could not load platform certificates: {e:#}"
+                ),
             }
         }
         for root in root_ca {
@@ -433,7 +437,10 @@ where
         match pool.get().await {
             Ok(conn) => return Ok(conn),
             Err(e) => {
-                tracing::debug!("Failed to get a database connection: {:#}", e);
+                debug!(
+                    LogLocation::Local,
+                    "Failed to get a database connection: {e:#}"
+                );
                 if start.elapsed() > timeout {
                     return Err(Error::PgConnection(e));
                 }

@@ -3,10 +3,10 @@
 use crate::Store;
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
+use log_broker::{info, warn, LogLocation};
 use rocksdb::backup::BackupEngineInfo;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{Notify, RwLock};
-use tracing::{info, warn};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BackupInfo {
@@ -46,7 +46,7 @@ pub async fn schedule_periodic(
                 let _res = create(&store, false, backups_to_keep);
             }
             () = stop.notified() => {
-                info!("creating a database backup before shutdown");
+                info!(LogLocation::Both, "creating a database backup before shutdown");
                 let _res = create(&store, false, backups_to_keep);
                 stop.notify_one();
                 return;
@@ -63,18 +63,18 @@ pub async fn schedule_periodic(
 /// Returns an error if backup fails.
 pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u32) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    info!("backing up database...");
+    info!(LogLocation::Both, "backing up database...");
     let res = {
         let mut store = store.write().await;
         store.backup(flush, backups_to_keep)
     };
     match res {
         Ok(()) => {
-            info!("backing up database completed");
+            info!(LogLocation::Both, "backing up database completed");
             Ok(())
         }
         Err(e) => {
-            warn!("database backup failed: {:?}", e);
+            warn!(LogLocation::Both, "database backup failed: {:?}", e);
             Err(e)
         }
     }
@@ -93,14 +93,14 @@ pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
     };
     match res {
         Ok(backup_list) => {
-            info!("generate database backup list");
+            info!(LogLocation::Both, "generate database backup list");
             Ok(backup_list
                 .into_iter()
                 .map(std::convert::Into::into)
                 .collect())
         }
         Err(e) => {
-            warn!("failed to generate backup list: {:?}", e);
+            warn!(LogLocation::Both, "failed to generate backup list: {e:?}");
             Err(e)
         }
     }
@@ -113,7 +113,7 @@ pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
 /// Returns an error if the restore operation fails.
 pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    info!("restoring database from {:?}", backup_id);
+    info!(LogLocation::Both, "restoring database from {backup_id:?}");
     let res = {
         let mut store = store.write().await;
         match &backup_id {
@@ -124,13 +124,16 @@ pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Resu
 
     match res {
         Ok(()) => {
-            info!("database restored from backup {:?}", backup_id);
+            info!(
+                LogLocation::Both,
+                "database restored from backup {backup_id:?}"
+            );
             Ok(())
         }
         Err(e) => {
             warn!(
-                "failed to restore database from backup {:?}: {:?}",
-                backup_id, e
+                LogLocation::Both,
+                "failed to restore database from backup {backup_id:?}: {e:?}",
             );
             Err(e)
         }
@@ -144,7 +147,10 @@ pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Resu
 /// Returns an error if the restore operation fails.
 pub async fn recover(store: &Arc<RwLock<Store>>) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    info!("recovering database from latest valid backup");
+    info!(
+        LogLocation::Both,
+        "recovering database from latest valid backup"
+    );
     let res = {
         let mut store = store.write().await;
         store.recover()
@@ -152,11 +158,14 @@ pub async fn recover(store: &Arc<RwLock<Store>>) -> Result<()> {
 
     match res {
         Ok(()) => {
-            info!("database recovered from backup");
+            info!(LogLocation::Both, "database recovered from backup");
             Ok(())
         }
         Err(e) => {
-            warn!("failed to recover database from backup: {e:?}");
+            warn!(
+                LogLocation::Both,
+                "failed to recover database from backup: {e:?}"
+            );
             Err(e)
         }
     }

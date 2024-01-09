@@ -2,8 +2,8 @@ use crate::types::{Outlier, Source, Timestamp};
 
 use super::{tokio_postgres::types::ToSql, Database, Error, Type};
 use futures::future::join_all;
+use log_broker::{error, LogLocation};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateOutlierRequest {
@@ -259,9 +259,14 @@ impl Database {
                 .map(|task| async move {
                     match task.await {
                         Ok(Err(e)) => {
-                            error!("An error occurred while updating outliers: {:#}", e);
+                            error!(
+                                LogLocation::Both,
+                                "An error occurred while updating outliers: {e:#}"
+                            );
                         }
-                        Err(e) => error!("Failed to execute outlier update: {:#}", e),
+                        Err(e) => {
+                            error!(LogLocation::Both, "Failed to execute outlier update: {e:#}");
+                        }
                         _ => {}
                     }
                 }),

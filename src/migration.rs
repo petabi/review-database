@@ -2,6 +2,7 @@
 #![allow(clippy::too_many_lines)]
 
 use anyhow::{anyhow, Context, Result};
+use log_broker::{info, LogLocation};
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -10,7 +11,6 @@ use std::{
     net::IpAddr,
     path::{Path, PathBuf},
 };
-use tracing::info;
 
 /// The range of versions that use the current database format.
 ///
@@ -60,7 +60,7 @@ pub async fn migrate_backend<P: AsRef<Path>>(
 }
 
 async fn backend_0_22(db: &super::Database, store: &super::Store) -> Result<()> {
-    tracing::info!("starting to transfer category data...");
+    info!(LogLocation::Both, "starting to transfer category data...");
     let mut after = None;
     let mut categories = vec![];
 
@@ -81,7 +81,7 @@ async fn backend_0_22(db: &super::Database, store: &super::Store) -> Result<()> 
     let mut table = store.category_map();
 
     if table.count()? > 0 {
-        tracing::info!("category data migration completed.");
+        info!(LogLocation::Both, "category data migration completed.");
         return Ok(());
     }
 
@@ -99,7 +99,7 @@ async fn backend_0_22(db: &super::Database, store: &super::Store) -> Result<()> 
         let added = table.add(&format!("dummy{id}"))?;
         if added != id {
             return Err(anyhow!(
-                "corrupted category table: inserting {id} and asigned with {added}"
+                "corrupted category table: inserting {id} and assigned with {added}"
             ));
         }
     }
@@ -123,7 +123,8 @@ async fn backend_0_22(db: &super::Database, store: &super::Store) -> Result<()> 
         }
     }
 
-    tracing::info!(
+    info!(
+        LogLocation::Both,
         "{} categories are migrated with {max_id} as largest id",
         categories.len()
     );
@@ -196,7 +197,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         .iter()
         .find(|(req, _to, _m)| req.matches(&version))
     {
-        info!("Migrating database to {to}");
+        info!(LogLocation::Both, "Migrating database to {to}");
         m(&store)?;
         version = to.clone();
         if compatible.matches(&version) {

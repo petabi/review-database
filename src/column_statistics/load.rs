@@ -14,10 +14,10 @@ use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use futures::future::join_all;
+use log_broker::{error, LogLocation};
 use serde::Serialize;
 use std::{cmp::Reverse, collections::HashMap};
 use structured::{ColumnStatistics, Description, ElementCount, NLargestCount};
-use tracing::error;
 
 #[derive(Debug, Queryable)]
 struct ColumnDescriptionLoad {
@@ -102,7 +102,10 @@ impl Database {
                 }
             };
             if let Err(e) = &statistics {
-                error!("An error occurred while loading column statistics: {:?}", e);
+                error!(
+                    LogLocation::Both,
+                    "An error occurred while loading column statistics: {e:?}"
+                );
             }
             statistics
         }))

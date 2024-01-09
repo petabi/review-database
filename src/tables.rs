@@ -3,10 +3,10 @@ mod batch_info;
 mod category;
 mod scores;
 
-use crate::{batch_info::BatchInfo, category::Category, scores::Scores, types::Account, Indexable};
-
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
+use crate::{batch_info::BatchInfo, category::Category, scores::Scores, types::Account, Indexable};
 use anyhow::{anyhow, Result};
+use log_broker::{error, info, warn, LogLocation};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -87,8 +87,8 @@ impl StateDb {
             Ok(db) => db,
             Err(e) => {
                 if recover_on_fail {
-                    tracing::warn!("fail to open db {e:?}");
-                    tracing::warn!("recovering from latest backup available");
+                    warn!(LogLocation::Both, "fail to open db {e:?}");
+                    warn!(LogLocation::Both, "recovering from latest backup available");
 
                     Self::recover_db(&path, &backup)?
                 } else {
@@ -262,15 +262,21 @@ impl StateDb {
             match engine.restore_from_backup(path, path, &restore_opts, backup_id) {
                 Ok(()) => match Self::open_db(path) {
                     Ok(db) => {
-                        tracing::info!("restored from backup (id: {backup_id})");
+                        info!(LogLocation::Both, "restored from backup (id: {backup_id})");
                         return Ok(db);
                     }
                     Err(e) => {
-                        tracing::warn!("opening restored backup (id: {backup_id}) failed {e:?}");
+                        warn!(
+                            LogLocation::Both,
+                            "opening restored backup (id: {backup_id}) failed {e:?}"
+                        );
                     }
                 },
                 Err(e) => {
-                    tracing::error!("restoring backup (id: {backup_id}) failed {e:?}");
+                    error!(
+                        LogLocation::Both,
+                        "restoring backup (id: {backup_id}) failed {e:?}"
+                    );
                 }
             }
         }
@@ -345,7 +351,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns an error if the map index is not found or the database operation fails.    
+    /// Returns an error if the map index is not found or the database operation fails.
     pub fn count(&self) -> Result<usize> {
         self.indexed_map.count()
     }

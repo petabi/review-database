@@ -1,8 +1,8 @@
 use crate::{tokio_postgres::types::ToSql, types::Cluster, Database, Error, Type, Value};
 use chrono::NaiveDateTime;
 use futures::future::join_all;
+use log_broker::{error, LogLocation};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UpdateClusterRequest {
@@ -306,9 +306,14 @@ impl Database {
                 .map(|task| async move {
                     match task.await {
                         Ok(Err(e)) => {
-                            error!("An error occurred while updating clusters: {:#}", e);
+                            error!(
+                                LogLocation::Both,
+                                "An error occurred while updating clusters: {e:#}"
+                            );
                         }
-                        Err(e) => error!("Failed to execute cluster update: {:#}", e),
+                        Err(e) => {
+                            error!(LogLocation::Both, "Failed to execute cluster update: {e:#}");
+                        }
                         _ => {}
                     }
                 }),

@@ -4,10 +4,10 @@ use crate::{
 };
 use chrono::NaiveDateTime;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use log_broker::{error, LogLocation};
 use serde::Deserialize;
 use std::convert::TryFrom;
 use structured::{ColumnStatistics, Element};
-use tracing::error;
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]
 #[diesel(table_name = crate::schema::description_datetime)]
@@ -63,6 +63,7 @@ pub(super) async fn insert_top_n(
         .await?;
     if res != column_stats.n_largest_count.top_n().len() {
         error!(
+            LogLocation::Both,
             "Failed to insert all of top_n_datetime, entries failed: {} / {}",
             column_stats.n_largest_count.top_n().len() - res,
             column_stats.n_largest_count.top_n().len()

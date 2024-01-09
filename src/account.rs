@@ -1,9 +1,11 @@
+use crate::tables::{Key, Value};
 use anyhow::Result;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
 use chrono::{DateTime, Utc};
+use log_broker::{error, LogLocation};
 use ring::{
     digest, pbkdf2,
     rand::{self, SecureRandom},
@@ -11,8 +13,6 @@ use ring::{
 use serde::{Deserialize, Serialize};
 use std::{net::IpAddr, num::NonZeroU32};
 use strum_macros::{Display, EnumString};
-
-use crate::tables::{Key, Value};
 
 /// Possible role types of `Account`.
 #[derive(Clone, Copy, Debug, Display, Eq, PartialEq, Deserialize, Serialize, EnumString)]
@@ -236,7 +236,10 @@ impl SaltedPassword {
                         .verify_password(password.as_bytes(), &parsed_hash)
                         .is_ok(),
                     Err(e) => {
-                        tracing::error!("Failed to parse the password hash: {hash}, reason: {e:?}");
+                        error!(
+                            LogLocation::Both,
+                            "Failed to parse the password hash: {hash}, reason: {e:?}"
+                        );
                         false
                     }
                 }
