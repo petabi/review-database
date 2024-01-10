@@ -5,6 +5,16 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The default implementation of `Indexed::update` has a code that it assumes the
+  implementor is using key + id as the primary key in RocksDB. This is not true
+  for `IndexedMap`, which uses only the key as the primary key. This version
+  fixes the issue by using `indexed_key`, which behaves differently depending
+  on the implementor.
+
 ## [0.22.0] - 2023-01-09
 
 ### Added
@@ -567,6 +577,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.22.0...main
 [0.22.0]: https://github.com/petabi/review-database/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/petabi/review-database/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/petabi/review-database/compare/0.19.0...0.20.0
