@@ -472,9 +472,7 @@ pub trait Indexed {
             let key = if new.key().is_some() {
                 self.indexed_key(cur_key, id)
             } else if let Some(key) = index.get(id).context("invalid ID")? {
-                let mut key = key.to_vec();
-                key.extend(id.to_be_bytes().iter());
-                key
+                self.indexed_key(key.to_vec(), id)
             } else {
                 bail!("no such ID");
             };
