@@ -1,13 +1,6 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    category (id) {
-        id -> Int4,
-        name -> Text,
-    }
-}
-
-diesel::table! {
     cluster (id) {
         id -> Int4,
         category_id -> Int4,
@@ -258,7 +251,6 @@ diesel::table! {
 }
 
 diesel::allow_tables_to_appear_in_same_query!(
-    category,
     cluster,
     column_description,
     csv_column_extra,

@@ -5,6 +5,12 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- `category` table from PostgreSQL database is now Removed.
+
 ## [0.22.1] - 2024-01-10
 
 ### Fixed
@@ -580,6 +586,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.22.1...main
 [0.22.1]: https://github.com/petabi/review-database/compare/0.22.0...0.22.1
 [0.22.0]: https://github.com/petabi/review-database/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/petabi/review-database/compare/0.20.0...0.21.0
