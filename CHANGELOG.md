@@ -5,7 +5,7 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.22.1] - 2024-01-10
 
 ### Fixed
 
@@ -18,7 +18,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   which might not be true for `IndexedMultiMap`. This version fixes the issue by
   guard it with a check.
 
-## [0.22.0] - 2023-01-09
+## [0.22.0] - 2024-01-09
 
 ### Added
 
@@ -580,7 +580,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
-[Unreleased]: https://github.com/petabi/review-database/compare/0.22.0...main
+[0.22.1]: https://github.com/petabi/review-database/compare/0.22.0...0.22.1
 [0.22.0]: https://github.com/petabi/review-database/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/petabi/review-database/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/petabi/review-database/compare/0.19.0...0.20.0
