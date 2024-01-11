@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS category (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+INSERT INTO category (name) VALUES('Non-Specified Alert') ON CONFLICT DO NOTHING;
+INSERT INTO category (name) VALUES('Irrelevant Alert') ON CONFLICT DO NOTHING;

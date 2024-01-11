@@ -32,7 +32,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.22.0,<0.23.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.22.0,<=0.23.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -44,89 +44,18 @@ const COMPATIBLE_VERSION_REQ: &str = ">=0.22.0,<0.23.0-alpha";
 ///
 /// Returns an error if the data hasn't been migrated successfully to Rocksdb.
 pub async fn migrate_backend<P: AsRef<Path>>(
-    db: &super::Database,
-    store: &super::Store,
-    data_dir: P,
+    _db: &super::Database,
+    _store: &super::Store,
+    _data_dir: P,
 ) -> Result<()> {
-    let path = data_dir.as_ref();
-    let file = path.join("VERSION");
+    // let path = data_dir.as_ref();
+    // let file = path.join("VERSION");
 
-    let version = read_version_file(&file)?;
+    // let version = read_version_file(&file)?;
 
-    if VersionReq::parse(COMPATIBLE_VERSION_REQ)?.matches(&version) {
-        backend_0_22(db, store).await?;
-    }
-    Ok(())
-}
-
-async fn backend_0_22(db: &super::Database, store: &super::Store) -> Result<()> {
-    tracing::info!("starting to transfer category data...");
-    let mut after = None;
-    let mut categories = vec![];
-
-    // retrieve categories from Postgres
-    while let Ok(cats) = db.load_categories(&after, &None, true, 100).await {
-        if cats.is_empty() {
-            break;
-        }
-        after = cats.last().map(|c| {
-            (
-                i32::try_from(c.id).expect("id out of range"),
-                c.name.clone(),
-            )
-        });
-        categories.extend(cats);
-    }
-
-    let mut table = store.category_map();
-
-    if table.count()? > 0 {
-        tracing::info!("category data migration completed.");
-        return Ok(());
-    }
-
-    let max_id = categories
-        .iter()
-        .map(|c| c.id)
-        .max()
-        .expect("maximum id doesn't exist");
-
-    for id in 0..=max_id {
-        if let Ok(_c) = table.get(id) {
-            continue;
-        }
-
-        let added = table.add(&format!("dummy{id}"))?;
-        if added != id {
-            return Err(anyhow!(
-                "corrupted category table: inserting {id} and asigned with {added}"
-            ));
-        }
-    }
-
-    for cat in &categories {
-        table.update(cat.id, &format!("dummy{}", cat.id), &cat.name)?;
-    }
-
-    if categories.len() != usize::try_from(max_id + 1).expect("max id out of range") {
-        let mut flags = vec![false; usize::try_from(max_id + 1).expect("max_id out of range")];
-        for c in &categories {
-            flags[usize::try_from(c.id).expect("max_id out of range")] = true;
-        }
-
-        for id in flags
-            .into_iter()
-            .enumerate()
-            .filter_map(|(id, exists)| if exists { None } else { Some(id) })
-        {
-            table.deactivate(u32::try_from(id).expect("id out of range"))?;
-        }
-    }
-
-    tracing::info!(
-        "{} categories are migrated with {max_id} as largest id",
-        categories.len()
-    );
+    // if VersionReq::parse(COMPATIBLE_VERSION_REQ)?.matches(&version) {
+    //     backend_0_22(db, store).await?;
+    // }
     Ok(())
 }
 
