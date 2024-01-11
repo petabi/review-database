@@ -7,6 +7,17 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added three detection events:
+  - `WindowsThreat`: This is a detection event for windows sysmon events.
+  - `NetworkThreat`: This is a detection event for network events.
+  - `ExtraThreat`: This is a detection event for misc log events. This event
+    replaces the place of `EventKind::Log` because it stores detections from
+    unstructured Log data and composite data (network event/sysmon events).
+    Also, because `EventKind::Log` is still not in actual use today, there is
+    no migration processing for that change.
+
 ### Removed
 
 - The category table has been permanently removed from the PostgreSQL database

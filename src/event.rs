@@ -7,13 +7,16 @@ mod ftp;
 mod http;
 mod kerberos;
 mod ldap;
+mod log;
 mod mqtt;
+mod network;
 mod nfs;
 mod ntlm;
 mod rdp;
 mod smb;
 mod smtp;
 mod ssh;
+mod sysmon;
 mod tls;
 mod tor;
 
@@ -42,13 +45,16 @@ pub use self::{
         BlockListLdap, BlockListLdapFields, LdapBruteForce, LdapBruteForceFields, LdapPlainText,
         LdapPlainTextFields,
     },
+    log::ExtraThreat,
     mqtt::{BlockListMqtt, BlockListMqttFields},
+    network::NetworkThreat,
     nfs::{BlockListNfs, BlockListNfsFields},
     ntlm::{BlockListNtlm, BlockListNtlmFields},
     rdp::{BlockListRdp, BlockListRdpFields, RdpBruteForce, RdpBruteForceFields},
     smb::{BlockListSmb, BlockListSmbFields},
     smtp::{BlockListSmtp, BlockListSmtpFields},
     ssh::{BlockListSsh, BlockListSshFields},
+    sysmon::WindowsThreat,
     tls::{BlockListTls, BlockListTlsFields},
     tor::{TorConnection, TorConnectionFields},
 };
@@ -99,7 +105,10 @@ const NON_BROWSER: &str = "Non Browser";
 const LDAP_BRUTE_FORCE: &str = "LDAP Brute Force";
 const LDAP_PLAIN_TEXT: &str = "LDAP Plain Text";
 const CRYPTOCURRENCY_MINING_POOL: &str = "Cryptocurrency Mining Pool";
-pub const BLOCK_LIST: &str = "Block List";
+const BLOCK_LIST: &str = "Block List";
+const WINDOWS_THREAT_EVENT: &str = "Windows Threat Events";
+const NETWORK_THREAT_EVENT: &str = "Network Threat Events";
+const MISC_LOG_THREAT: &str = "Log Threat";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -150,6 +159,12 @@ pub enum Event {
     CryptocurrencyMiningPool(CryptocurrencyMiningPool),
 
     BlockList(RecordType),
+
+    WindowsThreat(WindowsThreat),
+
+    NetworkThreat(NetworkThreat),
+
+    ExtraThreat(ExtraThreat),
 }
 
 pub enum RecordType {
@@ -216,6 +231,9 @@ impl Event {
                 RecordType::Ssh(ssh_event) => ssh_event.matches(locator, filter),
                 RecordType::Tls(tls_event) => tls_event.matches(locator, filter),
             },
+            Event::WindowsThreat(event) => event.matches(locator, filter),
+            Event::NetworkThreat(event) => event.matches(locator, filter),
+            Event::ExtraThreat(event) => event.matches(locator, filter),
         }
     }
 
@@ -378,6 +396,13 @@ impl Event {
                     }
                 }
             },
+            Event::WindowsThreat(_event) => {}
+            Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    addr_pair = (Some(event.orig_addr), Some(event.resp_addr));
+                }
+            }
+            Event::ExtraThreat(_event) => {}
         }
         Ok(addr_pair)
     }
@@ -541,10 +566,28 @@ impl Event {
                     }
                 }
             },
+            Event::WindowsThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(WINDOWS_THREAT_EVENT);
+                }
+            }
+            Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(NETWORK_THREAT_EVENT);
+                }
+            }
+            Event::ExtraThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(MISC_LOG_THREAT);
+                }
+            }
         }
         Ok(kind)
     }
 
+    // TODO: Need to implement country counting for `WindowsThreat`.
+    // 1. for Network Connection: count country via ip
+    // 2. for other Sysmon events: count the country by KR.
     /// Counts the number of events per country.
     ///
     /// # Errors
@@ -752,6 +795,21 @@ impl Event {
                     }
                 }
             },
+            Event::WindowsThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(EventCategory::Impact);
+                }
+            }
+            Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(EventCategory::Reconnaissance);
+                }
+            }
+            Event::ExtraThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(EventCategory::Reconnaissance);
+                }
+            }
         };
 
         if let Some(category) = category {
@@ -1070,6 +1128,21 @@ impl Event {
                     }
                 }
             },
+            Event::WindowsThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(MEDIUM);
+                }
+            }
+            Event::NetworkThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(MEDIUM);
+                }
+            }
+            Event::ExtraThreat(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(MEDIUM);
+                }
+            }
         }
 
         if let Some(level) = level {
@@ -1202,6 +1275,15 @@ impl Event {
                     tls_event.triage_scores = Some(triage_scores);
                 }
             },
+            Event::WindowsThreat(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::NetworkThreat(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::ExtraThreat(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
         }
     }
 }
@@ -1222,7 +1304,7 @@ pub enum EventKind {
     HttpThreat,
     RdpBruteForce,
     RepeatedHttpSessions,
-    Log,
+    ExtraThreat,
     TorConnection,
     DomainGenerationAlgorithm,
     FtpBruteForce,
@@ -1249,6 +1331,8 @@ pub enum EventKind {
     BlockListSmtp,
     BlockListSsh,
     BlockListTls,
+    WindowsThreat,
+    NetworkThreat,
 }
 
 /// Machine Learning Method.
@@ -1354,6 +1438,9 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["block", "list", "smtp"], "block list stmp");
             moderate_kinds_by(kinds, &["block", "list", "ssh"], "block list ssh");
             moderate_kinds_by(kinds, &["block", "list", "tls"], "block list tls");
+            moderate_kinds_by(kinds, &["windows", "threat"], "windows threat");
+            moderate_kinds_by(kinds, &["network", "threat"], "network threat");
+            moderate_kinds_by(kinds, &["extra", "threat"], "extra threat");
         }
     }
 }
@@ -1600,7 +1687,27 @@ impl fmt::Display for EventMessage {
                     write!(f, "invalid event")
                 }
             }
-            EventKind::Log => Ok(()),
+            EventKind::WindowsThreat => {
+                if let Ok(fields) = bincode::deserialize::<WindowsThreat>(&self.fields) {
+                    write!(f, "WindowsThreat,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::NetworkThreat => {
+                if let Ok(fields) = bincode::deserialize::<NetworkThreat>(&self.fields) {
+                    write!(f, "NetworkThreat,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::ExtraThreat => {
+                if let Ok(fields) = bincode::deserialize::<ExtraThreat>(&self.fields) {
+                    write!(f, "ExtraThreat,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
         }
     }
 }
@@ -2011,7 +2118,24 @@ impl<'i> Iterator for EventIterator<'i> {
                     Event::BlockList(RecordType::Tls(BlockListTls::new(time, fields))),
                 )))
             }
-            EventKind::Log => None,
+            EventKind::WindowsThreat => {
+                let Ok(fields) = bincode::deserialize::<WindowsThreat>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::WindowsThreat(fields))))
+            }
+            EventKind::NetworkThreat => {
+                let Ok(fields) = bincode::deserialize::<NetworkThreat>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::NetworkThreat(fields))))
+            }
+            EventKind::ExtraThreat => {
+                let Ok(fields) = bincode::deserialize::<ExtraThreat>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::ExtraThreat(fields))))
+            }
         }
     }
 }
