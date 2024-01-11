@@ -305,7 +305,7 @@ impl Match for HttpThreat {
     }
 
     fn kind(&self) -> &str {
-        "all"
+        "http threat"
     }
 
     fn source(&self) -> &str {

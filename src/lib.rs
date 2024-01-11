@@ -48,10 +48,11 @@ pub use self::event::{
     BlockListSmbFields, BlockListSmtp, BlockListSmtpFields, BlockListSsh, BlockListSshFields,
     BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool, Direction, DnsCovertChannel,
     DomainGenerationAlgorithm, Event, EventDb, EventFilter, EventIterator, EventMessage,
-    ExternalDdos, Filter, FilterEndpoint, FlowKind, FtpBruteForce, FtpPlainText, HttpThreat,
-    LdapBruteForce, LdapPlainText, LearningMethod, MultiHostPortScan, Network, NetworkEntry,
-    NetworkEntryValue, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
-    RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
+    ExternalDdos, ExtraThreat, Filter, FilterEndpoint, FlowKind, FtpBruteForce, FtpPlainText,
+    HttpThreat, LdapBruteForce, LdapPlainText, LearningMethod, MultiHostPortScan, Network,
+    NetworkEntry, NetworkEntryValue, NetworkThreat, NetworkType, NonBrowser, PortScan,
+    RdpBruteForce, RecordType, RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
+    WindowsThreat,
 };
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
