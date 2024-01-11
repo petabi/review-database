@@ -7,7 +7,7 @@ REview.
 
 ## License
 
-Copyright 2018-2023 Petabi, Inc.
+Copyright 2018-2024 Petabi, Inc.
 
 Licensed under [Apache License, Version 2.0][apache-license] (the "License");
 you may not use this crate except in compliance with the License.
