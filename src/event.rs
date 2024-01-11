@@ -1357,6 +1357,7 @@ pub struct EventFilter {
     sensors: Option<Vec<String>>,
     confidence: Option<f32>,
     triage_policies: Option<Vec<TriagePolicy>>,
+    agent_id: Option<String>,
 }
 
 impl EventFilter {
@@ -1376,6 +1377,7 @@ impl EventFilter {
         sensors: Option<Vec<String>>,
         confidence: Option<f32>,
         triage_policies: Option<Vec<TriagePolicy>>,
+        agent_id: Option<String>,
     ) -> Self {
         Self {
             customers,
@@ -1391,6 +1393,7 @@ impl EventFilter {
             sensors,
             confidence,
             triage_policies,
+            agent_id,
         }
     }
 

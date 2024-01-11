@@ -5,6 +5,14 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Introduced a new database table `TRIAGE`. This is the table that stores the
+  triage results of detection events.
+- Introduced a new database table `SEMI_MODELS`. This table stores configuration
+  information for the semi-supervised model.
+- Added functionality to filter `agent_id` when search detection event.
+
 ## [0.23.0] - 2024-01-18
 
 ### Added

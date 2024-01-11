@@ -342,6 +342,20 @@ impl Store {
             .expect("always available")
     }
 
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn semi_models_map(&self) -> Map {
+        self.states
+            .map(tables::SEMI_MODELS)
+            .expect("always available")
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn triage_map(&self) -> Map {
+        self.states.map(tables::TRIAGE).expect("always available")
+    }
+
     /// Fetch the most recent pretrained model with `name`
     ///
     /// # Errors
