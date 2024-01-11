@@ -14,6 +14,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   for `IndexedMap`, which uses only the key as the primary key. This version
   fixes the issue by using `indexed_key`, which behaves differently depending
   on the implementor.
+- The default implementation of `Indexed::update` doesn't allow duplicated keys
+  which might not be true for `IndexedMultiMap`. This version fixes the issue by
+  guard it with a check.
 
 ## [0.22.0] - 2023-01-09
 
