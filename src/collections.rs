@@ -490,20 +490,22 @@ pub trait Indexed {
             }
             let new_key = if let Some(new_key) = new.key() {
                 let new_key = self.indexed_key(new_key.to_vec(), id);
-                txn.delete_cf(self.cf(), key)
-                    .context("failed to delete old entry")?;
+
+                if new_key != key {
+                    txn.delete_cf(self.cf(), &key)
+                        .context("failed to delete old entry")?;
+                    if txn
+                        .get_pinned_cf(self.cf(), &new_key)
+                        .context("cannot read from database")?
+                        .is_some()
+                    {
+                        bail!("new key already exists");
+                    }
+                }
                 new_key
             } else {
                 key
             };
-
-            if txn
-                .get_pinned_cf(self.cf(), &new_key)
-                .context("cannot read from database")?
-                .is_some()
-            {
-                bail!("new key already exists");
-            }
 
             let new_entry = new.apply(entry.into());
             txn.put_cf(
