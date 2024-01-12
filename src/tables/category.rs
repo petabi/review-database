@@ -1,4 +1,4 @@
-//! The `batch_info` table.
+//! The `category` table.
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
