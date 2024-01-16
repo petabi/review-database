@@ -9,7 +9,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- `category` table from PostgreSQL database is now Removed.
+- The category table has been permanently removed from the PostgreSQL database
+  in this release.
+  - To ensure data integrity and avoid potential data loss, users currently
+    utilizing review-database versions below 0.22.0 must migrate to version
+    0.22.1 before proceeding with any further migrations.
 
 ## [0.22.1] - 2024-01-10
 
