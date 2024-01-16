@@ -4,14 +4,18 @@ use rocksdb::OptimisticTransactionDB;
 
 use crate::{category::Category, Indexable, Indexed, IndexedMap, IndexedTable};
 
+const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irrelevant Alert")];
+
 impl<'d> IndexedTable<'d, Category> {
     /// Opens the category table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
-        IndexedMap::new(db, super::CATEGORY)
+        let table = IndexedMap::new(db, super::CATEGORY)
             .map(IndexedTable::new)
-            .ok()
+            .ok()?;
+        table.setup().ok()?;
+        Some(table)
     }
 
     /// Add a category entry with `name`
@@ -59,6 +63,32 @@ impl<'d> IndexedTable<'d, Category> {
             .and_then(|r| r.ok_or(anyhow::anyhow!("category {id} unavailable")))?;
         let c = bincode::DefaultOptions::new().deserialize(res.as_ref())?;
         Ok(c)
+    }
+
+    /// Try adding default entries into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    fn setup(&self) -> Result<()> {
+        if self.indexed_map.count()? > 0 {
+            return Ok(());
+        }
+        let added = self.add("dummy")?;
+        if added != 0 {
+            self.remove(added)?; // so that `added` could be re-used as id.
+            return Ok(());
+        }
+        self.deactivate(added)?; // 0 is deactivated as id for `category`.
+
+        for (id, name) in DEFAULT_ENTRIES {
+            let added = self.add(name)?;
+            if added != id {
+                self.remove(added)?; // so that `added` could be re-used as id.
+                return Ok(());
+            }
+        }
+        Ok(())
     }
 
     /// Returns `n` `Category`(ies)
@@ -120,7 +150,7 @@ impl<'d> IndexedTable<'d, Category> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{category::Category, Store};
+    use crate::{category::Category, tables::category::DEFAULT_ENTRIES, Store};
 
     fn set_up_db() -> (Arc<Store>, Vec<Category>) {
         let db_dir = tempfile::tempdir().unwrap();
@@ -147,9 +177,9 @@ mod tests {
             },
         ];
 
-        for (id, e) in entries.iter_mut().enumerate() {
-            table.add(&e.name).unwrap();
-            e.id = id as u32;
+        for e in entries.iter_mut() {
+            let added = table.add(&e.name).unwrap();
+            e.id = added as u32;
         }
         (store, entries)
     }
@@ -159,7 +189,10 @@ mod tests {
         let (store, entries) = set_up_db();
         let table = store.category_map();
 
-        assert_eq!(table.count().unwrap(), entries.len());
+        assert_eq!(
+            table.count().unwrap(),
+            entries.len() + super::DEFAULT_ENTRIES.len()
+        );
     }
 
     #[test]
@@ -168,7 +201,8 @@ mod tests {
         let table = store.category_map();
 
         for (id, entry) in entries.iter().enumerate() {
-            assert_eq!(table.get(id as u32).unwrap(), *entry);
+            assert_eq!(table.get(entry.id).unwrap(), *entry);
+            assert_eq!(id + DEFAULT_ENTRIES.len() + 1, entry.id as usize);
         }
     }
 
@@ -177,9 +211,14 @@ mod tests {
         let (store, entries) = set_up_db();
         let mut table = store.category_map();
 
-        assert!(table.update(1, "a", "b").is_err());
+        assert!(table
+            .update(1 + DEFAULT_ENTRIES.len() as u32 + 1, "a", "b")
+            .is_err());
 
-        assert_eq!(table.count().unwrap(), entries.len());
+        assert_eq!(
+            table.count().unwrap(),
+            entries.len() + DEFAULT_ENTRIES.len()
+        );
     }
 
     #[test]
@@ -191,7 +230,7 @@ mod tests {
         let res = table
             .get_range(
                 Some(Category {
-                    id: 1,
+                    id: 1 + DEFAULT_ENTRIES.len() as u32 + 1,
                     name: "a".to_string(),
                 }),
                 None,
@@ -199,12 +238,12 @@ mod tests {
                 2,
             )
             .unwrap();
-        assert_eq!(res.len(), 0);
+        assert_eq!(res.len(), std::cmp::min(0 + DEFAULT_ENTRIES.len(), 2));
 
         let res = table
             .get_range(
                 Some(Category {
-                    id: 2,
+                    id: 2 + DEFAULT_ENTRIES.len() as u32 + 1,
                     name: "a".to_string(),
                 }),
                 None,
@@ -212,7 +251,7 @@ mod tests {
                 2,
             )
             .unwrap();
-        assert_eq!(res.len(), 1);
+        assert_eq!(res.len(), std::cmp::min(1 + DEFAULT_ENTRIES.len(), 2));
         assert_eq!(res[0], entries[1]);
     }
 
@@ -225,7 +264,7 @@ mod tests {
             .get_range(
                 None,
                 Some(Category {
-                    id: 1,
+                    id: 1 + DEFAULT_ENTRIES.len() as u32 + 1,
                     name: "a".to_string(),
                 }),
                 true,
@@ -240,7 +279,7 @@ mod tests {
             .get_range(
                 None,
                 Some(Category {
-                    id: 0,
+                    id: 0 + DEFAULT_ENTRIES.len() as u32 + 1,
                     name: "a".to_string(),
                 }),
                 true,
@@ -258,9 +297,9 @@ mod tests {
 
         let table = store.category_map();
 
-        let res = table.get_range(None, None, true, 2).unwrap();
+        let res = table.get_range(None, None, true, 4).unwrap();
         assert_eq!(
-            res.iter().collect::<Vec<_>>(),
+            res[2..].iter().collect::<Vec<_>>(),
             vec![&entries[1], &entries[2]]
         );
     }
@@ -275,11 +314,11 @@ mod tests {
         let res2 = table
             .get_range(
                 Some(Category {
-                    id: 5,
+                    id: 5 + DEFAULT_ENTRIES.len() as u32 + 1,
                     name: "x".to_string(),
                 }),
                 Some(Category {
-                    id: 10,
+                    id: 10 + DEFAULT_ENTRIES.len() as u32 + 1,
                     name: "z".to_string(),
                 }),
                 false,
