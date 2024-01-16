@@ -64,7 +64,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::{thread_rng, RngCore};
 pub use rocksdb::Direction;
-use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
+use rocksdb::IteratorMode;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -1630,14 +1630,6 @@ impl<'a> EventDb<'a> {
     pub fn iter_forward(&self) -> EventIterator {
         let iter = self.inner.iterator(IteratorMode::Start);
         EventIterator { inner: iter }
-    }
-
-    /// Creates an raw iterator over key-value pairs for the entire events.
-    #[must_use]
-    pub(crate) fn raw_iter_forward(
-        &self,
-    ) -> DBIteratorWithThreadMode<rocksdb::OptimisticTransactionDB> {
-        self.inner.iterator(IteratorMode::Start)
     }
 
     /// Stores a new event into the database.
