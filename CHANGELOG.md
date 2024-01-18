@@ -22,6 +22,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `IndexedTable<Category>::add` has been replaced with
   `IndexedTable<Category>::insert`, to be consistent with the `HashMap` API.
+- `TimeSeriesUpdate::time` has been removed for simplification.
+- `batch_ts` argument has been added to `add_time_series`.
 
 ### Removed
 
