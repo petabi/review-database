@@ -30,7 +30,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.22.0,<0.24.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.22.0,<=0.24.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -42,25 +42,166 @@ const COMPATIBLE_VERSION_REQ: &str = ">=0.22.0,<0.24.0-alpha";
 ///
 /// Returns an error if the data hasn't been migrated successfully to Rocksdb.
 pub async fn migrate_backend<P: AsRef<Path>>(
-    _db: &super::Database,
-    _store: &super::Store,
-    _data_dir: P,
+    db: &super::Database,
+    store: &super::Store,
+    data_dir: P,
 ) -> Result<()> {
     // Below is an example for cases when data migration between `PostgreSQL`
     // and RocksDB is needed.
-    // let path = data_dir.as_ref();
-    // let file = path.join("VERSION");
+    let path = data_dir.as_ref();
+    let file = path.join("VERSION");
 
-    // let version = read_version_file(&file)?;
+    let version = read_version_file(&file)?;
 
-    // let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
-    //     unreachable!("COMPATIBLE_VERSION_REQ must be valid")
-    // };
-    // if compatible.matches(&version)
-    // {
-    //     backend_0_22(db, store).await?;
-    // }
+    let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
+        unreachable!("COMPATIBLE_VERSION_REQ must be valid")
+    };
+    if compatible.matches(&version) {
+        backend_0_23(db, store).await?;
+    }
     Ok(())
+}
+
+async fn backend_0_23(db: &super::Database, store: &super::Store) -> Result<()> {
+    tracing::info!("starting to transfer status data...");
+    tracing::info!(
+        "# of entries ransfered: {}",
+        transfer_statuses(db, store).await?
+    );
+    tracing::info!("starting to transfer qualifier data...");
+    tracing::info!(
+        "# of entries ransfered: {}",
+        transfer_qualifiers(db, store).await?
+    );
+    Ok(())
+}
+
+async fn transfer_statuses(db: &super::Database, store: &super::Store) -> Result<usize> {
+    let mut after = None;
+    let mut data = vec![];
+
+    // retrieve data from Postgres
+    while let Ok(entry) = db.load_statuses(&after, &None, true, 100).await {
+        if entry.is_empty() {
+            break;
+        }
+        after = entry.last().map(|c| {
+            (
+                i32::try_from(c.id).expect("id out of range"),
+                c.description.clone(),
+            )
+        });
+        data.extend(entry);
+    }
+
+    let mut table = store.status_map();
+
+    if table.count()? > 0 {
+        return Ok(0);
+    }
+
+    let max_id = data
+        .iter()
+        .map(|e| e.id)
+        .max()
+        .expect("maximum id doesn't exist");
+
+    for id in 0..=max_id {
+        if let Ok(_e) = table.get(id) {
+            continue;
+        }
+
+        let added = table.insert(&format!("dummy{id}"))?;
+        if added != id {
+            return Err(anyhow!(
+                "corrupted category table: inserting {id} and asigned with {added}"
+            ));
+        }
+    }
+
+    for entry in &data {
+        table.update(entry.id, &format!("dummy{}", entry.id), &entry.description)?;
+    }
+
+    if data.len() != usize::try_from(max_id + 1).expect("max id out of range") {
+        let mut flags = vec![false; usize::try_from(max_id + 1).expect("max_id out of range")];
+        for entry in &data {
+            flags[usize::try_from(entry.id).expect("max_id out of range")] = true;
+        }
+
+        for id in flags
+            .into_iter()
+            .enumerate()
+            .filter_map(|(id, exists)| if exists { None } else { Some(id) })
+        {
+            table.deactivate(u32::try_from(id).expect("id out of range"))?;
+        }
+    }
+    Ok(data.len())
+}
+
+async fn transfer_qualifiers(db: &super::Database, store: &super::Store) -> Result<usize> {
+    let mut after = None;
+    let mut data = vec![];
+
+    // retrieve data from Postgres
+    while let Ok(entry) = db.load_qualifiers(&after, &None, true, 100).await {
+        if entry.is_empty() {
+            break;
+        }
+        after = entry.last().map(|c| {
+            (
+                i32::try_from(c.id).expect("id out of range"),
+                c.description.clone(),
+            )
+        });
+        data.extend(entry);
+    }
+
+    let mut table = store.qualifier_map();
+
+    if table.count()? > 0 {
+        return Ok(0);
+    }
+
+    let max_id = data
+        .iter()
+        .map(|e| e.id)
+        .max()
+        .expect("maximum id doesn't exist");
+
+    for id in 0..=max_id {
+        if let Ok(_e) = table.get(id) {
+            continue;
+        }
+
+        let added = table.insert(&format!("dummy{id}"))?;
+        if added != id {
+            return Err(anyhow!(
+                "corrupted category table: inserting {id} and asigned with {added}"
+            ));
+        }
+    }
+
+    for entry in &data {
+        table.update(entry.id, &format!("dummy{}", entry.id), &entry.description)?;
+    }
+
+    if data.len() != usize::try_from(max_id + 1).expect("max id out of range") {
+        let mut flags = vec![false; usize::try_from(max_id + 1).expect("max_id out of range")];
+        for entry in &data {
+            flags[usize::try_from(entry.id).expect("max_id out of range")] = true;
+        }
+
+        for id in flags
+            .into_iter()
+            .enumerate()
+            .filter_map(|(id, exists)| if exists { None } else { Some(id) })
+        {
+            table.deactivate(u32::try_from(id).expect("id out of range"))?;
+        }
+    }
+    Ok(data.len())
 }
 
 /// Migrates the data directory to the up-to-date format if necessary.

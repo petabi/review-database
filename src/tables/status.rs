@@ -1,30 +1,32 @@
-//! The `category` table.
+//! The `status` table.
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
 use crate::{status::Status, Indexable, Indexed, IndexedMap, IndexedTable};
 
+// The following will be used when PostgreSQL status table is deleted
 #[allow(dead_code)]
 const DEFAULT_ENTRIES: [(u32, &str); 3] = [(1, "reviewed"), (2, "pending review"), (3, "disabled")];
 
 impl<'d> IndexedTable<'d, Status> {
-    /// Opens the category table in the database.
+    /// Opens the status table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
-        let table = IndexedMap::new(db, super::CATEGORY)
+        let table = IndexedMap::new(db, super::STATUSES)
             .map(IndexedTable::new)
             .ok()?;
+        // The following should be uncommented when PostgreSQL status table is deleted
         //table.setup().ok()?;
         Some(table)
     }
 
-    /// Inserts a category into the table and returns the ID of the newly added
-    /// category.
+    /// Inserts a status into the table and returns the ID of the newly added
+    /// status.
     ///
     /// # Errors
     ///
-    /// Returns an error if the table already has a category with the same name.
+    /// Returns an error if the table already has a status with the same name.
     pub fn insert(&self, description: &str) -> Result<u32> {
         let entry = Status {
             id: u32::MAX,
@@ -33,7 +35,7 @@ impl<'d> IndexedTable<'d, Status> {
         self.indexed_map.insert(entry)
     }
 
-    /// Update the category name from `old` to `new`, given `id`.
+    /// Update the status name from `old` to `new`, given `id`.
     ///
     /// # Errors
     ///
@@ -50,7 +52,7 @@ impl<'d> IndexedTable<'d, Status> {
         self.indexed_map.update(id, &old, &new)
     }
 
-    /// Returns the category with the given ID.
+    /// Returns the status with the given ID.
     ///
     /// # Errors
     ///
@@ -59,7 +61,7 @@ impl<'d> IndexedTable<'d, Status> {
         let res = self
             .indexed_map
             .get_by_id(id)
-            .and_then(|r| r.ok_or(anyhow::anyhow!("category {id} unavailable")))?;
+            .and_then(|r| r.ok_or(anyhow::anyhow!("status {id} unavailable")))?;
         let c = super::deserialize(res.as_ref())?;
         Ok(c)
     }
@@ -69,6 +71,7 @@ impl<'d> IndexedTable<'d, Status> {
     /// # Errors
     ///
     /// Returns an error if the database query fails.
+    // The following will be used when PostgreSQL status table is deleted
     #[allow(dead_code)]
     fn setup(&self) -> Result<()> {
         if self.indexed_map.count()? > 0 {
@@ -79,7 +82,7 @@ impl<'d> IndexedTable<'d, Status> {
             self.remove(added)?; // so that `added` could be re-used as id.
             return Ok(());
         }
-        self.deactivate(added)?; // 0 is deactivated as id for `category`.
+        self.deactivate(added)?; // 0 is deactivated as id for `status`.
 
         for (id, name) in DEFAULT_ENTRIES {
             let added = self.insert(name)?;
@@ -91,7 +94,7 @@ impl<'d> IndexedTable<'d, Status> {
         Ok(())
     }
 
-    /// Returns `n` `Category`(ies)
+    /// Returns `n` `status`(ies)
     /// `is_first`: Forward or Reverse order.
     /// `from`: If `from` exists in database then, `bound` is excluded from the result.
     ///
@@ -126,7 +129,7 @@ impl<'d> IndexedTable<'d, Status> {
         }
     }
 
-    /// Returns `limit` # of `Category`(ies) according to conditions provided.
+    /// Returns `limit` # of `status`(ies) according to conditions provided.
     ///
     /// # Errors
     ///

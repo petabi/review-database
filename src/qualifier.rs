@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Indexable, IndexedMapUpdate};
 
-use super::{Database, Error, Type};
+use super::{Database, Error};
 
 #[derive(Debug, Deserialize, Queryable, Serialize, PartialEq, Eq)]
 pub struct Qualifier {
@@ -52,51 +52,6 @@ impl IndexedMapUpdate for Qualifier {
 }
 
 impl Database {
-    /// Adds a new qualifier to the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if an underlying database operation fails.
-    pub async fn add_qualifier(&self, description: &str) -> Result<i32, Error> {
-        let conn = self.pool.get().await?;
-        conn.insert_into("qualifier", &[("description", Type::TEXT)], &[&description])
-            .await
-    }
-
-    /// Counts the number of qualifiers in the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if an underlying database operation fails.
-    pub async fn count_qualifiers(&self) -> Result<i64, Error> {
-        let conn = self.pool.get().await?;
-        conn.count("qualifier", &[], &[], &[]).await
-    }
-
-    /// Returns the qualifier with the given id.
-    ///
-    /// # Panics
-    ///
-    /// Will panic if `id` cannot be safely converted to u32.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if an underlying database operation fails.
-    pub async fn load_qualifier(&self, id: i32) -> Result<Qualifier, Error> {
-        let conn = self.pool.get().await?;
-        conn.select_one_from::<(i32, String)>(
-            "qualifier",
-            &["id", "description"],
-            &[("id", super::Type::INT4)],
-            &[&id],
-        )
-        .await
-        .map(|(id, description)| Qualifier {
-            id: u32::try_from(id).expect("illegal id"),
-            description,
-        })
-    }
-
     /// Returns a list of qualifiers between `after` and `before`.
     ///
     /// # Panics
@@ -163,22 +118,5 @@ impl Database {
             rows = rows.into_iter().rev().collect();
         }
         Ok(rows)
-    }
-
-    /// Updates the description of the qualifier with the given id.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if an underlying database operation fails.
-    pub async fn update_qualifier(&self, id: i32, description: &str) -> Result<(), Error> {
-        let conn = self.pool.get().await?;
-        conn.update(
-            "qualifier",
-            id,
-            &[("description", Type::TEXT)],
-            &[&description],
-        )
-        .await?;
-        Ok(())
     }
 }
