@@ -1,11 +1,54 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+use crate::{Indexable, IndexedMapUpdate};
 
 use super::{Database, Error, Type};
 
-#[derive(Deserialize, Queryable)]
+#[derive(Debug, Deserialize, Queryable, Serialize, PartialEq, Eq)]
 pub struct Qualifier {
-    pub id: i32,
+    pub id: u32,
     pub description: String,
+}
+
+impl Indexable for Qualifier {
+    fn key(&self) -> &[u8] {
+        self.description.as_bytes()
+    }
+
+    fn value(&self) -> Vec<u8> {
+        use bincode::Options;
+
+        bincode::DefaultOptions::new()
+            .serialize(self)
+            .expect("serializable")
+    }
+
+    fn set_index(&mut self, index: u32) {
+        self.id = index;
+    }
+}
+
+impl IndexedMapUpdate for Qualifier {
+    type Entry = Qualifier;
+
+    fn key(&self) -> Option<&[u8]> {
+        if self.description.is_empty() {
+            None
+        } else {
+            Some(self.description.as_bytes())
+        }
+    }
+
+    fn apply(&self, mut value: Self::Entry) -> Result<Self::Entry, anyhow::Error> {
+        value.description.clear();
+        value.description.push_str(&self.description);
+
+        Ok(value)
+    }
+
+    fn verify(&self, value: &Self::Entry) -> bool {
+        self.description == value.description
+    }
 }
 
 impl Database {
@@ -32,21 +75,33 @@ impl Database {
 
     /// Returns the qualifier with the given id.
     ///
+    /// # Panics
+    ///
+    /// Will panic if `id` cannot be safely converted to u32.
+    ///
     /// # Errors
     ///
     /// Returns an error if an underlying database operation fails.
     pub async fn load_qualifier(&self, id: i32) -> Result<Qualifier, Error> {
         let conn = self.pool.get().await?;
-        conn.select_one_from::<Qualifier>(
+        conn.select_one_from::<(i32, String)>(
             "qualifier",
             &["id", "description"],
             &[("id", super::Type::INT4)],
             &[&id],
         )
         .await
+        .map(|(id, description)| Qualifier {
+            id: u32::try_from(id).expect("illegal id"),
+            description,
+        })
     }
 
     /// Returns a list of qualifiers between `after` and `before`.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `id` cannot be safely converted to u32.
     ///
     /// # Errors
     ///
@@ -95,7 +150,15 @@ impl Database {
         }
 
         let mut conn = self.pool.get_diesel_conn().await?;
-        let mut rows: Vec<Qualifier> = query.get_results(&mut conn).await?;
+        let mut rows: Vec<Qualifier> = query
+            .get_results::<(i32, String)>(&mut conn)
+            .await?
+            .into_iter()
+            .map(|(id, description)| Qualifier {
+                id: u32::try_from(id).expect("illegal id"),
+                description,
+            })
+            .collect();
         if !is_first {
             rows = rows.into_iter().rev().collect();
         }

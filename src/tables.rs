@@ -1,9 +1,14 @@
 mod accounts;
 mod batch_info;
 mod category;
+mod qualifier;
 mod scores;
+mod status;
 
-use crate::{batch_info::BatchInfo, category::Category, scores::Scores, types::Account, Indexable};
+use crate::{
+    batch_info::BatchInfo, category::Category, qualifier::Qualifier, scores::Scores,
+    status::Status, types::Account, Indexable,
+};
 
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
@@ -26,8 +31,10 @@ const META: &str = "meta";
 pub(super) const NETWORKS: &str = "networks";
 pub(super) const NODES: &str = "nodes";
 pub(super) const OUTLIERS: &str = "outliers";
+pub(super) const QUALIFIERS: &str = "qualifiers";
 pub(super) const SAMPLING_POLICY: &str = "sampling policy";
 pub(super) const SCORES: &str = "scores";
+pub(super) const STATUS: &str = "status";
 pub(super) const TEMPLATES: &str = "templates";
 pub(super) const TIDB: &str = "TI database";
 pub(super) const TOR_EXIT_NODES: &str = "Tor exit nodes";
@@ -37,7 +44,7 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 25] = [
+const MAP_NAMES: [&str; 27] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -53,8 +60,10 @@ const MAP_NAMES: [&str; 25] = [
     NETWORKS,
     NODES,
     OUTLIERS,
+    QUALIFIERS,
     SAMPLING_POLICY,
     SCORES,
+    STATUS,
     TEMPLATES,
     TIDB,
     TOR_EXIT_NODES,
@@ -123,9 +132,21 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn category(&self) -> IndexedTable<Category> {
+    pub(crate) fn categories(&self) -> IndexedTable<Category> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Category>::open(inner).expect("category table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn qualifiers(&self) -> IndexedTable<Qualifier> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<Qualifier>::open(inner).expect("category table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn statuses(&self) -> IndexedTable<Status> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<Status>::open(inner).expect("category table must be present")
     }
 
     #[must_use]

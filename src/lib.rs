@@ -187,7 +187,7 @@ impl Store {
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn category_map(&self) -> IndexedTable<category::Category> {
-        self.states.category()
+        self.states.categories()
     }
 
     #[must_use]
@@ -268,8 +268,20 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
+    pub fn qualifier_map(&self) -> IndexedTable<qualifier::Qualifier> {
+        self.states.qualifiers()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn scores_map(&self) -> Table<scores::Scores> {
         self.states.scores()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn status_map(&self) -> IndexedTable<status::Status> {
+        self.states.statuses()
     }
 
     #[must_use]
