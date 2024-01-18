@@ -2,7 +2,7 @@
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{category::Category, Indexable, Indexed, IndexedMap, IndexedTable};
+use crate::{category::Category, Indexed, IndexedMap, IndexedTable};
 
 const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irrelevant Alert")];
 
@@ -50,21 +50,6 @@ impl<'d> IndexedTable<'d, Category> {
         self.indexed_map.update(id, &old, &new)
     }
 
-    /// Returns the category with the given ID.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    pub fn get(&self, id: u32) -> Result<Category> {
-        use bincode::Options;
-        let res = self
-            .indexed_map
-            .get_by_id(id)
-            .and_then(|r| r.ok_or(anyhow::anyhow!("category {id} unavailable")))?;
-        let c = bincode::DefaultOptions::new().deserialize(res.as_ref())?;
-        Ok(c)
-    }
-
     /// Try adding default entries into the database.
     ///
     /// # Errors
@@ -89,60 +74,6 @@ impl<'d> IndexedTable<'d, Category> {
             }
         }
         Ok(())
-    }
-
-    /// Returns `n` `Category`(ies)
-    /// `is_first`: Forward or Reverse order.
-    /// `from`: If `from` exists in database then, `bound` is excluded from the result.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    fn get_n(&self, from: Option<Category>, n: usize, is_first: bool) -> Result<Vec<Category>> {
-        use rocksdb::{Direction, IteratorMode};
-
-        let mode = match (&from, is_first) {
-            (Some(from), true) => IteratorMode::From(from.indexed_key(), Direction::Forward),
-            (Some(from), false) => IteratorMode::From(from.indexed_key(), Direction::Reverse),
-            (None, true) => IteratorMode::From(&[0], Direction::Forward),
-            (None, false) => IteratorMode::End,
-        };
-
-        let mut iter = self
-            .indexed_map
-            .inner_iterator(mode)?
-            .map(|(_, v)| super::deserialize::<Category>(&v))
-            .peekable();
-
-        match (from, iter.peek()) {
-            (Some(value), Some(Ok(c))) => {
-                if value == *c {
-                    iter.skip(1).take(n).collect()
-                } else {
-                    iter.take(n).collect()
-                }
-            }
-            _ => iter.take(n).collect(),
-        }
-    }
-
-    /// Returns `limit` # of `Category`(ies) according to conditions provided.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    pub fn get_range(
-        &self,
-        before: Option<Category>,
-        after: Option<Category>,
-        is_first: bool,
-        limit: usize,
-    ) -> Result<Vec<Category>> {
-        match (before.is_some(), after.is_some()) {
-            (true, false) => self.get_n(before, limit, false),
-            (false, true) => self.get_n(after, limit, true),
-            _ => self.get_n(None, limit, is_first),
-        }
     }
 }
 

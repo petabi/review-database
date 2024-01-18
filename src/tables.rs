@@ -7,7 +7,7 @@ use crate::{batch_info::BatchInfo, category::Category, scores::Scores, types::Ac
 
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 // Key-value map names in `Database`.
@@ -357,6 +357,83 @@ where
     /// Returns an error if the record key already exists.
     pub fn insert(&self, record: R) -> Result<u32> {
         self.indexed_map.insert(record)
+    }
+
+    /// Returns the entry with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub fn get(&self, id: u32) -> Result<R>
+    where
+        R: DeserializeOwned,
+    {
+        let res = self
+            .indexed_map
+            .get_by_id(id)
+            .and_then(|r| r.ok_or(anyhow::anyhow!("category {id} unavailable")))?;
+        let c = deserialize(res.as_ref())?;
+        Ok(c)
+    }
+
+    /// Returns `n` `Entry`(ies)
+    /// `is_first`: Forward or Reverse order.
+    /// `from`: If `from` exists in database then, `bound` is excluded from the result.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    fn get_n(&self, from: Option<R>, n: usize, is_first: bool) -> Result<Vec<R>>
+    where
+        R: DeserializeOwned + PartialEq,
+    {
+        use rocksdb::{Direction, IteratorMode};
+
+        let mode = match (&from, is_first) {
+            (Some(from), true) => IteratorMode::From(from.indexed_key(), Direction::Forward),
+            (Some(from), false) => IteratorMode::From(from.indexed_key(), Direction::Reverse),
+            (None, true) => IteratorMode::From(&[0], Direction::Forward),
+            (None, false) => IteratorMode::End,
+        };
+
+        let mut iter = self
+            .indexed_map
+            .inner_iterator(mode)?
+            .map(|(_, v)| deserialize::<R>(&v))
+            .peekable();
+
+        match (from, iter.peek()) {
+            (Some(value), Some(Ok(c))) => {
+                if value == *c {
+                    iter.skip(1).take(n).collect()
+                } else {
+                    iter.take(n).collect()
+                }
+            }
+            _ => iter.take(n).collect(),
+        }
+    }
+
+    /// Returns `limit` # of `Entry`(ies) according to conditions provided.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    pub fn get_range(
+        &self,
+        before: Option<R>,
+        after: Option<R>,
+        is_first: bool,
+        limit: usize,
+    ) -> Result<Vec<R>>
+    where
+        R: DeserializeOwned + PartialEq,
+    {
+        match (before.is_some(), after.is_some()) {
+            (true, false) => self.get_n(before, limit, false),
+            (false, true) => self.get_n(after, limit, true),
+            _ => self.get_n(None, limit, is_first),
+        }
     }
 
     /// Removes a record with the given ID.
