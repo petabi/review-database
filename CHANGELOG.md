@@ -18,6 +18,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     Also, because `EventKind::Log` is still not in actual use today, there is
     no migration processing for that change.
 
+### Changed
+
+- `IndexedTable<Category>::add` has been replaced with
+  `IndexedTable<Category>::insert`, to be consistent with the `HashMap` API.
+
 ### Removed
 
 - The category table has been permanently removed from the PostgreSQL database
@@ -25,6 +30,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - To ensure data integrity and avoid potential data loss, users currently
     utilizing review-database versions below 0.22.0 must migrate to version
     0.22.1 before proceeding with any further migrations.
+- A generic definition of `IndexedTable::insert` has been removed; each table
+  implements its own `insert` function.
 
 ## [0.22.1] - 2024-01-10
 
