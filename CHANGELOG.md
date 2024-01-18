@@ -16,6 +16,21 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   eliminates the need for cloning `name` and `version`, as these values are now
   directly accessible through the public member variables of the `Tidb`
   instance.
+- Moved the qualifier table from the PostgreSQL database to RocksDB.
+  - The qualifier table data is now stored in RocksDB for improved performance
+    and scalability.
+  - A migration function has been provided to seamlessly transition data from
+    the old PostgreSQL table to RocksDB.
+- Moved the status table from the PostgreSQL database to RocksDB.
+  - The status table data is now stored in RocksDB for improved performance
+    and scalability.
+  - A migration function has been provided to seamlessly transition data from
+    the old PostgreSQL table to RocksDB.
+
+### Deprecated
+
+- `qualifier` table from PostgreSQL database is now deprecated.
+- `status` table from PostgreSQL database is now deprecated.
 
 ## [0.23.0] - 2024-01-18
 

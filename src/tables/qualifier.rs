@@ -1,9 +1,10 @@
-//! The `category` table.
+//! The `qualifier` table.
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
 use crate::{qualifier::Qualifier, Indexable, Indexed, IndexedMap, IndexedTable};
 
+// The following will be used when PostgreSQL qualifier table is deleted
 #[allow(dead_code)]
 const DEFAULT_ENTRIES: [(u32, &str); 4] = [
     (1, "benign"),
@@ -13,23 +14,24 @@ const DEFAULT_ENTRIES: [(u32, &str); 4] = [
 ];
 
 impl<'d> IndexedTable<'d, Qualifier> {
-    /// Opens the category table in the database.
+    /// Opens the qualifier table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
-        let table = IndexedMap::new(db, super::CATEGORY)
+        let table = IndexedMap::new(db, super::QUALIFIERS)
             .map(IndexedTable::new)
             .ok()?;
+        // The following should be uncommented when PostgreSQL qualifier table is deleted
         //table.setup().ok()?;
         Some(table)
     }
 
-    /// Inserts a category into the table and returns the ID of the newly added
-    /// category.
+    /// Inserts a qualifier into the table and returns the ID of the newly added
+    /// qualifier.
     ///
     /// # Errors
     ///
-    /// Returns an error if the table already has a category with the same name.
+    /// Returns an error if the table already has a qualifier with the same name.
     pub fn insert(&self, description: &str) -> Result<u32> {
         let entry = Qualifier {
             id: u32::MAX,
@@ -38,7 +40,7 @@ impl<'d> IndexedTable<'d, Qualifier> {
         self.indexed_map.insert(entry)
     }
 
-    /// Update the category name from `old` to `new`, given `id`.
+    /// Update the qualifier name from `old` to `new`, given `id`.
     ///
     /// # Errors
     ///
@@ -55,7 +57,7 @@ impl<'d> IndexedTable<'d, Qualifier> {
         self.indexed_map.update(id, &old, &new)
     }
 
-    /// Returns the category with the given ID.
+    /// Returns the qualifier with the given ID.
     ///
     /// # Errors
     ///
@@ -64,7 +66,7 @@ impl<'d> IndexedTable<'d, Qualifier> {
         let res = self
             .indexed_map
             .get_by_id(id)
-            .and_then(|r| r.ok_or(anyhow::anyhow!("category {id} unavailable")))?;
+            .and_then(|r| r.ok_or(anyhow::anyhow!("qualifier {id} unavailable")))?;
         let c = super::deserialize(res.as_ref())?;
         Ok(c)
     }
@@ -74,6 +76,7 @@ impl<'d> IndexedTable<'d, Qualifier> {
     /// # Errors
     ///
     /// Returns an error if the database query fails.
+    // The following will be used when PostgreSQL qualifier table is deleted
     #[allow(dead_code)]
     fn setup(&self) -> Result<()> {
         if self.indexed_map.count()? > 0 {
@@ -84,7 +87,7 @@ impl<'d> IndexedTable<'d, Qualifier> {
             self.remove(added)?; // so that `added` could be re-used as id.
             return Ok(());
         }
-        self.deactivate(added)?; // 0 is deactivated as id for `category`.
+        self.deactivate(added)?; // 0 is deactivated as id for `qualifier`.
 
         for (id, name) in DEFAULT_ENTRIES {
             let added = self.insert(name)?;
@@ -96,7 +99,7 @@ impl<'d> IndexedTable<'d, Qualifier> {
         Ok(())
     }
 
-    /// Returns `n` `Category`(ies)
+    /// Returns `n` `qualifier`(ies)
     /// `is_first`: Forward or Reverse order.
     /// `from`: If `from` exists in database then, `bound` is excluded from the result.
     ///
@@ -131,7 +134,7 @@ impl<'d> IndexedTable<'d, Qualifier> {
         }
     }
 
-    /// Returns `limit` # of `Category`(ies) according to conditions provided.
+    /// Returns `limit` # of `qualifier`(ies) according to conditions provided.
     ///
     /// # Errors
     ///

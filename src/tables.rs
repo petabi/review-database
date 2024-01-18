@@ -34,7 +34,7 @@ pub(super) const OUTLIERS: &str = "outliers";
 pub(super) const QUALIFIERS: &str = "qualifiers";
 pub(super) const SAMPLING_POLICY: &str = "sampling policy";
 pub(super) const SCORES: &str = "scores";
-pub(super) const STATUS: &str = "status";
+pub(super) const STATUSES: &str = "statuses";
 pub(super) const TEMPLATES: &str = "templates";
 pub(super) const TIDB: &str = "TI database";
 pub(super) const TOR_EXIT_NODES: &str = "Tor exit nodes";
@@ -63,7 +63,7 @@ const MAP_NAMES: [&str; 27] = [
     QUALIFIERS,
     SAMPLING_POLICY,
     SCORES,
-    STATUS,
+    STATUSES,
     TEMPLATES,
     TIDB,
     TOR_EXIT_NODES,
