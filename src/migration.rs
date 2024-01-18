@@ -53,7 +53,11 @@ pub async fn migrate_backend<P: AsRef<Path>>(
 
     // let version = read_version_file(&file)?;
 
-    // if VersionReq::parse(COMPATIBLE_VERSION_REQ)?.matches(&version) {
+    // let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
+    //     unreachable!("COMPATIBLE_VERSION_REQ must be valid")
+    // };
+    // if compatible.matches(&version)
+    // {
     //     backend_0_22(db, store).await?;
     // }
     Ok(())
@@ -68,14 +72,16 @@ pub async fn migrate_backend<P: AsRef<Path>>(
 ///
 /// Returns an error if the data directory doesn't exist and cannot be created,
 /// or if the data directory exists but is in the format incompatible with the
-/// current version. Or if `COMPATIBLE_VERSION_REQ` cannot be properly parsed.
+/// current version.
 pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()> {
     type Migration = (VersionReq, Version, fn(&crate::Store) -> anyhow::Result<()>);
 
     let data_dir = data_dir.as_ref();
     let backup_dir = backup_dir.as_ref();
 
-    let compatible = VersionReq::parse(COMPATIBLE_VERSION_REQ)?;
+    let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
+        unreachable!("COMPATIBLE_VERSION_REQ must be valid")
+    };
 
     let (data, data_ver) = retrieve_or_create_version(data_dir)?;
     let (backup, backup_ver) = retrieve_or_create_version(backup_dir)?;
