@@ -30,7 +30,6 @@ pub(crate) struct TimeSeries {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TimeSeriesUpdate {
     cluster_id: String,
-    time: NaiveDateTime,
     time_series: Vec<TimeSeries>,
 }
 
@@ -113,11 +112,11 @@ impl Database {
         &self,
         time_series: Vec<TimeSeriesUpdate>,
         model: i32,
+        batch_ts: NaiveDateTime,
     ) -> Result<(), anyhow::Error> {
         let tasks = time_series.into_iter().map(|ts| async move {
             let cluster_id = self.cluster_id(&ts.cluster_id, model).await?;
 
-            let time = ts.time;
             let tasks = ts.time_series.into_iter().map(move |s| {
                 let count_index = s.count_index;
                 let tasks = s.series.into_iter().map(move |tc| async move {
@@ -133,7 +132,7 @@ impl Database {
                         ],
                         &[
                             &cluster_id,
-                            &time,
+                            &batch_ts,
                             &count_index.map(|c| {
                                 std::cmp::min(c, MAX_CSV_COLUMNS)
                                     .to_i32()
