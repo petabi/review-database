@@ -18,19 +18,18 @@ impl<'d> IndexedTable<'d, Category> {
         Some(table)
     }
 
-    /// Add a category entry with `name`
-    ///
-    /// Returns the `ID` of the newly added category
+    /// Inserts a category into the table and returns the ID of the newly added
+    /// category.
     ///
     /// # Errors
     ///
-    /// Returns an error if the `name` already exists.
-    pub fn add(&self, name: &str) -> Result<u32> {
+    /// Returns an error if the table already has a category with the same name.
+    pub fn insert(&self, name: &str) -> Result<u32> {
         let entry = Category {
             id: u32::MAX,
             name: name.to_string(),
         };
-        self.insert(entry)
+        self.indexed_map.insert(entry)
     }
 
     /// Update the category name from `old` to `new`, given `id`.
@@ -74,7 +73,7 @@ impl<'d> IndexedTable<'d, Category> {
         if self.indexed_map.count()? > 0 {
             return Ok(());
         }
-        let added = self.add("dummy")?;
+        let added = self.insert("dummy")?;
         if added != 0 {
             self.remove(added)?; // so that `added` could be re-used as id.
             return Ok(());
@@ -82,7 +81,7 @@ impl<'d> IndexedTable<'d, Category> {
         self.deactivate(added)?; // 0 is deactivated as id for `category`.
 
         for (id, name) in DEFAULT_ENTRIES {
-            let added = self.add(name)?;
+            let added = self.insert(name)?;
             if added != id {
                 self.remove(added)?; // so that `added` could be re-used as id.
                 return Ok(());
@@ -178,7 +177,7 @@ mod tests {
         ];
 
         for e in entries.iter_mut() {
-            let added = table.add(&e.name).unwrap();
+            let added = table.insert(&e.name).unwrap();
             e.id = added as u32;
         }
         (store, entries)

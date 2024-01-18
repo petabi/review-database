@@ -350,15 +350,6 @@ where
         self.indexed_map.count()
     }
 
-    /// Inserts a new record.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the record key already exists.
-    pub fn insert(&self, record: R) -> Result<u32> {
-        self.indexed_map.insert(record)
-    }
-
     /// Removes a record with the given ID.
     ///
     /// # Errors
