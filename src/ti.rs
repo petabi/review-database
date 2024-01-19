@@ -51,13 +51,11 @@ impl Tidb {
     ///
     /// * Returns an error if it fails to encode TI database
     /// * Returns an error if it fails to save TI database
-    pub fn insert(&self, store: &Store) -> Result<(String, String)> {
-        let name = self.name.clone();
-        let version = self.version.clone();
+    pub fn insert(&self, store: &Store) -> Result<()> {
         let value = bincode::DefaultOptions::new().serialize(&self)?;
         let map = store.tidb_map();
-        map.put(name.as_bytes(), &value)?;
-        Ok((name, version))
+        map.put(self.name.as_bytes(), &value)?;
+        Ok(())
     }
 
     /// Replace TI database with the new
@@ -67,17 +65,15 @@ impl Tidb {
     /// * Returns an error if the TI database name does not match
     /// * Returns an error if it fails to encode TI database
     /// * Returns an error if it fails to delete or save TI database
-    pub fn update(&self, store: &Store, name: &str) -> Result<(String, String)> {
+    pub fn update(&self, store: &Store, name: &str) -> Result<()> {
         if *name != self.name {
             bail!("Tidb name does not matched");
         }
-        let new_name = self.name.clone();
-        let new_version = self.version.clone();
         let value = bincode::DefaultOptions::new().serialize(&self)?;
         let map = store.tidb_map();
         map.delete(name.as_bytes())?;
         map.put(name.as_bytes(), &value)?;
-        Ok((new_name, new_version))
+        Ok(())
     }
 
     /// Returns TI database

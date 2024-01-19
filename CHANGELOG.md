@@ -5,6 +5,18 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Updated the `insert` and `update` methods in the `Tidb` class to simplify
+  return types and remove unnecessary cloning. These methods no longer return
+  redundant tuple values `(String, String)` representing the name and version of
+  the TI database, instead returning a `Result<()>`. Additionally, the update
+  eliminates the need for cloning `name` and `version`, as these values are now
+  directly accessible through the public member variables of the `Tidb`
+  instance.
+
 ## [0.23.0] - 2024-01-18
 
 ### Added
@@ -610,6 +622,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.23.0...main
 [0.23.0]: https://github.com/petabi/review-database/compare/0.22.1...0.23.0
 [0.22.1]: https://github.com/petabi/review-database/compare/0.22.0...0.22.1
 [0.22.0]: https://github.com/petabi/review-database/compare/0.21.0...0.22.0
