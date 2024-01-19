@@ -280,10 +280,10 @@ impl StateDb {
         ))
     }
 
-    fn open_backup_engine(path: &Path) -> Result<rocksdb::backup::BackupEngine> {
+    fn open_backup_engine(path: &Path) -> Result<rocksdb::backup::BackupEngine, rocksdb::Error> {
         let opts = rocksdb::backup::BackupEngineOptions::new(path)?;
         let db_env = rocksdb::Env::new()?;
-        Ok(rocksdb::backup::BackupEngine::open(&opts, &db_env)?)
+        rocksdb::backup::BackupEngine::open(&opts, &db_env)
     }
 }
 
