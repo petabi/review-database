@@ -1,1 +1,1 @@
-doc-valid-idents = [ "PostgreSQL" ]
+doc-valid-idents = ["PostgreSQL", "RocksDB"]
