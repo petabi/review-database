@@ -163,7 +163,7 @@ impl StateDb {
         flush: bool,
         num_of_backups_to_keep: u32,
     ) -> Result<()> {
-        let mut engine = Self::open_backup_engine(self.backup.as_path())?;
+        let mut engine = open_rocksdb_backup_engine(self.backup.as_path())?;
 
         let inner = self
             .inner
@@ -177,7 +177,7 @@ impl StateDb {
     }
 
     pub fn restore_from_latest_backup(&mut self) -> Result<()> {
-        let mut engine = Self::open_backup_engine(self.backup.as_path())?;
+        let mut engine = open_rocksdb_backup_engine(self.backup.as_path())?;
 
         let mut opts = rocksdb::backup::RestoreOptions::default();
         opts.set_keep_log_files(true);
@@ -190,7 +190,7 @@ impl StateDb {
     }
 
     pub fn restore_from_backup(&mut self, id: u32) -> Result<()> {
-        let mut engine = Self::open_backup_engine(self.backup.as_path())?;
+        let mut engine = open_rocksdb_backup_engine(self.backup.as_path())?;
 
         let opts = rocksdb::backup::RestoreOptions::default();
 
@@ -202,13 +202,13 @@ impl StateDb {
     }
 
     pub fn get_backup_info(&self) -> Result<Vec<rocksdb::backup::BackupEngineInfo>> {
-        let engine = Self::open_backup_engine(self.backup.as_path())?;
+        let engine = open_rocksdb_backup_engine(self.backup.as_path())?;
 
         Ok(engine.get_backup_info())
     }
 
     pub fn purge_old_backups(&mut self, num_of_backups_to_keep: u32) -> Result<()> {
-        let mut engine = Self::open_backup_engine(self.backup.as_path())?;
+        let mut engine = open_rocksdb_backup_engine(self.backup.as_path())?;
 
         if engine
             .purge_old_backups(num_of_backups_to_keep as usize)
@@ -255,7 +255,7 @@ impl StateDb {
     }
 
     fn recover_db(path: &Path, backup: &Path) -> Result<rocksdb::OptimisticTransactionDB> {
-        let mut engine = Self::open_backup_engine(backup)?;
+        let mut engine = open_rocksdb_backup_engine(backup)?;
         let available = engine.get_backup_info();
         let restore_opts = rocksdb::backup::RestoreOptions::default();
         for backup_id in available.into_iter().rev().map(|b| b.backup_id) {
@@ -278,12 +278,6 @@ impl StateDb {
             "unable to recover from backups available at: {}",
             backup.display()
         ))
-    }
-
-    fn open_backup_engine(path: &Path) -> Result<rocksdb::backup::BackupEngine, rocksdb::Error> {
-        let opts = rocksdb::backup::BackupEngineOptions::new(path)?;
-        let db_env = rocksdb::Env::new()?;
-        rocksdb::backup::BackupEngine::open(&opts, &db_env)
     }
 }
 
@@ -391,4 +385,13 @@ fn serialize<I: Serialize>(input: &I) -> anyhow::Result<Vec<u8>> {
 fn deserialize<'de, O: Deserialize<'de>>(input: &'de [u8]) -> anyhow::Result<O> {
     use bincode::Options;
     Ok(bincode::DefaultOptions::new().deserialize(input)?)
+}
+
+/// Opens a RocksDB backup engine using the default options and environment.
+fn open_rocksdb_backup_engine(
+    path: &Path,
+) -> Result<rocksdb::backup::BackupEngine, rocksdb::Error> {
+    let opts = rocksdb::backup::BackupEngineOptions::new(path)?;
+    let db_env = rocksdb::Env::new()?;
+    rocksdb::backup::BackupEngine::open(&opts, &db_env)
 }
