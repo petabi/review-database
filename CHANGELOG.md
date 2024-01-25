@@ -32,6 +32,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - `qualifier` table from PostgreSQL database is now deprecated.
 - `status` table from PostgreSQL database is now deprecated.
 
+### Removed
+
+- `Table<Account>` no longer implements `IterableMap`. Instead, the user should
+  use `Table<Account>::iter` to iterate over the accounts in the database. This
+  change eliminates the need for callers to deserialize records manually,
+  simplifying the interaction with the accounts table.
+
 ## [0.23.0] - 2024-01-18
 
 ### Added
