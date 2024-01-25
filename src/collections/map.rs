@@ -221,17 +221,6 @@ pub struct MapIterator<'i> {
     >,
 }
 
-impl<'i> MapIterator<'i> {
-    pub(crate) fn new(
-        inner: rocksdb::DBIteratorWithThreadMode<
-            'i,
-            rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
-        >,
-    ) -> Self {
-        Self { inner }
-    }
-}
-
 impl<'i> Iterator for MapIterator<'i> {
     type Item = (Box<[u8]>, Box<[u8]>);
 

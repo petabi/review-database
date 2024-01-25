@@ -6,7 +6,7 @@ use anyhow::{bail, Context};
 use bincode::Options;
 use rocksdb::{Direction, IteratorMode, OptimisticTransactionDB};
 
-use crate::{types::Account, IterableMap, Map, MapIterator, Role, Table, EXCLUSIVE};
+use crate::{types::Account, Map, Role, Table, EXCLUSIVE};
 
 use super::TableIter;
 
@@ -156,7 +156,8 @@ impl<'d> Table<'d, Account> {
         Ok(())
     }
 
-    /// Returns an iterator over the account table.
+    /// Returns an iterator over the account table. Accounts are ordered by
+    /// username.
     #[must_use]
     pub fn iter(&self, direction: Direction, from: Option<&str>) -> TableIter<'d, Account> {
         match direction {
@@ -176,10 +177,6 @@ impl<'d> Table<'d, Account> {
             },
         }
     }
-
-    fn inner_iterator(&self, mode: IteratorMode) -> MapIterator {
-        MapIterator::new(self.map.db.iterator_cf(self.map.cf, mode))
-    }
 }
 
 impl<'i> Iterator for TableIter<'i, Account> {
@@ -194,20 +191,6 @@ impl<'i> Iterator for TableIter<'i, Account> {
             }
             Err(e) => Some(Err(e.into())),
         }
-    }
-}
-
-impl<'i> IterableMap<'i, MapIterator<'i>> for Table<'i, Account> {
-    fn iter_from(&self, key: &[u8], direction: Direction) -> Result<MapIterator, anyhow::Error> {
-        Ok(self.inner_iterator(IteratorMode::From(key, direction)))
-    }
-
-    fn iter_forward(&self) -> Result<MapIterator, anyhow::Error> {
-        Ok(self.inner_iterator(IteratorMode::Start))
-    }
-
-    fn iter_backward(&self) -> Result<MapIterator, anyhow::Error> {
-        Ok(self.inner_iterator(IteratorMode::End))
     }
 }
 
