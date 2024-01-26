@@ -60,7 +60,7 @@ pub use self::outlier::*;
 pub use self::qualifier::Qualifier;
 pub use self::status::Status;
 use self::tables::StateDb;
-pub use self::tables::{IndexedTable, Table};
+pub use self::tables::{IndexedTable, Iterable, Table};
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};

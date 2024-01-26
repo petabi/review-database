@@ -5,6 +5,15 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Refactored `iter` method in `Table<Account>` to be part of a new `Iterable`
+  trait. This enhancement enables the `iter` method to be used universally on
+  any table that implements the `Iterable` trait, extending its functionality
+  beyond just the `Table<Account>`.
+
 ## [0.24.0] - 2024-01-29
 
 ### Changed
@@ -645,6 +654,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.24.0...main
 [0.24.0]: https://github.com/petabi/review-database/compare/0.23.0...0.24.0
 [0.23.0]: https://github.com/petabi/review-database/compare/0.22.1...0.23.0
 [0.22.1]: https://github.com/petabi/review-database/compare/0.22.0...0.22.1

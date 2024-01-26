@@ -4,11 +4,9 @@ use std::net::IpAddr;
 
 use anyhow::{bail, Context};
 use bincode::Options;
-use rocksdb::{Direction, IteratorMode, OptimisticTransactionDB};
+use rocksdb::OptimisticTransactionDB;
 
 use crate::{types::Account, Map, Role, Table, EXCLUSIVE};
-
-use super::TableIter;
 
 /// Functions for the accounts table.
 impl<'d> Table<'d, Account> {
@@ -155,43 +153,6 @@ impl<'d> Table<'d, Account> {
         }
         Ok(())
     }
-
-    /// Returns an iterator over the account table. Accounts are ordered by
-    /// username.
-    #[must_use]
-    pub fn iter(&self, direction: Direction, from: Option<&str>) -> TableIter<'d, Account> {
-        match direction {
-            Direction::Forward => match from {
-                Some(from) => TableIter::new(self.map.db.iterator_cf(
-                    self.map.cf,
-                    IteratorMode::From(from.as_bytes(), Direction::Forward),
-                )),
-                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::Start)),
-            },
-            Direction::Reverse => match from {
-                Some(from) => TableIter::new(self.map.db.iterator_cf(
-                    self.map.cf,
-                    IteratorMode::From(from.as_bytes(), Direction::Reverse),
-                )),
-                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::End)),
-            },
-        }
-    }
-}
-
-impl<'i> Iterator for TableIter<'i, Account> {
-    type Item = Result<Account, anyhow::Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let serialized_item = self.inner.next()?;
-        match serialized_item {
-            Ok((_key, value)) => {
-                let item = bincode::DefaultOptions::new().deserialize::<Account>(&value);
-                Some(item.map_err(Into::into))
-            }
-            Err(e) => Some(Err(e.into())),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -240,6 +201,8 @@ mod tests {
 
     #[test]
     fn iter() {
+        use crate::tables::Iterable;
+
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
@@ -277,7 +240,7 @@ mod tests {
         .unwrap();
         table.put(&acc2).unwrap();
 
-        let mut iter = table.iter(Direction::Forward, Some("user2"));
+        let mut iter = table.iter(Direction::Forward, Some(b"user2"));
         let acc = iter.next().unwrap().unwrap();
         assert_eq!(acc.username, "user2");
 
@@ -285,7 +248,7 @@ mod tests {
         let acc = iter.next().unwrap().unwrap();
         assert_eq!(acc.username, "user2");
 
-        let mut iter = table.iter(Direction::Reverse, Some("user1"));
+        let mut iter = table.iter(Direction::Reverse, Some(b"user1"));
         let acc = iter.next().unwrap().unwrap();
         assert_eq!(acc.username, "user1");
     }

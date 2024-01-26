@@ -7,12 +7,12 @@ mod status;
 
 use crate::{
     batch_info::BatchInfo, category::Category, qualifier::Qualifier, scores::Scores,
-    status::Status, types::Account, Indexable,
+    status::Status, types::Account, Direction, Indexable,
 };
 
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 // Key-value map names in `Database`.
@@ -317,6 +317,31 @@ impl<'d, R> Table<'d, R> {
     }
 }
 
+impl<T: DeserializeOwned> Iterable<T> for Table<'_, T> {
+    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, T> {
+        use rocksdb::IteratorMode;
+
+        match direction {
+            Direction::Forward => match from {
+                Some(from) => TableIter::new(
+                    self.map
+                        .db
+                        .iterator_cf(self.map.cf, IteratorMode::From(from, Direction::Forward)),
+                ),
+                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::Start)),
+            },
+            Direction::Reverse => match from {
+                Some(from) => TableIter::new(
+                    self.map
+                        .db
+                        .iterator_cf(self.map.cf, IteratorMode::From(from, Direction::Reverse)),
+                ),
+                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::End)),
+            },
+        }
+    }
+}
+
 /// An iterator over the records in a table.
 pub struct TableIter<'i, R> {
     inner: rocksdb::DBIteratorWithThreadMode<
@@ -336,6 +361,26 @@ impl<'i, R> TableIter<'i, R> {
         Self {
             inner,
             _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'i, R> Iterator for TableIter<'i, R>
+where
+    R: DeserializeOwned,
+{
+    type Item = Result<R, anyhow::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use bincode::Options;
+
+        let serialized_item = self.inner.next()?;
+        match serialized_item {
+            Ok((_key, value)) => {
+                let item = bincode::DefaultOptions::new().deserialize::<R>(&value);
+                Some(item.map_err(Into::into))
+            }
+            Err(e) => Some(Err(e.into())),
         }
     }
 }
@@ -396,6 +441,11 @@ pub trait Value {
     where
         Self: 'a;
     fn value(&self) -> Self::Output<'_>;
+}
+
+pub trait Iterable<T: DeserializeOwned> {
+    /// Returns an iterator over the table, starting from the given key.
+    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<T>;
 }
 
 fn serialize<I: Serialize>(input: &I) -> anyhow::Result<Vec<u8>> {
