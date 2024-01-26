@@ -55,6 +55,8 @@ pub struct Node {
     pub sensors: bool,
     pub sensor_list: HashMap<String, bool>,
     pub creation_time: DateTime<Utc>,
+    pub apply_target_id: Option<u32>,
+    pub apply_in_progress: bool,
 }
 
 impl Indexable for Node {
