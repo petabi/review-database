@@ -116,37 +116,37 @@ impl StateDb {
     #[must_use]
     pub(crate) fn accounts(&self) -> Table<Account> {
         let inner = self.inner.as_ref().expect("database must be open");
-        Table::<Account>::open(inner).expect("accounts table must be present")
+        Table::<Account>::open(inner).expect("{ACCOUNTS} table must be present")
     }
 
     #[must_use]
     pub(crate) fn batch_info(&self) -> Table<BatchInfo> {
         let inner = self.inner.as_ref().expect("database must be open");
-        Table::<BatchInfo>::open(inner).expect("accounts table must be present")
+        Table::<BatchInfo>::open(inner).expect("{BATCH_INFO} table must be present")
     }
 
     #[must_use]
     pub(crate) fn scores(&self) -> Table<Scores> {
         let inner = self.inner.as_ref().expect("database must be open");
-        Table::<Scores>::open(inner).expect("accounts table must be present")
+        Table::<Scores>::open(inner).expect("{SCORES} table must be present")
     }
 
     #[must_use]
     pub(crate) fn categories(&self) -> IndexedTable<Category> {
         let inner = self.inner.as_ref().expect("database must be open");
-        IndexedTable::<Category>::open(inner).expect("category table must be present")
+        IndexedTable::<Category>::open(inner).expect("{CATEGORY} table must be present")
     }
 
     #[must_use]
     pub(crate) fn qualifiers(&self) -> IndexedTable<Qualifier> {
         let inner = self.inner.as_ref().expect("database must be open");
-        IndexedTable::<Qualifier>::open(inner).expect("category table must be present")
+        IndexedTable::<Qualifier>::open(inner).expect("{QUALIFIERS} table must be present")
     }
 
     #[must_use]
     pub(crate) fn statuses(&self) -> IndexedTable<Status> {
         let inner = self.inner.as_ref().expect("database must be open");
-        IndexedTable::<Status>::open(inner).expect("category table must be present")
+        IndexedTable::<Status>::open(inner).expect("{STATUSES} table must be present")
     }
 
     #[must_use]
