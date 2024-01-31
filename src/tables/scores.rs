@@ -5,8 +5,6 @@ use rocksdb::OptimisticTransactionDB;
 
 use crate::{scores::Scores, Map, Table};
 
-use super::{Key, Value};
-
 impl<'d> Table<'d, Scores> {
     /// Opens the scores table in the database.
     ///
@@ -38,29 +36,6 @@ impl<'d> Table<'d, Scores> {
         let value = super::deserialize(value.as_ref())?;
         let scores = Scores::new(model, value);
         Ok(Some(scores))
-    }
-
-    /// Stores scores into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization of the scores fails or the database operation fails.
-    pub fn put(&self, input: &Scores) -> Result<()> {
-        let key = super::serialize(input.key())?;
-        let value = super::serialize(input.value())?;
-        self.map.put(&key, &value)
-    }
-
-    /// Adds scores into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization of the scores fails, the scores with the same
-    /// model exists, or the database operation fails.
-    pub fn insert(&self, input: &Scores) -> Result<()> {
-        let key = super::serialize(input.key())?;
-        let value = super::serialize(input.value())?;
-        self.map.insert(&key, &value)
     }
 }
 

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 
 use crate::tables::{Key, Value};
@@ -30,17 +32,21 @@ impl From<crate::types::ModelBatchInfo> for BatchInfo {
 }
 
 impl Key for BatchInfo {
-    type Output<'a> = (i32, i64);
-
-    fn key(&self) -> Self::Output<'_> {
-        (self.model, self.inner.id)
+    fn key(&self) -> Cow<[u8]> {
+        use bincode::Options;
+        let Ok(key) = bincode::DefaultOptions::new().serialize(&(self.model, self.inner.id)) else {
+            unreachable!("serialization into memory should never fail")
+        };
+        Cow::Owned(key)
     }
 }
 
 impl Value for BatchInfo {
-    type Output<'a> = &'a crate::types::ModelBatchInfo;
-
-    fn value(&self) -> Self::Output<'_> {
-        &self.inner
+    fn value(&self) -> Cow<[u8]> {
+        use bincode::Options;
+        let Ok(value) = bincode::DefaultOptions::new().serialize(&self.inner) else {
+            unreachable!("serialization into memory should never fail")
+        };
+        Cow::Owned(value)
     }
 }
