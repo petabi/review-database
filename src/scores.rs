@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 
 use crate::tables::{Key, Value};
@@ -19,17 +21,21 @@ impl Scores {
 }
 
 impl Key for Scores {
-    type Output<'a> = &'a i32;
-
-    fn key(&self) -> Self::Output<'_> {
-        &self.model
+    fn key(&self) -> Cow<[u8]> {
+        use bincode::Options;
+        let Ok(key) = bincode::DefaultOptions::new().serialize(&self.model) else {
+            unreachable!("serialization into memory should never fail")
+        };
+        Cow::Owned(key)
     }
 }
 
 impl Value for Scores {
-    type Output<'a> = &'a crate::types::ModelScores;
-
-    fn value(&self) -> Self::Output<'_> {
-        &self.inner
+    fn value(&self) -> Cow<[u8]> {
+        use bincode::Options;
+        let Ok(value) = bincode::DefaultOptions::new().serialize(&self.inner) else {
+            unreachable!("serialization into memory should never fail")
+        };
+        Cow::Owned(value)
     }
 }

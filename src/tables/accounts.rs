@@ -49,27 +49,6 @@ impl<'d> Table<'d, Account> {
         ))
     }
 
-    /// Stores an account into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization of the account fails or the database operation fails.
-    pub fn put(&self, account: &Account) -> Result<(), anyhow::Error> {
-        let value = bincode::DefaultOptions::new().serialize(account)?;
-        self.map.put(account.username.as_bytes(), &value)
-    }
-
-    /// Adds an account into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization of the account fails, the account with the same
-    /// username exists, or the database operation fails.
-    pub fn insert(&self, account: &Account) -> Result<(), anyhow::Error> {
-        let value = bincode::DefaultOptions::new().serialize(account)?;
-        self.map.insert(account.username.as_bytes(), &value)
-    }
-
     /// Updates an entry in account map.
     ///
     /// # Errors

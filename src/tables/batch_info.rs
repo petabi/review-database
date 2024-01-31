@@ -5,37 +5,12 @@ use rocksdb::{IteratorMode, OptimisticTransactionDB};
 
 use crate::{batch_info::BatchInfo, Map, Table};
 
-use super::{Key, Value};
-
 impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// Opens the batch info table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
         Map::open(db, super::BATCH_INFO).map(Table::new)
-    }
-
-    /// Stores `batch_info` into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization of the `batch_info` fails or the database operation fails.
-    pub fn put(&self, input: &BatchInfo) -> Result<()> {
-        let key = super::serialize(&input.key())?;
-        let value = super::serialize(&input.value())?;
-        self.map.put(&key, &value)
-    }
-
-    /// Adds `batch_info` into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization of the `batch_info` fails, the `batch_info` with the same
-    /// key exists, or the database operation fails.
-    pub fn insert(&self, input: &BatchInfo) -> Result<()> {
-        let key = super::serialize(&input.key())?;
-        let value = super::serialize(&input.value())?;
-        self.map.insert(&key, &value)
     }
 
     /// Returns all `batch_info` with the given model id.

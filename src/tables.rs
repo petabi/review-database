@@ -13,7 +13,10 @@ use crate::{
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    borrow::Cow,
+    path::{Path, PathBuf},
+};
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -317,6 +320,27 @@ impl<'d, R> Table<'d, R> {
     }
 }
 
+impl<'d, R: Key + Value> Table<'d, R> {
+    /// Stores a record into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn put(&self, record: &R) -> Result<()> {
+        self.map.put(&record.key(), &record.value())
+    }
+
+    /// Adds a record into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the record with the same key exists, or the database
+    /// operation fails.
+    pub fn insert(&self, record: &R) -> Result<()> {
+        self.map.insert(&record.key(), &record.value())
+    }
+}
+
 impl<T: DeserializeOwned> Iterable<T> for Table<'_, T> {
     fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, T> {
         use rocksdb::IteratorMode;
@@ -430,17 +454,11 @@ where
 }
 
 pub trait Key {
-    type Output<'a>
-    where
-        Self: 'a;
-    fn key(&self) -> Self::Output<'_>;
+    fn key(&self) -> Cow<[u8]>;
 }
 
 pub trait Value {
-    type Output<'a>
-    where
-        Self: 'a;
-    fn value(&self) -> Self::Output<'_>;
+    fn value(&self) -> Cow<[u8]>;
 }
 
 pub trait Iterable<T: DeserializeOwned> {

@@ -9,8 +9,10 @@ use ring::{
     rand::{self, SecureRandom},
 };
 use serde::{Deserialize, Serialize};
-use std::{net::IpAddr, num::NonZeroU32};
+use std::{borrow::Cow, net::IpAddr, num::NonZeroU32};
 use strum_macros::{Display, EnumString};
+
+use crate::tables::{Key, Value};
 
 /// Possible role types of `Account`.
 #[derive(Clone, Copy, Debug, Display, Eq, PartialEq, Deserialize, Serialize, EnumString)]
@@ -102,6 +104,22 @@ impl Account {
     #[must_use]
     pub fn last_signin_time(&self) -> Option<DateTime<Utc>> {
         self.last_signin_time
+    }
+}
+
+impl Key for Account {
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.username.as_bytes())
+    }
+}
+
+impl Value for Account {
+    fn value(&self) -> Cow<[u8]> {
+        use bincode::Options;
+        let Ok(value) = bincode::DefaultOptions::new().serialize(&self) else {
+            unreachable!("serialization into memory should never fail")
+        };
+        Cow::Owned(value)
     }
 }
 
