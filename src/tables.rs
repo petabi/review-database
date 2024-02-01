@@ -1,13 +1,14 @@
 mod accounts;
 mod batch_info;
 mod category;
+mod csv_column_extra;
 mod qualifier;
 mod scores;
 mod status;
 
 use crate::{
-    batch_info::BatchInfo, category::Category, qualifier::Qualifier, scores::Scores,
-    status::Status, types::Account, Direction, Indexable,
+    batch_info::BatchInfo, category::Category, csv_column_extra::CsvColumnExtra,
+    qualifier::Qualifier, scores::Scores, status::Status, types::Account, Direction, Indexable,
 };
 
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
@@ -26,6 +27,7 @@ pub(super) const ALLOW_NETWORKS: &str = "allow networks";
 pub(super) const BATCH_INFO: &str = "batch_info";
 pub(super) const BLOCK_NETWORKS: &str = "block networks";
 pub(super) const CATEGORY: &str = "category";
+pub(super) const CSV_COLUMN_EXTRAS: &str = "csv column extras";
 pub(super) const CUSTOMERS: &str = "customers";
 pub(super) const DATA_SOURCES: &str = "data sources";
 pub(super) const FILTERS: &str = "filters";
@@ -47,7 +49,7 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 27] = [
+const MAP_NAMES: [&str; 28] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -55,6 +57,7 @@ const MAP_NAMES: [&str; 27] = [
     BATCH_INFO,
     BLOCK_NETWORKS,
     CATEGORY,
+    CSV_COLUMN_EXTRAS,
     CUSTOMERS,
     DATA_SOURCES,
     FILTERS,
@@ -150,6 +153,13 @@ impl StateDb {
     pub(crate) fn statuses(&self) -> IndexedTable<Status> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Status>::open(inner).expect("{STATUSES} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn csv_column_extras(&self) -> IndexedTable<CsvColumnExtra> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<CsvColumnExtra>::open(inner)
+            .expect("{CSV_COLUMN_EXTRAS} table must be present")
     }
 
     #[must_use]

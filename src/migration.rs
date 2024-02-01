@@ -32,7 +32,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<0.25.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -74,6 +74,11 @@ async fn backend_0_23(db: &super::Database, store: &super::Store) -> Result<()> 
     tracing::info!(
         "# of entries ransfered: {}",
         transfer_qualifiers(db, store).await?
+    );
+    tracing::info!("starting to transfer csv column extra data...");
+    tracing::info!(
+        "# of entries ransfered: {}",
+        transfer_csv_column_extras(db, store).await?
     );
     Ok(())
 }
@@ -206,6 +211,60 @@ async fn transfer_qualifiers(db: &super::Database, store: &super::Store) -> Resu
     Ok(data.len())
 }
 
+async fn transfer_csv_column_extras(db: &super::Database, store: &super::Store) -> Result<usize> {
+    let data = db.load_csv_column_extras().await?;
+    let table = store.csv_column_extra_map();
+
+    if table.count()? > 0 {
+        return Ok(0);
+    }
+
+    let mut next_mid = data
+        .iter()
+        .max_by_key(|e| e.model_id)
+        .expect("invalid model id")
+        .model_id
+        + 1;
+
+    let mut cur = 0;
+    let mut to_remove = vec![];
+    let data_len = data.len();
+    for entry in data {
+        while cur < entry.id {
+            let added = table.insert(next_mid, None, None, None, None, None)?;
+
+            if added != cur {
+                return Err(anyhow!(
+                    "corrupted category table: inserting {cur} and asigned with {added}"
+                ));
+            }
+
+            to_remove.push(cur);
+            next_mid += 1;
+            cur += 1;
+        }
+        let added = table.insert(
+            entry.model_id,
+            entry.column_alias.as_deref(),
+            entry.column_display.as_deref(),
+            entry.column_top_n.as_deref(),
+            entry.column_1.as_deref(),
+            entry.column_n.as_deref(),
+        )?;
+        if added != cur || added != entry.id {
+            return Err(anyhow!(
+                "corrupted category table: inserting {cur} and asigned with {added}"
+            ));
+        }
+        cur += 1;
+    }
+
+    for id in to_remove {
+        table.remove(id)?;
+    }
+
+    Ok(data_len)
+}
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
 /// Migration is supported between released versions only. The prelease versions (alpha, beta,

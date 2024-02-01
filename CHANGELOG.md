@@ -19,6 +19,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   trait. This enhancement enables the `iter` method to be used universally on
   any table that implements the `Iterable` trait, extending its functionality
   beyond just the `Table<Account>`.
+- Moved the csv_column_extra table from the PostgreSQL database to RocksDB.
+  - The csv_column_extra table data is now stored in RocksDB for improved performance
+    and scalability.
+  - A migration function has been provided to seamlessly transition data from
+    the old PostgreSQL table to RocksDB.
+
+### Deprecated
+
+- `csv_column_extra` table from PostgreSQL database is now deprecated.
 
 ### Removed
 
