@@ -37,7 +37,7 @@ pub use self::collections::{
     IndexedSet, IterableMap, Map, MapIterator,
 };
 pub use self::column_statistics::*;
-pub use self::csv_column_extra::CsvColumnExtraConfig;
+pub use self::csv_column_extra::CsvColumnExtra as CsvColumnExtraConfig;
 pub use self::event::EventKind;
 pub use self::event::{
     find_ip_country, BlockListConn, BlockListConnFields, BlockListDceRpc, BlockListDceRpcFields,
@@ -188,6 +188,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn category_map(&self) -> IndexedTable<category::Category> {
         self.states.categories()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn csv_column_extra_map(&self) -> IndexedTable<csv_column_extra::CsvColumnExtra> {
+        self.states.csv_column_extras()
     }
 
     #[must_use]
