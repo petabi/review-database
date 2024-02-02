@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, net::IpAddr, num::NonZeroU32};
 use strum_macros::{Display, EnumString};
 
-use crate::tables::{Key, Value};
+use crate::{tables::Value, UniqueKey};
 
 /// Possible role types of `Account`.
 #[derive(Clone, Copy, Debug, Display, Eq, PartialEq, Deserialize, Serialize, EnumString)]
@@ -107,8 +107,8 @@ impl Account {
     }
 }
 
-impl Key for Account {
-    fn key(&self) -> Cow<[u8]> {
+impl UniqueKey for Account {
+    fn unique_key(&self) -> Cow<[u8]> {
         Cow::Borrowed(self.username.as_bytes())
     }
 }

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::tables::{Key, Value};
+use crate::{tables::Value, UniqueKey};
 
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct Scores {
@@ -20,8 +20,8 @@ impl Scores {
     }
 }
 
-impl Key for Scores {
-    fn key(&self) -> Cow<[u8]> {
+impl UniqueKey for Scores {
+    fn unique_key(&self) -> Cow<[u8]> {
         use bincode::Options;
         let Ok(key) = bincode::DefaultOptions::new().serialize(&self.model) else {
             unreachable!("serialization into memory should never fail")

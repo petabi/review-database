@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::tables::{Key, Value};
+use crate::{tables::Value, UniqueKey};
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct BatchInfo {
@@ -31,8 +31,8 @@ impl From<crate::types::ModelBatchInfo> for BatchInfo {
     }
 }
 
-impl Key for BatchInfo {
-    fn key(&self) -> Cow<[u8]> {
+impl UniqueKey for BatchInfo {
+    fn unique_key(&self) -> Cow<[u8]> {
         use bincode::Options;
         let Ok(key) = bincode::DefaultOptions::new().serialize(&(self.model, self.inner.id)) else {
             unreachable!("serialization into memory should never fail")
