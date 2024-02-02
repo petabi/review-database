@@ -7,6 +7,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Introduced the `UniqueKey` trait to provide a standardized way to retrieve a
+  unique, opaque key (`Cow<[u8]>`) for instances of structs used as records in
+  the database.
+
 ### Changed
 
 - Refactored `iter` method in `Table<Account>` to be part of a new `Iterable`

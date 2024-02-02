@@ -320,14 +320,14 @@ impl<'d, R> Table<'d, R> {
     }
 }
 
-impl<'d, R: Key + Value> Table<'d, R> {
+impl<'d, R: UniqueKey + Value> Table<'d, R> {
     /// Stores a record into the database.
     ///
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
     pub fn put(&self, record: &R) -> Result<()> {
-        self.map.put(&record.key(), &record.value())
+        self.map.put(&record.unique_key(), &record.value())
     }
 
     /// Adds a record into the database.
@@ -337,7 +337,7 @@ impl<'d, R: Key + Value> Table<'d, R> {
     /// Returns an error if the record with the same key exists, or the database
     /// operation fails.
     pub fn insert(&self, record: &R) -> Result<()> {
-        self.map.insert(&record.key(), &record.value())
+        self.map.insert(&record.unique_key(), &record.value())
     }
 }
 
@@ -453,8 +453,62 @@ where
     }
 }
 
-pub trait Key {
-    fn key(&self) -> Cow<[u8]>;
+/// Represents entities that can be uniquely identified by a key.
+///
+/// The `UniqueKey` trait is designed to provide a standardized way to retrieve
+/// a unique, opaque key for instances of structs that implement this trait. The
+/// key is returned as a `Cow<[u8]>`, allowing for flexible ownership
+/// models—--either borrowing from an existing slice or owning the data
+/// outright.
+///
+/// Implementing this trait allows for unique identification of instances, which
+/// can be used for indexing, identification in collections, or any scenario
+/// where a distinct, non-colliding identifier is necessary.
+///
+/// # Examples
+///
+/// ```
+/// # use std::borrow::Cow;
+/// # use review_database::UniqueKey;
+/// struct User {
+///     id: u32,
+///     username: String,
+/// }
+///
+/// impl UniqueKey for User {
+///     fn unique_key(&self) -> Cow<[u8]> {
+///         Cow::Owned(self.id.to_be_bytes().to_vec())
+///     }
+/// }
+/// ```
+pub trait UniqueKey {
+    /// Returns a unique, opaque key for the instance as a `Cow<[u8]>`.
+    ///
+    /// This method should return a byte slice that uniquely identifies the
+    /// instance of the struct. The returned `Cow<[u8]>` allows the key to be
+    /// either borrowed or owned, depending on the implementation's needs.
+    ///
+    /// # Examples
+    ///
+    /// Using the `UniqueKey` implementation for a `User` struct defined in the
+    /// trait-level documentation:
+    ///
+    /// ```
+    /// # use std::borrow::Cow;
+    /// # struct User { id: u32, username: String }
+    /// # impl User {
+    /// #     fn unique_key(&self) -> Cow<[u8]> {
+    ///         Cow::Owned(self.id.to_be_bytes().to_vec())
+    /// #     }
+    /// # }
+    /// let user = User { id: 1, username: String::from("alice") };
+    /// assert_eq!(user.unique_key(), Cow::Borrowed(b"\x00\x00\x00\x01"));
+    /// ```
+    ///
+    /// In this example, the `unique_key` method returns the user's `id` as a
+    /// byte array, converted into a `Vec<u8>` and then into a `Cow::Owned`,
+    /// providing a unique key for the user instance.
+    fn unique_key(&self) -> Cow<[u8]>;
 }
 
 pub trait Value {
