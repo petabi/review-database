@@ -56,60 +56,6 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
         Ok(Some(BatchInfo::new(model_id, inner)))
     }
 
-    /// Returns all `batch_info` with given `model_id` and id range defined by [`before`, `after`].
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the account does not exist or the database operation fails.
-    pub fn get_range(
-        &self,
-        model_id: i32,
-        before: Option<i64>,
-        after: Option<i64>,
-        is_first: bool,
-        limit: usize,
-    ) -> Result<Vec<BatchInfo>> {
-        let prefix = super::serialize(&model_id)?;
-        let (map_iter, stop) = if is_first {
-            (
-                if let Some(after) = after {
-                    let start = super::serialize(&(model_id, after))?;
-                    self.map.inner_prefix_iterator(
-                        IteratorMode::From(&start, rocksdb::Direction::Forward),
-                        &prefix,
-                    )
-                } else {
-                    self.map.inner_prefix_iterator(IteratorMode::Start, &prefix)
-                },
-                before,
-            )
-        } else {
-            (
-                if let Some(before) = before {
-                    let start = super::serialize(&(model_id, before))?;
-                    self.map.inner_prefix_iterator(
-                        IteratorMode::From(&start, rocksdb::Direction::Reverse),
-                        &prefix,
-                    )
-                } else {
-                    self.map.inner_prefix_iterator(IteratorMode::End, &prefix)
-                },
-                after,
-            )
-        };
-
-        let mut batch_info = vec![];
-        for (_k, v) in map_iter.take(limit) {
-            let inner: crate::types::ModelBatchInfo = super::deserialize(&v)?;
-            if let Some(s) = &stop {
-                if (is_first && *s < inner.id) || (!is_first && *s > inner.id) {
-                    break;
-                }
-            }
-            batch_info.push(BatchInfo::new(model_id, inner));
-        }
-        Ok(batch_info)
-    }
     /// Deletes all `batch_info`s with the given model id.
     ///
     /// # Errors
@@ -233,38 +179,5 @@ mod tests {
 
         let entry = table.get(2, 321).unwrap();
         assert!(entry.is_none());
-
-        let res = table.get_range(1, None, None, true, 100).unwrap();
-        assert_eq!(vec![entries[1].clone(), entries[0].clone()], res);
-
-        let res = table.get_range(1, None, None, false, 100).unwrap();
-        assert_eq!(vec![entries[0].clone(), entries[1].clone()], res);
-
-        let res = table.get_range(1, None, None, true, 1).unwrap();
-        assert_eq!(vec![entries[1].clone()], res);
-
-        let res = table.get_range(1, None, None, false, 1).unwrap();
-        assert_eq!(vec![entries[0].clone()], res);
-
-        let res = table.get_range(1, Some(121), Some(121), true, 100).unwrap();
-        assert_eq!(vec![entries[1].clone()], res);
-
-        let res = table.get_range(1, None, Some(121), true, 100).unwrap();
-        assert_eq!(vec![entries[1].clone(), entries[0].clone()], res);
-
-        let res = table.get_range(1, None, Some(121), false, 1).unwrap();
-        assert_eq!(vec![entries[0].clone()], res);
-
-        let res = table.get_range(1, None, Some(121), true, 1).unwrap();
-        assert_eq!(vec![entries[1].clone()], res);
-
-        let res = table.get_range(1, Some(121), None, true, 100).unwrap();
-        assert_eq!(vec![entries[1].clone()], res);
-
-        let res = table.get_range(1, Some(333), None, false, 100).unwrap();
-        assert_eq!(vec![entries[0].clone(), entries[1].clone()], res);
-
-        let res = table.get_range(1, Some(333), None, false, 1).unwrap();
-        assert_eq!(vec![entries[0].clone()], res);
     }
 }
