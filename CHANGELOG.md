@@ -20,6 +20,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   any table that implements the `Iterable` trait, extending its functionality
   beyond just the `Table<Account>`.
 
+### Removed
+
+- Removed the `Table<BatchInfo>::get_range` method. This method was intended to
+  retrieve `BatchInfo` records based on their model IDs within a given range.
+  However, because the range is stored in little-endian format in the database,
+  it does not correspond to the numeric order of the IDs, making the method's
+  behavior unintuitive and potentially misleading for users. This decision was
+  made to prevent confusion and ensure the API's functionality aligns more
+  closely with expected behaviors regarding ID ordering and range queries.
+
 ## [0.24.0] - 2024-01-29
 
 ### Changed
