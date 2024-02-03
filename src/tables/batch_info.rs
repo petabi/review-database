@@ -17,7 +17,8 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the account does not exist or the database operation fails.
+    /// Returns an error if the record with given model id does not exist
+    /// or the database operation fails.
     pub fn get_all_for(&self, model: i32) -> Result<Vec<BatchInfo>> {
         let prefix = super::serialize(&model)?;
         let mut batch_info = vec![];
@@ -33,7 +34,8 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the account does not exist or the database operation fails.
+    /// Returns an error if the record with given model id does not exist
+    /// or the database operation fails.
     pub fn count(&self, model: i32) -> Result<usize> {
         let prefix = super::serialize(&model)?;
         Ok(self
@@ -46,7 +48,8 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the account does not exist or the database operation fails.
+    /// Returns an error if the record with given `model_id` and `batch_ts` does not exist
+    /// or the database operation fails.
     pub fn get(&self, model_id: i32, batch_ts: i64) -> Result<Option<BatchInfo>> {
         let key = super::serialize(&(model_id, batch_ts))?;
         let Some(value) = self.map.get(&key)? else {
