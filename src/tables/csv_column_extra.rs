@@ -73,7 +73,8 @@ impl<'d> IndexedTable<'d, CsvColumnExtra> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the table already has a category with the same name.
+    /// Returns an error if the table already has an entry with
+    /// the same `model_id`.
     pub fn insert(
         &self,
         model_id: i32,

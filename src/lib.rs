@@ -16,10 +16,8 @@ mod migration;
 mod model;
 mod node;
 mod outlier;
-mod qualifier;
 mod schema;
 mod scores;
-mod status;
 mod tables;
 mod ti;
 mod time_series;
@@ -57,8 +55,6 @@ pub use self::event::{
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
-pub use self::qualifier::Qualifier;
-pub use self::status::Status;
 use self::tables::StateDb;
 pub use self::tables::{IndexedTable, Iterable, Table, UniqueKey};
 pub use self::ti::{Tidb, TidbKind, TidbRule};
@@ -72,8 +68,8 @@ pub use self::top_n::{
 pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::types::{
     AttrCmpKind, Confidence, Customer, CustomerNetwork, DataSource, DataType, EventCategory,
-    HostNetworkGroup, ModelIndicator, PacketAttr, Response, ResponseKind, Ti, TiCmpKind,
-    TriagePolicy, ValueKind,
+    HostNetworkGroup, ModelIndicator, PacketAttr, Qualifier, Response, ResponseKind, Status, Ti,
+    TiCmpKind, TriagePolicy, ValueKind,
 };
 use anyhow::{anyhow, Result};
 use backends::Value;
@@ -274,7 +270,7 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn qualifier_map(&self) -> IndexedTable<qualifier::Qualifier> {
+    pub fn qualifier_map(&self) -> IndexedTable<types::Qualifier> {
         self.states.qualifiers()
     }
 
@@ -286,7 +282,7 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn status_map(&self) -> IndexedTable<status::Status> {
+    pub fn status_map(&self) -> IndexedTable<types::Status> {
         self.states.statuses()
     }
 
