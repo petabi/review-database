@@ -162,20 +162,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    qualifier (id) {
-        id -> Int4,
-        description -> Text,
-    }
-}
-
-diesel::table! {
-    status (id) {
-        id -> Int4,
-        description -> Text,
-    }
-}
-
-diesel::table! {
     time_series (id) {
         id -> Int4,
         cluster_id -> Int4,
@@ -266,8 +252,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     description_text,
     model,
     outlier,
-    qualifier,
-    status,
     time_series,
     top_n_binary,
     top_n_datetime,

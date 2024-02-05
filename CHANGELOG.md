@@ -38,6 +38,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   behavior unintuitive and potentially misleading for users. This decision was
   made to prevent confusion and ensure the API's functionality aligns more
   closely with expected behaviors regarding ID ordering and range queries.
+- The status and qualifier tables have been permanently removed from the
+  PostgreSQL database in this release.
+  - To ensure data integrity and avoid potential data loss, users currently
+    utilizing review-database versions below 0.24.0 must migrate to version
+    0.24.0 before proceeding with any further migrations.
 
 ## [0.24.0] - 2024-01-29
 

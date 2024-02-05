@@ -2,16 +2,56 @@
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{qualifier::Qualifier, Indexable, Indexed, IndexedMap, IndexedTable};
+use crate::{types::Qualifier, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
 
 // The following will be used when PostgreSQL qualifier table is deleted
-#[allow(dead_code)]
 const DEFAULT_ENTRIES: [(u32, &str); 4] = [
     (1, "benign"),
     (2, "unknown"),
     (3, "suspicious"),
     (4, "mixed"),
 ];
+
+impl Indexable for Qualifier {
+    fn key(&self) -> &[u8] {
+        self.description.as_bytes()
+    }
+
+    fn value(&self) -> Vec<u8> {
+        use bincode::Options;
+
+        bincode::DefaultOptions::new()
+            .serialize(self)
+            .expect("serializable")
+    }
+
+    fn set_index(&mut self, index: u32) {
+        self.id = index;
+    }
+}
+
+impl IndexedMapUpdate for Qualifier {
+    type Entry = Qualifier;
+
+    fn key(&self) -> Option<&[u8]> {
+        if self.description.is_empty() {
+            None
+        } else {
+            Some(self.description.as_bytes())
+        }
+    }
+
+    fn apply(&self, mut value: Self::Entry) -> Result<Self::Entry, anyhow::Error> {
+        value.description.clear();
+        value.description.push_str(&self.description);
+
+        Ok(value)
+    }
+
+    fn verify(&self, value: &Self::Entry) -> bool {
+        self.description == value.description
+    }
+}
 
 impl<'d> IndexedTable<'d, Qualifier> {
     /// Opens the qualifier table in the database.
@@ -21,8 +61,7 @@ impl<'d> IndexedTable<'d, Qualifier> {
         let table = IndexedMap::new(db, super::QUALIFIERS)
             .map(IndexedTable::new)
             .ok()?;
-        // The following should be uncommented when PostgreSQL qualifier table is deleted
-        //table.setup().ok()?;
+        table.setup().ok()?;
         Some(table)
     }
 
@@ -158,178 +197,149 @@ impl<'d> IndexedTable<'d, Qualifier> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{qualifier::Qualifier, Store};
+    use crate::{types::Qualifier, Store};
 
-    fn set_up_db() -> (Arc<Store>, Vec<Qualifier>, u32, usize) {
+    use super::DEFAULT_ENTRIES;
+
+    fn set_up_db() -> (Arc<Store>, Vec<Qualifier>) {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
         let table = store.qualifier_map();
 
-        let mut entries = vec![
-            Qualifier {
+        let testers = &["c", "a", "b", "d"];
+        let mut entries: Vec<_> = DEFAULT_ENTRIES
+            .iter()
+            .map(|(i, d)| Qualifier {
+                id: *i,
+                description: d.to_string(),
+            })
+            .chain(testers.iter().map(|d| Qualifier {
                 id: u32::MAX,
-                description: "c".to_string(),
-            },
-            Qualifier {
-                id: u32::MAX,
-                description: "a".to_string(),
-            },
-            Qualifier {
-                id: u32::MAX,
-                description: "b".to_string(),
-            },
-            Qualifier {
-                id: u32::MAX,
-                description: "d".to_string(),
-            },
-        ];
+                description: d.to_string(),
+            }))
+            .collect();
 
-        for e in entries.iter_mut() {
+        for e in entries.iter_mut().skip(DEFAULT_ENTRIES.len()) {
             let added = table.insert(&e.description).unwrap();
             e.id = added as u32;
         }
-        (store, entries, 0, 0)
+
+        entries.sort_unstable_by_key(|v| v.description.clone());
+
+        (store, entries)
     }
 
     #[test]
     fn add() {
-        let (store, entries, _offset, counts) = set_up_db();
+        let (store, entries) = set_up_db();
         let table = store.qualifier_map();
 
-        assert_eq!(table.count().unwrap(), entries.len() + counts);
+        assert_eq!(table.count().unwrap(), entries.len());
     }
 
     #[test]
     fn get() {
-        let (store, entries, offset, _counts) = set_up_db();
+        let (store, entries) = set_up_db();
         let table = store.qualifier_map();
 
-        for (id, entry) in entries.iter().enumerate() {
-            assert_eq!(table.get(entry.id).unwrap(), *entry);
-            assert_eq!(id + offset as usize, entry.id as usize);
+        for entry in entries {
+            assert_eq!(table.get(entry.id).unwrap(), entry);
         }
     }
 
     #[test]
     fn update_for_new_existing_key() {
-        let (store, entries, offset, counts) = set_up_db();
+        let (store, entries) = set_up_db();
         let mut table = store.qualifier_map();
 
-        assert!(table.update(1 + offset, "a", "b").is_err());
+        assert!(table
+            .update(
+                entries
+                    .iter()
+                    .find_map(|v| {
+                        if v.description == "a" {
+                            Some(v.id)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap(),
+                "a",
+                "b"
+            )
+            .is_err());
 
-        assert_eq!(table.count().unwrap(), entries.len() + counts);
+        assert_eq!(table.count().unwrap(), entries.len());
     }
 
     #[test]
     fn get_range_before() {
-        let (store, entries, offset, counts) = set_up_db();
+        let (store, entries) = set_up_db();
 
         let table = store.qualifier_map();
 
         let res = table
-            .get_range(
-                Some(Qualifier {
-                    id: 1 + offset,
-                    description: "a".to_string(),
-                }),
-                None,
-                false,
-                2,
-            )
+            .get_range(Some(entries[0].clone()), None, false, 2)
             .unwrap();
-        assert_eq!(res.len(), std::cmp::min(0 + counts, 2));
+        assert_eq!(res.len(), 0);
 
         let res = table
-            .get_range(
-                Some(Qualifier {
-                    id: 2 + offset,
-                    description: "a".to_string(),
-                }),
-                None,
-                false,
-                2,
-            )
+            .get_range(Some(entries[3].clone()), None, false, 2)
             .unwrap();
-        assert_eq!(res.len(), std::cmp::min(1 + counts, 2));
-        assert_eq!(res[0], entries[1]);
-    }
-
-    #[test]
-    fn get_range_after() {
-        let (store, entries, offset, _counts) = set_up_db();
-
-        let table = store.qualifier_map();
-        let res = table
-            .get_range(
-                None,
-                Some(Qualifier {
-                    id: 1 + offset,
-                    description: "a".to_string(),
-                }),
-                true,
-                2,
-            )
-            .unwrap();
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0], entries[2]);
-        assert_eq!(res[1], entries[0]);
-
-        let res = table
-            .get_range(
-                None,
-                Some(Qualifier {
-                    id: 0 + offset,
-                    description: "a".to_string(),
-                }),
-                true,
-                2,
-            )
-            .unwrap();
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0], entries[1]);
-        assert_eq!(res[1], entries[2]);
-    }
-
-    #[test]
-    fn get_range_first() {
-        let (store, entries, _offset, counts) = set_up_db();
-
-        let table = store.qualifier_map();
-
-        let res = table.get_range(None, None, true, 2 + counts).unwrap();
         assert_eq!(
-            res[counts..].iter().collect::<Vec<_>>(),
-            vec![&entries[1], &entries[2]]
+            res,
+            entries[1..3].into_iter().rev().cloned().collect::<Vec<_>>()
         );
     }
 
     #[test]
+    fn get_range_after() {
+        let (store, entries) = set_up_db();
+
+        let table = store.qualifier_map();
+        let res = table
+            .get_range(None, Some(entries[3].clone()), true, 2)
+            .unwrap();
+        assert_eq!(res.len(), 2);
+        assert_eq!(res, entries[4..6]);
+
+        let res = table
+            .get_range(None, Some(entries[entries.len() - 2].clone()), true, 2)
+            .unwrap();
+        assert_eq!(res.len(), 1);
+        assert_eq!(res, entries[entries.len() - 1..]);
+    }
+
+    #[test]
+    fn get_range_first() {
+        let (store, entries) = set_up_db();
+
+        let table = store.qualifier_map();
+
+        let res = table.get_range(None, None, true, 2).unwrap();
+        assert_eq!(res, entries[..2]);
+    }
+
+    #[test]
     fn get_range_last() {
-        let (store, entries, offset, _counts) = set_up_db();
+        let (store, entries) = set_up_db();
 
         let table = store.qualifier_map();
 
         let res1 = table.get_range(None, None, false, 2).unwrap();
         let res2 = table
-            .get_range(
-                Some(Qualifier {
-                    id: 5 + offset,
-                    description: "x".to_string(),
-                }),
-                Some(Qualifier {
-                    id: 10 + offset,
-                    description: "z".to_string(),
-                }),
-                false,
-                2,
-            )
+            .get_range(Some(entries[5].clone()), Some(entries[0].clone()), false, 2)
             .unwrap();
 
         assert_eq!(res1, res2);
         assert_eq!(
-            res1.iter().collect::<Vec<_>>(),
-            vec![&entries[3], &entries[0]]
+            res1,
+            entries[entries.len() - 2..]
+                .iter()
+                .rev()
+                .cloned()
+                .collect::<Vec<_>>()
         );
     }
 }

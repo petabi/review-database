@@ -7,8 +7,8 @@ mod scores;
 mod status;
 
 use crate::{
-    batch_info::BatchInfo, category::Category, csv_column_extra::CsvColumnExtra,
-    qualifier::Qualifier, scores::Scores, status::Status, types::Account, Direction, Indexable,
+    batch_info::BatchInfo, category::Category, csv_column_extra::CsvColumnExtra, scores::Scores,
+    types::Account, types::Qualifier, types::Status, Direction, Indexable,
 };
 
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};

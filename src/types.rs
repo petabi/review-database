@@ -639,3 +639,15 @@ impl Indexable for TriagePolicy {
         self.id = index;
     }
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct Status {
+    pub id: u32,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct Qualifier {
+    pub id: u32,
+    pub description: String,
+}
