@@ -1,7 +1,7 @@
 use bincode::Options;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, net::IpAddr};
+use std::{borrow::Cow, collections::HashMap, net::IpAddr};
 
 use crate::Indexable;
 
@@ -60,8 +60,8 @@ pub struct Node {
 }
 
 impl Indexable for Node {
-    fn key(&self) -> &[u8] {
-        self.name.as_bytes()
+    fn key(&self) -> Cow<[u8]> {
+        Cow::from(self.name.as_bytes())
     }
 
     fn value(&self) -> Vec<u8> {

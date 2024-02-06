@@ -15,7 +15,7 @@ use anyhow::{bail, Context, Result};
 use bincode::Options;
 use rocksdb::{Direction, IteratorMode};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, convert::TryFrom, mem};
+use std::{borrow::Cow, cmp::Ordering, convert::TryFrom, mem};
 
 use super::types::FromKeyValue;
 
@@ -201,8 +201,8 @@ pub trait Indexable
 where
     Self: Sized,
 {
-    fn key(&self) -> &[u8];
-    fn indexed_key(&self) -> &[u8] {
+    fn key(&self) -> Cow<[u8]>;
+    fn indexed_key(&self) -> Cow<[u8]> {
         self.key()
     }
     fn value(&self) -> Vec<u8>;
@@ -348,7 +348,7 @@ pub trait Indexed {
         loop {
             let txn = self.db().transaction();
             let mut index = self.index_in_transaction(&txn)?;
-            i = index.insert(entry.key()).context("cannot insert key")?;
+            i = index.insert(&entry.key()).context("cannot insert key")?;
             entry.set_index(i);
             if txn
                 .get_for_update_cf(self.cf(), entry.indexed_key(), super::EXCLUSIVE)
@@ -465,7 +465,7 @@ pub trait Indexed {
                 .index_in_transaction(&txn)
                 .context("cannot read index")?;
             let cur_key = if let Some(key) = new.key() {
-                index.update(id, key).context("cannot update index")?
+                index.update(id, &key).context("cannot update index")?
             } else {
                 Vec::new()
             };
@@ -579,7 +579,7 @@ pub trait IndexedMapUpdate {
     type Entry;
 
     /// Returns the key of itself.
-    fn key(&self) -> Option<&[u8]>;
+    fn key(&self) -> Option<Cow<[u8]>>;
 
     /// Applies the changes to the value.
     ///

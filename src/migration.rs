@@ -32,7 +32,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.3";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -379,6 +379,8 @@ fn migrate_0_22_to_0_24(store: &super::Store) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use super::COMPATIBLE_VERSION_REQ;
     use crate::Store;
     use semver::{Version, VersionReq};
@@ -510,8 +512,8 @@ mod tests {
         }
 
         impl Indexable for OldNode {
-            fn key(&self) -> &[u8] {
-                self.name.as_bytes()
+            fn key(&self) -> Cow<[u8]> {
+                Cow::from(self.name.as_bytes())
             }
 
             fn value(&self) -> Vec<u8> {

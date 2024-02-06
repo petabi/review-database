@@ -68,7 +68,7 @@ mod tests {
         collections::{tests::TestStore, Indexable, Indexed},
         IterableMap,
     };
-    use std::mem::size_of;
+    use std::{borrow::Cow, mem::size_of};
 
     struct TestEntry {
         indexed_key: Vec<u8>,
@@ -76,12 +76,12 @@ mod tests {
     }
 
     impl Indexable for TestEntry {
-        fn key(&self) -> &[u8] {
-            &self.indexed_key[..self.indexed_key.len() - size_of::<u32>()]
+        fn key(&self) -> Cow<[u8]> {
+            Cow::Borrowed(&self.indexed_key[..self.indexed_key.len() - size_of::<u32>()])
         }
 
-        fn indexed_key(&self) -> &[u8] {
-            &self.indexed_key
+        fn indexed_key(&self) -> Cow<[u8]> {
+            Cow::Borrowed(&self.indexed_key)
         }
 
         fn value(&self) -> Vec<u8> {
