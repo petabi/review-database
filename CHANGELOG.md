@@ -12,13 +12,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced the `UniqueKey` trait to provide a standardized way to retrieve a
   unique, opaque key (`Cow<[u8]>`) for instances of structs used as records in
   the database.
+- Implemented `iter` method not only for `Table<Account>` but for all `Table<R>`
+  where `R` implements `DeserializedOwned`. This enhancement enables the `iter`
+  method to be used universally on any table that contains a record that can be
+  deserialized from a key-value entry, extending its functionality beyond just
+  the `Table<Account>`.
 
 ### Changed
 
-- Refactored `iter` method in `Table<Account>` to be part of a new `Iterable`
-  trait. This enhancement enables the `iter` method to be used universally on
-  any table that implements the `Iterable` trait, extending its functionality
-  beyond just the `Table<Account>`.
 - Moved the csv_column_extra table from the PostgreSQL database to RocksDB.
   - The csv_column_extra table data is now stored in RocksDB for improved performance
     and scalability.

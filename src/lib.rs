@@ -56,7 +56,7 @@ pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
-pub use self::tables::{IndexedTable, Iterable, Table, UniqueKey};
+pub use self::tables::{IndexedTable, Table, UniqueKey};
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};

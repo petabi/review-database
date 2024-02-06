@@ -351,8 +351,9 @@ impl<'d, R: UniqueKey + Value> Table<'d, R> {
     }
 }
 
-impl<T: DeserializeOwned> Iterable<T> for Table<'_, T> {
-    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, T> {
+impl<T: DeserializeOwned> Table<'_, T> {
+    #[must_use]
+    pub fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, T> {
         use rocksdb::IteratorMode;
 
         match direction {
@@ -523,11 +524,6 @@ pub trait UniqueKey {
 
 pub trait Value {
     fn value(&self) -> Cow<[u8]>;
-}
-
-pub trait Iterable<T: DeserializeOwned> {
-    /// Returns an iterator over the table, starting from the given key.
-    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<T>;
 }
 
 fn serialize<I: Serialize>(input: &I) -> anyhow::Result<Vec<u8>> {
