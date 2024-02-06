@@ -25,6 +25,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     and scalability.
   - A migration function has been provided to seamlessly transition data from
     the old PostgreSQL table to RocksDB.
+- The `Indexable::key()`, `Indexable::indexed_key()`, `IndexedMapUpdate::key()`,
+  method now returns a `Cow<[u8]>` instead of `&[u8]`. This change was
+  introduced to provide greater flexibility and avoid potential ownership and
+  borrowing issues. `Cow<[u8]>` allows users to efficiently handle both owned
+  and borrowed data, depending on their specific use case.
 
 ### Deprecated
 

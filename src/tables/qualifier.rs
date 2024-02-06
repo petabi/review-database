@@ -1,4 +1,6 @@
 //! The `qualifier` table.
+use std::borrow::Cow;
+
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
@@ -13,8 +15,8 @@ const DEFAULT_ENTRIES: [(u32, &str); 4] = [
 ];
 
 impl Indexable for Qualifier {
-    fn key(&self) -> &[u8] {
-        self.description.as_bytes()
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.description.as_bytes())
     }
 
     fn value(&self) -> Vec<u8> {
@@ -33,11 +35,11 @@ impl Indexable for Qualifier {
 impl IndexedMapUpdate for Qualifier {
     type Entry = Qualifier;
 
-    fn key(&self) -> Option<&[u8]> {
+    fn key(&self) -> Option<Cow<[u8]>> {
         if self.description.is_empty() {
             None
         } else {
-            Some(self.description.as_bytes())
+            Some(Cow::Borrowed(self.description.as_bytes()))
         }
     }
 
@@ -147,10 +149,10 @@ impl<'d> IndexedTable<'d, Qualifier> {
     /// Returns an error if the database query fails.
     fn get_n(&self, from: Option<Qualifier>, n: usize, is_first: bool) -> Result<Vec<Qualifier>> {
         use rocksdb::{Direction, IteratorMode};
-
-        let mode = match (&from, is_first) {
-            (Some(from), true) => IteratorMode::From(from.indexed_key(), Direction::Forward),
-            (Some(from), false) => IteratorMode::From(from.indexed_key(), Direction::Reverse),
+        let key = from.as_ref().map(|v| v.indexed_key());
+        let mode = match (&key, is_first) {
+            (Some(from), true) => IteratorMode::From(from, Direction::Forward),
+            (Some(from), false) => IteratorMode::From(from, Direction::Reverse),
             (None, true) => IteratorMode::From(&[0], Direction::Forward),
             (None, false) => IteratorMode::End,
         };

@@ -1,4 +1,6 @@
 //! The `status` table.
+use std::borrow::Cow;
+
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
@@ -8,8 +10,8 @@ use crate::{types::Status, Indexable, Indexed, IndexedMap, IndexedMapUpdate, Ind
 const DEFAULT_ENTRIES: [(u32, &str); 3] = [(1, "reviewed"), (2, "pending review"), (3, "disabled")];
 
 impl Indexable for Status {
-    fn key(&self) -> &[u8] {
-        self.description.as_bytes()
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.description.as_bytes())
     }
 
     fn value(&self) -> Vec<u8> {
@@ -28,11 +30,11 @@ impl Indexable for Status {
 impl IndexedMapUpdate for Status {
     type Entry = Status;
 
-    fn key(&self) -> Option<&[u8]> {
+    fn key(&self) -> Option<Cow<[u8]>> {
         if self.description.is_empty() {
             None
         } else {
-            Some(self.description.as_bytes())
+            Some(Cow::Borrowed(self.description.as_bytes()))
         }
     }
 
@@ -142,10 +144,10 @@ impl<'d> IndexedTable<'d, Status> {
     /// Returns an error if the database query fails.
     fn get_n(&self, from: Option<Status>, n: usize, is_first: bool) -> Result<Vec<Status>> {
         use rocksdb::{Direction, IteratorMode};
-
-        let mode = match (&from, is_first) {
-            (Some(from), true) => IteratorMode::From(from.indexed_key(), Direction::Forward),
-            (Some(from), false) => IteratorMode::From(from.indexed_key(), Direction::Reverse),
+        let key = from.as_ref().map(|v| v.indexed_key());
+        let mode = match (&key, is_first) {
+            (Some(from), true) => IteratorMode::From(from, Direction::Forward),
+            (Some(from), false) => IteratorMode::From(from, Direction::Reverse),
             (None, true) => IteratorMode::From(&[0], Direction::Forward),
             (None, false) => IteratorMode::End,
         };

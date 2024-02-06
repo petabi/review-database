@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{borrow::Cow, cmp::Ordering};
 
 use serde::{Deserialize, Serialize};
 
@@ -28,8 +28,8 @@ impl Ord for Category {
 }
 
 impl Indexable for Category {
-    fn key(&self) -> &[u8] {
-        self.name.as_bytes()
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.name.as_bytes())
     }
 
     fn value(&self) -> Vec<u8> {
@@ -48,11 +48,11 @@ impl Indexable for Category {
 impl IndexedMapUpdate for Category {
     type Entry = Category;
 
-    fn key(&self) -> Option<&[u8]> {
+    fn key(&self) -> Option<Cow<[u8]>> {
         if self.name.is_empty() {
             None
         } else {
-            Some(self.name.as_bytes())
+            Some(Cow::Borrowed(self.name.as_bytes()))
         }
     }
 

@@ -99,10 +99,10 @@ impl<'d> IndexedTable<'d, Category> {
     /// Returns an error if the database query fails.
     fn get_n(&self, from: Option<Category>, n: usize, is_first: bool) -> Result<Vec<Category>> {
         use rocksdb::{Direction, IteratorMode};
-
-        let mode = match (&from, is_first) {
-            (Some(from), true) => IteratorMode::From(from.indexed_key(), Direction::Forward),
-            (Some(from), false) => IteratorMode::From(from.indexed_key(), Direction::Reverse),
+        let key = from.as_ref().map(|v| v.indexed_key());
+        let mode = match (&key, is_first) {
+            (Some(from), true) => IteratorMode::From(from, Direction::Forward),
+            (Some(from), false) => IteratorMode::From(from, Direction::Reverse),
             (None, true) => IteratorMode::From(&[0], Direction::Forward),
             (None, false) => IteratorMode::End,
         };

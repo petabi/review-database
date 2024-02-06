@@ -73,6 +73,7 @@ pub use rocksdb::Direction;
 use rocksdb::IteratorMode;
 use serde::{Deserialize, Serialize};
 use std::{
+    borrow::Cow,
     collections::HashMap,
     convert::TryInto,
     fmt,
@@ -2255,12 +2256,12 @@ impl FromKeyValue for NetworkEntry {
 }
 
 impl Indexable for NetworkEntry {
-    fn key(&self) -> &[u8] {
-        &self.key[..self.key.len() - size_of::<Id>()]
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(&self.key[..self.key.len() - size_of::<Id>()])
     }
 
-    fn indexed_key(&self) -> &[u8] {
-        &self.key
+    fn indexed_key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(&self.key)
     }
 
     fn value(&self) -> Vec<u8> {

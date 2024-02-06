@@ -1,4 +1,6 @@
 //! The `csv column extras` table.
+use std::borrow::Cow;
+
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use structured::arrow::datatypes::ToByteSlice;
@@ -9,8 +11,8 @@ use crate::{
 };
 
 impl Indexable for CsvColumnExtra {
-    fn key(&self) -> &[u8] {
-        self.model_id.to_byte_slice()
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Owned(self.model_id.to_be_bytes().to_vec())
     }
 
     fn value(&self) -> Vec<u8> {
@@ -29,8 +31,8 @@ impl Indexable for CsvColumnExtra {
 impl IndexedMapUpdate for CsvColumnExtra {
     type Entry = CsvColumnExtra;
 
-    fn key(&self) -> Option<&[u8]> {
-        Some(self.model_id.to_byte_slice())
+    fn key(&self) -> Option<Cow<[u8]>> {
+        Some(Cow::Owned(self.model_id.to_be_bytes().to_vec()))
     }
 
     fn apply(&self, mut value: Self::Entry) -> Result<Self::Entry, anyhow::Error> {

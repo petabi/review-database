@@ -11,6 +11,7 @@ use ipnet::IpNet;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::{
+    borrow::Cow,
     cmp::Ordering,
     collections::HashSet,
     convert::TryFrom,
@@ -118,8 +119,8 @@ pub struct Customer {
 }
 
 impl Indexable for Customer {
-    fn key(&self) -> &[u8] {
-        self.name.as_bytes()
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.name.as_bytes())
     }
 
     fn value(&self) -> Vec<u8> {
@@ -171,8 +172,8 @@ pub struct DataSource {
 }
 
 impl Indexable for DataSource {
-    fn key(&self) -> &[u8] {
-        self.name.as_bytes()
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.name.as_bytes())
     }
 
     fn value(&self) -> Vec<u8> {
@@ -625,8 +626,8 @@ pub struct TriagePolicy {
 }
 
 impl Indexable for TriagePolicy {
-    fn key(&self) -> &[u8] {
-        self.name.as_bytes()
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.name.as_bytes())
     }
 
     fn value(&self) -> Vec<u8> {

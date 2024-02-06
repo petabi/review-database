@@ -64,6 +64,8 @@ impl<'a> IndexedMap<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use crate::{Indexable, Indexed, IndexedMapUpdate, Store};
 
     #[derive(serde::Deserialize, serde::Serialize, Clone)]
@@ -73,8 +75,8 @@ mod tests {
     }
 
     impl Indexable for TestEntry {
-        fn key(&self) -> &[u8] {
-            self.name.as_bytes()
+        fn key(&self) -> Cow<[u8]> {
+            Cow::Borrowed(self.name.as_bytes())
         }
 
         fn value(&self) -> Vec<u8> {
@@ -93,8 +95,8 @@ mod tests {
     impl IndexedMapUpdate for TestEntry {
         type Entry = TestEntry;
 
-        fn key(&self) -> Option<&[u8]> {
-            Some(self.name.as_bytes())
+        fn key(&self) -> Option<Cow<[u8]>> {
+            Some(Cow::Borrowed(self.name.as_bytes()))
         }
 
         fn apply(&self, mut value: Self::Entry) -> Result<Self::Entry, anyhow::Error> {
