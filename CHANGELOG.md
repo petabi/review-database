@@ -13,8 +13,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   unique, opaque key (`Cow<[u8]>`) for instances of structs used as records in
   the database.
 - Implemented `iter` method not only for `Table<Account>` but for all `Table<R>`
-  where `R` implements `DeserializedOwned`. This enhancement enables the `iter`
-  method to be used universally on any table that contains a record that can be
+  and `IndexedTable<R>` where `R` implements `DeserializedOwned`, through the
+  newly-introduced `Iterable` trait. This enhancement enables the `iter` method
+  to be used universally on any table that contains a record that can be
   deserialized from a key-value entry, extending its functionality beyond just
   the `Table<Account>`.
 

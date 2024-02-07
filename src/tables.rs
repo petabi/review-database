@@ -315,66 +315,10 @@ impl StateDb {
     }
 }
 
-/// A database table storing records of type `R`.
-pub struct Table<'d, R> {
-    map: Map<'d>,
-    _phantom: std::marker::PhantomData<R>,
-}
-
-impl<'d, R> Table<'d, R> {
-    fn new(map: Map<'d>) -> Self {
-        Self {
-            map,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'d, R: UniqueKey + Value> Table<'d, R> {
-    /// Stores a record into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database operation fails.
-    pub fn put(&self, record: &R) -> Result<()> {
-        self.map.put(&record.unique_key(), &record.value())
-    }
-
-    /// Adds a record into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the record with the same key exists, or the database
-    /// operation fails.
-    pub fn insert(&self, record: &R) -> Result<()> {
-        self.map.insert(&record.unique_key(), &record.value())
-    }
-}
-
-impl<T: DeserializeOwned> Table<'_, T> {
-    #[must_use]
-    pub fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, T> {
-        use rocksdb::IteratorMode;
-
-        match direction {
-            Direction::Forward => match from {
-                Some(from) => TableIter::new(
-                    self.map
-                        .db
-                        .iterator_cf(self.map.cf, IteratorMode::From(from, Direction::Forward)),
-                ),
-                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::Start)),
-            },
-            Direction::Reverse => match from {
-                Some(from) => TableIter::new(
-                    self.map
-                        .db
-                        .iterator_cf(self.map.cf, IteratorMode::From(from, Direction::Reverse)),
-                ),
-                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::End)),
-            },
-        }
-    }
+/// Represents a table that can be iterated over.
+pub trait Iterable<R: DeserializeOwned> {
+    /// Returns an iterator over the records in the table.
+    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R>;
 }
 
 /// An iterator over the records in a table.
@@ -420,6 +364,67 @@ where
     }
 }
 
+/// A database table storing records of type `R`.
+pub struct Table<'d, R> {
+    map: Map<'d>,
+    _phantom: std::marker::PhantomData<R>,
+}
+
+impl<'d, R> Table<'d, R> {
+    fn new(map: Map<'d>) -> Self {
+        Self {
+            map,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'d, R: UniqueKey + Value> Table<'d, R> {
+    /// Stores a record into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn put(&self, record: &R) -> Result<()> {
+        self.map.put(&record.unique_key(), &record.value())
+    }
+
+    /// Adds a record into the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the record with the same key exists, or the database
+    /// operation fails.
+    pub fn insert(&self, record: &R) -> Result<()> {
+        self.map.insert(&record.unique_key(), &record.value())
+    }
+}
+
+impl<R: DeserializeOwned> Iterable<R> for Table<'_, R> {
+    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R> {
+        use rocksdb::IteratorMode;
+
+        match direction {
+            Direction::Forward => match from {
+                Some(from) => TableIter::new(
+                    self.map
+                        .db
+                        .iterator_cf(self.map.cf, IteratorMode::From(from, Direction::Forward)),
+                ),
+                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::Start)),
+            },
+            Direction::Reverse => match from {
+                Some(from) => TableIter::new(
+                    self.map
+                        .db
+                        .iterator_cf(self.map.cf, IteratorMode::From(from, Direction::Reverse)),
+                ),
+                None => TableIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::End)),
+            },
+        }
+    }
+}
+
 pub struct IndexedTable<'d, R: Indexable> {
     indexed_map: IndexedMap<'d>,
     _phantom: std::marker::PhantomData<R>,
@@ -461,6 +466,37 @@ where
     /// Returns an error if the database operation fails.
     pub fn deactivate(&self, id: u32) -> Result<Vec<u8>> {
         self.indexed_map.deactivate(id)
+    }
+}
+
+impl<R: DeserializeOwned + Indexable> Iterable<R> for IndexedTable<'_, R> {
+    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R> {
+        use rocksdb::IteratorMode;
+
+        match direction {
+            Direction::Forward => match from {
+                Some(from) => TableIter::new(self.indexed_map.db().iterator_cf(
+                    self.indexed_map.cf(),
+                    IteratorMode::From(from, Direction::Forward),
+                )),
+                None => TableIter::new(
+                    self.indexed_map
+                        .db()
+                        .iterator_cf(self.indexed_map.cf(), IteratorMode::Start),
+                ),
+            },
+            Direction::Reverse => match from {
+                Some(from) => TableIter::new(self.indexed_map.db().iterator_cf(
+                    self.indexed_map.cf(),
+                    IteratorMode::From(from, Direction::Reverse),
+                )),
+                None => TableIter::new(
+                    self.indexed_map
+                        .db()
+                        .iterator_cf(self.indexed_map.cf(), IteratorMode::End),
+                ),
+            },
+        }
     }
 }
 
@@ -520,6 +556,12 @@ pub trait UniqueKey {
     /// byte array, converted into a `Vec<u8>` and then into a `Cow::Owned`,
     /// providing a unique key for the user instance.
     fn unique_key(&self) -> Cow<[u8]>;
+}
+
+impl<R: Indexable> UniqueKey for R {
+    fn unique_key(&self) -> Cow<[u8]> {
+        self.indexed_key()
+    }
 }
 
 pub trait Value {
