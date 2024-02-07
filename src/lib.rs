@@ -104,7 +104,7 @@ impl Database {
     }
 }
 
-const DEFAULT_STATES: &str = "states.db";
+pub const DEFAULT_STATES: &str = "states.db";
 const EXCLUSIVE: bool = true;
 
 /// A key-value store.
@@ -413,6 +413,15 @@ impl Store {
     pub fn purge_old_backups(&mut self, num_backups_to_keep: u32) -> Result<()> {
         self.states.purge_old_backups(num_backups_to_keep)?;
         Ok(())
+    }
+
+    /// Backup current database from check point
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when check point generate fails.
+    pub(crate) fn backup_from_check_point(&mut self, check_point_path: &Path) -> Result<()> {
+        self.states.check_point(check_point_path)
     }
 }
 

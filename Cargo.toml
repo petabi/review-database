@@ -27,6 +27,7 @@ num-derive = "0.4"
 num-traits = "0.2"
 postgres-protocol = "0.6"
 rand = "0.8"
+regex="1"
 ring = { version = "0.17", features = ["std"] }
 rocksdb = "0.21"
 rustls = "0.21" # should be the same version as what tokio-postgres-rustls depends on
@@ -39,6 +40,7 @@ serde_json = "1"
 structured = "0.14"
 strum = "0.25"
 strum_macros = "0.25"
+tempfile = "3"
 thiserror = "1"
 tokio = { version = "1", features = ["macros"] }
 tokio-postgres-rustls = "0.10"

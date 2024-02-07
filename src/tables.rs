@@ -104,6 +104,15 @@ impl StateDb {
         })
     }
 
+    pub fn check_point(&self, check_point_path: &Path) -> Result<()> {
+        let inner = self.inner.as_ref().ok_or(anyhow!(
+            "failed to generate check point, database has closed"
+        ))?;
+        let check_point = rocksdb::checkpoint::Checkpoint::new(inner)?;
+        check_point.create_checkpoint(check_point_path)?;
+        Ok(())
+    }
+
     #[must_use]
     pub(crate) fn accounts(&self) -> Table<Account> {
         let inner = self.inner.as_ref().expect("database must be open");
@@ -345,7 +354,7 @@ where
     ///
     /// # Errors
     ///
-    /// Returns an error if the map index is not found or the database operation fails.    
+    /// Returns an error if the map index is not found or the database operation fails.
     pub fn count(&self) -> Result<usize> {
         self.indexed_map.count()
     }

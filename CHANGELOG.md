@@ -11,6 +11,17 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Initial pr
 
+### Added
+
+- Introduced a new module `postgres`. this is module provides the backup
+  create/list functions of postgresql db.
+- Added `create_archive_backup`/`list_archived_files` backup functions.
+  This functions does not use rocksdb's backup_engine. it uses the rocksdb's
+  check point to satisfy the creation/zipped/transfer of individual backup
+  archives. The current form of backup is unstable, so we will change to
+  using the share_table_files option of the backup engine in the future
+  when it is supported.
+
 ## [0.23.0] - 2024-01-18
 
 ### Added
