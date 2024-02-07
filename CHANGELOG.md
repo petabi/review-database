@@ -24,6 +24,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     and scalability.
   - A migration function has been provided to seamlessly transition data from
     the old PostgreSQL table to RocksDB.
+- Modified `node_map` to IndexedMultimap in place of IndexedMap, enabling the
+  storage of multiple items under the same key, in client's perspective.
 
 ### Deprecated
 

@@ -248,9 +248,9 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn node_map(&self) -> IndexedMap {
+    pub fn node_map(&self) -> IndexedMultimap {
         self.states
-            .indexed_map(tables::NODES)
+            .indexed_multimap(tables::NODES)
             .expect("always available")
     }
 
