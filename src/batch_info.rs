@@ -33,10 +33,9 @@ impl From<crate::types::ModelBatchInfo> for BatchInfo {
 
 impl UniqueKey for BatchInfo {
     fn unique_key(&self) -> Cow<[u8]> {
-        use bincode::Options;
-        let Ok(key) = bincode::DefaultOptions::new().serialize(&(self.model, self.inner.id)) else {
-            unreachable!("serialization into memory should never fail")
-        };
+        let mut key = self.model.to_be_bytes().to_vec();
+        key.extend(self.inner.id.to_be_bytes());
+
         Cow::Owned(key)
     }
 }
