@@ -20,7 +20,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// Returns an error if the record with given model id does not exist
     /// or the database operation fails.
     pub fn get_all_for(&self, model: i32) -> Result<Vec<BatchInfo>> {
-        let prefix = super::serialize(&model)?;
+        let prefix = model.to_be_bytes();
         let mut batch_info = vec![];
         for (_k, v) in self.map.inner_prefix_iterator(IteratorMode::Start, &prefix) {
             let inner = super::deserialize(&v)?;
@@ -37,7 +37,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// Returns an error if the record with given model id does not exist
     /// or the database operation fails.
     pub fn count(&self, model: i32) -> Result<usize> {
-        let prefix = super::serialize(&model)?;
+        let prefix = model.to_be_bytes();
         Ok(self
             .map
             .inner_prefix_iterator(IteratorMode::Start, &prefix)
@@ -51,7 +51,8 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// Returns an error if the record with given `model_id` and `batch_ts` does not exist
     /// or the database operation fails.
     pub fn get(&self, model_id: i32, batch_ts: i64) -> Result<Option<BatchInfo>> {
-        let key = super::serialize(&(model_id, batch_ts))?;
+        let mut key = model_id.to_be_bytes().to_vec();
+        key.extend(batch_ts.to_be_bytes());
         let Some(value) = self.map.get(&key)? else {
             return Ok(None);
         };
@@ -66,7 +67,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// Returns an error if any of deletion operation fails.
     pub fn delete_all_for(&self, model: i32) -> Result<usize> {
         let mut deleted = 0;
-        let prefix = super::serialize(&model)?;
+        let prefix = model.to_be_bytes();
         for (k, _v) in self.map.inner_prefix_iterator(IteratorMode::End, &prefix) {
             match self.map.delete(&k) {
                 Ok(()) => deleted += 1,
@@ -78,6 +79,10 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
             }
         }
         Ok(deleted)
+    }
+
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
     }
 }
 

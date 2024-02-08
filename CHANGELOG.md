@@ -50,6 +50,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     utilizing review-database versions below 0.24.0 must migrate to version
     0.24.0 before proceeding with any further migrations.
 
+### Fixed
+
+- Corrected key order in the `batch_info` Column Family.
+  - The order was adjusted due to Little-Endian Serialization.
+  - After the correction, it now uses the Big-Endian format.
+
 ## [0.24.0] - 2024-01-29
 
 ### Changed

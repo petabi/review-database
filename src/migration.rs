@@ -32,7 +32,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.3";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.4";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -173,11 +173,18 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<Migration> = vec![(
-        VersionReq::parse(">=0.22.0,<0.24.0")?,
-        Version::parse("0.24.0")?,
-        migrate_0_22_to_0_24,
-    )];
+    let migration: Vec<Migration> = vec![
+        (
+            VersionReq::parse(">=0.22.0,<0.24.0")?,
+            Version::parse("0.24.0")?,
+            migrate_0_22_to_0_24,
+        ),
+        (
+            VersionReq::parse(">=0.24.0,<0.25.0")?,
+            Version::parse("0.25.0")?,
+            migrate_0_24_to_0_25,
+        ),
+    ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
     store.backup(false, 1)?;
@@ -250,6 +257,25 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_24_to_0_25(store: &super::Store) -> Result<()> {
+    use crate::IterableMap;
+    use bincode::Options;
+
+    let map = store.batch_info_map();
+    for (old_k, v) in map.raw().iter_forward()? {
+        let Ok((mid, id)) = bincode::DefaultOptions::new().deserialize::<(i32, i64)>(&old_k) else {
+            continue;
+        };
+
+        let mut key = mid.to_be_bytes().to_vec();
+        key.extend(id.to_be_bytes());
+        map.raw().delete(&old_k)?;
+        map.raw().insert(&key, &v)?;
+    }
+
+    Ok(())
 }
 
 fn migrate_0_22_to_0_24(store: &super::Store) -> Result<()> {
@@ -382,7 +408,7 @@ mod tests {
     use std::borrow::Cow;
 
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::Store;
+    use crate::{tables::Value, Store};
     use semver::{Version, VersionReq};
 
     #[allow(dead_code)]
@@ -448,6 +474,57 @@ mod tests {
             breaking
         };
         assert!(!compatible.matches(&breaking));
+    }
+
+    #[test]
+    fn migrate_0_24_to_0_25() {
+        use crate::{types::ModelBatchInfo, BatchInfo};
+        use bincode::Options;
+
+        let settings = TestSchema::new();
+        let map = settings.store.batch_info_map();
+        let testers = vec![
+            BatchInfo {
+                model: 1,
+                inner: ModelBatchInfo {
+                    id: 123,
+                    earliest: 0,
+                    latest: 3,
+                    size: 4321,
+                    sources: vec!["tester".to_string()],
+                },
+            },
+            BatchInfo {
+                model: 100,
+                inner: ModelBatchInfo {
+                    id: 12300,
+                    earliest: 0,
+                    latest: 3,
+                    size: 4321,
+                    sources: vec!["tester".to_string()],
+                },
+            },
+        ];
+
+        for tester in &testers {
+            let value = tester.value();
+
+            let old_key = bincode::DefaultOptions::new()
+                .serialize(&(tester.model, tester.inner.id))
+                .unwrap();
+            map.raw().insert(&old_key, &value).unwrap();
+        }
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_24_to_0_25(&settings.store).is_ok());
+
+        let map = settings.store.batch_info_map();
+        for tester in testers {
+            assert_eq!(map.count(tester.model).unwrap(), 1);
+            let res = map.get(tester.model, tester.inner.id).unwrap();
+            assert_eq!(res, Some(tester));
+        }
     }
 
     #[test]
