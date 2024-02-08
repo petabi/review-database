@@ -2,7 +2,7 @@
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{category::Category, Indexable, Indexed, IndexedMap, IndexedTable};
+use crate::{category::Category, Indexed, IndexedMap, IndexedTable};
 
 const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irrelevant Alert")];
 
@@ -89,60 +89,6 @@ impl<'d> IndexedTable<'d, Category> {
         }
         Ok(())
     }
-
-    /// Returns `n` `Category`(ies)
-    /// `is_first`: Forward or Reverse order.
-    /// `from`: If `from` exists in database then, `bound` is excluded from the result.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    fn get_n(&self, from: Option<Category>, n: usize, is_first: bool) -> Result<Vec<Category>> {
-        use rocksdb::{Direction, IteratorMode};
-        let key = from.as_ref().map(|v| v.indexed_key());
-        let mode = match (&key, is_first) {
-            (Some(from), true) => IteratorMode::From(from, Direction::Forward),
-            (Some(from), false) => IteratorMode::From(from, Direction::Reverse),
-            (None, true) => IteratorMode::From(&[0], Direction::Forward),
-            (None, false) => IteratorMode::End,
-        };
-
-        let mut iter = self
-            .indexed_map
-            .inner_iterator(mode)?
-            .map(|(_, v)| super::deserialize::<Category>(&v))
-            .peekable();
-
-        match (from, iter.peek()) {
-            (Some(value), Some(Ok(c))) => {
-                if value == *c {
-                    iter.skip(1).take(n).collect()
-                } else {
-                    iter.take(n).collect()
-                }
-            }
-            _ => iter.take(n).collect(),
-        }
-    }
-
-    /// Returns `limit` # of `Category`(ies) according to conditions provided.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    pub fn get_range(
-        &self,
-        before: Option<Category>,
-        after: Option<Category>,
-        is_first: bool,
-        limit: usize,
-    ) -> Result<Vec<Category>> {
-        match (before.is_some(), after.is_some()) {
-            (true, false) => self.get_n(before, limit, false),
-            (false, true) => self.get_n(after, limit, true),
-            _ => self.get_n(None, limit, is_first),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -217,118 +163,6 @@ mod tests {
         assert_eq!(
             table.count().unwrap(),
             entries.len() + DEFAULT_ENTRIES.len()
-        );
-    }
-
-    #[test]
-    fn get_range_before() {
-        let (store, entries) = set_up_db();
-
-        let table = store.category_map();
-
-        let res = table
-            .get_range(
-                Some(Category {
-                    id: 1 + DEFAULT_ENTRIES.len() as u32 + 1,
-                    name: "a".to_string(),
-                }),
-                None,
-                false,
-                2,
-            )
-            .unwrap();
-        assert_eq!(res.len(), std::cmp::min(0 + DEFAULT_ENTRIES.len(), 2));
-
-        let res = table
-            .get_range(
-                Some(Category {
-                    id: 2 + DEFAULT_ENTRIES.len() as u32 + 1,
-                    name: "a".to_string(),
-                }),
-                None,
-                false,
-                2,
-            )
-            .unwrap();
-        assert_eq!(res.len(), std::cmp::min(1 + DEFAULT_ENTRIES.len(), 2));
-        assert_eq!(res[0], entries[1]);
-    }
-
-    #[test]
-    fn get_range_after() {
-        let (store, entries) = set_up_db();
-
-        let table = store.category_map();
-        let res = table
-            .get_range(
-                None,
-                Some(Category {
-                    id: 1 + DEFAULT_ENTRIES.len() as u32 + 1,
-                    name: "a".to_string(),
-                }),
-                true,
-                2,
-            )
-            .unwrap();
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0], entries[2]);
-        assert_eq!(res[1], entries[0]);
-
-        let res = table
-            .get_range(
-                None,
-                Some(Category {
-                    id: 0 + DEFAULT_ENTRIES.len() as u32 + 1,
-                    name: "a".to_string(),
-                }),
-                true,
-                2,
-            )
-            .unwrap();
-        assert_eq!(res.len(), 2);
-        assert_eq!(res[0], entries[1]);
-        assert_eq!(res[1], entries[2]);
-    }
-
-    #[test]
-    fn get_range_first() {
-        let (store, entries) = set_up_db();
-
-        let table = store.category_map();
-
-        let res = table.get_range(None, None, true, 4).unwrap();
-        assert_eq!(
-            res[2..].iter().collect::<Vec<_>>(),
-            vec![&entries[1], &entries[2]]
-        );
-    }
-
-    #[test]
-    fn get_range_last() {
-        let (store, entries) = set_up_db();
-
-        let table = store.category_map();
-
-        let res1 = table.get_range(None, None, false, 2).unwrap();
-        let res2 = table
-            .get_range(
-                Some(Category {
-                    id: 5 + DEFAULT_ENTRIES.len() as u32 + 1,
-                    name: "x".to_string(),
-                }),
-                Some(Category {
-                    id: 10 + DEFAULT_ENTRIES.len() as u32 + 1,
-                    name: "z".to_string(),
-                }),
-                false,
-                2,
-            )
-            .unwrap();
-
-        assert_eq!(res1, res2);
-        assert_eq!(
-            res1.iter().collect::<Vec<_>>(),
-            vec![&entries[3], &entries[0]]
         );
     }
 }

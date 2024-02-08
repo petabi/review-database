@@ -38,12 +38,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- The `Table<BatchInfo>::get_range` method has been removed in favor of a more
-  consistent and versatile iteration method. Users will now utilize the
-  `Table<BatchInfo>::iter` method for traversing records within the `BatchInfo`
-  table, as well as other types stored in RocksDB. This change aims to
-  streamline the interface and improve the overall usability of the database
-  access patterns.
+- The `Table::get_range` method has been removed in favor of a more consistent
+  and versatile iteration method. Users will now utilize the `Table::iter`
+  method for traversing records within a table. This change aims to streamline
+  the interface and improve the overall usability of the database access
+  patterns.
 - The status and qualifier tables have been permanently removed from the
   PostgreSQL database in this release.
   - To ensure data integrity and avoid potential data loss, users currently
