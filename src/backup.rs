@@ -113,27 +113,10 @@ pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
 /// Returns an error if the restore operation fails.
 pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    info!("restoring database from {:?}", backup_id);
-    let res = {
-        let mut store = store.write().await;
-        match &backup_id {
-            Some(id) => store.restore_from_backup(*id),
-            None => store.restore_from_latest_backup(),
-        }
-    };
-
-    match res {
-        Ok(()) => {
-            info!("database restored from backup {:?}", backup_id);
-            Ok(())
-        }
-        Err(e) => {
-            warn!(
-                "failed to restore database from backup {:?}: {:?}",
-                backup_id, e
-            );
-            Err(e)
-        }
+    let mut store = store.write().await;
+    match &backup_id {
+        Some(id) => store.restore_from_backup(*id),
+        None => store.restore_from_latest_backup(),
     }
 }
 
