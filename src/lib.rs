@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate diesel;
 
+mod access_token;
 mod account;
 mod backends;
 pub mod backup;
@@ -71,6 +72,7 @@ pub use self::types::{
     HostNetworkGroup, ModelIndicator, PacketAttr, Qualifier, Response, ResponseKind, Status, Ti,
     TiCmpKind, TriagePolicy, ValueKind,
 };
+use access_token::AccessTokenMap;
 use anyhow::{anyhow, Result};
 use backends::Value;
 use bb8_postgres::{
@@ -138,10 +140,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn access_token_map(&self) -> Map {
-        self.states
-            .map(tables::ACCESS_TOKENS)
-            .expect("always available")
+    pub fn access_token_map(&self) -> AccessTokenMap {
+        self.states.access_tokens()
     }
 
     #[must_use]

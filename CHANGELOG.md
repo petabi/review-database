@@ -18,6 +18,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   to be used universally on any table that contains a record that can be
   deserialized from a key-value entry, extending its functionality beyond just
   the `Table<Account>`.
+- Added new functions to facilitate insert, revoke, and containment operations,
+  ensuring a more controlled and secure access_token management.
 
 ### Changed
 
@@ -37,6 +39,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   and improve the overall clarity and readability of the log output. The same
   information, if needed, can be obtained by checking the return value of the
   `restore` function, and the caller can decide whether to log it or not.
+- Introduced a wrapper to enhance security by preventing direct exposure of `Map`
+  as return of `Store::access_token map`.
 
 ### Deprecated
 
