@@ -6,7 +6,6 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Deserialize;
 use std::convert::TryFrom;
 use structured::{ColumnStatistics, Element};
-use tracing::error;
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]
 #[diesel(table_name = crate::schema::description_binary)]
@@ -28,7 +27,7 @@ pub(super) async fn insert_top_n(
     description_id: i32,
     column_stats: &ColumnStatistics,
     mode: &[u8],
-) -> Result<(), Error> {
+) -> Result<usize, Error> {
     let db = DescriptionBinary {
         description_id,
         mode,
@@ -56,16 +55,8 @@ pub(super) async fn insert_top_n(
             }
         })
         .collect();
-    let res = diesel::insert_into(topn_d::top_n_binary)
+    Ok(diesel::insert_into(topn_d::top_n_binary)
         .values(&top_n)
         .execute(conn)
-        .await?;
-    if res != column_stats.n_largest_count.top_n().len() {
-        error!(
-            "Failed to insert all of top_n_binary, entries failed: {} / {}",
-            column_stats.n_largest_count.top_n().len() - res,
-            column_stats.n_largest_count.top_n().len()
-        );
-    }
-    Ok(())
+        .await?)
 }
