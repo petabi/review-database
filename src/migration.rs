@@ -67,7 +67,7 @@ pub async fn migrate_backend<P: AsRef<Path>>(
 async fn backend_0_23(db: &super::Database, store: &super::Store) -> Result<()> {
     tracing::info!("starting to transfer csv column extra data...");
     tracing::info!(
-        "# of entries ransfered: {}",
+        "# of entries transferred: {}",
         transfer_csv_column_extras(db, store).await?
     );
     Ok(())
