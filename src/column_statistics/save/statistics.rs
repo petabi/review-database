@@ -124,29 +124,44 @@ impl Database {
                         }
                     })
             {
-                match &column_stats.n_largest_count.mode() {
-                    Some(Element::Int(mode)) => {
-                        int::insert_top_n(&mut conn, id, column_stats, *mode).await?;
-                    }
-                    Some(Element::Enum(mode)) => {
-                        r#enum::insert_top_n(&mut conn, id, column_stats, mode).await?;
-                    }
-                    Some(Element::FloatRange(mode)) => {
-                        float_range::insert_top_n(&mut conn, id, column_stats, mode).await?;
-                    }
-                    Some(Element::Text(mode)) => {
-                        text::insert_top_n(&mut conn, id, column_stats, mode).await?;
-                    }
-                    Some(Element::IpAddr(mode)) => {
-                        ipaddr::insert_top_n(&mut conn, id, column_stats, mode).await?;
-                    }
-                    Some(Element::DateTime(mode)) => {
-                        datetime::insert_top_n(&mut conn, id, column_stats, mode).await?;
-                    }
-                    Some(Element::Binary(mode)) => {
-                        binary::insert_top_n(&mut conn, id, column_stats, mode).await?;
-                    }
-                    _ => {}
+                let (type_name, inserted) = match &column_stats.n_largest_count.mode() {
+                    Some(Element::Int(mode)) => (
+                        "int",
+                        int::insert_top_n(&mut conn, id, column_stats, *mode).await?,
+                    ),
+                    Some(Element::Enum(mode)) => (
+                        "enum",
+                        r#enum::insert_top_n(&mut conn, id, column_stats, mode).await?,
+                    ),
+                    Some(Element::FloatRange(mode)) => (
+                        "float_range",
+                        float_range::insert_top_n(&mut conn, id, column_stats, mode).await?,
+                    ),
+                    Some(Element::Text(mode)) => (
+                        "text",
+                        text::insert_top_n(&mut conn, id, column_stats, mode).await?,
+                    ),
+                    Some(Element::IpAddr(mode)) => (
+                        "ipaddr",
+                        ipaddr::insert_top_n(&mut conn, id, column_stats, mode).await?,
+                    ),
+                    Some(Element::DateTime(mode)) => (
+                        "datetime",
+                        datetime::insert_top_n(&mut conn, id, column_stats, mode).await?,
+                    ),
+                    Some(Element::Binary(mode)) => (
+                        "binary",
+                        binary::insert_top_n(&mut conn, id, column_stats, mode).await?,
+                    ),
+                    _ => ("", column_stats.n_largest_count.top_n().len()),
+                };
+                if inserted != column_stats.n_largest_count.top_n().len() {
+                    tracing::error!(
+                        "Failed to insert all of top_n {}, entries failed: {} / {}",
+                        type_name,
+                        column_stats.n_largest_count.top_n().len() - inserted,
+                        column_stats.n_largest_count.top_n().len()
+                    );
                 }
             }
         }
