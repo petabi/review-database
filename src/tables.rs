@@ -102,6 +102,13 @@ impl StateDb {
     }
 
     #[must_use]
+    pub(crate) fn access_tokens(&self) -> super::access_token::AccessTokenMap {
+        let inner = self.inner.as_ref().expect("database must be open");
+        super::access_token::AccessTokenMap::open(inner)
+            .expect("{ACCESS_TOKENS} table must be present")
+    }
+
+    #[must_use]
     pub(crate) fn accounts(&self) -> Table<Account> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Account>::open(inner).expect("{ACCOUNTS} table must be present")

@@ -32,7 +32,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.4";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.5";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -260,6 +260,12 @@ fn read_version_file(path: &Path) -> Result<Version> {
 }
 
 fn migrate_0_24_to_0_25(store: &super::Store) -> Result<()> {
+    migrate_batch_info_map(store)?;
+
+    migrate_access_token_map(store)
+}
+
+fn migrate_batch_info_map(store: &super::Store) -> Result<()> {
     use crate::IterableMap;
     use bincode::Options;
 
@@ -274,7 +280,24 @@ fn migrate_0_24_to_0_25(store: &super::Store) -> Result<()> {
         map.raw().delete(&old_k)?;
         map.raw().insert(&key, &v)?;
     }
+    Ok(())
+}
 
+fn migrate_access_token_map(store: &super::Store) -> Result<()> {
+    use crate::IterableMap;
+    use bincode::Options;
+    use std::collections::HashSet;
+
+    let map = store.access_token_map();
+
+    for (k, v) in map.raw().iter_forward()? {
+        let username = String::from_utf8_lossy(&k);
+        let tokens = bincode::DefaultOptions::new().deserialize::<HashSet<String>>(&v)?;
+        map.raw().delete(&k)?;
+        for token in tokens {
+            map.insert(&username, &token)?;
+        }
+    }
     Ok(())
 }
 
@@ -408,7 +431,7 @@ mod tests {
     use std::borrow::Cow;
 
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::{tables::Value, Store};
+    use crate::{tables::Value, IterableMap, Store};
     use semver::{Version, VersionReq};
 
     #[allow(dead_code)]
@@ -477,7 +500,7 @@ mod tests {
     }
 
     #[test]
-    fn migrate_0_24_to_0_25() {
+    fn migrate_0_24_to_0_25_batch_info() {
         use crate::{types::ModelBatchInfo, BatchInfo};
         use bincode::Options;
 
@@ -517,7 +540,7 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_24_to_0_25(&settings.store).is_ok());
+        assert!(super::migrate_batch_info_map(&settings.store).is_ok());
 
         let map = settings.store.batch_info_map();
         for tester in testers {
@@ -525,6 +548,37 @@ mod tests {
             let res = map.get(tester.model, tester.inner.id).unwrap();
             assert_eq!(res, Some(tester));
         }
+    }
+
+    #[test]
+    fn migrate_0_24_to_0_25_access_token() {
+        use bincode::Options;
+        use std::collections::HashSet;
+
+        let settings = TestSchema::new();
+        let map = settings.store.access_token_map();
+
+        let users = ["user1", "user2"];
+        let tokens = ["token1", "token2"];
+
+        for user in &users {
+            let key = user.as_bytes();
+            let tokens: HashSet<_> = tokens.iter().map(|v| v.to_string()).collect();
+            let value = bincode::DefaultOptions::new().serialize(&tokens).unwrap();
+            map.raw().insert(key, &value).unwrap();
+        }
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_access_token_map(&settings.store).is_ok());
+
+        let map = settings.store.access_token_map();
+        for user in users {
+            for token in &tokens {
+                assert_eq!(map.contains(user, token).unwrap(), true);
+            }
+        }
+        assert_eq!(2 * 2, map.raw().iter_forward().unwrap().count());
     }
 
     #[test]
