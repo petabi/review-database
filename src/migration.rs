@@ -97,7 +97,7 @@ async fn transfer_csv_column_extras(db: &super::Database, store: &super::Store) 
 
             if added != cur {
                 return Err(anyhow!(
-                    "corrupted category table: inserting {cur} and asigned with {added}"
+                    "corrupted category table: inserting {cur} and assigned with {added}"
                 ));
             }
 
@@ -115,7 +115,7 @@ async fn transfer_csv_column_extras(db: &super::Database, store: &super::Store) 
         )?;
         if added != cur || added != entry.id {
             return Err(anyhow!(
-                "corrupted category table: inserting {cur} and asigned with {added}"
+                "corrupted category table: inserting {cur} and assigned with {added}"
             ));
         }
         cur += 1;
