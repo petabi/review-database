@@ -117,8 +117,6 @@ impl<'d> IndexedTable<'d, Qualifier> {
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    // The following will be used when PostgreSQL qualifier table is deleted
-    #[allow(dead_code)]
     fn setup(&self) -> Result<()> {
         if self.indexed_map.count()? > 0 {
             return Ok(());
