@@ -45,5 +45,4 @@ tokio-postgres-rustls = "0.10"
 tracing = "0.1"
 
 [dev-dependencies]
-bytes = "1"
 tempfile = "3"
