@@ -94,28 +94,10 @@ pub(crate) struct StateDb {
 
 impl StateDb {
     pub fn open(path: &Path, backup: PathBuf) -> Result<Self> {
-        Self::try_open(path.to_owned(), backup, false)
-    }
-
-    fn try_open(path: PathBuf, backup: PathBuf, recover_on_fail: bool) -> Result<Self> {
-        let db = match Self::open_db(&path) {
-            Ok(db) => db,
-            Err(e) => {
-                if recover_on_fail {
-                    tracing::warn!("fail to open db {e:?}");
-                    tracing::warn!("recovering from latest backup available");
-
-                    Self::recover_db(&path, &backup)?
-                } else {
-                    return Err(e);
-                }
-            }
-        };
-
-        Ok(Self {
+        Self::open_db(path).map(|db| Self {
             inner: Some(db),
             backup,
-            db: path,
+            db: path.to_owned(),
         })
     }
 
