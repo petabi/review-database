@@ -39,8 +39,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   and improve the overall clarity and readability of the log output. The same
   information, if needed, can be obtained by checking the return value of the
   `restore` function, and the caller can decide whether to log it or not.
-- Introduced a wrapper to enhance security by preventing direct exposure of `Map`
-  as return of `Store::access_token map`.
+- Changed the return type of `Store::access_token_map` to `Table<AccessToken>` to
+  enhance security by preventing direct exposure of `Map`.
 
 ### Deprecated
 

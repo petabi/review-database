@@ -1,3 +1,4 @@
+mod access_token;
 mod accounts;
 mod batch_info;
 mod category;
@@ -7,8 +8,12 @@ mod scores;
 mod status;
 
 use crate::{
-    batch_info::BatchInfo, category::Category, csv_column_extra::CsvColumnExtra, scores::Scores,
-    types::Account, types::Qualifier, types::Status, Direction, Indexable,
+    batch_info::BatchInfo,
+    category::Category,
+    csv_column_extra::CsvColumnExtra,
+    scores::Scores,
+    types::{Account, FromKeyValue, Qualifier, Status},
+    Direction, Indexable,
 };
 
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
@@ -18,6 +23,8 @@ use std::{
     borrow::Cow,
     path::{Path, PathBuf},
 };
+
+pub use self::access_token::AccessToken;
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -102,10 +109,9 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn access_tokens(&self) -> super::access_token::AccessTokenMap {
+    pub(crate) fn access_tokens(&self) -> Table<AccessToken> {
         let inner = self.inner.as_ref().expect("database must be open");
-        super::access_token::AccessTokenMap::open(inner)
-            .expect("{ACCESS_TOKENS} table must be present")
+        Table::<AccessToken>::open(inner).expect("{ACCESS_TOKENS} table must be present")
     }
 
     #[must_use]
@@ -346,6 +352,80 @@ where
         match serialized_item {
             Ok((_key, value)) => {
                 let item = bincode::DefaultOptions::new().deserialize::<R>(&value);
+                Some(item.map_err(Into::into))
+            }
+            Err(e) => Some(Err(e.into())),
+        }
+    }
+}
+
+/// Represents a table that can be iterated over.
+pub trait KeyValueIterable<R: FromKeyValue> {
+    /// Returns an iterator over the records in the table.
+    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> KeyValueIter<'_, R>;
+}
+
+impl<R: FromKeyValue> KeyValueIterable<R> for Table<'_, R> {
+    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> KeyValueIter<'_, R> {
+        use rocksdb::IteratorMode;
+
+        match direction {
+            Direction::Forward => match from {
+                Some(from) => KeyValueIter::new(
+                    self.map
+                        .db
+                        .iterator_cf(self.map.cf, IteratorMode::From(from, Direction::Forward)),
+                ),
+                None => {
+                    KeyValueIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::Start))
+                }
+            },
+            Direction::Reverse => match from {
+                Some(from) => KeyValueIter::new(
+                    self.map
+                        .db
+                        .iterator_cf(self.map.cf, IteratorMode::From(from, Direction::Reverse)),
+                ),
+                None => KeyValueIter::new(self.map.db.iterator_cf(self.map.cf, IteratorMode::End)),
+            },
+        }
+    }
+}
+
+/// An iterator over the records in a table.
+pub struct KeyValueIter<'i, R> {
+    inner: rocksdb::DBIteratorWithThreadMode<
+        'i,
+        rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
+    >,
+    _phantom: std::marker::PhantomData<R>,
+}
+
+impl<'i, R> KeyValueIter<'i, R> {
+    fn new(
+        inner: rocksdb::DBIteratorWithThreadMode<
+            'i,
+            rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
+        >,
+    ) -> Self {
+        Self {
+            inner,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'i, R> Iterator for KeyValueIter<'i, R>
+where
+    R: FromKeyValue,
+{
+    type Item = Result<R, anyhow::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let serialized_item = self.inner.next()?;
+        match serialized_item {
+            Ok((key, value)) => {
+                let item = R::from_key_value(&key, &value);
                 Some(item.map_err(Into::into))
             }
             Err(e) => Some(Err(e.into())),

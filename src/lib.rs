@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate diesel;
 
-mod access_token;
 mod account;
 mod backends;
 pub mod backup;
@@ -57,7 +56,7 @@ pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
-pub use self::tables::{IndexedTable, Iterable, Table, UniqueKey};
+pub use self::tables::{AccessToken, IndexedTable, Iterable, KeyValueIterable, Table, UniqueKey};
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -72,7 +71,6 @@ pub use self::types::{
     HostNetworkGroup, ModelIndicator, PacketAttr, Qualifier, Response, ResponseKind, Status, Ti,
     TiCmpKind, TriagePolicy, ValueKind,
 };
-use access_token::AccessTokenMap;
 use anyhow::{anyhow, Result};
 use backends::Value;
 use bb8_postgres::{
@@ -140,7 +138,7 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn access_token_map(&self) -> AccessTokenMap {
+    pub fn access_token_map(&self) -> Table<AccessToken> {
         self.states.access_tokens()
     }
 
