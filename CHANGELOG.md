@@ -33,12 +33,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   introduced to provide greater flexibility and avoid potential ownership and
   borrowing issues. `Cow<[u8]>` allows users to efficiently handle both owned
   and borrowed data, depending on their specific use case.
-- `backup::restore` no longer leaves log messages regarding the result of the
-  restoration process, since its messages don't provide any information that the
-  caller doesn't already have. This change aims to reduce unnecessary verbosity
-  and improve the overall clarity and readability of the log output. The same
-  information, if needed, can be obtained by checking the return value of the
-  `restore` function, and the caller can decide whether to log it or not.
+- `backup::restore` and `Database::add_time_series` no longer leave log messages
+  regarding the result of their database operations, since the messages don't
+  provide any information that the caller doesn't already have. This change aims
+  to reduce unnecessary verbosity and improve the overall clarity and
+  readability of the log output. The same information, if needed, can be
+  obtained by checking the return value of each function, and the caller can
+  decide whether to log it or not.
 - Changed the return type of `Store::access_token_map` to `Table<AccessToken>` to
   enhance security by preventing direct exposure of `Map`.
 
