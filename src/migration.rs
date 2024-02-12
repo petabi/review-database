@@ -552,7 +552,10 @@ mod tests {
 
     #[test]
     fn migrate_0_24_to_0_25_access_token() {
+        use crate::tables::KeyValueIterable;
+        use crate::AccessToken;
         use bincode::Options;
+        use rocksdb::Direction;
         use std::collections::HashSet;
 
         let settings = TestSchema::new();
@@ -573,11 +576,17 @@ mod tests {
         assert!(super::migrate_access_token_map(&settings.store).is_ok());
 
         let map = settings.store.access_token_map();
-        for user in users {
-            for token in &tokens {
-                assert_eq!(map.contains(user, token).unwrap(), true);
-            }
+        let entries = users.iter().flat_map(|u| {
+            tokens.iter().map(|t| AccessToken {
+                username: (*u).into(),
+                token: (*t).into(),
+            })
+        });
+
+        for (record, entry) in map.iter(Direction::Forward, None).zip(entries) {
+            assert_eq!(record.unwrap(), entry);
         }
+
         assert_eq!(2 * 2, map.raw().iter_forward().unwrap().count());
     }
 
