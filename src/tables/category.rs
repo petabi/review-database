@@ -6,6 +6,12 @@ use crate::{category::Category, types::FromKeyValue, Indexed, IndexedMap, Indexe
 
 const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irrelevant Alert")];
 
+impl FromKeyValue for Category {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        super::deserialize(value)
+    }
+}
+
 impl<'d> IndexedTable<'d, Category> {
     /// Opens the category table in the database.
     ///

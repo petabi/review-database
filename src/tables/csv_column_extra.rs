@@ -10,6 +10,12 @@ use crate::{
     IndexedMapUpdate, IndexedTable,
 };
 
+impl FromKeyValue for CsvColumnExtra {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        super::deserialize(value)
+    }
+}
+
 impl Indexable for CsvColumnExtra {
     fn key(&self) -> Cow<[u8]> {
         Cow::Owned(self.model_id.to_be_bytes().to_vec())

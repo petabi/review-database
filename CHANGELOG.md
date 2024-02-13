@@ -72,6 +72,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   decision has been made to streamline and focus on providing precise abstractions
   for database operations. Users are advised to update their codebase accordingly
   and leverage alternative methods for scheduling periodic backups.
+- The `FromKeyValue` implementation for `DeserializeOwned` has been removed. This
+  change was made to ensure that the `FromKeyValue` trait is only implemented for
+  types that are explicitly intended to be deserialized from key-value entries.
 
 ### Fixed
 

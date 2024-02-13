@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, collections::HashMap, net::IpAddr};
 
-use crate::Indexable;
+use crate::{types::FromKeyValue, Indexable};
 
 type PortNumber = u16;
 
@@ -57,6 +57,12 @@ pub struct Node {
     pub creation_time: DateTime<Utc>,
     pub apply_target_id: Option<u32>,
     pub apply_in_progress: bool,
+}
+
+impl FromKeyValue for Node {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
+        Ok(bincode::DefaultOptions::new().deserialize(value)?)
+    }
 }
 
 impl Indexable for Node {

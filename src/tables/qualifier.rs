@@ -17,6 +17,12 @@ const DEFAULT_ENTRIES: [(u32, &str); 4] = [
     (4, "mixed"),
 ];
 
+impl FromKeyValue for Qualifier {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        super::deserialize(value)
+    }
+}
+
 impl Indexable for Qualifier {
     fn key(&self) -> Cow<[u8]> {
         Cow::Borrowed(self.description.as_bytes())

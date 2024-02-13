@@ -8,7 +8,7 @@ use chrono::{
 use data_encoding::BASE64;
 use flate2::read::GzDecoder;
 use ipnet::IpNet;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::{
     borrow::Cow,
@@ -28,16 +28,6 @@ pub trait FromKeyValue: Sized {
     ///
     /// Returns an error if the key or value cannot be deserialized.
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self>;
-}
-
-impl<T> FromKeyValue for T
-where
-    T: DeserializeOwned,
-{
-    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
-        let entry = bincode::DefaultOptions::new().deserialize::<Self>(value)?;
-        Ok(entry)
-    }
 }
 
 pub(crate) type Timestamp = i64;
@@ -118,6 +108,12 @@ pub struct Customer {
     pub creation_time: DateTime<Utc>,
 }
 
+impl FromKeyValue for Customer {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        Ok(bincode::DefaultOptions::new().deserialize(value)?)
+    }
+}
+
 impl Indexable for Customer {
     fn key(&self) -> Cow<[u8]> {
         Cow::Borrowed(self.name.as_bytes())
@@ -169,6 +165,12 @@ pub struct DataSource {
     pub kind: Option<String>,
 
     pub description: String,
+}
+
+impl FromKeyValue for DataSource {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        Ok(bincode::DefaultOptions::new().deserialize(value)?)
+    }
 }
 
 impl Indexable for DataSource {
@@ -426,6 +428,12 @@ pub struct Template {
     pub numbers_of_top_n: Option<Vec<i64>>,
 }
 
+impl FromKeyValue for Template {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        Ok(bincode::DefaultOptions::new().deserialize(value)?)
+    }
+}
+
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
 pub enum TiCmpKind {
     IpAddress,
@@ -623,6 +631,12 @@ pub struct TriagePolicy {
     pub confidence: Vec<Confidence>,
     pub response: Vec<Response>,
     pub creation_time: DateTime<Utc>,
+}
+
+impl FromKeyValue for TriagePolicy {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        Ok(bincode::DefaultOptions::new().deserialize(value)?)
+    }
 }
 
 impl Indexable for TriagePolicy {
