@@ -42,6 +42,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   decide whether to log it or not.
 - Changed the return type of `Store::access_token_map` to `Table<AccessToken>` to
   enhance security by preventing direct exposure of `Map`.
+- The `get_by_id` method in the `IndexedMap` struct has been updated to return a
+  key-value pair (`(Vec<u8>, Vec<u8>)`) instead of just the value (`impl
+  AsRef<[u8]>`). This change accommodates scenarios where the information stored
+  in a key may not be present in the value for some Column Families. Previously,
+  if you called `get_by_id` with a specific ID, you would receive the
+  corresponding value as `Option<impl AsRef<[u8]>>`. Now, calling `get_by_id`
+  with an ID will return an `Option` containing a tuple of `Vec<u8>` for both
+  the key and the value, effectively giving you direct access to the stored key
+  along with its corresponding value.
 
 ### Deprecated
 

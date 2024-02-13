@@ -18,7 +18,7 @@ use crate::{
 
 use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{
     borrow::Cow,
     path::{Path, PathBuf},
@@ -311,7 +311,7 @@ impl StateDb {
 }
 
 /// Represents a table that can be iterated over.
-pub trait Iterable<R: DeserializeOwned> {
+pub trait Iterable<R: FromKeyValue> {
     /// Returns an iterator over the records in the table.
     fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R>;
 }
@@ -341,17 +341,15 @@ impl<'i, R> TableIter<'i, R> {
 
 impl<'i, R> Iterator for TableIter<'i, R>
 where
-    R: DeserializeOwned,
+    R: FromKeyValue,
 {
     type Item = Result<R, anyhow::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use bincode::Options;
-
         let serialized_item = self.inner.next()?;
         match serialized_item {
-            Ok((_key, value)) => {
-                let item = bincode::DefaultOptions::new().deserialize::<R>(&value);
+            Ok((key, value)) => {
+                let item = R::from_key_value(&key, &value);
                 Some(item.map_err(Into::into))
             }
             Err(e) => Some(Err(e.into())),
@@ -469,7 +467,7 @@ impl<'d, R: UniqueKey + Value> Table<'d, R> {
     }
 }
 
-impl<R: DeserializeOwned> Iterable<R> for Table<'_, R> {
+impl<R: FromKeyValue> Iterable<R> for Table<'_, R> {
     fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R> {
         use rocksdb::IteratorMode;
 
@@ -538,7 +536,7 @@ where
     }
 }
 
-impl<R: DeserializeOwned + Indexable> Iterable<R> for IndexedTable<'_, R> {
+impl<R: FromKeyValue + Indexable> Iterable<R> for IndexedTable<'_, R> {
     fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R> {
         use rocksdb::IteratorMode;
 

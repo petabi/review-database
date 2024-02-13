@@ -2,7 +2,7 @@
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{category::Category, Indexed, IndexedMap, IndexedTable};
+use crate::{category::Category, types::FromKeyValue, Indexed, IndexedMap, IndexedTable};
 
 const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irrelevant Alert")];
 
@@ -55,12 +55,11 @@ impl<'d> IndexedTable<'d, Category> {
     ///
     /// Returns an error if the database query fails.
     pub fn get(&self, id: u32) -> Result<Category> {
-        use bincode::Options;
-        let res = self
+        let (key, value) = self
             .indexed_map
             .get_by_id(id)
             .and_then(|r| r.ok_or(anyhow::anyhow!("category {id} unavailable")))?;
-        let c = bincode::DefaultOptions::new().deserialize(res.as_ref())?;
+        let c = Category::from_key_value(&key, &value)?;
         Ok(c)
     }
 
