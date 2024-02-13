@@ -68,6 +68,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - To ensure data integrity and avoid potential data loss, users currently
     utilizing review-database versions below 0.24.0 must migrate to version
     0.24.0 before proceeding with any further migrations.
+- The `backup::schedule_periodic` function has been permanently removed. This
+  decision has been made to streamline and focus on providing precise abstractions
+  for database operations. Users are advised to update their codebase accordingly
+  and leverage alternative methods for scheduling periodic backups.
 
 ### Fixed
 

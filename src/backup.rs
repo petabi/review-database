@@ -4,8 +4,8 @@ use crate::Store;
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
 use rocksdb::backup::BackupEngineInfo;
-use std::{sync::Arc, time::Duration};
-use tokio::sync::{Notify, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 #[allow(clippy::module_name_repetitions)]
@@ -21,37 +21,6 @@ impl From<BackupEngineInfo> for BackupInfo {
             id: backup.backup_id,
             timestamp: Utc.timestamp_nanos(backup.timestamp),
             size: backup.size,
-        }
-    }
-}
-
-/// Schedules periodic database backups.
-#[allow(clippy::module_name_repetitions)]
-pub async fn schedule_periodic(
-    store: Arc<RwLock<Store>>,
-    schedule: (Duration, Duration),
-    backups_to_keep: u32,
-    stop: Arc<Notify>,
-) {
-    use tokio::time::{sleep, Instant};
-
-    let (init, duration) = schedule;
-    let sleep = sleep(init);
-    tokio::pin!(sleep);
-
-    loop {
-        tokio::select! {
-            () = &mut sleep => {
-                sleep.as_mut().reset(Instant::now() + duration);
-                let _res = create(&store, false, backups_to_keep);
-            }
-            () = stop.notified() => {
-                info!("creating a database backup before shutdown");
-                let _res = create(&store, false, backups_to_keep);
-                stop.notify_one();
-                return;
-            }
-
         }
     }
 }
