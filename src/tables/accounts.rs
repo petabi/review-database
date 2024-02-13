@@ -6,7 +6,16 @@ use anyhow::{bail, Context};
 use bincode::Options;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{types::Account, Map, Role, Table, EXCLUSIVE};
+use crate::{
+    types::{Account, FromKeyValue},
+    Map, Role, Table, EXCLUSIVE,
+};
+
+impl FromKeyValue for Account {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
+        super::deserialize(value)
+    }
+}
 
 /// Functions for the accounts table.
 impl<'d> Table<'d, Account> {

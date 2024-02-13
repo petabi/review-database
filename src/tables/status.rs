@@ -12,6 +12,12 @@ use crate::{
 // The following will be used when PostgreSQL status table is deleted
 const DEFAULT_ENTRIES: [(u32, &str); 3] = [(1, "reviewed"), (2, "pending review"), (3, "disabled")];
 
+impl FromKeyValue for Status {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        super::deserialize(value)
+    }
+}
+
 impl Indexable for Status {
     fn key(&self) -> Cow<[u8]> {
         Cow::Borrowed(self.description.as_bytes())

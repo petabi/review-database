@@ -3,7 +3,13 @@
 use anyhow::Result;
 use rocksdb::{IteratorMode, OptimisticTransactionDB};
 
-use crate::{batch_info::BatchInfo, Map, Table};
+use crate::{batch_info::BatchInfo, types::FromKeyValue, Map, Table};
+
+impl FromKeyValue for BatchInfo {
+    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
+        super::deserialize(value)
+    }
+}
 
 impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// Opens the batch info table in the database.

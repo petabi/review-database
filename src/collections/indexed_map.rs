@@ -69,12 +69,19 @@ impl<'a> IndexedMap<'a> {
 mod tests {
     use std::borrow::Cow;
 
-    use crate::{Indexable, Indexed, IndexedMapUpdate, Store};
+    use crate::{types::FromKeyValue, Indexable, Indexed, IndexedMapUpdate, Store};
 
     #[derive(serde::Deserialize, serde::Serialize, Clone)]
     struct TestEntry {
         id: u32,
         name: String,
+    }
+
+    impl FromKeyValue for TestEntry {
+        fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
+            use bincode::Options;
+            Ok(bincode::DefaultOptions::new().deserialize(value)?)
+        }
     }
 
     impl Indexable for TestEntry {
