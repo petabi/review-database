@@ -4,7 +4,10 @@ use std::borrow::Cow;
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{types::Status, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
+use crate::{
+    types::{FromKeyValue, Status},
+    Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+};
 
 // The following will be used when PostgreSQL status table is deleted
 const DEFAULT_ENTRIES: [(u32, &str); 3] = [(1, "reviewed"), (2, "pending review"), (3, "disabled")];
@@ -99,11 +102,11 @@ impl<'d> IndexedTable<'d, Status> {
     ///
     /// Returns an error if the database query fails.
     pub fn get(&self, id: u32) -> Result<Status> {
-        let res = self
+        let (key, value) = self
             .indexed_map
             .get_by_id(id)
             .and_then(|r| r.ok_or(anyhow::anyhow!("status {id} unavailable")))?;
-        let c = super::deserialize(res.as_ref())?;
+        let c = Status::from_key_value(&key, &value)?;
         Ok(c)
     }
 

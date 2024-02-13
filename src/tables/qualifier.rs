@@ -4,7 +4,10 @@ use std::borrow::Cow;
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{types::Qualifier, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
+use crate::{
+    types::{FromKeyValue, Qualifier},
+    Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+};
 
 // The following will be used when PostgreSQL qualifier table is deleted
 const DEFAULT_ENTRIES: [(u32, &str); 4] = [
@@ -104,11 +107,11 @@ impl<'d> IndexedTable<'d, Qualifier> {
     ///
     /// Returns an error if the database query fails.
     pub fn get(&self, id: u32) -> Result<Qualifier> {
-        let res = self
+        let (key, value) = self
             .indexed_map
             .get_by_id(id)
             .and_then(|r| r.ok_or(anyhow::anyhow!("qualifier {id} unavailable")))?;
-        let c = super::deserialize(res.as_ref())?;
+        let c = Qualifier::from_key_value(&key, &value)?;
         Ok(c)
     }
 

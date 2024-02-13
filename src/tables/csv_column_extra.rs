@@ -6,8 +6,8 @@ use rocksdb::OptimisticTransactionDB;
 use structured::arrow::datatypes::ToByteSlice;
 
 use crate::{
-    csv_column_extra::CsvColumnExtra, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
-    IndexedTable,
+    csv_column_extra::CsvColumnExtra, types::FromKeyValue, Indexable, Indexed, IndexedMap,
+    IndexedMapUpdate, IndexedTable,
 };
 
 impl Indexable for CsvColumnExtra {
@@ -123,13 +123,13 @@ impl<'d> IndexedTable<'d, CsvColumnExtra> {
         column_1: Option<&[bool]>,
         column_n: Option<&[bool]>,
     ) -> Result<()> {
-        let old: CsvColumnExtra = {
-            let res = self
+        let old = {
+            let (key, value) = self
                 .indexed_map
                 .get_by_id(id)
                 .and_then(|r| r.ok_or(anyhow::anyhow!("csv column extra {id} unavailable")))?;
-            super::deserialize(res.as_ref())
-        }?;
+            CsvColumnExtra::from_key_value(&key, &value)?
+        };
         let new = CsvColumnExtra {
             id,
             model_id: old.model_id,
