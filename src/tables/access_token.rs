@@ -78,22 +78,3 @@ impl<'d> Table<'d, AccessToken> {
         &self.map
     }
 }
-
-struct AccessMapIter<'i> {
-    inner: rocksdb::DBIteratorWithThreadMode<
-        'i,
-        rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
-    >,
-}
-
-impl<'i> Iterator for AccessMapIter<'i> {
-    type Item = Result<AccessToken, anyhow::Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let serialized_item = self.inner.next()?;
-        match serialized_item {
-            Ok((key, value)) => Some(AccessToken::from_key_value(&key, &value)),
-            Err(e) => Some(Err(e.into())),
-        }
-    }
-}
