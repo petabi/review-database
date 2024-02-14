@@ -22,6 +22,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   ensuring a more controlled and secure access_token management.
 - Added new functions to facilitate insert, remove, get and list operations,
   ensuring a more controlled and secure filter management.
+- Introduced a new data structure `TagSet` to facilitate easier access and
+  manipulation of tags stored in the database.
 
 ### Changed
 
@@ -65,6 +67,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   and improved code organization.
 - Modified `ModelIndicator` struct to include the `name` property, representing the
   associated name for the specific `ModelIndicator`.
+- `Store::workflow_tag_set` now returns `TagSet` instead of `IndexSet`. This
+  change is made to leverage the new `TagSet` structure for a more user-friendly
+  approach in accessing tags. The `TagSet` allows users to interact with tags
+  through the `Tag` struct, which includes `name` and `id` fields, offering a
+  more straightforward and human-readable format compared to the raw binary
+  format exposed by `IndexSet`.
 
 ### Deprecated
 
