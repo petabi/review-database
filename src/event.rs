@@ -2148,29 +2148,6 @@ pub enum InvalidEvent {
     Value(Box<[u8]>),
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct Filter {
-    pub name: String,
-    pub directions: Option<Vec<FlowKind>>,
-    pub keywords: Option<Vec<String>>,
-    pub network_tags: Option<Vec<String>>,
-    pub customers: Option<Vec<String>>,
-    pub endpoints: Option<Vec<FilterEndpoint>>,
-    pub sensors: Option<Vec<String>>,
-    pub os: Option<Vec<String>>,
-    pub devices: Option<Vec<String>>,
-    pub host_names: Option<Vec<String>>,
-    pub user_ids: Option<Vec<String>>,
-    pub user_names: Option<Vec<String>>,
-    pub user_departments: Option<Vec<String>>,
-    pub countries: Option<Vec<String>>,
-    pub categories: Option<Vec<u8>>,
-    pub levels: Option<Vec<u8>>,
-    pub kinds: Option<Vec<String>>,
-    pub learning_methods: Option<Vec<LearningMethod>>,
-    pub confidence: Option<f32>,
-}
-
 pub type Id = u32;
 
 #[derive(Clone, Deserialize, Serialize)]

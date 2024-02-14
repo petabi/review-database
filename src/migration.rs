@@ -32,7 +32,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.6";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.7";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -262,7 +262,9 @@ fn read_version_file(path: &Path) -> Result<Version> {
 fn migrate_0_24_to_0_25(store: &super::Store) -> Result<()> {
     migrate_batch_info_map(store)?;
 
-    migrate_access_token_map(store)
+    migrate_access_token_map(store)?;
+
+    migrate_filter_map(store)
 }
 
 fn migrate_batch_info_map(store: &super::Store) -> Result<()> {
@@ -296,6 +298,70 @@ fn migrate_access_token_map(store: &super::Store) -> Result<()> {
         map.raw().delete(&k)?;
         for token in tokens {
             map.insert(&username, &token)?;
+        }
+    }
+    Ok(())
+}
+
+fn migrate_filter_map(store: &super::Store) -> Result<()> {
+    use crate::{Filter, FilterEndpoint, FlowKind, IterableMap, LearningMethod};
+    use bincode::Options;
+    use std::collections::HashMap;
+
+    #[derive(Deserialize)]
+    struct OldFilter {
+        name: String,
+        directions: Option<Vec<FlowKind>>,
+        keywords: Option<Vec<String>>,
+        network_tags: Option<Vec<String>>,
+        customers: Option<Vec<String>>,
+        endpoints: Option<Vec<FilterEndpoint>>,
+        sensors: Option<Vec<String>>,
+        os: Option<Vec<String>>,
+        devices: Option<Vec<String>>,
+        host_names: Option<Vec<String>>,
+        user_ids: Option<Vec<String>>,
+        user_names: Option<Vec<String>>,
+        user_departments: Option<Vec<String>>,
+        countries: Option<Vec<String>>,
+        categories: Option<Vec<u8>>,
+        levels: Option<Vec<u8>>,
+        kinds: Option<Vec<String>>,
+        learning_methods: Option<Vec<LearningMethod>>,
+        confidence: Option<f32>,
+    }
+
+    let map = store.filter_map();
+
+    for (k, v) in map.raw().iter_forward()? {
+        let username = String::from_utf8_lossy(&k);
+        let filters =
+            bincode::DefaultOptions::new().deserialize::<HashMap<String, OldFilter>>(&v)?;
+        map.raw().delete(&k)?;
+        for (_, filter) in filters {
+            let new = Filter {
+                username: username.to_string(),
+                name: filter.name,
+                directions: filter.directions,
+                keywords: filter.keywords,
+                network_tags: filter.network_tags,
+                customers: filter.customers,
+                endpoints: filter.endpoints,
+                sensors: filter.sensors,
+                os: filter.os,
+                devices: filter.devices,
+                host_names: filter.host_names,
+                user_ids: filter.user_ids,
+                user_names: filter.user_names,
+                user_departments: filter.user_departments,
+                countries: filter.countries,
+                categories: filter.categories,
+                levels: filter.levels,
+                kinds: filter.kinds,
+                learning_methods: filter.learning_methods,
+                confidence: filter.confidence,
+            };
+            map.insert(new)?;
         }
     }
     Ok(())
@@ -552,7 +618,7 @@ mod tests {
 
     #[test]
     fn migrate_0_24_to_0_25_access_token() {
-        use crate::tables::KeyValueIterable;
+        use crate::tables::Iterable;
         use crate::AccessToken;
         use bincode::Options;
         use rocksdb::Direction;
@@ -588,6 +654,78 @@ mod tests {
         }
 
         assert_eq!(2 * 2, map.raw().iter_forward().unwrap().count());
+    }
+
+    #[test]
+    fn migrate_0_24_to_0_25_filter() {
+        use crate::tables::Iterable;
+        use crate::{FilterEndpoint, FlowKind, LearningMethod};
+        use bincode::Options;
+        use rocksdb::Direction;
+        use serde::Serialize;
+        use std::collections::HashMap;
+
+        #[derive(Default, Serialize)]
+        struct OldFilter {
+            name: String,
+            directions: Option<Vec<FlowKind>>,
+            keywords: Option<Vec<String>>,
+            network_tags: Option<Vec<String>>,
+            customers: Option<Vec<String>>,
+            endpoints: Option<Vec<FilterEndpoint>>,
+            sensors: Option<Vec<String>>,
+            os: Option<Vec<String>>,
+            devices: Option<Vec<String>>,
+            host_names: Option<Vec<String>>,
+            user_ids: Option<Vec<String>>,
+            user_names: Option<Vec<String>>,
+            user_departments: Option<Vec<String>>,
+            countries: Option<Vec<String>>,
+            categories: Option<Vec<u8>>,
+            levels: Option<Vec<u8>>,
+            kinds: Option<Vec<String>>,
+            learning_methods: Option<Vec<LearningMethod>>,
+            confidence: Option<f32>,
+        }
+
+        let settings = TestSchema::new();
+        let map = settings.store.filter_map();
+
+        let mut users = vec!["user2", "user1"];
+        let mut filters = vec!["filter_b", "filter_a"];
+        for user in &users {
+            let value: HashMap<_, _> = filters
+                .iter()
+                .map(|f| {
+                    let mut old = OldFilter::default();
+                    old.name = f.to_string();
+                    (f.to_string(), old)
+                })
+                .collect();
+            let value = bincode::DefaultOptions::new().serialize(&value).unwrap();
+            map.raw().put(user.as_bytes(), &value).unwrap();
+        }
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_filter_map(&settings.store).is_ok());
+
+        let map = settings.store.filter_map();
+
+        assert_eq!(4, map.iter(Direction::Forward, None).count());
+
+        let res = map
+            .iter(Direction::Forward, None)
+            .filter_map(|f| f.ok().map(|v| (v.username, v.name)))
+            .collect::<Vec<_>>();
+
+        users.sort_unstable();
+        filters.sort_unstable();
+        let testers: Vec<_> = users
+            .into_iter()
+            .flat_map(|u| filters.iter().map(|f| (u.to_string(), f.to_string())))
+            .collect();
+        assert_eq!(res, testers);
     }
 
     #[test]

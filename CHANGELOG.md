@@ -20,6 +20,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   the `Table<Account>`.
 - Added new functions to facilitate insert, revoke, and containment operations,
   ensuring a more controlled and secure access_token management.
+- Added new functions to facilitate insert, remove, get and list operations,
+  ensuring a more controlled and secure filter management.
 
 ### Changed
 
@@ -51,6 +53,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   with an ID will return an `Option` containing a tuple of `Vec<u8>` for both
   the key and the value, effectively giving you direct access to the stored key
   along with its corresponding value.
+- Changed the return type of `Store::filter_map` to `Table<Filter>` to
+  enhance security by preventing direct exposure of `Map`.
+- Modified `Filter` struct to include the `username` property, representing the
+  associated username for the specific `Filter`.
 
 ### Deprecated
 
