@@ -89,31 +89,6 @@ pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Resu
     }
 }
 
-/// Restores the database from a backup with the specified ID.
-///
-/// # Errors
-///
-/// Returns an error if the restore operation fails.
-pub async fn recover(store: &Arc<RwLock<Store>>) -> Result<()> {
-    // TODO: This function should be expanded to support PostgreSQL backups as well.
-    info!("recovering database from latest valid backup");
-    let res = {
-        let mut store = store.write().await;
-        store.recover()
-    };
-
-    match res {
-        Ok(()) => {
-            info!("database recovered from backup");
-            Ok(())
-        }
-        Err(e) => {
-            warn!("failed to recover database from backup: {e:?}");
-            Err(e)
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{event::DnsEventFields, EventKind, EventMessage, Store};

@@ -90,10 +90,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - To ensure data integrity and avoid potential data loss, users currently
     utilizing review-database versions below 0.24.0 must migrate to version
     0.24.0 before proceeding with any further migrations.
-- The `backup::schedule_periodic` function has been permanently removed. This
-  decision has been made to streamline and focus on providing precise abstractions
-  for database operations. Users are advised to update their codebase accordingly
-  and leverage alternative methods for scheduling periodic backups.
+- The `backup::schedule_periodic` function has been permanently removed. Users
+  are advised to update their codebase accordingly and leverage alternative
+  methods for scheduling periodic backups.
+- The `backup::recover` and `Store::recover` functions have been removed. These
+  functions were designed to attempt recovery from the most recent backup until
+  success. We recommend implementing backup recovery strategies at the
+  application level to better suit specific needs.
 - The `FromKeyValue` implementation for `DeserializeOwned` has been removed. This
   change was made to ensure that the `FromKeyValue` trait is only implemented for
   types that are explicitly intended to be deserialized from key-value entries.

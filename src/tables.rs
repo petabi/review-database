@@ -264,14 +264,6 @@ impl StateDb {
         Ok(())
     }
 
-    pub fn recover(&mut self) -> Result<()> {
-        self.close();
-
-        let db = Self::recover_db(&self.db, &self.backup)?;
-        self.inner = Some(db);
-        Ok(())
-    }
-
     fn close(&mut self) {
         if let Some(db) = self.inner.as_ref() {
             db.cancel_all_background_work(true);
@@ -297,32 +289,6 @@ impl StateDb {
         Ok(rocksdb::OptimisticTransactionDB::open_cf(
             &opts, path, MAP_NAMES,
         )?)
-    }
-
-    fn recover_db(path: &Path, backup: &Path) -> Result<rocksdb::OptimisticTransactionDB> {
-        let mut engine = open_rocksdb_backup_engine(backup)?;
-        let available = engine.get_backup_info();
-        let restore_opts = rocksdb::backup::RestoreOptions::default();
-        for backup_id in available.into_iter().rev().map(|b| b.backup_id) {
-            match engine.restore_from_backup(path, path, &restore_opts, backup_id) {
-                Ok(()) => match Self::open_db(path) {
-                    Ok(db) => {
-                        tracing::info!("restored from backup (id: {backup_id})");
-                        return Ok(db);
-                    }
-                    Err(e) => {
-                        tracing::warn!("opening restored backup (id: {backup_id}) failed {e:?}");
-                    }
-                },
-                Err(e) => {
-                    tracing::error!("restoring backup (id: {backup_id}) failed {e:?}");
-                }
-            }
-        }
-        Err(anyhow!(
-            "unable to recover from backups available at: {}",
-            backup.display()
-        ))
     }
 }
 
