@@ -492,15 +492,12 @@ impl<R: FromKeyValue> Iterable<R> for Table<'_, R> {
     }
 }
 
-pub struct IndexedTable<'d, R: Indexable> {
+pub struct IndexedTable<'d, R> {
     indexed_map: IndexedMap<'d>,
     _phantom: std::marker::PhantomData<R>,
 }
 
-impl<'d, R> IndexedTable<'d, R>
-where
-    R: Indexable,
-{
+impl<'d, R> IndexedTable<'d, R> {
     fn new(indexed_map: IndexedMap<'d>) -> Self {
         Self {
             indexed_map,
@@ -536,7 +533,7 @@ where
     }
 }
 
-impl<R: FromKeyValue + Indexable> Iterable<R> for IndexedTable<'_, R> {
+impl<R: FromKeyValue> Iterable<R> for IndexedTable<'_, R> {
     fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R> {
         use rocksdb::IteratorMode;
 
