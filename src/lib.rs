@@ -46,17 +46,16 @@ pub use self::event::{
     BlockListSmbFields, BlockListSmtp, BlockListSmtpFields, BlockListSsh, BlockListSshFields,
     BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool, Direction, DnsCovertChannel,
     DomainGenerationAlgorithm, Event, EventDb, EventFilter, EventIterator, EventMessage,
-    ExternalDdos, ExtraThreat, Filter, FilterEndpoint, FlowKind, FtpBruteForce, FtpPlainText,
-    HttpThreat, LdapBruteForce, LdapPlainText, LearningMethod, MultiHostPortScan, Network,
-    NetworkEntry, NetworkEntryValue, NetworkThreat, NetworkType, NonBrowser, PortScan,
-    RdpBruteForce, RecordType, RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore,
-    WindowsThreat,
+    ExternalDdos, ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce, FtpPlainText, HttpThreat,
+    LdapBruteForce, LdapPlainText, LearningMethod, MultiHostPortScan, Network, NetworkEntry,
+    NetworkEntryValue, NetworkThreat, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
+    RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore, WindowsThreat,
 };
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
-pub use self::tables::{AccessToken, IndexedTable, Iterable, KeyValueIterable, Table, UniqueKey};
+pub use self::tables::{AccessToken, Filter, IndexedTable, Iterable, Table, UniqueKey};
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -216,8 +215,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn filter_map(&self) -> Map {
-        self.states.map(tables::FILTERS).expect("always available")
+    pub fn filter_map(&self) -> Table<Filter> {
+        self.states.filters()
     }
 
     #[must_use]
