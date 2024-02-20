@@ -4,6 +4,7 @@ mod batch_info;
 mod category;
 mod csv_column_extra;
 mod filter;
+mod model_indicator;
 mod qualifier;
 mod scores;
 mod status;
@@ -27,6 +28,7 @@ use std::{
 
 pub use self::access_token::AccessToken;
 pub use self::filter::Filter;
+pub use self::model_indicator::ModelIndicator;
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -132,6 +134,12 @@ impl StateDb {
     pub(crate) fn filters(&self) -> Table<Filter> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Filter>::open(inner).expect("{FILTERS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn model_indicators(&self) -> Table<ModelIndicator> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<ModelIndicator>::open(inner).expect("{MODEL_INDICATORS} table must be present")
     }
 
     #[must_use]
