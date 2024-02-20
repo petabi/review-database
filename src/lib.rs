@@ -55,7 +55,9 @@ pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
-pub use self::tables::{AccessToken, Filter, IndexedTable, Iterable, Table, UniqueKey};
+pub use self::tables::{
+    AccessToken, Filter, IndexedTable, Iterable, ModelIndicator, Table, UniqueKey,
+};
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -67,8 +69,8 @@ pub use self::top_n::{
 pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::types::{
     AttrCmpKind, Confidence, Customer, CustomerNetwork, DataSource, DataType, EventCategory,
-    HostNetworkGroup, ModelIndicator, PacketAttr, Qualifier, Response, ResponseKind, Status, Ti,
-    TiCmpKind, TriagePolicy, ValueKind,
+    HostNetworkGroup, PacketAttr, Qualifier, Response, ResponseKind, Status, Ti, TiCmpKind,
+    TriagePolicy, ValueKind,
 };
 use anyhow::{anyhow, Result};
 use backends::Value;
@@ -221,10 +223,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn model_indicator_map(&self) -> Map {
-        self.states
-            .map(tables::MODEL_INDICATORS)
-            .expect("always available")
+    pub fn model_indicator_map(&self) -> Table<ModelIndicator> {
+        self.states.model_indicators()
     }
 
     #[must_use]

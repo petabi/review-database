@@ -57,6 +57,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   enhance security by preventing direct exposure of `Map`.
 - Modified `Filter` struct to include the `username` property, representing the
   associated username for the specific `Filter`.
+- Changed the return type of `Store::model_indicator_map` to `Table<ModelIndicator>`
+  to enhance security by preventing direct exposure of `Map`.
+- Moved member functions of `ModelIndicator` that are related to database operations
+  under `Table<ModelIndicator>` to facilitate insert, remove, update, get and
+  list operations, ensuring a more controlled and secure model indicator management
+  and improved code organization.
+- Modified `ModelIndicator` struct to include the `name` property, representing the
+  associated name for the specific `ModelIndicator`.
 
 ### Deprecated
 

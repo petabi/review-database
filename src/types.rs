@@ -1,24 +1,12 @@
-use super::{Indexable, IterableMap, NetworkType, Store, TrafficDirection};
+use super::{Indexable, NetworkType, TrafficDirection};
 pub use crate::account::{Account, Role};
-use anyhow::{bail, Context, Result};
+use anyhow::Result;
 use bincode::Options;
-use chrono::{
-    naive::serde::ts_nanoseconds_option, serde::ts_seconds, DateTime, NaiveDateTime, Utc,
-};
-use data_encoding::BASE64;
-use flate2::read::GzDecoder;
+use chrono::{naive::serde::ts_nanoseconds_option, DateTime, NaiveDateTime, Utc};
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use std::{
-    borrow::Cow,
-    cmp::Ordering,
-    collections::HashSet,
-    convert::TryFrom,
-    io::{BufReader, Read},
-    net::IpAddr,
-    ops::RangeInclusive,
-};
+use std::{borrow::Cow, cmp::Ordering, convert::TryFrom, net::IpAddr, ops::RangeInclusive};
 use strum_macros::Display;
 
 pub trait FromKeyValue: Sized {
@@ -283,110 +271,6 @@ impl HostNetworkGroup {
     #[must_use]
     pub fn contains_network(&self, network: &IpNet) -> bool {
         self.networks.binary_search(network).is_ok()
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct ModelIndicator {
-    pub description: String,
-    pub model_id: i32,
-    pub tokens: HashSet<Vec<String>>,
-    #[serde(with = "ts_seconds")]
-    pub last_modification_time: DateTime<Utc>,
-}
-
-impl ModelIndicator {
-    /// Creates a new `ModelIndicator` from the given data.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the given data is invalid.
-    pub fn new(data: &str) -> Result<Self> {
-        let data = BASE64.decode(data.as_bytes())?;
-        let decoder = GzDecoder::new(&data[..]);
-        let mut buf = Vec::new();
-        let mut reader = BufReader::new(decoder);
-        reader.read_to_end(&mut buf)?;
-        let indicator = match bincode::deserialize::<ModelIndicator>(&buf) {
-            Ok(v) => v,
-            Err(e) => bail!("failed to deserialize. {:?}", e),
-        };
-        Ok(indicator)
-    }
-
-    /// Gets the `ModelIndicator` with the given name.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database operation fails or the value in the database is invalid.
-    pub fn get(store: &Store, name: &str) -> Result<Option<Self>> {
-        let map = store.model_indicator_map();
-        Ok(match map.get(name.as_bytes())? {
-            Some(v) => Some(
-                bincode::DefaultOptions::new()
-                    .deserialize::<ModelIndicator>(v.as_ref())
-                    .context("invalid value in database")?,
-            ),
-            None => None,
-        })
-    }
-
-    /// Gets the list of all `ModelIndicator`s, sorted by name.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database operation fails or the value in the database is invalid.
-    pub fn get_list(store: &Store) -> Result<Vec<(String, ModelIndicator)>> {
-        let map = store.model_indicator_map();
-        let mut indicators = Vec::new();
-        for (name, value) in map.iter_forward()? {
-            let indicator = bincode::DefaultOptions::new()
-                .deserialize::<ModelIndicator>(value.as_ref())
-                .context("invalid value in database")?;
-            indicators.push((String::from_utf8_lossy(&name).to_string(), indicator));
-        }
-        indicators.sort_unstable_by(|a, b| a.0.cmp(&b.0));
-        Ok(indicators)
-    }
-
-    /// Removes the `ModelIndicator`s with the given names. The removed names are returned.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database operation fails.
-    pub fn remove(store: &Store, names: &[String]) -> Result<Vec<String>> {
-        let map = store.model_indicator_map();
-        let mut removed = Vec::with_capacity(names.len());
-        for name in names {
-            map.delete(name.as_bytes())?;
-            removed.push(name.to_string());
-        }
-        Ok(removed)
-    }
-
-    /// Inserts the `ModelIndicator` into the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization fails or the database operation fails.
-    pub fn insert(&self, store: &Store, name: &str) -> Result<String> {
-        let map = store.model_indicator_map();
-        let value = bincode::DefaultOptions::new().serialize(self)?;
-        map.put(name.as_bytes(), &value)?;
-        Ok(name.to_string())
-    }
-
-    /// Updates the `ModelIndicator` in the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization fails or the database operation fails.
-    pub fn update(&self, store: &Store, name: &str) -> Result<String> {
-        let map = store.model_indicator_map();
-        map.delete(name.as_bytes())?;
-        let value = bincode::DefaultOptions::new().serialize(&self)?;
-        map.put(name.as_bytes(), &value)?;
-        Ok(name.to_string())
     }
 }
 
