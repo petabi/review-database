@@ -19,6 +19,8 @@ mod outlier;
 mod schema;
 mod scores;
 mod tables;
+#[cfg(test)]
+mod test;
 mod ti;
 mod time_series;
 mod top_n;

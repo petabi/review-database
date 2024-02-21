@@ -594,35 +594,6 @@ pub trait IndexedMapUpdate {
 
 #[cfg(test)]
 mod tests {
-    use super::{IndexedMultimap, IndexedSet};
-    use rocksdb::OptimisticTransactionDB;
-
-    pub(super) struct TestStore {
-        db: OptimisticTransactionDB,
-    }
-
-    impl TestStore {
-        pub(super) fn new() -> Self {
-            let db_dir = tempfile::tempdir().unwrap();
-            let db_path = db_dir.path().join("test.db");
-
-            let mut opts = rocksdb::Options::default();
-            opts.create_if_missing(true);
-            opts.create_missing_column_families(true);
-            let db =
-                rocksdb::OptimisticTransactionDB::open_cf(&opts, db_path, ["test_cf"]).unwrap();
-            Self { db }
-        }
-
-        pub(super) fn indexed_multimap(&self) -> IndexedMultimap {
-            IndexedMultimap::new(&self.db, "test_cf").unwrap()
-        }
-
-        pub(super) fn indexed_set(&self) -> IndexedSet {
-            IndexedSet::new(&self.db, "test_cf", b"indexed set").unwrap()
-        }
-    }
-
     #[test]
     fn index_clear_inactive() {
         let mut index = super::KeyIndex::default();
