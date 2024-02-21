@@ -222,11 +222,11 @@ impl<'a> IndexedSet<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::collections::tests::TestStore;
+    use crate::test;
 
     #[test]
     fn deactivate() {
-        let db = TestStore::new();
+        let db = test::Store::new();
         let set = db.indexed_set();
         let id_a = set.insert(b"a").unwrap();
         assert_eq!(id_a, 0);
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn remove() {
-        let db = TestStore::new();
+        let db = test::Store::new();
         let set = db.indexed_set();
         let _id_a = set.insert(b"a").unwrap();
         let id_b = set.insert(b"b").unwrap();

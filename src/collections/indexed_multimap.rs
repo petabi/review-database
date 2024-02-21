@@ -65,8 +65,8 @@ impl<'a> IndexedMultimap<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        collections::{tests::TestStore, Indexable, Indexed},
-        IterableMap,
+        collections::{Indexable, Indexed},
+        test, IterableMap,
     };
     use std::{borrow::Cow, mem::size_of};
 
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn insert_duplicate() {
-        let db = TestStore::new();
+        let db = test::Store::new();
         let map = db.indexed_multimap();
 
         assert_eq!(map.count().unwrap(), 0);
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn remove() {
-        let db = TestStore::new();
+        let db = test::Store::new();
         let map = db.indexed_multimap();
         map.insert(TestEntry {
             indexed_key: vec![b'a', 0, 0, 0, 0],
