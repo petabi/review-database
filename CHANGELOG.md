@@ -24,6 +24,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   ensuring a more controlled and secure filter management.
 - Introduced a new data structure `TagSet` to facilitate easier access and
   manipulation of tags stored in the database.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure template management.
+- Introduced `Template`, `Structured`, `Unstructured`,
+  `StructuredClusteringAlgorithm` and `UnstructuredClusteringAlgorithm` to describe
+  data stored in `Table<Template>`.
 
 ### Changed
 
@@ -73,6 +78,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   through the `Tag` struct, which includes `name` and `id` fields, offering a
   more straightforward and human-readable format compared to the raw binary
   format exposed by `IndexSet`.
+- Changed the return type of `Store::template_map` to `Table<Template>` to enhance
+  security by preventing direct exposure of `Map`.
 
 ### Deprecated
 
