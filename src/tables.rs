@@ -8,6 +8,7 @@ mod model_indicator;
 mod qualifier;
 mod scores;
 mod status;
+mod template;
 
 use crate::{
     batch_info::BatchInfo,
@@ -29,6 +30,10 @@ use std::{
 pub use self::access_token::AccessToken;
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
+pub use self::template::{
+    Structured, StructuredClusteringAlgorithm, Template, Unstructured,
+    UnstructuredClusteringAlgorithm,
+};
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -146,6 +151,12 @@ impl StateDb {
     pub(crate) fn scores(&self) -> Table<Scores> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Scores>::open(inner).expect("{SCORES} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn templates(&self) -> Table<Template> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<Template>::open(inner).expect("{TEMPLATES} table must be present")
     }
 
     #[must_use]

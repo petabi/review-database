@@ -59,7 +59,9 @@ pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, Filter, IndexedTable, Iterable, ModelIndicator, Table, UniqueKey,
+    AccessToken, Filter, IndexedTable, Iterable, ModelIndicator, Structured,
+    StructuredClusteringAlgorithm, Table, Template, UniqueKey, Unstructured,
+    UnstructuredClusteringAlgorithm,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -289,10 +291,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn template_map(&self) -> Map {
-        self.states
-            .map(tables::TEMPLATES)
-            .expect("always available")
+    pub fn template_map(&self) -> Table<Template> {
+        self.states.templates()
     }
 
     #[must_use]
