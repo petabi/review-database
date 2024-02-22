@@ -28,7 +28,7 @@ num-traits = "0.2"
 postgres-protocol = "0.6"
 rand = "0.8"
 ring = { version = "0.17", features = ["std"] }
-rocksdb = "0.21"
+rocksdb = "0.22"
 rustls = "0.21" # should be the same version as what tokio-postgres-rustls depends on
 rustls-native-certs = "0.6"
 rustls-pemfile = "1.0"
