@@ -15,7 +15,8 @@ use bb8_postgres::{
 };
 use diesel_async::AsyncPgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use rustls::{Certificate, CertificateError, ClientConfig, RootCertStore};
+use rustls::{CertificateError, ClientConfig, RootCertStore};
+use rustls_pki_types::CertificateDer;
 use serde::de::DeserializeOwned;
 use std::{
     cmp::min,
@@ -311,7 +312,7 @@ impl ConnectionPoolType {
             match rustls_native_certs::load_native_certs() {
                 Ok(certs) => {
                     for cert in certs {
-                        root_store.add(&Certificate(cert.0))?;
+                        root_store.add(cert)?;
                     }
                 }
                 Err(e) => tracing::error!("Could not load platform certificates: {:#}", e),
@@ -319,15 +320,16 @@ impl ConnectionPoolType {
         }
         for root in root_ca {
             let certs = Self::read_certificates_from_path(root).map_err(|e| {
-                rustls::Error::InvalidCertificate(CertificateError::Other(Arc::new(e)))
+                rustls::Error::InvalidCertificate(CertificateError::Other(rustls::OtherError(
+                    Arc::new(e),
+                )))
             })?;
             for cert in certs {
-                root_store.add(&cert)?;
+                root_store.add(cert)?;
             }
         }
 
         let mut builder = ClientConfig::builder()
-            .with_safe_defaults()
             .with_root_certificates(root_store)
             .with_no_client_auth();
         builder.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
@@ -341,12 +343,12 @@ impl ConnectionPoolType {
     /// This function can return an [`std::io::Error`] in the following cases:
     ///
     /// * If the file cannot be read or does not exist.
-    /// * If the certificates cannot be parsed from the file.
-    fn read_certificates_from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Certificate>, io::Error> {
+    fn read_certificates_from_path<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<Vec<CertificateDer<'static>>, io::Error> {
         let cert = fs::read(&path)?;
-        Ok(rustls_pemfile::certs(&mut &*cert)?
-            .into_iter()
-            .map(Certificate)
+        Ok(rustls_pemfile::certs(&mut &*cert)
+            .filter_map(Result::ok)
             .collect())
     }
 }
