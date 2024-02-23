@@ -9,6 +9,7 @@ mod qualifier;
 mod scores;
 mod status;
 mod template;
+mod triage_response;
 
 use crate::{
     batch_info::BatchInfo,
@@ -34,6 +35,7 @@ pub use self::template::{
     Structured, StructuredClusteringAlgorithm, Template, Unstructured,
     UnstructuredClusteringAlgorithm,
 };
+pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -182,6 +184,13 @@ impl StateDb {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<CsvColumnExtra>::open(inner)
             .expect("{CSV_COLUMN_EXTRAS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn triage_response(&self) -> IndexedTable<TriageResponse> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<TriageResponse>::open(inner)
+            .expect("{TRIAGE_RESPONSE} table must be present")
     }
 
     #[must_use]
@@ -440,6 +449,18 @@ impl<'d, R> IndexedTable<'d, R> {
     /// Returns an error if the map index is not found or the database operation fails.    
     pub fn count(&self) -> Result<usize> {
         self.indexed_map.count()
+    }
+
+    /// Stores a record with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn put(&self, entry: R) -> Result<u32>
+    where
+        R: Indexable,
+    {
+        self.indexed_map.insert(entry)
     }
 
     /// Removes a record with the given ID.

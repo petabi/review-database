@@ -29,6 +29,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `Template`, `Structured`, `Unstructured`,
   `StructuredClusteringAlgorithm` and `UnstructuredClusteringAlgorithm` to describe
   data stored in `Table<Template>`.
+- Introduced `TriageResponse` to describe data stored in `IndexedTable<TriageResponse>`.
+- Introduced `TriageResponseUpdate` to support `TriageResponse` record update.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure triage response management.
 
 ### Changed
 
@@ -80,6 +84,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   format exposed by `IndexSet`.
 - Changed the return type of `Store::template_map` to `Table<Template>` to enhance
   security by preventing direct exposure of `Map`.
+- Changed the return type of `Store::triage_response_map` to `IndexedTable<TriageResponse>`
+  to enhance security by preventing direct exposure of `IndexedMap`.
 
 ### Deprecated
 

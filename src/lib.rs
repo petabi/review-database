@@ -60,8 +60,8 @@ pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
     AccessToken, Filter, IndexedTable, Iterable, ModelIndicator, Structured,
-    StructuredClusteringAlgorithm, Table, Template, UniqueKey, Unstructured,
-    UnstructuredClusteringAlgorithm,
+    StructuredClusteringAlgorithm, Table, Template, TriageResponse, TriageResponseUpdate,
+    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -319,10 +319,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn triage_response_map(&self) -> IndexedMap {
-        self.states
-            .indexed_map(tables::TRIAGE_RESPONSE)
-            .expect("always available")
+    pub fn triage_response_map(&self) -> IndexedTable<TriageResponse> {
+        self.states.triage_response()
     }
 
     #[must_use]
