@@ -426,6 +426,9 @@ pub trait Indexed {
     fn overwrite<T: Indexable>(&self, entry: &T) -> Result<()> {
         loop {
             let txn = self.db().transaction();
+            if entry.indexed_key().is_empty() {
+                bail!("key shouldn't be empty");
+            }
             if txn
                 .get_for_update_cf(self.cf(), entry.indexed_key(), super::EXCLUSIVE)
                 .context("cannot read from database")?
@@ -465,6 +468,9 @@ pub trait Indexed {
                 .index_in_transaction(&txn)
                 .context("cannot read index")?;
             let cur_key = if let Some(key) = new.key() {
+                if key.is_empty() {
+                    bail!("key shouldn't be empty");
+                }
                 index.update(id, &key).context("cannot update index")?
             } else {
                 Vec::new()
