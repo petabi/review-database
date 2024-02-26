@@ -341,7 +341,16 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let serialized_item = self.inner.next()?;
         match serialized_item {
-            Ok((key, value)) => {
+            Ok((mut key, mut value)) => {
+                if key.is_empty() {
+                    match self.inner.next()? {
+                        Ok((k, v)) => {
+                            key = k;
+                            value = v;
+                        }
+                        Err(e) => return Some(Err(e.into())),
+                    }
+                }
                 let item = R::from_key_value(&key, &value);
                 Some(item.map_err(Into::into))
             }
