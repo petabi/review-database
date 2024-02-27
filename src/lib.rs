@@ -86,7 +86,8 @@ use bb8_postgres::{
 pub use rocksdb::backup::BackupEngineInfo;
 use std::io;
 use std::path::{Path, PathBuf};
-use tags::TagSet;
+pub use tags::TagSet;
+use tags::{EventTagId, WorkflowTagId};
 use thiserror::Error;
 
 #[derive(Clone)]
@@ -213,12 +214,18 @@ impl Store {
             .expect("always available")
     }
 
-    #[must_use]
+    /// Returns the tag set for event.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if database operation fails or the data is invalid.
     #[allow(clippy::missing_panics_doc)]
-    pub fn event_tag_set(&self) -> IndexedSet {
-        self.states
+    pub fn event_tag_set(&self) -> Result<TagSet<EventTagId>> {
+        let set = self
+            .states
             .indexed_set(tables::EVENT_TAGS)
-            .expect("always available")
+            .expect("always available");
+        TagSet::new(set)
     }
 
     #[must_use]
@@ -351,7 +358,7 @@ impl Store {
     ///
     /// Returns an error if database operation fails or the data is invalid.
     #[allow(clippy::missing_panics_doc)]
-    pub fn workflow_tag_set(&self) -> Result<TagSet> {
+    pub fn workflow_tag_set(&self) -> Result<TagSet<WorkflowTagId>> {
         let set = self
             .states
             .indexed_set(tables::WORKFLOW_TAGS)

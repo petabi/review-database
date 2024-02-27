@@ -1,4 +1,16 @@
-use crate::IndexedSet;
+use crate::{IndexedSet, IndexedTable, TriageResponse};
+
+// Kinds of tag IDs. They are used to define the behavior of tag sets.
+
+/// A compile-time tag indicating that tag IDs are for event tags.
+pub struct EventTagId;
+
+/// A compile-time tag indicating that tag IDs are for network tags.
+// will be used when `Store::network_tag_set` is converted to use `TagSet`.
+// pub struct NetworkTagId;
+
+/// A compile-time tag indicating that tag IDs are for workflow tags.
+pub struct WorkflowTagId;
 
 #[derive(Default)]
 pub struct Tag {
@@ -6,12 +18,15 @@ pub struct Tag {
     pub name: String,
 }
 
-pub struct TagSet<'a> {
+/// A set of tags. `T` represents the removal behavior. When a tag is removed,
+/// `TagSet<T>::remove` removes all the references to the tag in the database.
+pub struct TagSet<'a, IdKind> {
     set: IndexedSet<'a>, // will be needed when we implement write operations
     tags: Vec<Tag>,
+    _phantom: std::marker::PhantomData<IdKind>,
 }
 
-impl<'a> TagSet<'a> {
+impl<'a, IdKind> TagSet<'a, IdKind> {
     pub(crate) fn new(set: IndexedSet<'a>) -> anyhow::Result<Self> {
         use anyhow::Context;
 
@@ -23,7 +38,11 @@ impl<'a> TagSet<'a> {
                 name: String::from_utf8(name.to_vec()).context("invalid data")?,
             });
         }
-        Ok(Self { set, tags })
+        Ok(Self {
+            set,
+            tags,
+            _phantom: std::marker::PhantomData,
+        })
     }
 
     /// Inserts a new tag into the set, returning its ID.
@@ -36,17 +55,6 @@ impl<'a> TagSet<'a> {
         // requires searching the name in the set. We need to convert the format
         // so that keys are stored as actual RocksDB keys.
         self.set.insert(name.as_bytes())
-    }
-
-    /// Removes a tag from the set, returning its name.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if `id` is invalid or any database operation fails.
-    pub fn remove(&mut self, id: u32) -> anyhow::Result<String> {
-        let key = self.set.remove(id)?;
-        let name = String::from_utf8(key)?;
-        Ok(name)
     }
 
     /// Updates an old tag name to a new one for the given ID.
@@ -62,11 +70,45 @@ impl<'a> TagSet<'a> {
     }
 
     /// Returns an iterator over the tags in the set.
+    #[must_use]
     pub fn tags(&self) -> Tags {
         Tags {
             tags: self.tags.as_slice(),
             index: 0,
         }
+    }
+}
+
+impl<'a, EventTagId> TagSet<'a, EventTagId> {
+    /// Removes a tag from the event tag set, returning its name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `id` is invalid or any database operation fails.
+    pub fn remove_event_tag(
+        &mut self,
+        id: u32,
+        triage_responses: &IndexedTable<TriageResponse>,
+    ) -> anyhow::Result<String> {
+        let key = self.set.deactivate(id)?;
+        triage_responses.remove_tag(id)?;
+        self.set.clear_inactive()?;
+
+        let name = String::from_utf8(key)?;
+        Ok(name)
+    }
+}
+
+impl<'a, WorkflowTagId> TagSet<'a, WorkflowTagId> {
+    /// Removes a tag from the workflow tag set, returning its name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `id` is invalid or any database operation fails.
+    pub fn remove_workflow_tag(&mut self, id: u32) -> anyhow::Result<String> {
+        let key = self.set.remove(id)?;
+        let name = String::from_utf8(key)?;
+        Ok(name)
     }
 }
 
@@ -93,13 +135,13 @@ impl<'a> Iterator for Tags<'a> {
 #[cfg(test)]
 mod tests {
     use super::TagSet;
-    use crate::test;
+    use crate::{tags::WorkflowTagId, test};
 
     #[test]
-    fn tag_set() {
+    fn workflow_tag_set() {
         let db = test::Store::new();
         let set = db.indexed_set();
-        let mut tag_set = TagSet::new(set).unwrap();
+        let mut tag_set = TagSet::<WorkflowTagId>::new(set).unwrap();
 
         let id = tag_set.insert("tag1").unwrap();
         assert_eq!(id, 0);
@@ -108,10 +150,10 @@ mod tests {
         let id = tag_set.insert("tag3").unwrap();
         assert_eq!(id, 2);
 
-        assert!(tag_set.remove(5).is_err());
-        let removed_name = tag_set.remove(1).unwrap();
+        assert!(tag_set.remove_workflow_tag(5).is_err());
+        let removed_name = tag_set.remove_workflow_tag(1).unwrap();
         assert_eq!(removed_name, "tag2");
-        assert!(tag_set.remove(1).is_err());
+        assert!(tag_set.remove_workflow_tag(1).is_err());
 
         let updated = tag_set.update(2, "tag3", "tag3.1").unwrap();
         assert_eq!(updated, true);
