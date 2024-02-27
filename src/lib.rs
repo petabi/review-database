@@ -60,8 +60,8 @@ pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
     AccessToken, Filter, IndexedTable, Iterable, ModelIndicator, Structured,
-    StructuredClusteringAlgorithm, Table, Template, TriageResponse, TriageResponseUpdate,
-    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
+    StructuredClusteringAlgorithm, Table, Template, TorExitNode, TriageResponse,
+    TriageResponseUpdate, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -303,10 +303,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn tor_exit_node_map(&self) -> Map {
-        self.states
-            .map(tables::TOR_EXIT_NODES)
-            .expect("always available")
+    pub fn tor_exit_node_map(&self) -> Table<TorExitNode> {
+        self.states.tor_exit_nodes()
     }
 
     #[must_use]

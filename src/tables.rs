@@ -9,6 +9,7 @@ mod qualifier;
 mod scores;
 mod status;
 mod template;
+mod tor_exit_node;
 mod triage_response;
 
 use crate::{
@@ -35,6 +36,7 @@ pub use self::template::{
     Structured, StructuredClusteringAlgorithm, Template, Unstructured,
     UnstructuredClusteringAlgorithm,
 };
+pub use self::tor_exit_node::TorExitNode;
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 
 // Key-value map names in `Database`.
@@ -159,6 +161,12 @@ impl StateDb {
     pub(crate) fn templates(&self) -> Table<Template> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Template>::open(inner).expect("{TEMPLATES} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn tor_exit_nodes(&self) -> Table<TorExitNode> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<TorExitNode>::open(inner).expect("{TOR_EXIT_NODES} table must be present")
     }
 
     #[must_use]
