@@ -33,6 +33,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `TriageResponseUpdate` to support `TriageResponse` record update.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure triage response management.
+- Introduced `TorExitNode` to describe data stored in `Table<TorExitNode>`.
+- Added new functions to facilitate replace and list operations, ensuring a
+  more controlled and secure tor exit node management.
 
 ### Changed
 
@@ -86,6 +89,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   security by preventing direct exposure of `Map`.
 - Changed the return type of `Store::triage_response_map` to `IndexedTable<TriageResponse>`
   to enhance security by preventing direct exposure of `IndexedMap`.
+- Changed the return type of `Store::tor_exit_node_map` to `Table<TorExitNode>`
+  to enhance security by preventing direct exposure of `Map`.
 
 ### Deprecated
 
