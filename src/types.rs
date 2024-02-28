@@ -5,7 +5,6 @@ use bincode::Options;
 use chrono::{naive::serde::ts_nanoseconds_option, DateTime, NaiveDateTime, Utc};
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
 use std::{borrow::Cow, cmp::Ordering, convert::TryFrom, net::IpAddr, ops::RangeInclusive};
 use strum_macros::Display;
 
@@ -295,27 +294,6 @@ pub struct ModelBatchInfo {
     pub latest: i64,
     pub size: usize,
     pub sources: Vec<String>,
-}
-
-#[derive(Deserialize)]
-pub struct Template {
-    pub id: i32,
-    pub name: String,
-    pub description: Option<String>,
-    pub event_type: String,
-    pub method: String,
-    pub algorithm: Option<String>,
-    pub min_token_length: Option<i64>,
-    pub eps: Option<f64>,
-    pub format: Option<JsonValue>,
-    pub time_intervals: Option<Vec<i64>>,
-    pub numbers_of_top_n: Option<Vec<i64>>,
-}
-
-impl FromKeyValue for Template {
-    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
-        Ok(bincode::DefaultOptions::new().deserialize(value)?)
-    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]

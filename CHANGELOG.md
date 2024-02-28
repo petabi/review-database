@@ -26,9 +26,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   manipulation of tags stored in the database.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure template management.
-- Introduced `Template`, `Structured`, `Unstructured`,
-  `StructuredClusteringAlgorithm` and `UnstructuredClusteringAlgorithm` to describe
-  data stored in `Table<Template>`.
+- Introduced `Structured`, `Unstructured`, `StructuredClusteringAlgorithm` and
+ `UnstructuredClusteringAlgorithm` to describe data stored in `Table<Template>`.
 - Introduced `TriageResponse` to describe data stored in `IndexedTable<TriageResponse>`.
 - Introduced `TriageResponseUpdate` to support `TriageResponse` record update.
 - Added new functions to facilitate insert, remove, and update operations,
@@ -87,6 +86,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   format compared to the raw binary format exposed by `IndexSet`.
 - Changed the return type of `Store::template_map` to `Table<Template>` to enhance
   security by preventing direct exposure of `Map`.
+- The Template type has been replaced with the enum type. This modification
+  reflects the diverse templates supported by the database.
 - Changed the return type of `Store::triage_response_map` to `IndexedTable<TriageResponse>`
   to enhance security by preventing direct exposure of `IndexedMap`.
 - Changed the return type of `Store::tor_exit_node_map` to `Table<TorExitNode>`
