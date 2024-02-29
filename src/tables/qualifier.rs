@@ -113,12 +113,9 @@ impl<'d> IndexedTable<'d, Qualifier> {
     ///
     /// Returns an error if the database query fails.
     pub fn get(&self, id: u32) -> Result<Qualifier> {
-        let (key, value) = self
-            .indexed_map
-            .get_by_id(id)
-            .and_then(|r| r.ok_or(anyhow::anyhow!("qualifier {id} unavailable")))?;
-        let c = Qualifier::from_key_value(&key, &value)?;
-        Ok(c)
+        self.indexed_map
+            .get_by_id(id)?
+            .ok_or(anyhow::anyhow!("qualifier {id} unavailable"))
     }
 
     /// Try adding default entries into the database.

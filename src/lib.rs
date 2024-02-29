@@ -34,8 +34,8 @@ pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
 pub use self::cluster::*;
 pub use self::collections::{
-    Indexable, Indexed, IndexedMap, IndexedMapIterator, IndexedMapUpdate, IndexedMultimap,
-    IndexedSet, IterableMap, Map, MapIterator,
+    Indexable, Indexed, IndexedMap, IndexedMapIterator, IndexedMapUpdate, IndexedSet, IterableMap,
+    Map, MapIterator,
 };
 pub use self::column_statistics::*;
 pub use self::csv_column_extra::CsvColumnExtra as CsvColumnExtraConfig;
@@ -50,17 +50,17 @@ pub use self::event::{
     BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool, Direction, DnsCovertChannel,
     DomainGenerationAlgorithm, Event, EventDb, EventFilter, EventIterator, EventMessage,
     ExternalDdos, ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce, FtpPlainText, HttpThreat,
-    LdapBruteForce, LdapPlainText, LearningMethod, MultiHostPortScan, Network, NetworkEntry,
-    NetworkEntryValue, NetworkThreat, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
-    RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore, WindowsThreat,
+    LdapBruteForce, LdapPlainText, LearningMethod, MultiHostPortScan, NetworkThreat, NetworkType,
+    NonBrowser, PortScan, RdpBruteForce, RecordType, RepeatedHttpSessions, TorConnection,
+    TrafficDirection, TriageScore, WindowsThreat,
 };
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, Filter, IndexedTable, Iterable, ModelIndicator, Structured,
-    StructuredClusteringAlgorithm, Table, Template, TorExitNode, TriageResponse,
+    AccessToken, Filter, IndexedTable, Iterable, ModelIndicator, Network, NetworkUpdate,
+    Structured, StructuredClusteringAlgorithm, Table, Template, TorExitNode, TriageResponse,
     TriageResponseUpdate, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
@@ -242,10 +242,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn network_map(&self) -> IndexedMultimap {
-        self.states
-            .indexed_multimap(tables::NETWORKS)
-            .expect("always available")
+    pub fn network_map(&self) -> IndexedTable<Network> {
+        self.states.networks()
     }
 
     #[must_use]
@@ -325,7 +323,7 @@ impl Store {
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn triage_response_map(&self) -> IndexedTable<TriageResponse> {
-        self.states.triage_response()
+        self.states.triage_responses()
     }
 
     #[must_use]

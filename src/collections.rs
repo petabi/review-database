@@ -1,5 +1,4 @@
 mod indexed_map;
-mod indexed_multimap;
 mod indexed_set;
 mod map;
 
@@ -7,7 +6,6 @@ use crate::EXCLUSIVE;
 
 pub use self::{
     indexed_map::IndexedMap,
-    indexed_multimap::IndexedMultimap,
     indexed_set::IndexedSet,
     map::{Map, MapIterator},
 };
@@ -333,6 +331,24 @@ pub trait Indexed {
             }
         }
         Ok(())
+    }
+
+    /// Gets an entry corresponding to the given index.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is invalid or cannot be read.
+    fn get_by_id<T: Indexable + FromKeyValue>(&self, id: u32) -> Result<Option<T>> {
+        let index = self.index()?;
+        let Some(key) = index.get(id).context("invalid ID")? else {
+            return Ok(None);
+        };
+        let key = self.indexed_key(key.to_vec(), id);
+        self.db()
+            .get_cf(self.cf(), &key)
+            .context("cannot read entry")?
+            .map(|value| T::from_key_value(&key, &value))
+            .transpose()
     }
 
     /// Inserts a new key-value pair.

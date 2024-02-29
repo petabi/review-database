@@ -5,6 +5,7 @@ mod category;
 mod csv_column_extra;
 mod filter;
 mod model_indicator;
+mod network;
 mod qualifier;
 mod scores;
 mod status;
@@ -21,7 +22,7 @@ use crate::{
     Direction, Indexable,
 };
 
-use super::{event, Indexed, IndexedMap, IndexedMultimap, IndexedSet, Map};
+use super::{event, Indexed, IndexedMap, IndexedSet, Map};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -32,6 +33,7 @@ use std::{
 pub use self::access_token::AccessToken;
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
+pub use self::network::{Network, Update as NetworkUpdate};
 pub use self::template::{
     Structured, StructuredClusteringAlgorithm, Template, Unstructured,
     UnstructuredClusteringAlgorithm,
@@ -195,10 +197,16 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn triage_response(&self) -> IndexedTable<TriageResponse> {
+    pub(crate) fn triage_responses(&self) -> IndexedTable<TriageResponse> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<TriageResponse>::open(inner)
             .expect("{TRIAGE_RESPONSE} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn networks(&self) -> IndexedTable<Network> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<Network>::open(inner).expect("{NETWORKS} table must be present")
     }
 
     #[must_use]
@@ -217,12 +225,6 @@ impl StateDb {
     pub(super) fn indexed_map(&self, name: &str) -> Option<IndexedMap> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedMap::new(inner, name).ok()
-    }
-
-    #[must_use]
-    pub(super) fn indexed_multimap(&self, name: &str) -> Option<IndexedMultimap> {
-        let inner = self.inner.as_ref().expect("database must be open");
-        IndexedMultimap::new(inner, name).ok()
     }
 
     #[must_use]
