@@ -59,12 +59,11 @@ pub use self::{
     tor::{TorConnection, TorConnectionFields},
 };
 use super::{
-    types::{Customer, Endpoint, EventCategory, FromKeyValue, HostNetworkGroup, TriagePolicy},
-    Indexable,
+    types::{Customer, Endpoint, EventCategory, HostNetworkGroup, TriagePolicy},
+    Network,
 };
 use aho_corasick::AhoCorasickBuilder;
 use anyhow::{bail, Context, Result};
-use bincode::Options;
 use chrono::{serde::ts_nanoseconds, DateTime, TimeZone, Utc};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -73,11 +72,9 @@ pub use rocksdb::Direction;
 use rocksdb::IteratorMode;
 use serde::{Deserialize, Serialize};
 use std::{
-    borrow::Cow,
     collections::HashMap,
     convert::TryInto,
     fmt,
-    mem::size_of,
     net::IpAddr,
     num::NonZeroU8,
     sync::{Arc, Mutex, MutexGuard},
@@ -1291,7 +1288,7 @@ impl Event {
 
 fn find_network(ip: IpAddr, networks: &[Network]) -> Option<u32> {
     for net in networks {
-        if net.contains(ip) {
+        if net.networks.contains(ip) {
             return Some(net.id);
         }
     }
@@ -2167,103 +2164,6 @@ pub enum FlowKind {
     Inbound,
     Outbound,
     Internal,
-}
-
-pub struct Network {
-    pub id: u32,
-    pub name: String,
-    pub description: String,
-    pub networks: HostNetworkGroup,
-    pub customer_ids: Vec<u32>,
-    pub tag_ids: Vec<u32>,
-    pub creation_time: DateTime<Utc>,
-}
-
-impl Network {
-    #[must_use]
-    pub fn contains(&self, addr: IpAddr) -> bool {
-        self.networks.contains(addr)
-    }
-
-    #[must_use]
-    pub fn has_tag(&self, tag_id: u32) -> bool {
-        self.tag_ids.contains(&tag_id)
-    }
-}
-
-impl FromKeyValue for Network {
-    fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self, anyhow::Error> {
-        let mut entry = NetworkEntry::from_key_value(key, value)?;
-        let id = u32::from_be_bytes(
-            entry.key[entry.key.len() - size_of::<Id>()..]
-                .try_into()
-                .expect("should have four bytes"),
-        );
-        entry.key.truncate(entry.key.len() - size_of::<Id>());
-        Ok(Self {
-            id,
-            name: String::from_utf8(entry.key).context("invalid key in database")?,
-            description: entry.value.description,
-            networks: entry.value.networks,
-            customer_ids: entry.value.customer_ids,
-            tag_ids: entry.value.tag_ids,
-            creation_time: entry.value.creation_time,
-        })
-    }
-}
-
-pub struct NetworkEntry {
-    pub key: Vec<u8>,
-    pub value: NetworkEntryValue,
-}
-
-impl NetworkEntry {
-    pub fn delete_customer(&mut self, customer_id: u32) -> bool {
-        let prev_len = self.value.customer_ids.len();
-        self.value.customer_ids.retain(|&id| id != customer_id);
-        prev_len != self.value.customer_ids.len()
-    }
-}
-
-impl FromKeyValue for NetworkEntry {
-    fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self, anyhow::Error> {
-        Ok(Self {
-            key: key.to_vec(),
-            value: bincode::DefaultOptions::new()
-                .deserialize(value)
-                .context("failed to deserialize")?,
-        })
-    }
-}
-
-impl Indexable for NetworkEntry {
-    fn key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(&self.key[..self.key.len() - size_of::<Id>()])
-    }
-
-    fn indexed_key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(&self.key)
-    }
-
-    fn value(&self) -> Vec<u8> {
-        bincode::DefaultOptions::new()
-            .serialize(&self.value)
-            .expect("serializable")
-    }
-
-    fn set_index(&mut self, index: Id) {
-        let offset = self.key.len() - size_of::<Id>();
-        self.key[offset..].copy_from_slice(&index.to_be_bytes());
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct NetworkEntryValue {
-    pub description: String,
-    pub networks: HostNetworkGroup,
-    pub customer_ids: Vec<u32>,
-    pub tag_ids: Vec<u32>,
-    pub creation_time: DateTime<Utc>,
 }
 
 /// Possible network types of `CustomerNetwork`.

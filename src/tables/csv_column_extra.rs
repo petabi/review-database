@@ -129,13 +129,10 @@ impl<'d> IndexedTable<'d, CsvColumnExtra> {
         column_1: Option<&[bool]>,
         column_n: Option<&[bool]>,
     ) -> Result<()> {
-        let old = {
-            let (key, value) = self
-                .indexed_map
-                .get_by_id(id)
-                .and_then(|r| r.ok_or(anyhow::anyhow!("csv column extra {id} unavailable")))?;
-            CsvColumnExtra::from_key_value(&key, &value)?
-        };
+        let old: CsvColumnExtra = self
+            .indexed_map
+            .get_by_id(id)
+            .map(|r| r.ok_or(anyhow::anyhow!("csv column extra {id} unavailable")))??;
         let new = CsvColumnExtra {
             id,
             model_id: old.model_id,

@@ -61,12 +61,9 @@ impl<'d> IndexedTable<'d, Category> {
     ///
     /// Returns an error if the database query fails.
     pub fn get(&self, id: u32) -> Result<Category> {
-        let (key, value) = self
-            .indexed_map
+        self.indexed_map
             .get_by_id(id)
-            .and_then(|r| r.ok_or(anyhow::anyhow!("category {id} unavailable")))?;
-        let c = Category::from_key_value(&key, &value)?;
-        Ok(c)
+            .map(|entry| entry.ok_or(anyhow::anyhow!("category {id} unavailable")))?
     }
 
     /// Try adding default entries into the database.

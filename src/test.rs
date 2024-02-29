@@ -9,7 +9,7 @@
 
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{IndexedMultimap, IndexedSet};
+use crate::IndexedSet;
 
 pub(super) struct Store {
     db: OptimisticTransactionDB,
@@ -25,10 +25,6 @@ impl Store {
         opts.create_missing_column_families(true);
         let db = rocksdb::OptimisticTransactionDB::open_cf(&opts, db_path, ["test_cf"]).unwrap();
         Self { db }
-    }
-
-    pub(super) fn indexed_multimap(&self) -> IndexedMultimap {
-        IndexedMultimap::new(&self.db, "test_cf").unwrap()
     }
 
     pub(super) fn indexed_set(&self) -> IndexedSet {
