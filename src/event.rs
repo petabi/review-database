@@ -1423,7 +1423,11 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["external", "ddos"], "external ddos");
             moderate_kinds_by(kinds, &["port", "scan"], "port scan");
             moderate_kinds_by(kinds, &["non", "browser"], "non browser");
-            moderate_kinds_by(kinds, &["crypto", "currency"], "crypto currency");
+            moderate_kinds_by(
+                kinds,
+                &["cryptocurrency", "mining", "pool"],
+                "cryptocurrency mining pool",
+            );
             moderate_kinds_by(kinds, &["block", "list", "conn"], "block list conn");
             moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
             moderate_kinds_by(kinds, &["block", "list", "dcerpc"], "block list dcerpc");

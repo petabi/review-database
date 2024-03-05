@@ -1,5 +1,4 @@
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::BLOCK_LIST;
 use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 use std::{fmt, net::IpAddr, num::NonZeroU8};
@@ -132,7 +131,7 @@ impl Match for BlockListSmb {
     }
 
     fn kind(&self) -> &str {
-        BLOCK_LIST
+        "block list smb"
     }
 
     fn source(&self) -> &str {
