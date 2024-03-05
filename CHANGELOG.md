@@ -95,6 +95,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modify the kind value of the Blocklist/CryptocurrencyMiningPool/TorConnection
   event that implements the Match trait. This fix allows the kind filter in
   GraphQL queries that retrieve the event to work correctly.
+- Modified `Node` struct to include the `as_is` and `to_be` fields,
+  with existing field values migrated to the `to_be` field.
 
 ### Deprecated
 
