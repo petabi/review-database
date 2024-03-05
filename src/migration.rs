@@ -32,7 +32,7 @@ use tracing::info;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.11";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.24.0,<=0.25.0-alpha.12";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -264,7 +264,9 @@ fn migrate_0_24_to_0_25(store: &super::Store) -> Result<()> {
 
     migrate_access_token_map(store)?;
 
-    migrate_filter_map(store)
+    migrate_filter_map(store)?;
+
+    migrate_node(store)
 }
 
 fn migrate_batch_info_map(store: &super::Store) -> Result<()> {
@@ -367,15 +369,226 @@ fn migrate_filter_map(store: &super::Store) -> Result<()> {
     Ok(())
 }
 
-fn migrate_0_22_to_0_24(store: &super::Store) -> Result<()> {
+fn migrate_node(store: &super::Store) -> Result<()> {
     use crate::collections::Indexed;
-    use crate::node::Node;
+    use crate::node::{Node, NodeSetting};
     use crate::IterableMap;
     use bincode::Options;
     use chrono::{DateTime, Utc};
     use std::collections::HashMap;
 
     type PortNumber = u16;
+
+    #[allow(clippy::struct_excessive_bools)]
+    #[derive(Deserialize, Serialize)]
+    pub struct OldNode {
+        pub id: u32,
+        pub name: String,
+        pub customer_id: u32,
+        pub description: String,
+        pub hostname: String,
+
+        pub review: bool,
+        pub review_port: Option<PortNumber>,
+        pub review_web_port: Option<PortNumber>,
+
+        pub piglet: bool,
+        pub piglet_giganto_ip: Option<IpAddr>,
+        pub piglet_giganto_port: Option<PortNumber>,
+        pub piglet_review_ip: Option<IpAddr>,
+        pub piglet_review_port: Option<PortNumber>,
+        pub save_packets: bool,
+        pub http: bool,
+        pub office: bool,
+        pub exe: bool,
+        pub pdf: bool,
+        pub html: bool,
+        pub txt: bool,
+        pub smtp_eml: bool,
+        pub ftp: bool,
+
+        pub giganto: bool,
+        pub giganto_ingestion_ip: Option<IpAddr>,
+        pub giganto_ingestion_port: Option<PortNumber>,
+        pub giganto_publish_ip: Option<IpAddr>,
+        pub giganto_publish_port: Option<PortNumber>,
+        pub giganto_graphql_ip: Option<IpAddr>,
+        pub giganto_graphql_port: Option<PortNumber>,
+        pub retention_period: Option<u16>,
+
+        pub reconverge: bool,
+        pub reconverge_review_ip: Option<IpAddr>,
+        pub reconverge_review_port: Option<PortNumber>,
+        pub reconverge_giganto_ip: Option<IpAddr>,
+        pub reconverge_giganto_port: Option<PortNumber>,
+
+        pub hog: bool,
+        pub hog_review_ip: Option<IpAddr>,
+        pub hog_review_port: Option<PortNumber>,
+        pub hog_giganto_ip: Option<IpAddr>,
+        pub hog_giganto_port: Option<PortNumber>,
+        pub protocols: bool,
+        pub protocol_list: HashMap<String, bool>,
+
+        pub sensors: bool,
+        pub sensor_list: HashMap<String, bool>,
+
+        pub creation_time: DateTime<Utc>,
+
+        pub apply_target_id: Option<u32>,
+        pub apply_in_progress: bool,
+    }
+
+    impl From<OldNode> for Node {
+        fn from(input: OldNode) -> Self {
+            Self {
+                id: input.id,
+                creation_time: input.creation_time,
+                as_is: None,
+                to_be: Some(NodeSetting {
+                    name: input.name,
+                    customer_id: input.customer_id,
+                    description: input.description,
+                    hostname: input.hostname,
+                    review: input.review,
+                    review_port: input.review_port,
+                    review_web_port: input.review_web_port,
+                    piglet: input.piglet,
+                    piglet_giganto_ip: input.piglet_giganto_ip,
+                    piglet_giganto_port: input.piglet_giganto_port,
+                    piglet_review_ip: input.piglet_review_ip,
+                    piglet_review_port: input.piglet_review_port,
+                    save_packets: input.save_packets,
+                    http: input.http,
+                    office: input.office,
+                    exe: input.exe,
+                    pdf: input.pdf,
+                    html: input.html,
+                    txt: input.txt,
+                    smtp_eml: input.smtp_eml,
+                    ftp: input.ftp,
+                    giganto: input.giganto,
+                    giganto_ingestion_ip: input.giganto_ingestion_ip,
+                    giganto_ingestion_port: input.giganto_ingestion_port,
+                    giganto_publish_ip: input.giganto_publish_ip,
+                    giganto_publish_port: input.giganto_publish_port,
+                    giganto_graphql_ip: input.giganto_graphql_ip,
+                    giganto_graphql_port: input.giganto_graphql_port,
+                    retention_period: input.retention_period,
+                    reconverge: input.reconverge,
+                    reconverge_review_ip: input.reconverge_review_ip,
+                    reconverge_review_port: input.reconverge_review_port,
+                    reconverge_giganto_ip: input.reconverge_giganto_ip,
+                    reconverge_giganto_port: input.reconverge_giganto_port,
+                    hog: input.hog,
+                    hog_review_ip: input.hog_review_ip,
+                    hog_review_port: input.hog_review_port,
+                    hog_giganto_ip: input.hog_giganto_ip,
+                    hog_giganto_port: input.hog_giganto_port,
+                    protocols: input.protocols,
+                    protocol_list: input.protocol_list,
+                    sensors: input.sensors,
+                    sensor_list: input.sensor_list,
+                }),
+            }
+        }
+    }
+
+    let node_db = store.node_map();
+    for (_key, old_value) in node_db.iter_forward()? {
+        let old_node = bincode::DefaultOptions::new()
+            .deserialize::<OldNode>(&old_value)
+            .context("Failed to migrate node database: invalid node value")?;
+        let new_node: Node = old_node.into();
+        node_db.overwrite(&new_node)?;
+    }
+    Ok(())
+}
+
+fn migrate_0_22_to_0_24(store: &super::Store) -> Result<()> {
+    use crate::collections::Indexed;
+    use crate::{Indexable, IterableMap};
+    use bincode::Options;
+    use chrono::{DateTime, Utc};
+    use std::{borrow::Cow, collections::HashMap};
+
+    type PortNumber = u16;
+
+    #[allow(clippy::struct_excessive_bools)]
+    #[derive(Deserialize, Serialize)]
+    pub struct NewNode {
+        pub id: u32,
+        pub name: String,
+        pub customer_id: u32,
+        pub description: String,
+        pub hostname: String,
+
+        pub review: bool,
+        pub review_port: Option<PortNumber>,
+        pub review_web_port: Option<PortNumber>,
+
+        pub piglet: bool,
+        pub piglet_giganto_ip: Option<IpAddr>,
+        pub piglet_giganto_port: Option<PortNumber>,
+        pub piglet_review_ip: Option<IpAddr>,
+        pub piglet_review_port: Option<PortNumber>,
+        pub save_packets: bool,
+        pub http: bool,
+        pub office: bool,
+        pub exe: bool,
+        pub pdf: bool,
+        pub html: bool,
+        pub txt: bool,
+        pub smtp_eml: bool,
+        pub ftp: bool,
+
+        pub giganto: bool,
+        pub giganto_ingestion_ip: Option<IpAddr>,
+        pub giganto_ingestion_port: Option<PortNumber>,
+        pub giganto_publish_ip: Option<IpAddr>,
+        pub giganto_publish_port: Option<PortNumber>,
+        pub giganto_graphql_ip: Option<IpAddr>,
+        pub giganto_graphql_port: Option<PortNumber>,
+        pub retention_period: Option<u16>,
+
+        pub reconverge: bool,
+        pub reconverge_review_ip: Option<IpAddr>,
+        pub reconverge_review_port: Option<PortNumber>,
+        pub reconverge_giganto_ip: Option<IpAddr>,
+        pub reconverge_giganto_port: Option<PortNumber>,
+
+        pub hog: bool,
+        pub hog_review_ip: Option<IpAddr>,
+        pub hog_review_port: Option<PortNumber>,
+        pub hog_giganto_ip: Option<IpAddr>,
+        pub hog_giganto_port: Option<PortNumber>,
+        pub protocols: bool,
+        pub protocol_list: HashMap<String, bool>,
+
+        pub sensors: bool,
+        pub sensor_list: HashMap<String, bool>,
+
+        pub creation_time: DateTime<Utc>,
+
+        pub apply_target_id: Option<u32>,
+        pub apply_in_progress: bool,
+    }
+
+    impl Indexable for NewNode {
+        fn key(&self) -> Cow<[u8]> {
+            Cow::from(self.name.as_bytes())
+        }
+
+        fn value(&self) -> Vec<u8> {
+            bincode::DefaultOptions::new()
+                .serialize(self)
+                .expect("serializable")
+        }
+
+        fn set_index(&mut self, index: u32) {
+            self.id = index;
+        }
+    }
 
     #[allow(clippy::struct_excessive_bools)]
     #[derive(Deserialize, Serialize)]
@@ -427,7 +640,7 @@ fn migrate_0_22_to_0_24(store: &super::Store) -> Result<()> {
         pub creation_time: DateTime<Utc>,
     }
 
-    impl From<OldNode> for Node {
+    impl From<OldNode> for NewNode {
         fn from(input: OldNode) -> Self {
             Self {
                 id: input.id,
@@ -486,7 +699,7 @@ fn migrate_0_22_to_0_24(store: &super::Store) -> Result<()> {
         let old_node = bincode::DefaultOptions::new()
             .deserialize::<OldNode>(&old_value)
             .context("Failed to migrate node database: invalid node value")?;
-        let new_node: Node = old_node.into();
+        let new_node: NewNode = old_node.into();
         node_db.overwrite(&new_node)?;
     }
     Ok(())
@@ -726,6 +939,144 @@ mod tests {
             .flat_map(|u| filters.iter().map(|f| (u.to_string(), f.to_string())))
             .collect();
         assert_eq!(res, testers);
+    }
+
+    #[test]
+    fn migrate_0_24_to_0_25_node() {
+        type PortNumber = u16;
+        use crate::{collections::Indexed, Indexable};
+        use bincode::Options;
+        use chrono::{DateTime, Utc};
+        use serde::{Deserialize, Serialize};
+        use std::{
+            collections::HashMap,
+            net::{IpAddr, Ipv4Addr},
+        };
+
+        #[derive(Deserialize, Serialize, Clone)]
+        struct OldNode {
+            id: u32,
+            name: String,
+            customer_id: u32,
+            description: String,
+            hostname: String,
+            review: bool,
+            review_port: Option<PortNumber>,
+            review_web_port: Option<PortNumber>,
+            piglet: bool,
+            piglet_giganto_ip: Option<IpAddr>,
+            piglet_giganto_port: Option<PortNumber>,
+            piglet_review_ip: Option<IpAddr>,
+            piglet_review_port: Option<PortNumber>,
+            save_packets: bool,
+            http: bool,
+            office: bool,
+            exe: bool,
+            pdf: bool,
+            html: bool,
+            txt: bool,
+            smtp_eml: bool,
+            ftp: bool,
+            giganto: bool,
+            giganto_ingestion_ip: Option<IpAddr>,
+            giganto_ingestion_port: Option<PortNumber>,
+            giganto_publish_ip: Option<IpAddr>,
+            giganto_publish_port: Option<PortNumber>,
+            giganto_graphql_ip: Option<IpAddr>,
+            giganto_graphql_port: Option<PortNumber>,
+            retention_period: Option<u16>,
+            reconverge: bool,
+            reconverge_review_ip: Option<IpAddr>,
+            reconverge_review_port: Option<PortNumber>,
+            reconverge_giganto_ip: Option<IpAddr>,
+            reconverge_giganto_port: Option<PortNumber>,
+            hog: bool,
+            hog_review_ip: Option<IpAddr>,
+            hog_review_port: Option<PortNumber>,
+            hog_giganto_ip: Option<IpAddr>,
+            hog_giganto_port: Option<PortNumber>,
+            protocols: bool,
+            protocol_list: HashMap<String, bool>,
+            sensors: bool,
+            sensor_list: HashMap<String, bool>,
+            creation_time: DateTime<Utc>,
+            apply_target_id: Option<u32>,
+            apply_in_progress: bool,
+        }
+
+        impl Indexable for OldNode {
+            fn key(&self) -> Cow<[u8]> {
+                Cow::from(self.name.as_bytes())
+            }
+
+            fn value(&self) -> Vec<u8> {
+                bincode::DefaultOptions::new()
+                    .serialize(self)
+                    .expect("serializable")
+            }
+
+            fn set_index(&mut self, index: u32) {
+                self.id = index;
+            }
+        }
+
+        let settings = TestSchema::new();
+        let node_db = settings.store.node_map();
+
+        let old_node = OldNode {
+            id: 0,
+            name: "name".to_string(),
+            customer_id: 20,
+            description: "description".to_string(),
+            hostname: "host".to_string(),
+            review: true,
+            review_port: Some(4040),
+            review_web_port: Some(8442),
+            piglet: true,
+            piglet_giganto_ip: Some(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 2))),
+            piglet_giganto_port: Some(3030),
+            piglet_review_ip: Some(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))),
+            piglet_review_port: Some(4040),
+            save_packets: true,
+            http: false,
+            office: false,
+            exe: false,
+            pdf: false,
+            html: false,
+            txt: false,
+            smtp_eml: false,
+            ftp: false,
+            giganto: true,
+            giganto_ingestion_ip: Some(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))),
+            giganto_ingestion_port: Some(3030),
+            giganto_publish_ip: Some(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))),
+            giganto_publish_port: Some(3050),
+            giganto_graphql_ip: Some(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))),
+            giganto_graphql_port: Some(5050),
+            retention_period: Some(100),
+            reconverge: false,
+            reconverge_review_ip: Some(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))),
+            reconverge_review_port: Some(4040),
+            reconverge_giganto_ip: Some(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))),
+            reconverge_giganto_port: Some(3050),
+            hog: true,
+            hog_review_ip: Some(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))),
+            hog_review_port: Some(4040),
+            hog_giganto_ip: Some(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))),
+            hog_giganto_port: Some(3050),
+            protocols: false,
+            protocol_list: HashMap::new(),
+            sensors: false,
+            sensor_list: HashMap::new(),
+            creation_time: Utc::now(),
+            apply_target_id: Some(0),
+            apply_in_progress: false,
+        };
+
+        assert!(node_db.insert(old_node.clone()).is_ok());
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_node(&settings.store).is_ok());
     }
 
     #[test]

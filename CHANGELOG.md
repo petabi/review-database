@@ -92,6 +92,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   to enhance security by preventing direct exposure of `IndexedMap`.
 - Changed the return type of `Store::tor_exit_node_map` to `Table<TorExitNode>`
   to enhance security by preventing direct exposure of `Map`.
+- Modified `Node` struct to include the `as_is` and `to_be` fields,
+  with existing field values migrated to the `to_be` field.
 
 ### Deprecated
 
