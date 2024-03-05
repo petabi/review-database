@@ -200,9 +200,11 @@ where
     Self: Sized,
 {
     fn key(&self) -> Cow<[u8]>;
+    fn index(&self) -> u32;
     fn indexed_key(&self) -> Cow<[u8]> {
-        self.key()
+        Self::make_indexed_key(self.key(), self.index())
     }
+    fn make_indexed_key(key: Cow<[u8]>, index: u32) -> Cow<[u8]>;
     fn value(&self) -> Vec<u8>;
     fn set_index(&mut self, index: u32);
 }
@@ -210,8 +212,6 @@ where
 pub trait Indexed {
     fn db(&self) -> &rocksdb::OptimisticTransactionDB;
     fn cf(&self) -> &rocksdb::ColumnFamily;
-
-    fn indexed_key(&self, key: Vec<u8>, index: u32) -> Vec<u8>;
 
     /// Returns the index.
     ///
@@ -343,7 +343,7 @@ pub trait Indexed {
         let Some(key) = index.get(id).context("invalid ID")? else {
             return Ok(None);
         };
-        let key = self.indexed_key(key.to_vec(), id);
+        let key = T::make_indexed_key(Cow::Borrowed(key), id);
         self.db()
             .get_cf(self.cf(), &key)
             .context("cannot read entry")?
@@ -400,7 +400,7 @@ pub trait Indexed {
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    fn remove(&self, id: u32) -> Result<Vec<u8>> {
+    fn remove<T: Indexable>(&self, id: u32) -> Result<Vec<u8>> {
         let mut key;
         loop {
             let txn = self.db().transaction();
@@ -411,7 +411,7 @@ pub trait Indexed {
             if key.is_empty() {
                 bail!("corrupt index");
             }
-            let indexed_key = self.indexed_key(key.clone(), id);
+            let indexed_key = T::make_indexed_key(Cow::Borrowed(&key), id);
             txn.put_cf(
                 self.cf(),
                 [],
@@ -492,9 +492,9 @@ pub trait Indexed {
                 Vec::new()
             };
             let key = if new.key().is_some() {
-                self.indexed_key(cur_key, id)
+                V::Entry::make_indexed_key(Cow::Owned(cur_key), id)
             } else if let Some(key) = index.get(id).context("invalid ID")? {
-                self.indexed_key(key.to_vec(), id)
+                V::Entry::make_indexed_key(Cow::Borrowed(key), id)
             } else {
                 bail!("no such ID");
             };
@@ -511,7 +511,7 @@ pub trait Indexed {
                 bail!("entry changed");
             }
             let new_key = if let Some(new_key) = new.key() {
-                let new_key = self.indexed_key(new_key.to_vec(), id);
+                let new_key = V::Entry::make_indexed_key(new_key, id);
 
                 if new_key != key {
                     txn.delete_cf(self.cf(), &key)

@@ -478,8 +478,11 @@ impl<'d, R> IndexedTable<'d, R> {
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn remove(&self, id: u32) -> Result<Vec<u8>> {
-        self.indexed_map.remove(id)
+    pub fn remove(&self, id: u32) -> Result<Vec<u8>>
+    where
+        R: Indexable,
+    {
+        self.indexed_map.remove::<R>(id)
     }
 
     /// Deactivates a key-value pair with the given ID.

@@ -18,10 +18,6 @@ impl<'a> Indexed for IndexedMap<'a> {
     fn cf(&self) -> &rocksdb::ColumnFamily {
         self.cf
     }
-
-    fn indexed_key(&self, key: Vec<u8>, _id: u32) -> Vec<u8> {
-        key
-    }
 }
 
 impl<'a> IndexedMap<'a> {
@@ -88,7 +84,12 @@ mod tests {
         fn key(&self) -> Cow<[u8]> {
             Cow::Borrowed(self.name.as_bytes())
         }
-
+        fn index(&self) -> u32 {
+            self.id
+        }
+        fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
+            key
+        }
         fn value(&self) -> Vec<u8> {
             use bincode::Options;
 
