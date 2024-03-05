@@ -1,5 +1,4 @@
 use super::{common::Match, EventCategory, EventFilter, TriagePolicy, TriageScore, LOW, MEDIUM};
-use crate::event::BLOCK_LIST;
 use aho_corasick::AhoCorasickBuilder;
 use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
@@ -851,7 +850,7 @@ impl Match for BlockListHttp {
     }
 
     fn kind(&self) -> &str {
-        BLOCK_LIST
+        "block list http"
     }
 
     fn source(&self) -> &str {

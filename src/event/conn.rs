@@ -1,5 +1,4 @@
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::BLOCK_LIST;
 use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -442,7 +441,7 @@ impl Match for BlockListConn {
     }
 
     fn kind(&self) -> &str {
-        BLOCK_LIST
+        "block list conn"
     }
 
     fn source(&self) -> &str {

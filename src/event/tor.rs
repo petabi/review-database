@@ -148,7 +148,7 @@ impl Match for TorConnection {
     }
 
     fn kind(&self) -> &str {
-        "tor exit node"
+        "tor exit nodes"
     }
 
     fn source(&self) -> &str {
