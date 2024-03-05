@@ -1,6 +1,5 @@
 #![allow(clippy::module_name_repetitions, clippy::struct_excessive_bools)]
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::BLOCK_LIST;
 use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 use std::{fmt, net::IpAddr, num::NonZeroU8};
@@ -441,7 +440,7 @@ impl Match for BlockListDns {
     }
 
     fn kind(&self) -> &str {
-        BLOCK_LIST
+        "block list dns"
     }
 
     fn source(&self) -> &str {

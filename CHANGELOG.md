@@ -92,6 +92,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   to enhance security by preventing direct exposure of `IndexedMap`.
 - Changed the return type of `Store::tor_exit_node_map` to `Table<TorExitNode>`
   to enhance security by preventing direct exposure of `Map`.
+- Modify the kind value of the Blocklist/CryptocurrencyMiningPool/TorConnection
+  event that implements the Match trait. This fix allows the kind filter in
+  GraphQL queries that retrieve the event to work correctly.
 
 ### Deprecated
 
