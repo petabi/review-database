@@ -91,6 +91,17 @@ impl Indexable for Network {
         Cow::Borrowed(self.name.as_bytes())
     }
 
+    fn index(&self) -> u32 {
+        self.id
+    }
+
+    fn make_indexed_key(key: Cow<[u8]>, index: u32) -> Cow<[u8]> {
+        let mut key = key.into_owned();
+        key.extend(index.to_be_bytes());
+
+        Cow::Owned(key)
+    }
+
     fn indexed_key(&self) -> Cow<[u8]> {
         let mut key = self.name.as_bytes().to_vec();
         key.extend(self.id.to_be_bytes());

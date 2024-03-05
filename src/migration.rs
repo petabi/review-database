@@ -578,7 +578,12 @@ fn migrate_0_22_to_0_24(store: &super::Store) -> Result<()> {
         fn key(&self) -> Cow<[u8]> {
             Cow::from(self.name.as_bytes())
         }
-
+        fn index(&self) -> u32 {
+            self.id
+        }
+        fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
+            key
+        }
         fn value(&self) -> Vec<u8> {
             bincode::DefaultOptions::new()
                 .serialize(self)
@@ -1008,7 +1013,12 @@ mod tests {
             fn key(&self) -> Cow<[u8]> {
                 Cow::from(self.name.as_bytes())
             }
-
+            fn index(&self) -> u32 {
+                self.id
+            }
+            fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
+                key
+            }
             fn value(&self) -> Vec<u8> {
                 bincode::DefaultOptions::new()
                     .serialize(self)
@@ -1144,7 +1154,12 @@ mod tests {
             fn key(&self) -> Cow<[u8]> {
                 Cow::from(self.name.as_bytes())
             }
-
+            fn index(&self) -> u32 {
+                self.id
+            }
+            fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
+                key
+            }
             fn value(&self) -> Vec<u8> {
                 bincode::DefaultOptions::new()
                     .serialize(self)

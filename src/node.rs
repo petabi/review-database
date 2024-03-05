@@ -86,6 +86,14 @@ impl Indexable for Node {
         }
     }
 
+    fn index(&self) -> u32 {
+        self.id
+    }
+
+    fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
+        key
+    }
+
     fn value(&self) -> Vec<u8> {
         bincode::DefaultOptions::new()
             .serialize(self)
