@@ -32,22 +32,6 @@ impl<'a> IndexedMap<'a> {
             .ok_or_else(|| anyhow!("database error: cannot find column family \"{}\"", name))
     }
 
-    /// Gets a key-value pair corresponding to the given index.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the index is invalid or cannot be read.
-    // pub fn get_by_id(&self, id: u32) -> Result<Option<(Vec<u8>, Vec<u8>)>> {
-    //     let index = self.index()?;
-    //     let Some(key) = index.get(id).context("invalid ID")? else {
-    //         return Ok(None);
-    //     };
-    //     self.db
-    //         .get_cf(self.cf, key)
-    //         .context("cannot read entry")
-    //         .map(|value| value.map(|value| (key.to_vec(), value)))
-    // }
-
     /// Gets a value corresponding to the given key.
     ///
     /// # Errors

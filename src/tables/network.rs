@@ -12,6 +12,7 @@ use crate::{
     IndexedTable, Iterable,
 };
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct Network {
     pub id: u32,
     pub name: String,
@@ -296,5 +297,171 @@ impl IndexedMapUpdate for Update {
             }
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::sync::Arc;
+
+    use rocksdb::Direction;
+
+    use crate::{types::HostNetworkGroup, Iterable, Network, Store};
+
+    #[test]
+    fn insert_and_get() {
+        let store = setup_store();
+        let table = store.network_map();
+
+        let mut network = create_network("TestNetwork", "TestDescription", vec![1, 2], vec![1, 2]);
+        let inserted_id1 = table.insert(network.clone()).unwrap();
+        network.id = inserted_id1;
+
+        let retrieved_network = table.get(inserted_id1).unwrap().unwrap();
+        assert_eq!(retrieved_network, network);
+
+        let inserted_id2 = table.insert(network.clone()).unwrap();
+        network.id = inserted_id2;
+        let retrieved_network = table.get(inserted_id2).unwrap().unwrap();
+        assert_eq!(retrieved_network, network);
+
+        assert!(inserted_id1 != inserted_id2);
+    }
+
+    #[test]
+    fn remove() {
+        let store = setup_store();
+        let table = store.network_map();
+
+        let mut network1 = create_network("Network1", "Description1", vec![1], vec![1, 2]);
+        let mut network2 = create_network("Network2", "Description2", vec![2], vec![2]);
+        let mut network3 = create_network("Network3", "Description3", vec![3], vec![3, 1]);
+
+        network1.id = table.insert(network1.clone()).unwrap();
+        network2.id = table.insert(network2.clone()).unwrap();
+        network3.id = table.insert(network3.clone()).unwrap();
+
+        let iter = table.iter(Direction::Forward, None);
+        assert_eq!(iter.count(), 3);
+
+        assert!(table.remove(network2.id).is_ok());
+        let iter = table.iter(Direction::Reverse, None);
+        assert_eq!(iter.count(), 2);
+
+        let ids: Vec<_> = table
+            .iter(Direction::Reverse, None)
+            .filter_map(|res| if let Ok(e) = res { Some(e) } else { None })
+            .map(|e| e.id)
+            .collect();
+
+        assert_eq!(ids, vec![network3.id, network1.id]);
+    }
+
+    #[test]
+    fn remove_tag() {
+        let store = setup_store();
+        let table = store.network_map();
+
+        let mut network1 = create_network("Network1", "Description1", vec![1], vec![1, 2]);
+        let mut network2 = create_network("Network2", "Description2", vec![2], vec![2]);
+        let mut network3 = create_network("Network3", "Description3", vec![3], vec![3, 1]);
+
+        network1.id = table.insert(network1.clone()).unwrap();
+        network2.id = table.insert(network2.clone()).unwrap();
+        network3.id = table.insert(network3.clone()).unwrap();
+
+        table.remove_tag(2).unwrap();
+
+        assert_eq!(table.get(network1.id).unwrap().unwrap().tag_ids, vec![1]);
+        assert_eq!(
+            table.get(network2.id).unwrap().unwrap().tag_ids,
+            Vec::<u32>::new()
+        );
+        assert_eq!(table.get(network3.id).unwrap().unwrap().tag_ids, vec![1, 3]);
+    }
+
+    #[test]
+    fn remove_customer() {
+        let store = setup_store();
+        let table = store.network_map();
+
+        let mut network1 = create_network("Network1", "Description1", vec![3, 1], vec![1, 2]);
+        let mut network2 = create_network("Network2", "Description2", vec![2, 1, 4], vec![1, 2]);
+        let mut network3 = create_network("Network3", "Description3", vec![1], vec![1, 2]);
+
+        network1.id = table.insert(network1.clone()).unwrap();
+        network2.id = table.insert(network2.clone()).unwrap();
+        network3.id = table.insert(network3.clone()).unwrap();
+
+        table.remove_customer(2).unwrap();
+
+        assert_eq!(
+            table.get(network1.id).unwrap().unwrap().customer_ids,
+            vec![3, 1]
+        );
+        assert_eq!(
+            table.get(network2.id).unwrap().unwrap().customer_ids,
+            vec![1, 4]
+        );
+        assert_eq!(
+            table.get(network3.id).unwrap().unwrap().customer_ids,
+            vec![1]
+        );
+    }
+
+    #[test]
+    fn update() {
+        let store = setup_store();
+        let mut table = store.network_map();
+
+        let mut network = create_network("Network1", "Description1", vec![1], vec![1, 2]);
+        network.id = table.insert(network.clone()).unwrap();
+        let old = super::Update::new(
+            Some(network.name.clone()),
+            Some(network.description.clone()),
+            Some(network.networks.clone()),
+            Some(network.customer_ids.clone()),
+            Some(network.tag_ids.clone()),
+        );
+
+        let mut updated_network =
+            create_network("UpdatedNetwork", "UpdatedDescription", vec![2], vec![3]);
+        updated_network.creation_time = network.creation_time;
+        let update = super::Update::new(
+            Some(updated_network.name.clone()),
+            Some(updated_network.description.clone()),
+            Some(updated_network.networks.clone()),
+            Some(updated_network.customer_ids.clone()),
+            Some(updated_network.tag_ids.clone()),
+        );
+
+        table.update(network.id, &old, &update).unwrap();
+
+        let retrieved_network = table.get(network.id).unwrap().unwrap();
+        assert_eq!(retrieved_network, updated_network);
+
+        let iter = table.iter(Direction::Forward, None);
+        assert_eq!(iter.count(), 1);
+    }
+
+    fn setup_store() -> Arc<Store> {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap())
+    }
+
+    fn create_network(
+        name: &str,
+        description: &str,
+        customer_ids: Vec<u32>,
+        tag_ids: Vec<u32>,
+    ) -> Network {
+        Network::new(
+            name.to_string(),
+            description.to_string(),
+            HostNetworkGroup::default(),
+            customer_ids,
+            tag_ids,
+        )
     }
 }
