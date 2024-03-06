@@ -141,7 +141,7 @@ impl Database {
             .filter_map(|t| {
                 const A_BILLION: i64 = 1_000_000_000;
                 if let Ok(ns) = u32::try_from(t % A_BILLION) {
-                    chrono::NaiveDateTime::from_timestamp_opt(t / A_BILLION, ns)
+                    chrono::DateTime::from_timestamp(t / A_BILLION, ns).map(|v| v.naive_utc())
                 } else {
                     None
                 }
