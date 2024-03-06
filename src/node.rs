@@ -10,7 +10,6 @@ type PortNumber = u16;
 #[allow(clippy::struct_excessive_bools, clippy::module_name_repetitions)]
 #[derive(Deserialize, Serialize)]
 pub struct NodeSetting {
-    pub name: String,
     pub customer_id: u32,
     pub description: String,
     pub hostname: String,
@@ -64,9 +63,11 @@ pub struct NodeSetting {
 #[derive(Deserialize, Serialize)]
 pub struct Node {
     pub id: u32,
+    pub name: String,
+    pub name_draft: Option<String>,
+    pub setting: Option<NodeSetting>,
+    pub setting_draft: Option<NodeSetting>,
     pub creation_time: DateTime<Utc>,
-    pub as_is: Option<NodeSetting>,
-    pub to_be: Option<NodeSetting>,
 }
 
 impl FromKeyValue for Node {
@@ -77,13 +78,7 @@ impl FromKeyValue for Node {
 
 impl Indexable for Node {
     fn key(&self) -> Cow<[u8]> {
-        if let Some(as_is) = &self.as_is {
-            Cow::from(as_is.name.as_bytes())
-        } else if let Some(to_be) = &self.to_be {
-            Cow::from(to_be.name.as_bytes())
-        } else {
-            panic!("Both `as_is` and `to_be` are `None`");
-        }
+        Cow::from(self.name.as_bytes())
     }
 
     fn index(&self) -> u32 {

@@ -32,6 +32,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - Now, it returns `Result<Option<T>>`, where T is the entry type.
   - The type T must implement the `Indexable` and `FromKeyValue` traits.
   - This change enhances security by avoiding direct exposure of binary data.
+- Modified `Node` to have `name` and `name_draft` field, replacing its previous
+  location within `NodeSetting`. Also, renamed `as_is` and `to_be` to `setting`
+  and `setting_draft`.
 
 ### Removed
 
