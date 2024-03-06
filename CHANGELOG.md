@@ -5,6 +5,40 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added `Indexable::id` and `Indexable::make_indexed_key` for `Indexable` trait.
+  This enhancement provides users with greater flexibility in customizing the
+  `indexed_key` associated with `Indexable` trait.
+- Introduced `Network` and `NetworkUpdate` to describe data stored in `Table<Network>`.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure network management.
+
+### Changed
+
+- Introduced `IndexedMap` as the replacement for `IndexedMultiMap` for database
+  table types. This change allows for a more streamlined and efficient approach
+  to managing entries in the table.
+- The customized indexed key implementation allows for more tailored and efficient
+  indexing strategies.
+- Changed the return type of `Store::network_map` to `IndexedTable<Network>`
+  to enhance security by preventing direct exposure of internal structure.
+- Replaced `IndexedMap::get_by_id` function with `Indexed::get_by_id`, providing
+   a more structured and type-safe result.
+  - Previously, the function returned a binary representation of the key-value
+    pair: `Result<(Option<impl AsRef<[u8]>>, Option<impl AsRef<[u8]>>)>`.
+  - Now, it returns `Result<Option<T>>`, where T is the entry type.
+  - The type T must implement the `Indexable` and `FromKeyValue` traits.
+  - This change enhances security by avoiding direct exposure of binary data.
+
+### Removed
+
+- `IndexedMultiMap` has been removed from the codebase, for table that currently
+  use `IndexedMultiMap` use `IndexedMap` with a customized `Indexable::make_indexed_key`
+  for entries stored instead.
+
 ## [0.25.0] - 2024-03-05
 
 ### Added
@@ -771,6 +805,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.25.0...main
 [0.25.0]: https://github.com/petabi/review-database/compare/0.24.0...0.25.0
 [0.24.0]: https://github.com/petabi/review-database/compare/0.23.0...0.24.0
 [0.23.0]: https://github.com/petabi/review-database/compare/0.22.1...0.23.0

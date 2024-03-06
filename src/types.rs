@@ -204,7 +204,7 @@ pub struct Endpoint {
 }
 
 // `hosts` and `networks` must be kept sorted.
-#[derive(Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct HostNetworkGroup {
     hosts: Vec<IpAddr>,
     networks: Vec<IpNet>,
