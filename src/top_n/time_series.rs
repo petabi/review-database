@@ -3,7 +3,7 @@ use crate::{
     schema::{cluster, time_series},
     Database, Error, TimeCount,
 };
-use chrono::{Duration, NaiveDateTime, Utc};
+use chrono::{NaiveDateTime, TimeDelta, Utc};
 use diesel::{dsl::max, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
@@ -149,10 +149,10 @@ async fn get_time_series_of_clusters(
         let recent = latest.unwrap_or_else(|| Utc::now().naive_utc());
         let (start, end) = if let (Some(start), Some(end)) = (start, end) {
             match (
-                NaiveDateTime::from_timestamp_opt(start, 0),
-                NaiveDateTime::from_timestamp_opt(end, 0),
+                chrono::DateTime::from_timestamp(start, 0),
+                chrono::DateTime::from_timestamp(end, 0),
             ) {
-                (Some(s), Some(e)) => (s, e),
+                (Some(s), Some(e)) => (s.naive_utc(), e.naive_utc()),
                 _ => {
                     return Err(database::Error::InvalidInput(format!(
                         "illegal time range provided ({start},{end})"
@@ -160,7 +160,10 @@ async fn get_time_series_of_clusters(
                 }
             }
         } else {
-            (recent - Duration::hours(2), recent)
+            (
+                recent - TimeDelta::try_hours(2).expect("should be within the limit"),
+                recent,
+            )
         };
 
         c_d::cluster

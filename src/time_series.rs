@@ -2,8 +2,8 @@ use super::{
     schema::{cluster, time_series},
     Database, Error, Type,
 };
-use anyhow::anyhow;
-use chrono::{Duration, NaiveDateTime, Utc};
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::{
     dsl::{max, min},
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
@@ -62,11 +62,11 @@ pub struct TimeCount {
     pub count: usize,
 }
 
-pub(crate) fn fill_vacant_time_slots(series: &[TimeCount]) -> Vec<TimeCount> {
+pub(crate) fn fill_vacant_time_slots(series: &[TimeCount]) -> Option<Vec<TimeCount>> {
     let mut filled_series: Vec<TimeCount> = Vec::new();
 
     if series.len() <= 2 {
-        return series.to_vec();
+        return Some(series.to_vec());
     }
 
     let mut min_diff = series[1].time - series[0].time;
@@ -87,14 +87,15 @@ pub(crate) fn fill_vacant_time_slots(series: &[TimeCount]) -> Vec<TimeCount> {
         if time_diff > 1 {
             for d in 1..time_diff {
                 filled_series.push(TimeCount {
-                    time: series[index - 1].time + Duration::seconds(d * min_diff.num_seconds()),
+                    time: series[index - 1].time
+                        + Duration::try_seconds(d * min_diff.num_seconds())?,
                     count: 0,
                 });
             }
         }
         filled_series.push(element.clone());
     }
-    filled_series
+    Some(filled_series)
 }
 
 impl Database {
@@ -112,7 +113,7 @@ impl Database {
         time_series: Vec<TimeSeriesUpdate>,
         model: i32,
         batch_ts: NaiveDateTime,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<()> {
         let tasks = time_series.into_iter().map(|ts| async move {
             let cluster_id = self.cluster_id(&ts.cluster_id, model).await?;
 
@@ -199,14 +200,14 @@ impl Database {
             )
             .get_result::<(Option<NaiveDateTime>, Option<NaiveDateTime>)>(&mut conn)
             .await?;
-        let recent = latest.unwrap_or_else(|| Utc::now().naive_utc());
+        let recent: NaiveDateTime = latest.unwrap_or_else(|| Utc::now().naive_utc());
 
         let (start, end) = if let (Some(start), Some(end)) = (start, end) {
             match (
-                NaiveDateTime::from_timestamp_opt(start, 0),
-                NaiveDateTime::from_timestamp_opt(end, 0),
+                DateTime::from_timestamp(start, 0),
+                DateTime::from_timestamp(end, 0),
             ) {
-                (Some(s), Some(e)) => (s, e),
+                (Some(s), Some(e)) => (s.naive_utc(), e.naive_utc()),
                 _ => {
                     return Err(Error::InvalidInput(format!(
                         "illegal time range provided({start}, {end})"
@@ -214,7 +215,10 @@ impl Database {
                 }
             }
         } else {
-            (recent - Duration::hours(2), recent)
+            (
+                recent - chrono::TimeDelta::try_hours(2).expect("should be within the bound"),
+                recent,
+            )
         };
 
         let values = c_d::cluster
@@ -261,7 +265,7 @@ impl Database {
                         })
                         .collect();
                     series.sort_by_key(|v| v.time);
-                    let series = fill_vacant_time_slots(&series);
+                    let series = fill_vacant_time_slots(&series)?;
 
                     Some(ColumnTimeSeries {
                         column_index,
