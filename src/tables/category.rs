@@ -55,17 +55,6 @@ impl<'d> IndexedTable<'d, Category> {
         self.indexed_map.update(id, &old, &new)
     }
 
-    /// Returns the category with the given ID.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    pub fn get(&self, id: u32) -> Result<Category> {
-        self.indexed_map
-            .get_by_id(id)
-            .map(|entry| entry.ok_or(anyhow::anyhow!("category {id} unavailable")))?
-    }
-
     /// Try adding default entries into the database.
     ///
     /// # Errors
@@ -148,7 +137,8 @@ mod tests {
         let table = store.category_map();
 
         for (id, entry) in entries.iter().enumerate() {
-            assert_eq!(table.get(entry.id).unwrap(), *entry);
+            let res = table.get_by_id(entry.id).unwrap().unwrap();
+            assert_eq!(res, *entry);
             assert_eq!(id + DEFAULT_ENTRIES.len() + 1, entry.id as usize);
         }
     }

@@ -486,6 +486,18 @@ impl<'d, R> IndexedTable<'d, R> {
         self.indexed_map.remove::<R>(id)
     }
 
+    /// Get a record with the given ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn get_by_id(&self, id: u32) -> Result<Option<R>>
+    where
+        R: Indexable + FromKeyValue,
+    {
+        self.indexed_map.get_by_id(id)
+    }
+
     /// Deactivates a key-value pair with the given ID.
     ///
     /// # Errors

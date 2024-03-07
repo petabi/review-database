@@ -41,6 +41,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   through the `Tag` struct, which includes `name` and `id` fields, offering a
   more straightforward and human-readable format compared to the raw binary
   format exposed by `IndexSet`.
+- Replaced the `IndexedTable<Category>::get`, `IndexedTable<Qualifier>::get` and
+ `IndexedTable<Status>::get` method with the more general function
+ `IndexedTable<R>::get_by_id`. This change enhances flexibility by allowing
+  retrieval based on any type R rather than being limited to a specific category.
+  Existing code using get for categories should be updated to use get_by_id with
+  the appropriate type.
 
 ### Removed
 

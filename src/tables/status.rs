@@ -110,17 +110,6 @@ impl<'d> IndexedTable<'d, Status> {
         self.indexed_map.update(id, &old, &new)
     }
 
-    /// Returns the status with the given ID.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    pub fn get(&self, id: u32) -> Result<Status> {
-        self.indexed_map
-            .get_by_id(id)?
-            .ok_or(anyhow::anyhow!("status {id} unavailable"))
-    }
-
     /// Try adding default entries into the database.
     ///
     /// # Errors
@@ -201,7 +190,7 @@ mod tests {
         let table = store.status_map();
 
         for entry in entries {
-            assert_eq!(table.get(entry.id).unwrap(), entry);
+            assert_eq!(table.get_by_id(entry.id).unwrap(), Some(entry));
         }
     }
 
