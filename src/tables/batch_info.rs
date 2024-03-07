@@ -86,10 +86,6 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
         }
         Ok(deleted)
     }
-
-    pub(crate) fn raw(&self) -> &Map<'_> {
-        &self.map
-    }
 }
 
 #[cfg(test)]
