@@ -155,15 +155,6 @@ impl<'d> IndexedTable<'d, Network> {
         self.indexed_map.insert(entry)
     }
 
-    /// Returns the `Network` with the given ID.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    pub fn get(&self, id: u32) -> Result<Option<Network>> {
-        self.indexed_map.get_by_id(id)
-    }
-
     /// Removes `tag_id` in all the related entries
     ///
     /// # Errors
@@ -317,12 +308,12 @@ mod test {
         let inserted_id1 = table.insert(network.clone()).unwrap();
         network.id = inserted_id1;
 
-        let retrieved_network = table.get(inserted_id1).unwrap().unwrap();
+        let retrieved_network = table.get_by_id(inserted_id1).unwrap().unwrap();
         assert_eq!(retrieved_network, network);
 
         let inserted_id2 = table.insert(network.clone()).unwrap();
         network.id = inserted_id2;
-        let retrieved_network = table.get(inserted_id2).unwrap().unwrap();
+        let retrieved_network = table.get_by_id(inserted_id2).unwrap().unwrap();
         assert_eq!(retrieved_network, network);
 
         assert!(inserted_id1 != inserted_id2);
@@ -372,12 +363,18 @@ mod test {
 
         table.remove_tag(2).unwrap();
 
-        assert_eq!(table.get(network1.id).unwrap().unwrap().tag_ids, vec![1]);
         assert_eq!(
-            table.get(network2.id).unwrap().unwrap().tag_ids,
+            table.get_by_id(network1.id).unwrap().unwrap().tag_ids,
+            vec![1]
+        );
+        assert_eq!(
+            table.get_by_id(network2.id).unwrap().unwrap().tag_ids,
             Vec::<u32>::new()
         );
-        assert_eq!(table.get(network3.id).unwrap().unwrap().tag_ids, vec![1, 3]);
+        assert_eq!(
+            table.get_by_id(network3.id).unwrap().unwrap().tag_ids,
+            vec![1, 3]
+        );
     }
 
     #[test]
@@ -396,15 +393,15 @@ mod test {
         table.remove_customer(2).unwrap();
 
         assert_eq!(
-            table.get(network1.id).unwrap().unwrap().customer_ids,
+            table.get_by_id(network1.id).unwrap().unwrap().customer_ids,
             vec![3, 1]
         );
         assert_eq!(
-            table.get(network2.id).unwrap().unwrap().customer_ids,
+            table.get_by_id(network2.id).unwrap().unwrap().customer_ids,
             vec![1, 4]
         );
         assert_eq!(
-            table.get(network3.id).unwrap().unwrap().customer_ids,
+            table.get_by_id(network3.id).unwrap().unwrap().customer_ids,
             vec![1]
         );
     }
@@ -437,7 +434,7 @@ mod test {
 
         table.update(network.id, &old, &update).unwrap();
 
-        let retrieved_network = table.get(network.id).unwrap().unwrap();
+        let retrieved_network = table.get_by_id(network.id).unwrap().unwrap();
         assert_eq!(retrieved_network, updated_network);
 
         let iter = table.iter(Direction::Forward, None);
