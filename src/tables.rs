@@ -17,7 +17,6 @@ use crate::{
     batch_info::BatchInfo,
     category::Category,
     collections::IndexedSet,
-    csv_column_extra::CsvColumnExtra,
     scores::Scores,
     types::{Account, FromKeyValue, Qualifier, Status},
     Direction, Indexable,
@@ -32,6 +31,7 @@ use std::{
 };
 
 pub use self::access_token::AccessToken;
+pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};

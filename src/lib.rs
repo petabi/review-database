@@ -9,7 +9,6 @@ mod category;
 mod cluster;
 mod collections;
 mod column_statistics;
-mod csv_column_extra;
 mod csv_indicator;
 pub mod event;
 mod migration;
@@ -38,7 +37,6 @@ pub use self::collections::{
     MapIterator,
 };
 pub use self::column_statistics::*;
-pub use self::csv_column_extra::CsvColumnExtra as CsvColumnExtraConfig;
 pub use self::event::EventKind;
 pub use self::event::{
     find_ip_country, BlockListConn, BlockListConnFields, BlockListDceRpc, BlockListDceRpcFields,
@@ -59,9 +57,10 @@ pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, Filter, IndexedTable, Iterable, ModelIndicator, Network, NetworkUpdate,
-    Structured, StructuredClusteringAlgorithm, Table, Template, TorExitNode, TriageResponse,
-    TriageResponseUpdate, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
+    AccessToken, CsvColumnExtra as CsvColumnExtraConfig, Filter, IndexedTable, Iterable,
+    ModelIndicator, Network, NetworkUpdate, Structured, StructuredClusteringAlgorithm, Table,
+    Template, TorExitNode, TriageResponse, TriageResponseUpdate, UniqueKey, Unstructured,
+    UnstructuredClusteringAlgorithm,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -194,7 +193,7 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn csv_column_extra_map(&self) -> IndexedTable<csv_column_extra::CsvColumnExtra> {
+    pub fn csv_column_extra_map(&self) -> IndexedTable<CsvColumnExtraConfig> {
         self.states.csv_column_extras()
     }
 

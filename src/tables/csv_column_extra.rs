@@ -3,12 +3,21 @@ use std::borrow::Cow;
 
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
+use serde::{Deserialize, Serialize};
 use structured::arrow::datatypes::ToByteSlice;
 
-use crate::{
-    csv_column_extra::CsvColumnExtra, types::FromKeyValue, Indexable, Indexed, IndexedMap,
-    IndexedMapUpdate, IndexedTable,
-};
+use crate::{types::FromKeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
+
+#[derive(Deserialize, Serialize, Default)]
+pub struct CsvColumnExtra {
+    pub id: u32,
+    pub model_id: i32,
+    pub column_alias: Option<Vec<String>>,
+    pub column_display: Option<Vec<bool>>,
+    pub column_top_n: Option<Vec<bool>>,
+    pub column_1: Option<Vec<bool>>,
+    pub column_n: Option<Vec<bool>>,
+}
 
 impl FromKeyValue for CsvColumnExtra {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
