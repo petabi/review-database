@@ -10,6 +10,7 @@ mod data_source;
 mod filter;
 mod model_indicator;
 mod network;
+mod node;
 mod qualifier;
 mod sampling_policy;
 mod scores;
@@ -45,6 +46,7 @@ pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
+pub use self::node::{Node, Setting as NodeSetting, Update as NodeUpdate};
 pub use self::sampling_policy::{
     Interval as SamplingInterval, Kind as SamplingKind, Period as SamplingPeriod, SamplingPolicy,
     Update as SamplingPolicyUpdate,
@@ -259,6 +261,11 @@ impl StateDb {
         IndexedTable::<DataSource>::open(inner).expect("{DATA_SOURCES} table must be present")
     }
 
+    pub(crate) fn nodes(&self) -> IndexedTable<Node> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<Node>::open(inner).expect("{NETWORKS} table must be present")
+    }
+
     #[must_use]
     pub(crate) fn triage_policies(&self) -> IndexedTable<TriagePolicy> {
         let inner = self.inner.as_ref().expect("database must be open");
@@ -275,12 +282,6 @@ impl StateDb {
     pub(super) fn map(&self, name: &str) -> Option<Map> {
         let inner = self.inner.as_ref().expect("database must be open");
         Map::open(inner, name)
-    }
-
-    #[must_use]
-    pub(super) fn indexed_map(&self, name: &str) -> Option<IndexedMap> {
-        let inner = self.inner.as_ref().expect("database must be open");
-        IndexedMap::new(inner, name).ok()
     }
 
     #[must_use]

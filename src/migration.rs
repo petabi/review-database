@@ -32,7 +32,7 @@ use tracing::{info, warn};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.26.0,<=0.27.0-alpha.4";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.26.0,<=0.27.0-alpha.5";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -190,8 +190,8 @@ fn read_version_file(path: &Path) -> Result<Version> {
 
 fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
     use crate::collections::Indexed;
-    use crate::node::{Node, NodeSetting};
     use crate::IterableMap;
+    use crate::{Node, NodeSetting};
     use bincode::Options;
     use chrono::{DateTime, Utc};
     use std::collections::HashMap;
@@ -335,15 +335,16 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
         }
     }
 
-    let node_db = store.node_map();
-    for (_key, old_value) in node_db.iter_forward()? {
+    let map = store.node_map();
+    let raw = map.raw();
+    for (_key, old_value) in raw.iter_forward()? {
         let old_node = bincode::DefaultOptions::new()
             .deserialize::<OldNode>(&old_value)
             .context("Failed to migrate node database: invalid node value")?;
 
         match TryInto::<Node>::try_into(old_node) {
             Ok(new_node) => {
-                node_db.overwrite(&new_node)?;
+                raw.overwrite(&new_node)?;
             }
             Err(e) => {
                 warn!("Skip the migration for an item: {e}");
@@ -429,7 +430,7 @@ mod tests {
     #[test]
     fn migrate_0_25_to_0_26_node() {
         type PortNumber = u16;
-        use crate::node::Node;
+        use crate::Node;
         use crate::{collections::Indexed, Indexable};
         use bincode::Options;
         use chrono::{DateTime, Utc};
@@ -532,7 +533,8 @@ mod tests {
         }
 
         let settings = TestSchema::new();
-        let node_db = settings.store.node_map();
+        let map = settings.store.node_map();
+        let node_db = map.raw();
 
         let old_node = OldNode {
             id: 0,
@@ -590,7 +592,8 @@ mod tests {
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
         assert!(super::migrate_0_25_to_0_26(&settings.store).is_ok());
 
-        let node_db = settings.store.node_map();
+        let map = settings.store.node_map();
+        let node_db = map.raw();
         let new_node = node_db.get_by_key("name".as_bytes()).unwrap().unwrap();
         let new_node: Node = bincode::DefaultOptions::new()
             .deserialize(new_node.as_ref())
