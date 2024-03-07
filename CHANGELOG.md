@@ -48,6 +48,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   use `IndexedMultiMap` use `IndexedMap` with a customized `Indexable::make_indexed_key`
   for entries stored instead.
 - `IndexedSet` has been removed, replaced by `TagSet`.
+- `csv_column_extra` table from PostgreSQL database is now removed.
 
 ## [0.25.0] - 2024-03-05
 

@@ -32,7 +32,7 @@ use tracing::{info, warn};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">0.25.0,<=0.26.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.26.0-alpha.2,<=0.26.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -44,88 +44,24 @@ const COMPATIBLE_VERSION_REQ: &str = ">0.25.0,<=0.26.0-alpha.2";
 ///
 /// Returns an error if the data hasn't been migrated successfully to Rocksdb.
 pub async fn migrate_backend<P: AsRef<Path>>(
-    db: &super::Database,
-    store: &super::Store,
-    data_dir: P,
+    _: &super::Database,
+    _: &super::Store,
+    _: P,
 ) -> Result<()> {
     // Below is an example for cases when data migration between `PostgreSQL`
     // and RocksDB is needed.
-    let path = data_dir.as_ref();
-    let file = path.join("VERSION");
+    // let path = data_dir.as_ref();
+    // let file = path.join("VERSION");
 
-    let version = read_version_file(&file)?;
+    // let version = read_version_file(&file)?;
 
-    let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
-        unreachable!("COMPATIBLE_VERSION_REQ must be valid")
-    };
-    if compatible.matches(&version) {
-        backend_0_23(db, store).await?;
-    }
+    // let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
+    //     unreachable!("COMPATIBLE_VERSION_REQ must be valid")
+    // };
+    // if compatible.matches(&version) {
+    //     backend_0_23(db, store).await?;
+    // }
     Ok(())
-}
-
-async fn backend_0_23(db: &super::Database, store: &super::Store) -> Result<()> {
-    tracing::info!("starting to transfer csv column extra data...");
-    tracing::info!(
-        "# of entries transferred: {}",
-        transfer_csv_column_extras(db, store).await?
-    );
-    Ok(())
-}
-
-async fn transfer_csv_column_extras(db: &super::Database, store: &super::Store) -> Result<usize> {
-    let data = db.load_csv_column_extras().await?;
-    let table = store.csv_column_extra_map();
-
-    if table.count()? > 0 {
-        return Ok(0);
-    }
-
-    let mut next_mid = data
-        .iter()
-        .max_by_key(|e| e.model_id)
-        .expect("invalid model id")
-        .model_id
-        + 1;
-
-    let mut cur = 0;
-    let mut to_remove = vec![];
-    let data_len = data.len();
-    for entry in data {
-        while cur < entry.id {
-            let added = table.insert(next_mid, None, None, None, None, None)?;
-
-            if added != cur {
-                return Err(anyhow!(
-                    "corrupted category table: inserting {cur} and assigned with {added}"
-                ));
-            }
-
-            to_remove.push(cur);
-            next_mid += 1;
-            cur += 1;
-        }
-        let added = table.insert(
-            entry.model_id,
-            entry.column_alias.as_deref(),
-            entry.column_display.as_deref(),
-            entry.column_top_n.as_deref(),
-            entry.column_1.as_deref(),
-            entry.column_n.as_deref(),
-        )?;
-        if added != cur || added != entry.id {
-            return Err(anyhow!(
-                "corrupted category table: inserting {cur} and assigned with {added}"
-            ));
-        }
-        cur += 1;
-    }
-
-    for id in to_remove {
-        table.remove(id)?;
-    }
-
-    Ok(data_len)
 }
 
 /// Migrates the data directory to the up-to-date format if necessary.
