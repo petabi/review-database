@@ -13,7 +13,6 @@ mod csv_indicator;
 pub mod event;
 mod migration;
 mod model;
-mod node;
 mod outlier;
 mod schema;
 mod scores;
@@ -32,10 +31,8 @@ use self::backends::ConnectionPool;
 pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
 pub use self::cluster::*;
-pub use self::collections::{
-    Indexable, Indexed, IndexedMap, IndexedMapIterator, IndexedMapUpdate, IterableMap, Map,
-    MapIterator,
-};
+pub use self::collections::{Indexable, Indexed, IterableMap, Map, MapIterator};
+pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate};
 pub use self::column_statistics::*;
 pub use self::event::EventKind;
 pub use self::event::{
@@ -60,11 +57,11 @@ pub use self::tables::{
     AccessToken, AllowNetwork, AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate,
     Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate,
     DataSource, DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator,
-    Network, NetworkUpdate, PacketAttr, Response, ResponseKind, SamplingInterval, SamplingKind,
-    SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
-    StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, TorExitNode, TriagePolicy,
-    TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, UniqueKey, Unstructured,
-    UnstructuredClusteringAlgorithm, ValueKind,
+    Network, NetworkUpdate, Node, NodeSetting, NodeUpdate, PacketAttr, Response, ResponseKind,
+    SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate,
+    Structured, StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, TorExitNode,
+    TriagePolicy, TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, UniqueKey,
+    Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -253,10 +250,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn node_map(&self) -> IndexedMap {
-        self.states
-            .indexed_map(tables::NODES)
-            .expect("always available")
+    pub fn node_map(&self) -> IndexedTable<Node> {
+        self.states.nodes()
     }
 
     #[must_use]
