@@ -35,6 +35,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modified `Node` to have `name` and `name_draft` field, replacing its previous
   location within `NodeSetting`. Also, renamed `as_is` and `to_be` to `setting`
   and `setting_draft`.
+- `Store::network_tag_set` now returns `TagSet` instead of `IndexSet`. This
+  change is made to leverage the new `TagSet` structure for a more user-friendly
+  approach in accessing tags. The `TagSet` allows users to interact with tags
+  through the `Tag` struct, which includes `name` and `id` fields, offering a
+  more straightforward and human-readable format compared to the raw binary
+  format exposed by `IndexSet`.
 
 ### Removed
 

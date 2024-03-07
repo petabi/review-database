@@ -1,9 +1,12 @@
-use crate::{IndexedSet, IndexedTable, TriageResponse};
+use crate::{IndexedSet, IndexedTable, Network, TriageResponse};
 
 // Kinds of tag IDs. They are used to define the behavior of tag sets.
 
 /// A compile-time tag indicating that tag IDs are for event tags.
 pub struct EventTagId;
+
+/// A compile-time tag indicating that tag IDs are for network tags.
+pub struct NetworkTagId;
 
 /// A compile-time tag indicating that tag IDs are for network tags.
 // will be used when `Store::network_tag_set` is converted to use `TagSet`.
@@ -92,6 +95,26 @@ impl<'a> TagSet<'a, EventTagId> {
     ) -> anyhow::Result<String> {
         let key = self.set.deactivate(id)?;
         triage_responses.remove_tag(id)?;
+        self.set.clear_inactive()?;
+
+        let name = String::from_utf8(key)?;
+        Ok(name)
+    }
+}
+
+impl<'a> TagSet<'a, NetworkTagId> {
+    /// Removes a tag from the network tag set, returning its name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `id` is invalid or any database operation fails.
+    pub fn remove_network_tag(
+        &mut self,
+        id: u32,
+        networks: &IndexedTable<Network>,
+    ) -> anyhow::Result<String> {
+        let key = self.set.deactivate(id)?;
+        networks.remove_tag(id)?;
         self.set.clear_inactive()?;
 
         let name = String::from_utf8(key)?;

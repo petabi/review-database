@@ -87,7 +87,7 @@ pub use rocksdb::backup::BackupEngineInfo;
 use std::io;
 use std::path::{Path, PathBuf};
 pub use tags::TagSet;
-use tags::{EventTagId, WorkflowTagId};
+use tags::{EventTagId, NetworkTagId, WorkflowTagId};
 use thiserror::Error;
 
 #[derive(Clone)]
@@ -246,12 +246,18 @@ impl Store {
         self.states.networks()
     }
 
-    #[must_use]
+    /// Returns the tag set for network.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if database operation fails or the data is invalid.
     #[allow(clippy::missing_panics_doc)]
-    pub fn network_tag_set(&self) -> IndexedSet {
-        self.states
+    pub fn network_tag_set(&self) -> Result<TagSet<NetworkTagId>> {
+        let set = self
+            .states
             .indexed_set(tables::NETWORK_TAGS)
-            .expect("always available")
+            .expect("always available");
+        TagSet::new(set)
     }
 
     #[must_use]
