@@ -79,7 +79,7 @@ impl<'a, IdKind> TagSet<'a, IdKind> {
     }
 }
 
-impl<'a, EventTagId> TagSet<'a, EventTagId> {
+impl<'a> TagSet<'a, EventTagId> {
     /// Removes a tag from the event tag set, returning its name.
     ///
     /// # Errors
@@ -99,7 +99,7 @@ impl<'a, EventTagId> TagSet<'a, EventTagId> {
     }
 }
 
-impl<'a, WorkflowTagId> TagSet<'a, WorkflowTagId> {
+impl<'a> TagSet<'a, WorkflowTagId> {
     /// Removes a tag from the workflow tag set, returning its name.
     ///
     /// # Errors
