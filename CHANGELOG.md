@@ -47,6 +47,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - `IndexedMultiMap` has been removed from the codebase, for table that currently
   use `IndexedMultiMap` use `IndexedMap` with a customized `Indexable::make_indexed_key`
   for entries stored instead.
+- `IndexedSet` has been removed, replaced by `TagSet`.
 
 ## [0.25.0] - 2024-03-05
 

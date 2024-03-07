@@ -34,8 +34,8 @@ pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
 pub use self::cluster::*;
 pub use self::collections::{
-    Indexable, Indexed, IndexedMap, IndexedMapIterator, IndexedMapUpdate, IndexedSet, IterableMap,
-    Map, MapIterator,
+    Indexable, Indexed, IndexedMap, IndexedMapIterator, IndexedMapUpdate, IterableMap, Map,
+    MapIterator,
 };
 pub use self::column_statistics::*;
 pub use self::csv_column_extra::CsvColumnExtra as CsvColumnExtraConfig;

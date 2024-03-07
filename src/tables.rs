@@ -16,13 +16,14 @@ mod triage_response;
 use crate::{
     batch_info::BatchInfo,
     category::Category,
+    collections::IndexedSet,
     csv_column_extra::CsvColumnExtra,
     scores::Scores,
     types::{Account, FromKeyValue, Qualifier, Status},
     Direction, Indexable,
 };
 
-use super::{event, Indexed, IndexedMap, IndexedSet, Map};
+use super::{event, Indexed, IndexedMap, Map};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::{

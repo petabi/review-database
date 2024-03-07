@@ -9,7 +9,7 @@
 
 use rocksdb::OptimisticTransactionDB;
 
-use crate::IndexedSet;
+use crate::collections::IndexedSet;
 
 pub(super) struct Store {
     db: OptimisticTransactionDB,
