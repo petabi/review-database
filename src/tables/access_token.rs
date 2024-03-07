@@ -73,8 +73,4 @@ impl<'d> Table<'d, AccessToken> {
         let (key, _value) = AccessToken::create_key_value(username, token);
         self.map.get(&key).map(|v| v.is_some())
     }
-
-    pub(crate) fn raw(&self) -> &Map<'_> {
-        &self.map
-    }
 }
