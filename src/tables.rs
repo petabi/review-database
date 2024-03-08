@@ -1,5 +1,6 @@
 mod access_token;
 mod accounts;
+mod allow_network;
 mod batch_info;
 mod category;
 mod csv_column_extra;
@@ -31,6 +32,7 @@ use std::{
 };
 
 pub use self::access_token::AccessToken;
+pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
@@ -208,6 +210,12 @@ impl StateDb {
     pub(crate) fn networks(&self) -> IndexedTable<Network> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Network>::open(inner).expect("{NETWORKS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn allow_networks(&self) -> IndexedTable<AllowNetwork> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<AllowNetwork>::open(inner).expect("{ALLOW_NETWORKS} table must be present")
     }
 
     #[must_use]
