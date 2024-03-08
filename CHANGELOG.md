@@ -15,6 +15,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `Network` and `NetworkUpdate` to describe data stored in `Table<Network>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure network management.
+- Introduced `AllowNetwork` and `AllowNetworkUpdate` to describe data stored in `Table<Network>`.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure network management.
 
 ### Changed
 
@@ -47,6 +50,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   retrieval based on any type R rather than being limited to a specific category.
   Existing code using get for categories should be updated to use get_by_id with
   the appropriate type.
+- Changed the return type of `Store::allow_network_map` to `IndexedTable<AllowNetwork>`
+  to enhance security by preventing direct exposure of internal structure.
 
 ### Removed
 
