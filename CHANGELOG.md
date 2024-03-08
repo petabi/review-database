@@ -14,10 +14,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `indexed_key` associated with `Indexable` trait.
 - Introduced `Network` and `NetworkUpdate` to describe data stored in `Table<Network>`.
 - Added new functions to facilitate insert, remove, and update operations,
-  ensuring a more controlled and secure network management.
+  ensuring a more controlled and secure allow network management.
 - Introduced `AllowNetwork` and `AllowNetworkUpdate` to describe data stored in `Table<Network>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure network management.
+- Introduced `BlockNetwork` and `BlockNetworkUpdate` to describe data stored in `Table<Network>`.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure block network management.
 
 ### Changed
 
@@ -51,6 +54,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   Existing code using get for categories should be updated to use get_by_id with
   the appropriate type.
 - Changed the return type of `Store::allow_network_map` to `IndexedTable<AllowNetwork>`
+  to enhance security by preventing direct exposure of internal structure.
+- Changed the return type of `Store::block_network_map` to `IndexedTable<BlockNetwork>`
   to enhance security by preventing direct exposure of internal structure.
 
 ### Removed

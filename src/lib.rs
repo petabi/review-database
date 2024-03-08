@@ -57,10 +57,11 @@ pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, AllowNetwork, AllowNetworkUpdate, CsvColumnExtra as CsvColumnExtraConfig, Filter,
-    IndexedTable, Iterable, ModelIndicator, Network, NetworkUpdate, Structured,
-    StructuredClusteringAlgorithm, Table, Template, TorExitNode, TriageResponse,
-    TriageResponseUpdate, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
+    AccessToken, AllowNetwork, AllowNetworkUpdate, BlockNetwork, BlockNetworkUpdate,
+    CsvColumnExtra as CsvColumnExtraConfig, Filter, IndexedTable, Iterable, ModelIndicator,
+    Network, NetworkUpdate, Structured, StructuredClusteringAlgorithm, Table, Template,
+    TorExitNode, TriageResponse, TriageResponseUpdate, UniqueKey, Unstructured,
+    UnstructuredClusteringAlgorithm,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -177,10 +178,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn block_network_map(&self) -> IndexedMap {
-        self.states
-            .indexed_map(tables::BLOCK_NETWORKS)
-            .expect("always available")
+    pub fn block_network_map(&self) -> IndexedTable<BlockNetwork> {
+        self.states.block_networks()
     }
 
     #[must_use]

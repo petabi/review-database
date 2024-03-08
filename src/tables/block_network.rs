@@ -1,4 +1,4 @@
-//! The `allow_network` table.
+//! The `block_network` table.
 
 use std::borrow::Cow;
 
@@ -12,20 +12,20 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct AllowNetwork {
+pub struct BlockNetwork {
     pub id: u32,
     pub name: String,
     pub networks: HostNetworkGroup,
     pub description: String,
 }
 
-impl FromKeyValue for AllowNetwork {
+impl FromKeyValue for BlockNetwork {
     fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
         super::deserialize(value)
     }
 }
 
-impl Indexable for AllowNetwork {
+impl Indexable for BlockNetwork {
     fn key(&self) -> Cow<[u8]> {
         Cow::Borrowed(self.name.as_bytes())
     }
@@ -54,7 +54,7 @@ pub struct Update {
 }
 
 impl IndexedMapUpdate for Update {
-    type Entry = AllowNetwork;
+    type Entry = BlockNetwork;
 
     fn key(&self) -> Option<Cow<[u8]>> {
         self.name.as_deref().map(str::as_bytes).map(Cow::Borrowed)
@@ -95,18 +95,18 @@ impl IndexedMapUpdate for Update {
     }
 }
 
-/// Functions for the `allow_network` indexed map.
-impl<'d> IndexedTable<'d, AllowNetwork> {
-    /// Opens the `allow_network` table in the database.
+/// Functions for the `block_network` indexed map.
+impl<'d> IndexedTable<'d, BlockNetwork> {
+    /// Opens the `block_network` table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
-        IndexedMap::new(db, super::ALLOW_NETWORKS)
+        IndexedMap::new(db, super::BLOCK_NETWORKS)
             .map(IndexedTable::new)
             .ok()
     }
 
-    /// Updates the `AllowNetwork` from `old` to `new`, given `id`.
+    /// Updates the `BlockNetwork` from `old` to `new`, given `id`.
     ///
     /// # Errors
     ///
@@ -122,22 +122,22 @@ mod test {
 
     use rocksdb::Direction;
 
-    use crate::{AllowNetwork, HostNetworkGroup, Iterable, Store};
+    use crate::{BlockNetwork, HostNetworkGroup, Iterable, Store};
 
     #[test]
     fn put_and_get() {
         let store = setup_store();
-        let table = store.allow_network_map();
+        let table = store.block_network_map();
 
-        let a = create_allow_network("a", "TestDescription");
+        let a = create_block_network("a", "TestDescription");
         let inserted_id = table.put(a.clone()).unwrap();
 
-        let retrieved_allow_network = table.get_by_id(inserted_id).unwrap().unwrap();
-        assert_eq!(retrieved_allow_network, a);
+        let retrieved_block_network = table.get_by_id(inserted_id).unwrap().unwrap();
+        assert_eq!(retrieved_block_network, a);
 
         assert!(table.put(a).is_err());
 
-        let b = create_allow_network("b", "TestDescription");
+        let b = create_block_network("b", "TestDescription");
         let b_id = table.put(b).unwrap();
         assert!(b_id != inserted_id);
 
@@ -147,43 +147,43 @@ mod test {
     #[test]
     fn update() {
         let store = setup_store();
-        let mut table = store.allow_network_map();
+        let mut table = store.block_network_map();
 
-        let allow_network = create_allow_network("AllowNetwork1", "Description1");
-        let inserted_id = table.put(allow_network.clone()).unwrap();
+        let block_network = create_block_network("AllowNetwork1", "Description1");
+        let inserted_id = table.put(block_network.clone()).unwrap();
         let old = super::Update {
-            name: Some(allow_network.name.clone()),
-            networks: Some(allow_network.networks.clone()),
-            description: Some(allow_network.description.clone()),
+            name: Some(block_network.name.clone()),
+            networks: Some(block_network.networks.clone()),
+            description: Some(block_network.description.clone()),
         };
 
-        let updated_allow_network =
-            create_allow_network("UpdatedAllowNetwork", "UpdatedDescription");
+        let updated_block_network =
+            create_block_network("UpdatedAllowNetwork", "UpdatedDescription");
         let update = super::Update {
-            name: Some(updated_allow_network.name.clone()),
-            networks: Some(updated_allow_network.networks.clone()),
-            description: Some(updated_allow_network.description.clone()),
+            name: Some(updated_block_network.name.clone()),
+            networks: Some(updated_block_network.networks.clone()),
+            description: Some(updated_block_network.description.clone()),
         };
 
         table.update(inserted_id, &old, &update).unwrap();
 
-        let retrieved_allow_network = table.get_by_id(inserted_id).unwrap().unwrap();
-        assert_eq!(retrieved_allow_network, updated_allow_network);
+        let retrieved_block_network = table.get_by_id(inserted_id).unwrap().unwrap();
+        assert_eq!(retrieved_block_network, updated_block_network);
     }
 
     #[test]
     fn update_key() {
         let store = setup_store();
-        let mut table = store.allow_network_map();
+        let mut table = store.block_network_map();
 
-        let mut a = create_allow_network("a", "a");
+        let mut a = create_block_network("a", "a");
         a.id = table.put(a.clone()).unwrap();
         let a_update = super::Update {
             name: Some(a.name.clone()),
             networks: Some(a.networks.clone()),
             description: Some(a.description.clone()),
         };
-        let mut b = create_allow_network("b", "b");
+        let mut b = create_block_network("b", "b");
         b.id = table.put(b.clone()).unwrap();
         let b_update = super::Update {
             name: Some(b.name.clone()),
@@ -217,8 +217,8 @@ mod test {
         Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap())
     }
 
-    fn create_allow_network(name: &str, description: &str) -> AllowNetwork {
-        AllowNetwork {
+    fn create_block_network(name: &str, description: &str) -> BlockNetwork {
+        BlockNetwork {
             id: 0,
             name: name.to_string(),
             networks: HostNetworkGroup::default(),
