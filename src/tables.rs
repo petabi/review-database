@@ -9,6 +9,7 @@ mod filter;
 mod model_indicator;
 mod network;
 mod qualifier;
+mod sampling_policy;
 mod scores;
 mod status;
 mod template;
@@ -39,6 +40,10 @@ pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
+pub use self::sampling_policy::{
+    Interval as SamplingInterval, Kind as SamplingKind, Period as SamplingPeriod, SamplingPolicy,
+    Update as SamplingPolicyUpdate,
+};
 pub use self::template::{
     Structured, StructuredClusteringAlgorithm, Template, Unstructured,
     UnstructuredClusteringAlgorithm,
@@ -224,6 +229,13 @@ impl StateDb {
     pub(crate) fn block_networks(&self) -> IndexedTable<BlockNetwork> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<BlockNetwork>::open(inner).expect("{BLOCK_NETWORKS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn sampling_policies(&self) -> IndexedTable<SamplingPolicy> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<SamplingPolicy>::open(inner)
+            .expect("{SAMPLING_POLICY} table must be present")
     }
 
     #[must_use]
