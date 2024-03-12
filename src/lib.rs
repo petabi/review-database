@@ -59,9 +59,9 @@ use self::tables::StateDb;
 pub use self::tables::{
     AccessToken, AllowNetwork, AllowNetworkUpdate, BlockNetwork, BlockNetworkUpdate,
     CsvColumnExtra as CsvColumnExtraConfig, Filter, IndexedTable, Iterable, ModelIndicator,
-    Network, NetworkUpdate, Structured, StructuredClusteringAlgorithm, Table, Template,
-    TorExitNode, TriageResponse, TriageResponseUpdate, UniqueKey, Unstructured,
-    UnstructuredClusteringAlgorithm,
+    Network, NetworkUpdate, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
+    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, TorExitNode,
+    TriageResponse, TriageResponseUpdate, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -272,10 +272,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn sampling_policy_map(&self) -> IndexedMap {
-        self.states
-            .indexed_map(tables::SAMPLING_POLICY)
-            .expect("always available")
+    pub fn sampling_policy_map(&self) -> IndexedTable<SamplingPolicy> {
+        self.states.sampling_policies()
     }
 
     #[must_use]

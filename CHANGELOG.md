@@ -5,6 +5,20 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Introduced `SamplingInterval`, `SamplingPeriod`, `SamplingKind`, `SamplingPolicy`
+  and `SamplingPolicyUpdate` to describe data stored in `IndexedTable<SamplingPolicy>`.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure sampling policy management.
+
+### Changed
+
+- Changed the return type of `Store::sampling_policy_map` to `IndexedTable<SamplingPolicy>`
+  to enhance security by preventing direct exposure of internal structure.
+
 ## [0.26.0] - 2024-03-11
 
 ### Added
@@ -835,6 +849,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.26.0...main
 [0.26.0]: https://github.com/petabi/review-database/compare/0.25.0...0.26.0
 [0.25.0]: https://github.com/petabi/review-database/compare/0.24.0...0.25.0
 [0.24.0]: https://github.com/petabi/review-database/compare/0.23.0...0.24.0
