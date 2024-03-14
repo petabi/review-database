@@ -6,6 +6,7 @@ mod block_network;
 mod category;
 mod csv_column_extra;
 mod customer;
+mod data_source;
 mod filter;
 mod model_indicator;
 mod network;
@@ -39,6 +40,7 @@ pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::customer::{Customer, Network as CustomerNetwork, Update as CustomerUpdate};
+pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
@@ -244,6 +246,12 @@ impl StateDb {
     pub(crate) fn customers(&self) -> IndexedTable<Customer> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Customer>::open(inner).expect("{CUSTOMERS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn data_sources(&self) -> IndexedTable<DataSource> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<DataSource>::open(inner).expect("{DATA_SOURCES} table must be present")
     }
 
     #[must_use]
