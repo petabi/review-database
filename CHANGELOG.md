@@ -15,7 +15,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   ensuring a more controlled and secure sampling policy management.
 - Introduced `CustomerUpdate` to describe data for updating `IndexedTable<Customer>`.
 - Added new functions to facilitate insert, remove, and update operations,
-  ensuring a more controlled and secure sampling policy management.
+  ensuring a more controlled and secure customer management.
+- Introduced `DataSourceUpdate` to describe data for updating `IndexedTable<DataSource>`.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure data source management.
 
 ### Changed
 
@@ -27,6 +30,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `crate::Customer` and `crate::CustomerNetwork` respectively to align with other
   type definitions.
 - Associated `Customer`, `CustomerNetwork`, with the customer data table in the database.
+- Moved `crate::types::DataSource` and `crate::types::DataType` to
+  `crate::DataSource` and `crate::DataType` respectively to align with other
+  type definitions.
+- Associated `DataSource`, `DataType`, with the customer data table in the database.
 
 ## [0.26.0] - 2024-03-11
 

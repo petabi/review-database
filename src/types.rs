@@ -87,59 +87,6 @@ pub struct Cluster {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct DataSource {
-    pub id: u32,
-    pub name: String,
-
-    pub server_name: String,
-    pub address: std::net::SocketAddr,
-
-    pub data_type: DataType,
-    pub source: String,
-    pub kind: Option<String>,
-
-    pub description: String,
-}
-
-impl FromKeyValue for DataSource {
-    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
-        Ok(bincode::DefaultOptions::new().deserialize(value)?)
-    }
-}
-
-impl Indexable for DataSource {
-    fn key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(self.name.as_bytes())
-    }
-    fn index(&self) -> u32 {
-        self.id
-    }
-    fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
-        key
-    }
-    fn value(&self) -> Vec<u8> {
-        bincode::DefaultOptions::new()
-            .serialize(self)
-            .expect("serializable")
-    }
-
-    fn set_index(&mut self, index: u32) {
-        self.id = index;
-    }
-}
-
-/// Data type of `DataSource`.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub enum DataType {
-    /// comma-separated values
-    Csv,
-    /// line-based text data
-    Log,
-    /// time series data
-    TimeSeries,
-}
-
-#[derive(Deserialize, Serialize)]
 pub struct Endpoint {
     pub direction: Option<TrafficDirection>,
     pub network: HostNetworkGroup,
