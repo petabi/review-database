@@ -58,10 +58,11 @@ pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
     AccessToken, AllowNetwork, AllowNetworkUpdate, BlockNetwork, BlockNetworkUpdate,
-    CsvColumnExtra as CsvColumnExtraConfig, Filter, IndexedTable, Iterable, ModelIndicator,
-    Network, NetworkUpdate, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
-    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, TorExitNode,
-    TriageResponse, TriageResponseUpdate, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
+    CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, Filter,
+    IndexedTable, Iterable, ModelIndicator, Network, NetworkUpdate, SamplingInterval, SamplingKind,
+    SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
+    StructuredClusteringAlgorithm, Table, Template, TorExitNode, TriageResponse,
+    TriageResponseUpdate, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -73,9 +74,8 @@ pub use self::top_n::{
 };
 pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::types::{
-    AttrCmpKind, Confidence, Customer, CustomerNetwork, DataSource, DataType, EventCategory,
-    HostNetworkGroup, PacketAttr, Qualifier, Response, ResponseKind, Status, Ti, TiCmpKind,
-    TriagePolicy, ValueKind,
+    AttrCmpKind, Confidence, DataSource, DataType, EventCategory, HostNetworkGroup, PacketAttr,
+    Qualifier, Response, ResponseKind, Status, Ti, TiCmpKind, TriagePolicy, ValueKind,
 };
 use anyhow::{anyhow, Result};
 use backends::Value;
@@ -196,10 +196,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn customer_map(&self) -> IndexedMap {
-        self.states
-            .indexed_map(tables::CUSTOMERS)
-            .expect("always available")
+    pub fn customer_map(&self) -> IndexedTable<Customer> {
+        self.states.customers()
     }
 
     #[must_use]

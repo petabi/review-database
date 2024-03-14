@@ -136,7 +136,7 @@ struct Value {
 
 /// Functions for the `network` indexed map.
 impl<'d> IndexedTable<'d, Network> {
-    /// Opens the `triage_response` table in the database.
+    /// Opens the `network` table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
