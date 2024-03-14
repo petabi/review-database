@@ -59,8 +59,8 @@ pub use self::{
     tor::{TorConnection, TorConnectionFields},
 };
 use super::{
-    types::{Customer, Endpoint, EventCategory, HostNetworkGroup, TriagePolicy},
-    Network,
+    types::{Endpoint, EventCategory, HostNetworkGroup, TriagePolicy},
+    Customer, Network,
 };
 use aho_corasick::AhoCorasickBuilder;
 use anyhow::{bail, Context, Result};

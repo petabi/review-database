@@ -1,4 +1,4 @@
-use super::{Indexable, NetworkType, TrafficDirection};
+use super::{Indexable, TrafficDirection};
 pub use crate::account::{Account, Role};
 use anyhow::Result;
 use bincode::Options;
@@ -84,64 +84,6 @@ pub struct Cluster {
     #[serde(with = "ts_nanoseconds_option")]
     pub last_modification_time: Option<NaiveDateTime>,
     pub model_id: i32,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct Customer {
-    pub id: u32,
-    pub name: String,
-    pub description: String,
-    pub networks: Vec<CustomerNetwork>,
-    pub creation_time: DateTime<Utc>,
-}
-
-impl FromKeyValue for Customer {
-    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
-        Ok(bincode::DefaultOptions::new().deserialize(value)?)
-    }
-}
-
-impl Indexable for Customer {
-    fn key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(self.name.as_bytes())
-    }
-    fn index(&self) -> u32 {
-        self.id
-    }
-    fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
-        key
-    }
-    fn value(&self) -> Vec<u8> {
-        bincode::DefaultOptions::new()
-            .serialize(self)
-            .expect("serializable")
-    }
-
-    fn set_index(&mut self, index: u32) {
-        self.id = index;
-    }
-}
-
-impl Customer {
-    #[must_use]
-    pub fn contains(&self, addr: IpAddr) -> bool {
-        self.networks.iter().any(|n| n.contains(addr))
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct CustomerNetwork {
-    pub name: String,
-    pub description: String,
-    pub network_type: NetworkType,
-    pub network_group: HostNetworkGroup,
-}
-
-impl CustomerNetwork {
-    #[must_use]
-    pub fn contains(&self, addr: IpAddr) -> bool {
-        self.network_group.contains(addr)
-    }
 }
 
 #[derive(Deserialize, Serialize)]

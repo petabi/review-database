@@ -13,11 +13,20 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   and `SamplingPolicyUpdate` to describe data stored in `IndexedTable<SamplingPolicy>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure sampling policy management.
+- Introduced `CustomerUpdate` to describe data for updating `IndexedTable<Customer>`.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure sampling policy management.
 
 ### Changed
 
 - Changed the return type of `Store::sampling_policy_map` to `IndexedTable<SamplingPolicy>`
   to enhance security by preventing direct exposure of internal structure.
+- Changed the return type of `Store::customer_map` to `IndexedTable<Customer>`
+  to enhance security by preventing direct exposure of internal structure.
+- Moved `crate::types::Customer` and `crate::types::CustomerNetwork` to
+  `crate::Customer` and `crate::CustomerNetwork` respectively to align with other
+  type definitions.
+- Associated `Customer`, `CustomerNetwork`, with the customer data table in the database.
 
 ## [0.26.0] - 2024-03-11
 
