@@ -16,6 +16,7 @@ mod scores;
 mod status;
 mod template;
 mod tor_exit_node;
+mod triage_policy;
 mod triage_response;
 
 use crate::{
@@ -53,6 +54,10 @@ pub use self::template::{
     UnstructuredClusteringAlgorithm,
 };
 pub use self::tor_exit_node::TorExitNode;
+pub use self::triage_policy::{
+    AttrCmpKind, Confidence, PacketAttr, Response, ResponseKind, Ti, TiCmpKind, TriagePolicy,
+    Update as TriagePolicyUpdate, ValueKind,
+};
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 
 // Key-value map names in `Database`.
@@ -252,6 +257,12 @@ impl StateDb {
     pub(crate) fn data_sources(&self) -> IndexedTable<DataSource> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<DataSource>::open(inner).expect("{DATA_SOURCES} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn triage_policies(&self) -> IndexedTable<TriagePolicy> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<TriagePolicy>::open(inner).expect("{TRIAGE_POLICY} table must be present")
     }
 
     #[must_use]

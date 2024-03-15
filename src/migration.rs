@@ -32,7 +32,7 @@ use tracing::{info, warn};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.26.0,<=0.27.0-alpha.3";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.26.0,<=0.27.0-alpha.4";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///

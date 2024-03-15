@@ -19,6 +19,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `DataSourceUpdate` to describe data for updating `IndexedTable<DataSource>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure data source management.
+- Introduced `TriagePolicyUpdate` to describe data for updating `IndexedTable<TriagePolicy>`.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure triage policy management.
 
 ### Changed
 
@@ -34,6 +37,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `crate::DataSource` and `crate::DataType` respectively to align with other
   type definitions.
 - Associated `DataSource`, `DataType`, with the customer data table in the database.
+- Moved `AttrCmpKind`, `Confidence`, `PacketAttr`, `Response`, `ResponseKind`,
+  `Ti`, `TiCmpKind`, `TriagePolicy`, `ValueKind` from `crate::types` to `crate`
+  in order to align with other type definitions.
+- Associated `TriagePolicy` with the triage policy data table in the database.
 
 ## [0.26.0] - 2024-03-11
 

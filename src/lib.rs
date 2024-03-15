@@ -57,12 +57,14 @@ pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, AllowNetwork, AllowNetworkUpdate, BlockNetwork, BlockNetworkUpdate,
-    CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
-    DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator, Network,
-    NetworkUpdate, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
-    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, TorExitNode,
-    TriageResponse, TriageResponseUpdate, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
+    AccessToken, AllowNetwork, AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate,
+    Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate,
+    DataSource, DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator,
+    Network, NetworkUpdate, PacketAttr, Response, ResponseKind, SamplingInterval, SamplingKind,
+    SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
+    StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, TorExitNode, TriagePolicy,
+    TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, UniqueKey, Unstructured,
+    UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
@@ -73,10 +75,7 @@ pub use self::top_n::{
     StructuredColumnType, TopColumnsOfCluster, TopMultimaps, TopTrendsByColumn,
 };
 pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
-pub use self::types::{
-    AttrCmpKind, Confidence, EventCategory, HostNetworkGroup, PacketAttr, Qualifier, Response,
-    ResponseKind, Status, Ti, TiCmpKind, TriagePolicy, ValueKind,
-};
+pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 use anyhow::{anyhow, Result};
 use backends::Value;
 use bb8_postgres::{
@@ -310,10 +309,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn triage_policy_map(&self) -> IndexedMap {
-        self.states
-            .indexed_map(tables::TRIAGE_POLICY)
-            .expect("always available")
+    pub fn triage_policy_map(&self) -> IndexedTable<TriagePolicy> {
+        self.states.triage_policies()
     }
 
     #[must_use]
