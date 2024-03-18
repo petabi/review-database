@@ -70,6 +70,17 @@ impl<'d> IndexedTable<'d, DataSource> {
             .ok()
     }
 
+    /// Gets the `DataSource`, given `name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `id` is invalid or the database operation fails.
+    pub fn get(&self, name: &str) -> Result<Option<DataSource>> {
+        let res = self.indexed_map.get_by_key(name.as_bytes())?;
+        res.map(|value| DataSource::from_key_value(name.as_bytes(), value.as_ref()))
+            .transpose()
+    }
+
     /// Updates the `DataSource` from `old` to `new`, given `id`.
     ///
     /// # Errors
@@ -186,6 +197,21 @@ mod test {
     use std::sync::Arc;
 
     use crate::{DataSource, DataSourceUpdate, DataType, Store};
+
+    #[test]
+    fn get() {
+        let store = setup_store();
+        let table = store.data_source_map();
+
+        let entry = create_entry("a");
+        let id = table.put(entry.clone()).unwrap();
+
+        let entry = table.get("a").unwrap();
+        assert_eq!(Some(id), entry.map(|e| e.id));
+
+        let entry = table.get("b").unwrap();
+        assert!(entry.is_none());
+    }
 
     #[test]
     fn update() {
