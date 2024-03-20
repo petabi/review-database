@@ -20,7 +20,6 @@ mod tables;
 mod tags;
 #[cfg(test)]
 mod test;
-mod ti;
 mod time_series;
 mod top_n;
 mod traffic_filter;
@@ -59,11 +58,10 @@ pub use self::tables::{
     DataSource, DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator,
     Network, NetworkUpdate, Node, NodeSetting, NodeUpdate, PacketAttr, Response, ResponseKind,
     SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate,
-    Structured, StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, TorExitNode,
-    TriagePolicy, TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, UniqueKey,
-    Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
+    Structured, StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind,
+    TidbRule, TorExitNode, TriagePolicy, TriagePolicyUpdate, TriageResponse, TriageResponseUpdate,
+    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
 };
-pub use self::ti::{Tidb, TidbKind, TidbRule};
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
 pub use self::top_n::*;
@@ -292,8 +290,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn tidb_map(&self) -> Map {
-        self.states.map(tables::TIDB).expect("always available")
+    pub fn tidb_map(&self) -> Table<Tidb> {
+        self.states.tidbs()
     }
 
     #[must_use]

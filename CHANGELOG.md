@@ -25,6 +25,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `Node`, `NodeSetting` and `NodeUpdate` to describe data stored in `IndexedTable<Node>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure node management.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure tidb management.
 
 ### Changed
 
@@ -46,6 +48,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Associated `TriagePolicy` with the triage policy data table in the database.
 - Changed the return type of `Store::node_map` to `IndexedTable<Node>`
   to enhance security by preventing direct exposure of internal structure.
+- Moved `Tidb`, `TidbKind` and `TidbRule` from `crate::types` to `crate` in order
+  to align with other type definitions.
+- Changed the return type of `Store::tidb_map` to `Table<Tidb>` to enhance security
+  by preventing direct exposure of internal structure.
+- Modified `Tidb::new` method to require input string serialization using
+  `bincode::DefaultOptions::new().serialize` instead of `bincode::serialize` for
+  consistency across the library.
 
 ## [0.26.0] - 2024-03-11
 
