@@ -16,6 +16,7 @@ mod sampling_policy;
 mod scores;
 mod status;
 mod template;
+mod tidb;
 mod tor_exit_node;
 mod triage_policy;
 mod triage_response;
@@ -55,6 +56,7 @@ pub use self::template::{
     Structured, StructuredClusteringAlgorithm, Template, Unstructured,
     UnstructuredClusteringAlgorithm,
 };
+pub use self::tidb::{Kind as TidbKind, Rule as TidbRule, Tidb};
 pub use self::tor_exit_node::TorExitNode;
 pub use self::triage_policy::{
     AttrCmpKind, Confidence, PacketAttr, Response, ResponseKind, Ti, TiCmpKind, TriagePolicy,
@@ -270,6 +272,12 @@ impl StateDb {
     pub(crate) fn triage_policies(&self) -> IndexedTable<TriagePolicy> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<TriagePolicy>::open(inner).expect("{TRIAGE_POLICY} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn tidbs(&self) -> Table<Tidb> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<Tidb>::open(inner).expect("{TIDB} table must be present")
     }
 
     #[must_use]
