@@ -21,6 +21,7 @@ mod tor_exit_node;
 mod triage_policy;
 mod triage_response;
 mod trusted_domain;
+mod trusted_user_agent;
 
 use crate::{
     batch_info::BatchInfo,
@@ -65,6 +66,7 @@ pub use self::triage_policy::{
 };
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 pub use self::trusted_domain::TrustedDomain;
+pub use self::trusted_user_agent::TrustedUserAgent;
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -286,6 +288,11 @@ impl StateDb {
     pub(crate) fn trusted_domains(&self) -> Table<TrustedDomain> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<TrustedDomain>::open(inner).expect("{TRUSTED_DNS_SERVERS} table must be present")
+    }
+
+    pub(crate) fn trusted_user_agents(&self) -> Table<TrustedUserAgent> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<TrustedUserAgent>::open(inner).expect("{TRUSTED_USER_AGENTS} table must be present")
     }
 
     #[must_use]

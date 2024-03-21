@@ -30,6 +30,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `TrustedDomain` to describe data stored in `Table<TrustedDomain>`.
 - Added new functions to facilitate insert, remove operations, ensuring a more
   controlled and secure trusted domain management.
+- Introduced `TrustedUserAgent` to describe data stored in `IndexedTable<TrustedUserAgent>`.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure trusted user agent management.
 
 ### Changed
 
@@ -60,6 +63,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   consistency across the library.
 - Replaced `Store::trusted_dns_servers_map` with `Store::trusted_domain_map` for
   consistency and to enhance security by preventing direct exposure of internal structure.
+- Changed the return type of `Store::trusted_user_agent_map` to
+  `Table<TrustedUserAgent>` to enhance security by preventing direct exposure of
+  internal structure.
 
 ## [0.26.0] - 2024-03-11
 
