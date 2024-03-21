@@ -20,6 +20,7 @@ mod tidb;
 mod tor_exit_node;
 mod triage_policy;
 mod triage_response;
+mod trusted_domain;
 
 use crate::{
     batch_info::BatchInfo,
@@ -63,6 +64,7 @@ pub use self::triage_policy::{
     Update as TriagePolicyUpdate, ValueKind,
 };
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
+pub use self::trusted_domain::TrustedDomain;
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -278,6 +280,12 @@ impl StateDb {
     pub(crate) fn tidbs(&self) -> Table<Tidb> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Tidb>::open(inner).expect("{TIDB} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn trusted_domains(&self) -> Table<TrustedDomain> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<TrustedDomain>::open(inner).expect("{TRUSTED_DNS_SERVERS} table must be present")
     }
 
     #[must_use]
