@@ -18,6 +18,7 @@ mod status;
 mod template;
 mod tidb;
 mod tor_exit_node;
+mod traffic_filter;
 mod triage_policy;
 mod triage_response;
 mod trusted_domain;
@@ -60,6 +61,7 @@ pub use self::template::{
 };
 pub use self::tidb::{Kind as TidbKind, Rule as TidbRule, Tidb};
 pub use self::tor_exit_node::TorExitNode;
+pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::triage_policy::{
     AttrCmpKind, Confidence, PacketAttr, Response, ResponseKind, Ti, TiCmpKind, TriagePolicy,
     Update as TriagePolicyUpdate, ValueKind,
@@ -293,6 +295,11 @@ impl StateDb {
     pub(crate) fn trusted_user_agents(&self) -> Table<TrustedUserAgent> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<TrustedUserAgent>::open(inner).expect("{TRUSTED_USER_AGENTS} table must be present")
+    }
+
+    pub(crate) fn traffic_filters(&self) -> Table<TrafficFilter> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<TrafficFilter>::open(inner).expect("{TRAFFIC_FILTER_RULES} table must be present")
     }
 
     #[must_use]

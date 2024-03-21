@@ -22,7 +22,6 @@ mod tags;
 mod test;
 mod time_series;
 mod top_n;
-mod traffic_filter;
 pub mod types;
 
 pub use self::account::Role;
@@ -56,12 +55,12 @@ pub use self::tables::{
     AccessToken, AllowNetwork, AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate,
     Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate,
     DataSource, DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator,
-    Network, NetworkUpdate, Node, NodeSetting, NodeUpdate, PacketAttr, Response, ResponseKind,
-    SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate,
-    Structured, StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind,
-    TidbRule, TorExitNode, TriagePolicy, TriagePolicyUpdate, TriageResponse, TriageResponseUpdate,
-    TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm,
-    ValueKind,
+    Network, NetworkUpdate, Node, NodeSetting, NodeUpdate, PacketAttr, ProtocolPorts, Response,
+    ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
+    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, Ti,
+    TiCmpKind, Tidb, TidbKind, TidbRule, TorExitNode, TrafficFilter, TriagePolicy,
+    TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent,
+    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -70,7 +69,6 @@ pub use self::top_n::{
     ClusterScore, ClusterScoreSet, ClusterTrend, ElementCount, LineSegment, Regression,
     StructuredColumnType, TopColumnsOfCluster, TopMultimaps, TopTrendsByColumn,
 };
-pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 use anyhow::{anyhow, Result};
 use backends::Value;
@@ -327,10 +325,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn traffic_filter_map(&self) -> Map {
-        self.states
-            .map(tables::TRAFFIC_FILTER_RULES)
-            .expect("always available")
+    pub fn traffic_filter_map(&self) -> Table<TrafficFilter> {
+        self.states.traffic_filters()
     }
 
     /// Returns the tag set for workflow.
