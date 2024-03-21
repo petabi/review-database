@@ -27,6 +27,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   ensuring a more controlled and secure node management.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure tidb management.
+- Introduced `TrustedDomain` to describe data stored in `Table<TrustedDomain>`.
+- Added new functions to facilitate insert, remove operations, ensuring a more
+  controlled and secure trusted domain management.
 
 ### Changed
 
@@ -55,6 +58,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modified `Tidb::new` method to require input string serialization using
   `bincode::DefaultOptions::new().serialize` instead of `bincode::serialize` for
   consistency across the library.
+- Replaced `Store::trusted_dns_servers_map` with `Store::trusted_domain_map` for
+  consistency and to enhance security by preventing direct exposure of internal structure.
 
 ## [0.26.0] - 2024-03-11
 

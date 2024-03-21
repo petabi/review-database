@@ -60,7 +60,7 @@ pub use self::tables::{
     SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate,
     Structured, StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind,
     TidbRule, TorExitNode, TriagePolicy, TriagePolicyUpdate, TriageResponse, TriageResponseUpdate,
-    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
+    TrustedDomain, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -314,10 +314,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn trusted_dns_server_map(&self) -> Map {
-        self.states
-            .map(tables::TRUSTED_DNS_SERVERS)
-            .expect("always available")
+    pub fn trusted_domain_map(&self) -> Table<TrustedDomain> {
+        self.states.trusted_domains()
     }
 
     #[must_use]
