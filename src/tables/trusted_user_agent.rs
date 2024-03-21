@@ -1,3 +1,5 @@
+//! The `trusted_user_agent` map.
+
 use std::borrow::Cow;
 
 use anyhow::{Context, Result};

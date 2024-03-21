@@ -33,6 +33,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `TrustedUserAgent` to describe data stored in `IndexedTable<TrustedUserAgent>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure trusted user agent management.
+- Added new functions to facilitate insert, remove, and update operations,
+  ensuring a more controlled and secure traffic filter management.
 
 ### Changed
 
@@ -65,6 +67,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   consistency and to enhance security by preventing direct exposure of internal structure.
 - Changed the return type of `Store::trusted_user_agent_map` to
   `Table<TrustedUserAgent>` to enhance security by preventing direct exposure of
+  internal structure.
+- Moved `TrafficFilter` and `ProtocolPorts` from `crate::types` to `crate` in order
+  to align with other type definitions.
+- Changed the return type of `Store::traffic_filter_map` to
+  `Table<TrafficFilter>` to enhance security by preventing direct exposure of
   internal structure.
 
 ## [0.26.0] - 2024-03-11
