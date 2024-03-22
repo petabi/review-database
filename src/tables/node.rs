@@ -13,7 +13,7 @@ type PortNumber = u16;
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Default, Deserialize, Serialize, PartialEq)]
-pub struct Setting {
+pub struct Settings {
     pub customer_id: u32,
     pub description: String,
     pub hostname: String,
@@ -69,8 +69,8 @@ pub struct Node {
     pub id: u32,
     pub name: String,
     pub name_draft: Option<String>,
-    pub setting: Option<Setting>,
-    pub setting_draft: Option<Setting>,
+    pub settings: Option<Settings>,
+    pub settings_draft: Option<Settings>,
     pub creation_time: DateTime<Utc>,
 }
 
@@ -130,8 +130,8 @@ impl<'d> IndexedTable<'d, Node> {
 pub struct Update {
     pub name: Option<String>,
     pub name_draft: Option<String>,
-    pub setting: Option<Setting>,
-    pub setting_draft: Option<Setting>,
+    pub settings: Option<Settings>,
+    pub settings_draft: Option<Settings>,
 }
 
 impl From<Node> for Update {
@@ -139,8 +139,8 @@ impl From<Node> for Update {
         Self {
             name: Some(input.name),
             name_draft: input.name_draft,
-            setting: input.setting,
-            setting_draft: input.setting_draft,
+            settings: input.settings,
+            settings_draft: input.settings_draft,
         }
     }
 }
@@ -157,8 +157,8 @@ impl IndexedMapUpdate for Update {
             value.name = n.to_owned();
         }
         value.name_draft = self.name_draft.clone();
-        value.setting = self.setting.clone();
-        value.setting_draft = self.setting_draft.clone();
+        value.settings = self.settings.clone();
+        value.settings_draft = self.settings_draft.clone();
         Ok(value)
     }
 
@@ -171,9 +171,9 @@ impl IndexedMapUpdate for Update {
         if self.name_draft != value.name_draft {
             return false;
         }
-        if self.setting != value.setting {
+        if self.settings != value.settings {
             return false;
         }
-        self.setting_draft == value.setting_draft
+        self.settings_draft == value.settings_draft
     }
 }

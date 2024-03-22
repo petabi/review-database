@@ -32,7 +32,7 @@ use tracing::{info, warn};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.26.0,<=0.27.0-alpha.9";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.26.0,<=0.27.0-alpha.10";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -191,7 +191,7 @@ fn read_version_file(path: &Path) -> Result<Version> {
 fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
     use crate::collections::Indexed;
     use crate::IterableMap;
-    use crate::{Node, NodeSetting};
+    use crate::{Node, NodeSettings};
     use bincode::Options;
     use chrono::{DateTime, Utc};
     use std::collections::HashMap;
@@ -202,13 +202,13 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
     pub struct OldNode {
         pub id: u32,
         pub creation_time: DateTime<Utc>,
-        as_is: Option<OldNodeSetting>,
-        to_be: Option<OldNodeSetting>,
+        as_is: Option<OldNodeSettings>,
+        to_be: Option<OldNodeSettings>,
     }
 
     #[allow(clippy::struct_excessive_bools, clippy::module_name_repetitions)]
     #[derive(Deserialize, Serialize)]
-    struct OldNodeSetting {
+    struct OldNodeSettings {
         pub name: String,
         pub customer_id: u32,
         pub description: String,
@@ -260,8 +260,8 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
         pub sensor_list: HashMap<String, bool>,
     }
 
-    impl From<OldNodeSetting> for NodeSetting {
-        fn from(input: OldNodeSetting) -> Self {
+    impl From<OldNodeSettings> for NodeSettings {
+        fn from(input: OldNodeSettings) -> Self {
             Self {
                 customer_id: input.customer_id,
                 description: input.description,
@@ -328,8 +328,8 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
                 id: input.id,
                 name,
                 name_draft,
-                setting: input.as_is.map(std::convert::Into::into),
-                setting_draft: input.to_be.map(std::convert::Into::into),
+                settings: input.as_is.map(std::convert::Into::into),
+                settings_draft: input.to_be.map(std::convert::Into::into),
                 creation_time: input.creation_time,
             })
         }
@@ -444,13 +444,13 @@ mod tests {
         pub struct OldNode {
             pub id: u32,
             pub creation_time: DateTime<Utc>,
-            pub as_is: Option<OldNodeSetting>,
-            pub to_be: Option<OldNodeSetting>,
+            pub as_is: Option<OldNodeSettings>,
+            pub to_be: Option<OldNodeSettings>,
         }
 
         #[allow(clippy::struct_excessive_bools, clippy::module_name_repetitions)]
         #[derive(Deserialize, Serialize, Clone)]
-        struct OldNodeSetting {
+        struct OldNodeSettings {
             pub name: String,
             pub customer_id: u32,
             pub description: String,
@@ -540,7 +540,7 @@ mod tests {
             id: 0,
             creation_time: Utc::now(),
             as_is: None,
-            to_be: Some(OldNodeSetting {
+            to_be: Some(OldNodeSettings {
                 name: "name".to_string(),
                 customer_id: 20,
                 description: "description".to_string(),

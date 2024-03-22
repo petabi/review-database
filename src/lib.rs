@@ -55,7 +55,7 @@ pub use self::tables::{
     AccessToken, AllowNetwork, AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate,
     Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate,
     DataSource, DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator,
-    Network, NetworkUpdate, Node, NodeSetting, NodeUpdate, PacketAttr, ProtocolPorts, Response,
+    Network, NetworkUpdate, Node, NodeSettings, NodeUpdate, PacketAttr, ProtocolPorts, Response,
     ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
     SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, Ti,
     TiCmpKind, Tidb, TidbKind, TidbRule, TorExitNode, TrafficFilter, TriagePolicy,
