@@ -22,7 +22,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `TriagePolicyUpdate` to describe data for updating `IndexedTable<TriagePolicy>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure triage policy management.
-- Introduced `Node`, `NodeSetting` and `NodeUpdate` to describe data stored in `IndexedTable<Node>`.
+- Introduced `Node`, `NodeSettings` and `NodeUpdate` to describe data stored in `IndexedTable<Node>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure node management.
 - Added new functions to facilitate insert, remove, and update operations,

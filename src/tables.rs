@@ -50,7 +50,7 @@ pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
-pub use self::node::{Node, Setting as NodeSetting, Update as NodeUpdate};
+pub use self::node::{Node, Settings as NodeSettings, Update as NodeUpdate};
 pub use self::sampling_policy::{
     Interval as SamplingInterval, Kind as SamplingKind, Period as SamplingPeriod, SamplingPolicy,
     Update as SamplingPolicyUpdate,
@@ -543,7 +543,7 @@ impl<'d, R> IndexedTable<'d, R> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the map index is not found or the database operation fails.    
+    /// Returns an error if the map index is not found or the database operation fails.
     pub fn count(&self) -> Result<usize> {
         self.indexed_map.count()
     }
