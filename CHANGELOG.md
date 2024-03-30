@@ -5,6 +5,30 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Introduced `OutlierInfoKey`, `OutlierInfoValue` to describe data stored in `Table<OutlierInfo>`.
+- Added new functions to facilitate insert, remove operations, ensuring a more
+  controlled and secure outlier info management.
+- Added `prefix_iter` to `Iterable` trait to offer a prefix iterator for database
+  table.
+
+### Changed
+
+- Changed the return type of `Store::outlier_map` to `Table<OutlierInfo>` to
+  enhance security by preventing direct exposure of internal structure.
+- Moved `OutlierInfo` from `crate::outlier` to `crate` in order to align with
+  other type definitions.
+- Included `model_id`, `timestamp` and `is_saved` fields in `OutlierInfo` to align
+  with other database table type definitions.
+
+### Removed
+
+- `PrefixMap` has been removed from code base, for table that needs a prefix iterator
+  use `prefix_iter` in `Iterable` trait instead.
+
 ## [0.27.1] - 2024-04-15
 
 ### Added
@@ -910,6 +934,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.27.1...main
 [0.27.1]: https://github.com/petabi/review-database/compare/0.27.0...0.27.1
 [0.27.0]: https://github.com/petabi/review-database/compare/0.26.0...0.27.0
 [0.26.0]: https://github.com/petabi/review-database/compare/0.25.0...0.26.0

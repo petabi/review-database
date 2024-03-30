@@ -55,12 +55,13 @@ pub use self::tables::{
     AccessToken, AllowNetwork, AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate,
     Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate,
     DataSource, DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator,
-    Network, NetworkUpdate, Node, NodeSettings, NodeUpdate, PacketAttr, ProtocolPorts, Response,
-    ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
-    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, Ti,
-    TiCmpKind, Tidb, TidbKind, TidbRule, TorExitNode, TrafficFilter, TriagePolicy,
-    TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent,
-    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
+    Network, NetworkUpdate, Node, NodeSettings, NodeUpdate, OutlierInfo, OutlierInfoKey,
+    OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval,
+    SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
+    StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
+    TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
+    TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
+    UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -253,8 +254,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn outlier_map(&self) -> Map {
-        self.states.map(tables::OUTLIERS).expect("always available")
+    pub fn outlier_map(&self) -> Table<OutlierInfo> {
+        self.states.outlier_infos()
     }
 
     #[must_use]

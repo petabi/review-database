@@ -32,7 +32,7 @@ use tracing::{info, warn};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.26.0,<0.28.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.28.0-alpha.1,<=0.28.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -109,11 +109,18 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<Migration> = vec![(
-        VersionReq::parse(">=0.25.0,<0.26.0")?,
-        Version::parse("0.26.0")?,
-        migrate_0_25_to_0_26,
-    )];
+    let migration: Vec<Migration> = vec![
+        (
+            VersionReq::parse(">=0.25.0,<0.26.0")?,
+            Version::parse("0.26.0")?,
+            migrate_0_25_to_0_26,
+        ),
+        (
+            VersionReq::parse(">=0.26.0,<0.28.0")?,
+            Version::parse("0.28.0")?,
+            migrate_0_27_to_0_28,
+        ),
+    ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
     store.backup(false, 1)?;
@@ -186,6 +193,30 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_27_to_0_28(store: &super::Store) -> Result<()> {
+    use crate::collections::IterableMap;
+    use crate::OutlierInfoKey;
+    use bincode::Options;
+
+    let map = store.outlier_map();
+    let raw = map.raw();
+    for (key, value) in raw.iter_forward()? {
+        let (model_id, timestamp, rank, id, source) = bincode::DefaultOptions::new()
+            .deserialize::<(i32, i64, i64, i64, String)>(&key)
+            .context("Failed to migrate node database: invalid node value")?;
+        let new_key = OutlierInfoKey {
+            model_id,
+            timestamp,
+            rank,
+            id,
+            source,
+        };
+        let new_key = new_key.to_bytes();
+        raw.update((&key, &value), (&new_key, &value))?;
+    }
+    Ok(())
 }
 
 fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
@@ -360,6 +391,7 @@ mod tests {
 
     use super::COMPATIBLE_VERSION_REQ;
     use crate::Store;
+    use rocksdb::Direction;
     use semver::{Version, VersionReq};
 
     #[allow(dead_code)]
@@ -601,5 +633,54 @@ mod tests {
 
         assert_eq!(new_node.id, 0);
         assert_eq!(new_node.name, "name");
+    }
+
+    #[test]
+    fn migrate_0_27_to_0_28() {
+        use crate::tables::Iterable;
+        use bincode::Options;
+
+        let settings = TestSchema::new();
+        let map = settings.store.outlier_map();
+        let outlier_db = map.raw();
+
+        let model_id = 123;
+        let timestamp = 456;
+        let rank = 789;
+        let id = 0;
+        let source = "some source".to_string();
+        let distance = 3.1415926;
+        let is_saved = true;
+        let sample = crate::OutlierInfo {
+            model_id,
+            timestamp,
+            rank,
+            id,
+            source,
+            distance,
+            is_saved,
+        };
+
+        let key = bincode::DefaultOptions::new()
+            .serialize(&(model_id, timestamp, rank, id, &sample.source))
+            .unwrap();
+        let value = bincode::DefaultOptions::new()
+            .serialize(&(distance, is_saved))
+            .unwrap();
+        assert!(outlier_db.insert(&key, &value).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_27_to_0_28(&settings.store).is_ok());
+
+        let map = settings.store.outlier_map();
+        assert_eq!(map.iter(Direction::Forward, None).count(), 1);
+        let entries = map
+            .get(model_id, Some(timestamp), Direction::Reverse, None)
+            .collect::<anyhow::Result<Vec<_>>>()
+            .unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0], sample);
     }
 }

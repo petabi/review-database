@@ -1,13 +1,21 @@
 //! The `batch_info` table.
 
-use anyhow::Result;
-use rocksdb::{IteratorMode, OptimisticTransactionDB};
+use std::mem::size_of;
 
-use crate::{batch_info::BatchInfo, types::FromKeyValue, Map, Table};
+use anyhow::Result;
+use rocksdb::OptimisticTransactionDB;
+
+use crate::{batch_info::BatchInfo, types::FromKeyValue, Iterable, Map, Table, UniqueKey};
 
 impl FromKeyValue for BatchInfo {
-    fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
-        super::deserialize(value)
+    fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
+        let mut model = [0; size_of::<i32>()];
+        model.copy_from_slice(&key[..size_of::<i32>()]);
+        let model = i32::from_be_bytes(model);
+
+        let inner = super::deserialize(value)?;
+
+        Ok(Self::new(model, inner))
     }
 }
 
@@ -27,13 +35,8 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// or the database operation fails.
     pub fn get_all_for(&self, model: i32) -> Result<Vec<BatchInfo>> {
         let prefix = model.to_be_bytes();
-        let mut batch_info = vec![];
-        for (_k, v) in self.map.inner_prefix_iterator(IteratorMode::Start, &prefix) {
-            let inner = super::deserialize(&v)?;
-
-            batch_info.push(BatchInfo::new(model, inner));
-        }
-        Ok(batch_info)
+        self.prefix_iter(rocksdb::Direction::Forward, None, &prefix)
+            .collect()
     }
 
     /// Returns the count of `batch_info` with the given model id.
@@ -45,8 +48,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     pub fn count(&self, model: i32) -> Result<usize> {
         let prefix = model.to_be_bytes();
         Ok(self
-            .map
-            .inner_prefix_iterator(IteratorMode::Start, &prefix)
+            .prefix_iter(rocksdb::Direction::Forward, None, &prefix)
             .count())
     }
 
@@ -74,8 +76,9 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     pub fn delete_all_for(&self, model: i32) -> Result<usize> {
         let mut deleted = 0;
         let prefix = model.to_be_bytes();
-        for (k, _v) in self.map.inner_prefix_iterator(IteratorMode::End, &prefix) {
-            match self.map.delete(&k) {
+        for res in self.prefix_iter(rocksdb::Direction::Reverse, None, &prefix) {
+            let entry = res?;
+            match self.map.delete(&entry.unique_key()) {
                 Ok(()) => deleted += 1,
                 Err(e) => {
                     return Err(anyhow::anyhow!(

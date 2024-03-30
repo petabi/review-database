@@ -13,15 +13,6 @@ pub struct UpdateOutlierRequest {
     pub size: i64,
 }
 
-#[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct OutlierInfo {
-    pub id: i64,
-    pub rank: i64,
-    pub distance: f64,
-    pub source: String,
-}
-
 #[derive(Queryable)]
 struct OutlierDbSchema {
     id: i32,

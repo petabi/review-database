@@ -153,21 +153,8 @@ impl<'a> Map<'a> {
         Ok(())
     }
 
-    #[must_use]
-    pub fn into_prefix_map(self, prefix: &'a [u8]) -> PrefixMap {
-        PrefixMap { prefix, map: self }
-    }
-
     fn inner_iterator(&self, mode: IteratorMode) -> MapIterator {
         let iter = self.db.iterator_cf(self.cf, mode);
-
-        MapIterator { inner: iter }
-    }
-
-    pub(crate) fn inner_prefix_iterator(&self, mode: IteratorMode, prefix: &[u8]) -> MapIterator {
-        let mut readopts = rocksdb::ReadOptions::default();
-        readopts.set_iterate_range(rocksdb::PrefixRange(prefix));
-        let iter = self.db.iterator_cf_opt(self.cf, readopts, mode);
 
         MapIterator { inner: iter }
     }
@@ -184,32 +171,6 @@ impl<'i> IterableMap<'i, MapIterator<'i>> for Map<'i> {
 
     fn iter_backward(&self) -> Result<MapIterator> {
         Ok(self.inner_iterator(IteratorMode::End))
-    }
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub struct PrefixMap<'a, 'b> {
-    prefix: &'a [u8],
-    map: Map<'b>,
-}
-
-impl<'a, 'b, 'i> IterableMap<'i, MapIterator<'i>> for PrefixMap<'a, 'b> {
-    fn iter_from(&self, key: &[u8], direction: Direction) -> Result<MapIterator> {
-        Ok(self
-            .map
-            .inner_prefix_iterator(IteratorMode::From(key, direction), self.prefix))
-    }
-
-    fn iter_forward(&self) -> Result<MapIterator> {
-        Ok(self
-            .map
-            .inner_prefix_iterator(IteratorMode::Start, self.prefix))
-    }
-
-    fn iter_backward(&self) -> Result<MapIterator> {
-        Ok(self
-            .map
-            .inner_prefix_iterator(IteratorMode::End, self.prefix))
     }
 }
 

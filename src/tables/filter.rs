@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, FilterEndpoint, FlowKind, LearningMethod, Map, Table};
+use crate::{types::FromKeyValue, FilterEndpoint, FlowKind, Iterable, LearningMethod, Map, Table};
 
 #[derive(Default)]
 pub struct Filter {
@@ -175,24 +175,21 @@ impl<'d> Table<'d, Filter> {
     ///
     /// Returns an error if the database operation fails.
     pub fn list(&self, username: &str) -> Result<Vec<Filter>> {
-        use rocksdb::{Direction::Forward, IteratorMode::From};
+        use rocksdb::Direction::Forward;
         let prefix = username.as_bytes();
-        let iter = self
-            .map
-            .inner_prefix_iterator(From(prefix, Forward), prefix);
-        iter.map(|(k, v)| Filter::from_key_value(&k, &v))
-            .filter_map(|filter| {
-                filter
-                    .map(|f| {
-                        if f.username == username {
-                            Some(f)
-                        } else {
-                            None
-                        }
-                    })
-                    .transpose()
-            })
-            .collect()
+        let iter = self.prefix_iter(Forward, Some(prefix), prefix);
+        iter.filter_map(|filter| {
+            filter
+                .map(|f| {
+                    if f.username == username {
+                        Some(f)
+                    } else {
+                        None
+                    }
+                })
+                .transpose()
+        })
+        .collect()
     }
 }
 
