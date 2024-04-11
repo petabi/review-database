@@ -12,7 +12,9 @@ bb8-postgres = { version = "0.8", features = [
   "with-chrono-0_4",
 ] }
 bincode = "1"
-chrono = { version = "0.4.31", default-features = false, features = ["serde"] }
+chrono = { version = ">=0.4.35", default_features = false, features = [
+  "serde",
+] }
 data-encoding = "2"
 diesel = { version = "2", features = ["chrono", "postgres", "serde_json"] }
 diesel-async = { version = "0.4", features = ["bb8", "postgres"] }

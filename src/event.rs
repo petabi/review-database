@@ -30,7 +30,7 @@ pub use self::{
     dcerpc::{BlockListDceRpc, BlockListDceRpcFields},
     dns::{
         BlockListDns, BlockListDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
-        DnsCovertChannel, DnsEventFields,
+        DnsCovertChannel, DnsEventFields, LockyRansomware,
     },
     ftp::{
         BlockListFtp, BlockListFtpFields, FtpBruteForce, FtpBruteForceFields, FtpPlainText,
@@ -84,7 +84,7 @@ use std::{
 // const VERY_LOW: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(1) };
 const LOW: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(2) };
 const MEDIUM: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(3) };
-// const HIGH: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(4) };
+const HIGH: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(4) };
 // const VERY_HIGH: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(5) };
 
 // event kind
@@ -107,6 +107,7 @@ const BLOCK_LIST: &str = "Block List";
 const WINDOWS_THREAT_EVENT: &str = "Windows Threat Events";
 const NETWORK_THREAT_EVENT: &str = "Network Threat Events";
 const MISC_LOG_THREAT: &str = "Log Threat";
+const LOCKY_RANSOMWARE: &str = "Locky Ransomware";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -163,6 +164,8 @@ pub enum Event {
     NetworkThreat(NetworkThreat),
 
     ExtraThreat(ExtraThreat),
+
+    LockyRansomware(LockyRansomware),
 }
 
 pub enum RecordType {
@@ -232,6 +235,7 @@ impl Event {
             Event::WindowsThreat(event) => event.matches(locator, filter),
             Event::NetworkThreat(event) => event.matches(locator, filter),
             Event::ExtraThreat(event) => event.matches(locator, filter),
+            Event::LockyRansomware(event) => event.matches(locator, filter),
         }
     }
 
@@ -401,6 +405,11 @@ impl Event {
                 }
             }
             Event::ExtraThreat(_event) => {}
+            Event::LockyRansomware(event) => {
+                if event.matches(locator, filter)?.0 {
+                    addr_pair = (Some(event.src_addr), Some(event.dst_addr));
+                }
+            }
         }
         Ok(addr_pair)
     }
@@ -577,6 +586,11 @@ impl Event {
             Event::ExtraThreat(event) => {
                 if event.matches(locator, filter)?.0 {
                     kind = Some(MISC_LOG_THREAT);
+                }
+            }
+            Event::LockyRansomware(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(LOCKY_RANSOMWARE);
                 }
             }
         }
@@ -806,6 +820,11 @@ impl Event {
             Event::ExtraThreat(event) => {
                 if event.matches(locator, filter)?.0 {
                     category = Some(EventCategory::Reconnaissance);
+                }
+            }
+            Event::LockyRansomware(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(EventCategory::Impact);
                 }
             }
         };
@@ -1141,6 +1160,11 @@ impl Event {
                     level = Some(MEDIUM);
                 }
             }
+            Event::LockyRansomware(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(HIGH);
+                }
+            }
         }
 
         if let Some(level) = level {
@@ -1282,6 +1306,9 @@ impl Event {
             Event::ExtraThreat(event) => {
                 event.triage_scores = Some(triage_scores);
             }
+            Event::LockyRansomware(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
         }
     }
 }
@@ -1331,6 +1358,7 @@ pub enum EventKind {
     BlockListTls,
     WindowsThreat,
     NetworkThreat,
+    LockyRansomware,
 }
 
 /// Machine Learning Method.
@@ -1443,6 +1471,7 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["windows", "threat"], "windows threat");
             moderate_kinds_by(kinds, &["network", "threat"], "network threat");
             moderate_kinds_by(kinds, &["extra", "threat"], "extra threat");
+            moderate_kinds_by(kinds, &["locky", "ransomware"], "locky ransomware");
         }
     }
 }
@@ -1706,6 +1735,13 @@ impl fmt::Display for EventMessage {
             EventKind::ExtraThreat => {
                 if let Ok(fields) = bincode::deserialize::<ExtraThreat>(&self.fields) {
                     write!(f, "ExtraThreat,{fields}")
+                } else {
+                    write!(f, "invalid event")
+                }
+            }
+            EventKind::LockyRansomware => {
+                if let Ok(fields) = bincode::deserialize::<DnsEventFields>(&self.fields) {
+                    write!(f, "LockyRansomware,{fields}")
                 } else {
                     write!(f, "invalid event")
                 }
@@ -2138,6 +2174,15 @@ impl<'i> Iterator for EventIterator<'i> {
                 };
                 Some(Ok((key, Event::ExtraThreat(fields))))
             }
+            EventKind::LockyRansomware => {
+                let Ok(fields) = bincode::deserialize::<DnsEventFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::LockyRansomware(LockyRansomware::new(time, fields)),
+                )))
+            }
         }
     }
 }
@@ -2218,18 +2263,17 @@ fn get_record_country_short_name(record: &ip2location::Record) -> Option<String>
 #[cfg(test)]
 mod tests {
     use crate::{
-        event::DgaFields, event::DnsEventFields, DomainGenerationAlgorithm, EventKind,
-        EventMessage, Store,
+        event::{DgaFields, DnsEventFields, LOCKY_RANSOMWARE},
+        DomainGenerationAlgorithm, EventCategory, EventFilter, EventKind, EventMessage, Store,
     };
-    use bincode::Options;
     use chrono::{TimeZone, Utc};
     use std::{
+        collections::HashMap,
         net::{IpAddr, Ipv4Addr},
         sync::Arc,
     };
 
-    fn example_message() -> EventMessage {
-        let codec = bincode::DefaultOptions::new();
+    fn example_message(kind: EventKind) -> EventMessage {
         let fields = DnsEventFields {
             source: "collector1".to_string(),
             session_end_time: Utc::now(),
@@ -2254,8 +2298,8 @@ mod tests {
         };
         EventMessage {
             time: Utc::now(),
-            kind: EventKind::DnsCovertChannel,
-            fields: codec.serialize(&fields).expect("serializable"),
+            kind,
+            fields: bincode::serialize(&fields).expect("serializable"),
         }
     }
 
@@ -2268,7 +2312,7 @@ mod tests {
         let db = store.events();
         assert!(db.iter_forward().next().is_none());
 
-        let msg = example_message();
+        let msg = example_message(EventKind::DnsCovertChannel);
         db.put(&msg).unwrap();
         let mut iter = db.iter_forward();
         assert!(iter.next().is_some());
@@ -2279,6 +2323,60 @@ mod tests {
         assert!(iter.next().is_some());
         assert!(iter.next().is_some());
         assert!(iter.next().is_none());
+    }
+
+    #[tokio::test]
+    async fn event_message() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        let msg = example_message(EventKind::LockyRansomware);
+        db.put(&msg).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: None,
+            kinds: Some(vec!["locky ransomware".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: Some(0.5),
+            triage_policies: None,
+        };
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(LOCKY_RANSOMWARE));
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(LOCKY_RANSOMWARE), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::Impact), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
+        );
     }
 
     #[tokio::test]
@@ -2343,7 +2441,7 @@ mod tests {
             let db = store.events();
             assert!(db.iter_forward().next().is_none());
 
-            let msg = example_message();
+            let msg = example_message(EventKind::DnsCovertChannel);
 
             db.put(&msg).unwrap();
             {
@@ -2363,7 +2461,7 @@ mod tests {
         {
             let store = store.read().await;
             let db = store.events();
-            let msg = example_message();
+            let msg = example_message(EventKind::LockyRansomware);
             db.put(&msg).unwrap();
             {
                 let mut iter = db.iter_forward();
