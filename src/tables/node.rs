@@ -154,11 +154,11 @@ impl IndexedMapUpdate for Update {
 
     fn apply(&self, mut value: Self::Entry) -> Result<Self::Entry, anyhow::Error> {
         if let Some(n) = self.name.as_deref() {
-            value.name = n.to_owned();
+            n.clone_into(&mut value.name);
         }
-        value.name_draft = self.name_draft.clone();
-        value.settings = self.settings.clone();
-        value.settings_draft = self.settings_draft.clone();
+        value.name_draft.clone_from(&self.name_draft);
+        value.settings.clone_from(&self.settings);
+        value.settings_draft.clone_from(&self.settings_draft);
         Ok(value)
     }
 

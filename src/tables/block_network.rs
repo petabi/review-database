@@ -66,7 +66,7 @@ impl IndexedMapUpdate for Update {
             value.name.push_str(name);
         }
         if let Some(networks) = self.networks.as_ref() {
-            value.networks = networks.to_owned();
+            networks.clone_into(&mut value.networks);
         }
         if let Some(description) = self.description.as_deref() {
             value.description.clear();
