@@ -4,11 +4,7 @@ mod map;
 
 use crate::EXCLUSIVE;
 
-pub use self::{
-    indexed_map::IndexedMap,
-    indexed_set::IndexedSet,
-    map::{Map, MapIterator},
-};
+pub use self::{indexed_map::IndexedMap, indexed_set::IndexedSet, map::Map};
 use anyhow::{bail, Context, Result};
 use bincode::Options;
 use rocksdb::{Direction, IteratorMode};
@@ -18,26 +14,12 @@ use std::{borrow::Cow, cmp::Ordering, convert::TryFrom, mem};
 use super::types::FromKeyValue;
 
 pub trait IterableMap<'i, I: Iterator + 'i> {
-    /// Creates an iterator over key-value pairs, starting from `key`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the iterator cannot be created.
-    fn iter_from(&'i self, key: &[u8], direction: Direction) -> Result<I>;
-
     /// Creates an iterator that iterates forward over key-value pairs.
     ///
     /// # Errors
     ///
     /// Returns an error if the iterator cannot be created.
     fn iter_forward(&'i self) -> Result<I>;
-
-    /// Creates an iterator that iterates backward over key-value pairs.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the iterator cannot be created.
-    fn iter_backward(&'i self) -> Result<I>;
 }
 
 #[derive(Deserialize, Serialize)]
@@ -581,19 +563,8 @@ impl<'i, M> IterableMap<'i, IndexedMapIterator<'i>> for M
 where
     M: Indexed,
 {
-    fn iter_from(&self, key: &[u8], direction: Direction) -> Result<IndexedMapIterator> {
-        if key.is_empty() {
-            bail!("key shouldn't be empty");
-        }
-        self.inner_iterator(IteratorMode::From(key, direction))
-    }
-
     fn iter_forward(&self) -> Result<IndexedMapIterator> {
         self.inner_iterator(IteratorMode::From(&[0], Direction::Forward))
-    }
-
-    fn iter_backward(&self) -> Result<IndexedMapIterator> {
-        self.inner_iterator(IteratorMode::End)
     }
 }
 

@@ -29,8 +29,8 @@ use self::backends::ConnectionPool;
 pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
 pub use self::cluster::*;
-pub use self::collections::{Indexable, Indexed, IterableMap, Map, MapIterator};
-pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate};
+pub use self::collections::{Indexable, Indexed};
+pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, IterableMap, Map};
 pub use self::column_statistics::*;
 pub use self::event::EventKind;
 pub use self::event::{
@@ -52,14 +52,14 @@ pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, AllowNetwork, AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate,
-    Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate,
-    DataSource, DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator,
-    Network, NetworkUpdate, Node, NodeSettings, NodeUpdate, OutlierInfo, OutlierInfoKey,
-    OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval,
-    SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
-    StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
-    TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
+    AccessToken, AccountPolicy, AllowNetwork, AllowNetworkUpdate, AttrCmpKind, BlockNetwork,
+    BlockNetworkUpdate, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
+    CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, Filter, IndexedTable,
+    Iterable, ModelIndicator, Network, NetworkUpdate, Node, NodeSettings, NodeUpdate, OutlierInfo,
+    OutlierInfoKey, OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind,
+    SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate,
+    Structured, StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind,
+    TidbRule, TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
     TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
     UnstructuredClusteringAlgorithm, ValueKind,
 };
@@ -152,10 +152,8 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn account_policy_map(&self) -> Map {
-        self.states
-            .map(tables::ACCOUNT_POLICY)
-            .expect("always available")
+    pub fn account_policy_map(&self) -> Table<AccountPolicy> {
+        self.states.account_policy()
     }
 
     #[must_use]

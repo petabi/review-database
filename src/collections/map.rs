@@ -1,7 +1,7 @@
 use super::IterableMap;
 use crate::EXCLUSIVE;
 use anyhow::{anyhow, bail, Context, Result};
-use rocksdb::{Direction, IteratorMode};
+use rocksdb::IteratorMode;
 
 pub struct Map<'a> {
     pub(crate) db: &'a rocksdb::OptimisticTransactionDB,
@@ -161,16 +161,8 @@ impl<'a> Map<'a> {
 }
 
 impl<'i> IterableMap<'i, MapIterator<'i>> for Map<'i> {
-    fn iter_from(&self, key: &[u8], direction: Direction) -> Result<MapIterator> {
-        Ok(self.inner_iterator(IteratorMode::From(key, direction)))
-    }
-
     fn iter_forward(&self) -> Result<MapIterator> {
         Ok(self.inner_iterator(IteratorMode::Start))
-    }
-
-    fn iter_backward(&self) -> Result<MapIterator> {
-        Ok(self.inner_iterator(IteratorMode::End))
     }
 }
 

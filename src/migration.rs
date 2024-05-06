@@ -12,6 +12,8 @@ use std::{
 };
 use tracing::{info, warn};
 
+use crate::IterableMap;
+
 /// The range of versions that use the current database format.
 ///
 /// The range should include all the earlier, released versions that use the current database
@@ -32,7 +34,7 @@ use tracing::{info, warn};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.28.0-alpha.1,<=0.28.0-alpha.1";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.28.0-alpha.2,<=0.28.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -196,6 +198,11 @@ fn read_version_file(path: &Path) -> Result<Version> {
 }
 
 fn migrate_0_27_to_0_28(store: &super::Store) -> Result<()> {
+    migrate_outlier_info(store)?;
+    migrate_account_policy(store)
+}
+
+fn migrate_outlier_info(store: &super::Store) -> Result<()> {
     use crate::collections::IterableMap;
     use crate::OutlierInfoKey;
     use bincode::Options;
@@ -215,6 +222,33 @@ fn migrate_0_27_to_0_28(store: &super::Store) -> Result<()> {
         };
         let new_key = new_key.to_bytes();
         raw.update((&key, &value), (&new_key, &value))?;
+    }
+    Ok(())
+}
+
+fn migrate_account_policy(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
+    #[derive(Deserialize, Serialize)]
+    pub struct OldAccountPolicy {
+        pub expiration_time: i64,
+    }
+
+    let key = b"account policy key";
+    let map = store.account_policy_map();
+    let raw = map.raw();
+
+    for (cur_key, _value) in raw.iter_forward()? {
+        if cur_key.as_ref() != key {
+            raw.delete(&cur_key)?;
+        }
+    }
+
+    if let Some(old) = raw.get(key)? {
+        let old: OldAccountPolicy = bincode::DefaultOptions::new().deserialize(old.as_ref())?;
+        let secs = u32::try_from(old.expiration_time)?;
+        raw.delete(key)?;
+        map.init_expiry_period(secs)?;
     }
     Ok(())
 }
@@ -636,7 +670,7 @@ mod tests {
     }
 
     #[test]
-    fn migrate_0_27_to_0_28() {
+    fn migrate_0_27_to_0_28_outlier_info() {
         use crate::tables::Iterable;
         use bincode::Options;
 
@@ -671,7 +705,7 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_27_to_0_28(&settings.store).is_ok());
+        assert!(super::migrate_outlier_info(&settings.store).is_ok());
 
         let map = settings.store.outlier_map();
         assert_eq!(map.iter(Direction::Forward, None).count(), 1);
@@ -682,5 +716,42 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0], sample);
+    }
+
+    #[test]
+    fn migrate_0_27_to_0_28_account_policy() {
+        use crate::collections::IterableMap;
+        use bincode::Options;
+        use serde::Serialize;
+
+        #[derive(Serialize)]
+        pub struct OldAccountPolicy {
+            pub expiration_time: i64,
+        }
+
+        let key = b"account policy key";
+        let settings = TestSchema::new();
+        let map = settings.store.account_policy_map();
+        let ap_db = map.raw();
+
+        let time: u32 = 32;
+
+        let value = bincode::DefaultOptions::new()
+            .serialize(&OldAccountPolicy {
+                expiration_time: i64::try_from(time).unwrap(),
+            })
+            .unwrap();
+        assert!(ap_db.insert(key, &value).is_ok());
+        assert!(ap_db.insert(b"error key", &value).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_account_policy(&settings.store).is_ok());
+
+        let map = settings.store.account_policy_map();
+        assert_eq!(map.raw().iter_forward().unwrap().count(), 1);
+        let res = map.current_expiry_period();
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), Some(time));
     }
 }
