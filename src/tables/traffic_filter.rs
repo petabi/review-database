@@ -86,7 +86,7 @@ impl TrafficFilter {
     }
 
     fn check_duplicate(&self, network: IpNet) -> Option<IpNet> {
-        if network.addr().is_unspecified() && self.rules.get(&network).is_some() {
+        if network.addr().is_unspecified() && self.rules.contains_key(&network) {
             return Some(network);
         }
         self.rules
