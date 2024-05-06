@@ -15,9 +15,12 @@ use std::{
 
 pub(super) trait Match {
     fn src_addr(&self) -> IpAddr;
+    #[allow(dead_code)] // for future use
     fn src_port(&self) -> u16;
     fn dst_addr(&self) -> IpAddr;
+    #[allow(dead_code)] // for future use
     fn dst_port(&self) -> u16;
+    #[allow(dead_code)] // for future use
     fn proto(&self) -> u8;
     fn category(&self) -> EventCategory;
     fn level(&self) -> NonZeroU8;
