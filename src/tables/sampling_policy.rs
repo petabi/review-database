@@ -151,7 +151,7 @@ impl IndexedMapUpdate for Update {
 
         value.dst_ip = self.dst_ip;
 
-        value.node = self.node.clone();
+        value.node.clone_from(&self.node);
 
         value.column = self.column;
 

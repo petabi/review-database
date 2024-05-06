@@ -102,19 +102,19 @@ impl<'d> Table<'d, Account> {
                     if account.name != *old {
                         bail!("old value mismatch");
                     }
-                    account.name = new.clone();
+                    account.name.clone_from(new);
                 }
                 if let Some((old, new)) = &department {
                     if account.department != *old {
                         bail!("old value mismatch");
                     }
-                    account.department = new.clone();
+                    account.department.clone_from(new);
                 }
                 if let Some((old, new)) = &allow_access_from {
                     if account.allow_access_from != *old {
                         bail!("old value mismatch");
                     }
-                    account.allow_access_from = new.clone();
+                    account.allow_access_from.clone_from(new);
                 }
                 if let Some((old, new)) = max_parallel_sessions {
                     if account.max_parallel_sessions != *old {
