@@ -14,6 +14,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   controlled and secure outlier info management.
 - Added `prefix_iter` to `Iterable` trait to offer a prefix iterator for database
   table.
+- Added new functions to facilitate initialize, update and get operations,
+  ensuring a more controlled and secure account policy management.
 
 ### Changed
 
@@ -23,11 +25,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   other type definitions.
 - Included `model_id`, `timestamp` and `is_saved` fields in `OutlierInfo` to align
   with other database table type definitions.
+- Changed the return type of `Store::account_policy_map` to `Table<AccountPlicy>`
+  to enhance security by preventing direct exposure of internal structure.
 
 ### Removed
 
 - `PrefixMap` has been removed from code base, for table that needs a prefix iterator
   use `prefix_iter` in `Iterable` trait instead.
+- `Map`, `IterableMap`, `MapIterator` have been hidden from the user to enhance security.
 
 ## [0.27.1] - 2024-04-15
 

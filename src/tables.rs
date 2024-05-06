@@ -1,4 +1,5 @@
 mod access_token;
+mod account_policy;
 mod accounts;
 mod allow_network;
 mod batch_info;
@@ -43,6 +44,7 @@ use std::{
 };
 
 pub use self::access_token::AccessToken;
+pub use self::account_policy::AccountPolicy;
 pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::csv_column_extra::CsvColumnExtra;
@@ -164,6 +166,12 @@ impl StateDb {
     pub(crate) fn accounts(&self) -> Table<Account> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Account>::open(inner).expect("{ACCOUNTS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn account_policy(&self) -> Table<AccountPolicy> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<AccountPolicy>::open(inner).expect("{ACCOUNT_POLICY} table must be present")
     }
 
     #[must_use]
@@ -313,12 +321,6 @@ impl StateDb {
     pub fn events(&self) -> event::EventDb {
         let inner = self.inner.as_ref().expect("database must be open");
         event::EventDb::new(inner)
-    }
-
-    #[must_use]
-    pub(super) fn map(&self, name: &str) -> Option<Map> {
-        let inner = self.inner.as_ref().expect("database must be open");
-        Map::open(inner, name)
     }
 
     #[must_use]
