@@ -158,7 +158,7 @@ impl Database {
         let mut conn = self.pool.get_diesel_conn().await?;
         let columns_for_top_n = get_columns_for_top_n(&mut conn, model_id).await?;
         let mut column_types = self.get_column_types_of_model(model_id).await?;
-        column_types.retain(|c| columns_for_top_n.get(&c.column_index).is_some());
+        column_types.retain(|c| columns_for_top_n.contains(&c.column_index));
 
         let cluster_sizes = super::get_cluster_sizes(&mut conn, model_id).await?;
         let cluster_ids = get_limited_cluster_ids(
