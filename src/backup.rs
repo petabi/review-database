@@ -6,7 +6,6 @@ use chrono::{DateTime, TimeZone, Utc};
 use rocksdb::backup::BackupEngineInfo;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BackupInfo {
@@ -32,21 +31,8 @@ impl From<BackupEngineInfo> for BackupInfo {
 /// Returns an error if backup fails.
 pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u32) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    info!("backing up database...");
-    let res = {
-        let mut store = store.write().await;
-        store.backup(flush, backups_to_keep)
-    };
-    match res {
-        Ok(()) => {
-            info!("backing up database completed");
-            Ok(())
-        }
-        Err(e) => {
-            warn!("database backup failed: {:?}", e);
-            Err(e)
-        }
-    }
+    let mut store = store.write().await;
+    store.backup(flush, backups_to_keep)
 }
 
 /// Lists the backup information of the database.
@@ -56,23 +42,14 @@ pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u3
 /// Returns an error if backup list fails to create
 pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    let res = {
+    let backup_list = {
         let store = store.read().await;
-        store.get_backup_info()
+        store.get_backup_info()?
     };
-    match res {
-        Ok(backup_list) => {
-            info!("generate database backup list");
-            Ok(backup_list
-                .into_iter()
-                .map(std::convert::Into::into)
-                .collect())
-        }
-        Err(e) => {
-            warn!("failed to generate backup list: {:?}", e);
-            Err(e)
-        }
-    }
+    Ok(backup_list
+        .into_iter()
+        .map(std::convert::Into::into)
+        .collect())
 }
 
 /// Restores the database from a backup with the specified ID.
