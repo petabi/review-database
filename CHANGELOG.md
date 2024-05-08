@@ -27,6 +27,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   with other database table type definitions.
 - Changed the return type of `Store::account_policy_map` to `Table<AccountPlicy>`
   to enhance security by preventing direct exposure of internal structure.
+- Removed redundant log messages in the backup module. Errors are now reported
+  through return values only, allowing callers to handle and log errors
+  according to their needs.
 
 ### Removed
 
