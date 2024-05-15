@@ -3,7 +3,9 @@
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{types::FromKeyValue, Map, Table};
+use crate::{types::FromKeyValue, Iterable, Map, Table};
+
+use super::TableIter;
 
 #[derive(Debug, PartialEq)]
 pub struct AccessToken {
@@ -43,7 +45,7 @@ impl<'d> Table<'d, AccessToken> {
         Map::open(db, super::ACCESS_TOKENS).map(Table::new)
     }
 
-    /// Insert `(username, token)` into map in the database.
+    /// Inserts `(username, token)` into map in the database.
     ///
     /// # Errors
     ///
@@ -53,7 +55,7 @@ impl<'d> Table<'d, AccessToken> {
         self.map.insert(&key, &value)
     }
 
-    /// Remove `(username, token)` from map in the database.
+    /// Removes `(username, token)` from map in the database.
     ///
     /// # Errors
     ///
@@ -64,7 +66,7 @@ impl<'d> Table<'d, AccessToken> {
         self.map.delete(&key)
     }
 
-    /// Find whether `username` `token` exists in the database.
+    /// Finds whether `username` `token` exists in the database.
     ///
     /// # Errors
     ///
@@ -72,5 +74,50 @@ impl<'d> Table<'d, AccessToken> {
     pub fn contains(&self, username: &str, token: &str) -> Result<bool> {
         let (key, _value) = AccessToken::create_key_value(username, token);
         self.map.get(&key).map(|v| v.is_some())
+    }
+
+    /// Finds all tokens for `username` in the database.
+    #[must_use]
+    pub fn tokens(&self, username: &str) -> TableIter<'_, AccessToken> {
+        use rocksdb::Direction;
+
+        let mut prefix = username.as_bytes().to_owned();
+        prefix.push(0);
+        self.prefix_iter(Direction::Forward, None, &prefix)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::Store;
+
+    #[test]
+    fn operations() {
+        let store = setup_store();
+        let table = store.access_token_map();
+        let names = &["abc", "abcd", "def"];
+
+        for (count, name) in names.iter().enumerate() {
+            for i in 0..count + 1 {
+                assert!(table.insert(name, &i.to_string()).is_ok());
+            }
+        }
+
+        for (count, name) in names.iter().enumerate() {
+            assert_eq!(count + 1, table.tokens(name).count());
+            for i in 0..count + 1 {
+                assert!(table.contains(name, &i.to_string()).unwrap());
+            }
+            assert!(table.revoke(name, &0.to_string()).is_ok());
+            assert!(!table.contains(name, &0.to_string()).unwrap());
+        }
+    }
+
+    fn setup_store() -> Arc<Store> {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap())
     }
 }
