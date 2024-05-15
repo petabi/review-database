@@ -16,6 +16,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   table.
 - Added new functions to facilitate initialize, update and get operations,
   ensuring a more controlled and secure account policy management.
+- Added `Table<AccessToken>::tokens` for accessing all the access tokens for given
+  `username`.
 
 ### Changed
 
