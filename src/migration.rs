@@ -34,7 +34,7 @@ use crate::IterableMap;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.28.0-alpha.2,<=0.28.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.28.0-alpha.2,<0.29.0-alpha";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
