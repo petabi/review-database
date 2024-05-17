@@ -1,6 +1,7 @@
 mod access_token;
 mod account_policy;
 mod accounts;
+mod agent;
 mod allow_network;
 mod batch_info;
 mod block_network;
@@ -36,6 +37,7 @@ use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
 pub use self::account_policy::AccountPolicy;
+pub use self::agent::{Agent, Kind as AgentKind};
 pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::csv_column_extra::CsvColumnExtra;
@@ -78,6 +80,7 @@ use crate::{
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
 pub(super) const ACCOUNTS: &str = "accounts";
 pub(super) const ACCOUNT_POLICY: &str = "account policy";
+pub(super) const AGENTS: &str = "agents";
 pub(super) const ALLOW_NETWORKS: &str = "allow networks";
 pub(super) const BATCH_INFO: &str = "batch_info";
 pub(super) const BLOCK_NETWORKS: &str = "block networks";
@@ -104,10 +107,11 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 28] = [
+const MAP_NAMES: [&str; 29] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
+    AGENTS,
     ALLOW_NETWORKS,
     BATCH_INFO,
     BLOCK_NETWORKS,
@@ -172,6 +176,12 @@ impl StateDb {
     pub(crate) fn account_policy(&self) -> Table<AccountPolicy> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<AccountPolicy>::open(inner).expect("{ACCOUNT_POLICY} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn agents(&self) -> IndexedTable<Agent> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        IndexedTable::<Agent>::open(inner).expect("{AGENTS} table must be present")
     }
 
     #[must_use]
