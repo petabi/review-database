@@ -66,8 +66,8 @@ pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, AccountPolicy, AllowNetwork, AllowNetworkUpdate, AttrCmpKind, BlockNetwork,
-    BlockNetworkUpdate, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
+    AccessToken, AccountPolicy, Agent, AgentKind, AllowNetwork, AllowNetworkUpdate, AttrCmpKind,
+    BlockNetwork, BlockNetworkUpdate, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
     CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, Filter, IndexedTable,
     Iterable, ModelIndicator, Network, NetworkUpdate, Node, NodeSettings, NodeUpdate, OutlierInfo,
     OutlierInfoKey, OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind,
@@ -156,6 +156,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn account_policy_map(&self) -> Table<AccountPolicy> {
         self.states.account_policy()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn agents_map(&self) -> IndexedTable<Agent> {
+        self.states.agents()
     }
 
     #[must_use]
