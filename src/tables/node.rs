@@ -7,7 +7,9 @@ use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
+use crate::{
+    types::FromKeyValue, Agent, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+};
 
 type PortNumber = u16;
 
@@ -50,6 +52,61 @@ pub struct Settings {
     pub sensors: Option<Vec<String>>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct Review {
+    pub port: Option<PortNumber>,
+    pub web_port: Option<PortNumber>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Giganto {
+    pub ingestion_ip: Option<IpAddr>,
+    pub ingestion_port: Option<PortNumber>,
+    pub publish_ip: Option<IpAddr>,
+    pub publish_port: Option<PortNumber>,
+    pub graphql_ip: Option<IpAddr>,
+    pub graphql_port: Option<PortNumber>,
+    pub retention_period: Option<u16>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Reconverge {
+    pub review_ip: Option<IpAddr>,
+    pub review_port: Option<PortNumber>,
+    pub giganto_ip: Option<IpAddr>,
+    pub giganto_port: Option<PortNumber>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Hog {
+    pub review_ip: Option<IpAddr>,
+    pub review_port: Option<PortNumber>,
+    pub giganto_ip: Option<IpAddr>,
+    pub giganto_port: Option<PortNumber>,
+    pub protocols: bool,
+    pub protocol_list: HashMap<String, bool>,
+
+    pub sensors: bool,
+    pub sensor_list: HashMap<String, bool>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Piglet {
+    pub giganto_ip: Option<IpAddr>,
+    pub giganto_port: Option<PortNumber>,
+    pub review_ip: Option<IpAddr>,
+    pub review_port: Option<PortNumber>,
+    pub save_packets: bool,
+    pub http: bool,
+    pub office: bool,
+    pub exe: bool,
+    pub pdf: bool,
+    pub html: bool,
+    pub txt: bool,
+    pub smtp_eml: bool,
+    pub ftp: bool,
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Node {
     pub id: u32,
@@ -58,6 +115,184 @@ pub struct Node {
     pub settings: Option<Settings>,
     pub settings_draft: Option<Settings>,
     pub creation_time: DateTime<Utc>,
+}
+
+struct InnerNode {
+    id: u32,
+    name: String,
+    customer_id: u32,
+    description: String,
+    hostname: String,
+    creation_time: DateTime<Utc>,
+
+    review: Option<Review>,
+    giganto: Option<Giganto>,
+    agents: Vec<u32>,
+}
+
+impl Node {
+    fn into_storage(self) -> Result<(InnerNode, Vec<Agent>)> {
+        use anyhow::anyhow;
+        let settings = self.settings.ok_or(anyhow!("expecting settings"))?;
+        let draft = self.settings_draft;
+        let agents = settings.get_agents(self.id, draft)?;
+        let inner = InnerNode {
+            id: self.id,
+            name: self.name,
+            customer_id: settings.customer_id,
+            description: settings.description,
+            hostname: settings.hostname,
+            creation_time: self.creation_time,
+            review: None,
+            giganto: None,
+            agents: vec![],
+        };
+
+        Ok((inner, agents))
+    }
+
+    fn from_storage(inner: InnerNode, _agents: Vec<Agent>) -> Self {
+        Self {
+            id: inner.id,
+            name: inner.name,
+            name_draft: None,
+            settings: None,
+            settings_draft: None,
+            creation_time: inner.creation_time,
+        }
+    }
+}
+
+impl Settings {
+    fn get_agents(&self, node: u32, other: Option<Settings>) -> Result<Vec<Agent>> {
+        let mut agents = vec![];
+        let config = if self.piglet {
+            let config = Piglet {
+                giganto_ip: self.piglet_giganto_ip,
+                giganto_port: self.piglet_giganto_port,
+                review_ip: self.piglet_review_ip,
+                review_port: self.piglet_review_port,
+                save_packets: self.save_packets,
+                http: self.http,
+                office: self.office,
+                exe: self.exe,
+                pdf: self.pdf,
+                html: self.html,
+                txt: self.txt,
+                smtp_eml: self.smtp_eml,
+                ftp: self.ftp,
+            };
+            Some(toml::to_string(&config)?)
+        } else {
+            None
+        };
+        let draft = if let Some(other) = &other {
+            if other.piglet {
+                let draft = Piglet {
+                    giganto_ip: other.piglet_giganto_ip,
+                    giganto_port: other.piglet_giganto_port,
+                    review_ip: other.piglet_review_ip,
+                    review_port: other.piglet_review_port,
+                    save_packets: other.save_packets,
+                    http: other.http,
+                    office: other.office,
+                    exe: other.exe,
+                    pdf: other.pdf,
+                    html: other.html,
+                    txt: other.txt,
+                    smtp_eml: other.smtp_eml,
+                    ftp: other.ftp,
+                };
+                Some(toml::to_string(&draft)?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let agent = Agent::new(
+            node,
+            "piglet".to_string(),
+            "piglet".try_into()?,
+            config,
+            draft,
+        )?;
+        agents.push(agent);
+
+        let config = if self.hog {
+            let config = Hog {
+                giganto_ip: self.hog_giganto_ip,
+                giganto_port: self.hog_giganto_port,
+                review_ip: self.hog_review_ip,
+                review_port: self.hog_review_port,
+                protocol_list: self.protocol_list.clone(),
+                protocols: self.protocols,
+                sensors: self.sensors,
+                sensor_list: self.sensor_list.clone(),
+            };
+            Some(toml::to_string(&config)?)
+        } else {
+            None
+        };
+        let draft = if let Some(other) = &other {
+            if other.hog {
+                let draft = Hog {
+                    giganto_ip: other.hog_giganto_ip,
+                    giganto_port: other.hog_giganto_port,
+                    review_ip: other.hog_review_ip,
+                    review_port: other.hog_review_port,
+                    protocol_list: other.protocol_list.clone(),
+                    protocols: other.protocols,
+                    sensors: other.sensors,
+                    sensor_list: other.sensor_list.clone(),
+                };
+                Some(toml::to_string(&draft)?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let agent = Agent::new(node, "hog".to_string(), "hog".try_into()?, config, draft)?;
+        agents.push(agent);
+
+        let config = if self.reconverge {
+            let config = Reconverge {
+                giganto_ip: self.reconverge_giganto_ip,
+                giganto_port: self.reconverge_giganto_port,
+                review_ip: self.reconverge_review_ip,
+                review_port: self.reconverge_review_port,
+            };
+            Some(toml::to_string(&config)?)
+        } else {
+            None
+        };
+        let draft = if let Some(other) = &other {
+            if other.reconverge {
+                let draft = Reconverge {
+                    giganto_ip: other.reconverge_giganto_ip,
+                    giganto_port: other.reconverge_giganto_port,
+                    review_ip: other.reconverge_review_ip,
+                    review_port: other.reconverge_review_port,
+                };
+                Some(toml::to_string(&draft)?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let agent = Agent::new(
+            node,
+            "reconverge".to_string(),
+            "reconverge".try_into()?,
+            config,
+            draft,
+        )?;
+        agents.push(agent);
+
+        Ok(agents)
+    }
 }
 
 impl FromKeyValue for Node {
