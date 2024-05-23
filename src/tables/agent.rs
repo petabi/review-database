@@ -59,11 +59,11 @@ impl Display for Config {
 }
 
 pub struct Agent {
-    node: u32,
-    key: String,
-    kind: Kind,
-    config: Option<Config>,
-    draft: Option<Config>,
+    pub node: u32,
+    pub key: String,
+    pub kind: Kind,
+    pub config: Option<Config>,
+    pub draft: Option<Config>,
 }
 
 impl Agent {
@@ -131,5 +131,14 @@ impl<'d> Table<'d, Agent> {
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
         Map::open(db, super::AGENTS).map(Table::new)
+    }
+
+    pub fn get(&self, node: u32, id: &str) -> Result<Option<Agent>> {
+        let mut key = node.to_be_bytes().to_vec();
+        key.extend(id.as_bytes());
+        let Some(value) = self.map.get(&key)? else {
+            return Ok(None);
+        };
+        Ok(Some(Agent::from_key_value(&key, value.as_ref())?))
     }
 }

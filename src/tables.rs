@@ -46,7 +46,7 @@ pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
-pub use self::node::{Node, Settings as NodeSettings, Update as NodeUpdate};
+pub use self::node::{Node, NodeTable, Settings as NodeSettings, Update as NodeUpdate};
 pub use self::outlier_info::{Key as OutlierInfoKey, OutlierInfo, Value as OutlierInfoValue};
 pub use self::sampling_policy::{
     Interval as SamplingInterval, Kind as SamplingKind, Period as SamplingPeriod, SamplingPolicy,
@@ -289,9 +289,9 @@ impl StateDb {
         IndexedTable::<DataSource>::open(inner).expect("{DATA_SOURCES} table must be present")
     }
 
-    pub(crate) fn nodes(&self) -> IndexedTable<Node> {
+    pub(crate) fn nodes(&self) -> NodeTable {
         let inner = self.inner.as_ref().expect("database must be open");
-        IndexedTable::<Node>::open(inner).expect("{NETWORKS} table must be present")
+        NodeTable::open(inner).expect("{NETWORKS} table must be present")
     }
 
     #[must_use]
