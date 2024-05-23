@@ -160,7 +160,7 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn agents_map(&self) -> IndexedTable<Agent> {
+    pub fn agents_map(&self) -> Table<Agent> {
         self.states.agents()
     }
 

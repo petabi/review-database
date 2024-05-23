@@ -8,7 +8,7 @@ use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::{types::FromKeyValue, Indexable, IndexedMap, IndexedTable};
+use crate::{types::FromKeyValue, Map, Table, UniqueKey};
 
 #[derive(
     Serialize,
@@ -61,7 +61,6 @@ impl Display for Config {
 pub struct Agent {
     node: u32,
     key: String,
-    id: u32,
     kind: Kind,
     config: Option<Config>,
     draft: Option<Config>,
@@ -78,13 +77,11 @@ impl Agent {
         config: Option<String>,
         draft: Option<String>,
     ) -> Result<Self> {
-        let id = u32::MAX;
         let config = config.map(TryInto::try_into).transpose()?;
         let draft = draft.map(TryInto::try_into).transpose()?;
         Ok(Self {
             node,
             key,
-            id,
             kind,
             config,
             draft,
@@ -105,7 +102,6 @@ impl FromKeyValue for Agent {
         Ok(Self {
             node,
             key,
-            id: value.id,
             kind: value.kind,
             config: value.config,
             draft: value.draft,
@@ -113,52 +109,27 @@ impl FromKeyValue for Agent {
     }
 }
 
-impl Indexable for Agent {
-    fn key(&self) -> Cow<[u8]> {
+impl UniqueKey for Agent {
+    fn unique_key(&self) -> Cow<[u8]> {
         let mut buf = self.node.to_be_bytes().to_vec();
         buf.extend(self.key.as_bytes());
         Cow::Owned(buf)
-    }
-
-    fn index(&self) -> u32 {
-        self.id
-    }
-
-    fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
-        key
-    }
-
-    fn value(&self) -> Vec<u8> {
-        let value = Value {
-            id: self.id,
-            kind: self.kind,
-            config: self.config.clone(),
-            draft: self.draft.clone(),
-        };
-        super::serialize(&value).expect("value should be serializable.")
-    }
-
-    fn set_index(&mut self, index: u32) {
-        self.id = index;
     }
 }
 
 #[derive(Serialize, Deserialize)]
 struct Value {
-    id: u32,
     kind: Kind,
     config: Option<Config>,
     draft: Option<Config>,
 }
 
 /// Functions for the agents table.
-impl<'d> IndexedTable<'d, Agent> {
+impl<'d> Table<'d, Agent> {
     /// Opens the agents table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
-        IndexedMap::new(db, super::AGENTS)
-            .map(IndexedTable::new)
-            .ok()
+        Map::open(db, super::AGENTS).map(Table::new)
     }
 }
