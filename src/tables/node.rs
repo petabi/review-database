@@ -8,18 +8,15 @@ use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    types::FromKeyValue, Agent, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+    types::FromKeyValue, Agent, AgentKind, Indexable, IndexedMap, IndexedMapUpdate,
+    IndexedTable, Map, Table,
 };
+
+use super::agent::Config;
 
 type PortNumber = u16;
 
-#[derive(Serialize, Deserialize)]
-struct Review {
-    pub port: Option<PortNumber>,
-    pub web_port: Option<PortNumber>,
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct Giganto {
     pub ingestion_ip: Option<IpAddr>,
     pub ingestion_port: Option<PortNumber>,
@@ -28,14 +25,6 @@ struct Giganto {
     pub graphql_ip: Option<IpAddr>,
     pub graphql_port: Option<PortNumber>,
     pub retention_period: Option<u16>,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Reconverge {
-    pub review_ip: Option<IpAddr>,
-    pub review_port: Option<PortNumber>,
-    pub giganto_ip: Option<IpAddr>,
-    pub giganto_port: Option<PortNumber>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -71,24 +60,64 @@ pub struct Node {
     pub settings_draft: Option<Settings>,
     pub creation_time: DateTime<Utc>,
 }
-
-struct InnerSettings {
-    pub customer_id: u32,
-    pub description: String,
-    pub hostname: String,
-
-    pub giganto: Option<Giganto>,
+pub struct NodeTable<'d> {
+    node: IndexedTable<'d, InnerNode>,
+    agent: Table<'d, Agent>,
 }
 
+impl<'d> NodeTable<'d> {
+    pub fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
+        let node = IndexedMap::new(db, super::NODES)
+            .map(IndexedTable::new)
+            .expect("{super::NODES} must be present");
+        let agent = Map::open(db, super::AGENTS).map(Table::new)?;
+        Some(Self { node, agent })
+    }
+
+    pub fn count(&self) -> Result<usize> {
+        self.node.count()
+    }
+
+    pub fn get_by_id(&self, id: u32) -> Result<Option<(Node, Vec<String>)>> {
+        let Some(inner) = self.node.get_by_id(id)? else {
+            return Ok(None);
+        };
+        let mut agents = vec![];
+        let mut invalid_agents = vec![];
+        for aid in inner.agents {
+            if let Some(agent) = self.agent.get(id, &aid)? {
+                agents.push(agent);
+            } else {
+                invalid_agents.push(aid);
+            }
+        }
+        let mut settings: Option<Settings> = inner.settings.map(Into::into);
+        let mut settings_draft: Option<Settings> = inner.settings_draft.map(Into::into);
+
+        // agent + innter_settings + inner_draft_settings -> settings + draft_settings
+        Ok(None)
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+struct InnerSettings {
+    customer_id: u32,
+    description: String,
+    hostname: String,
+
+    giganto: Option<Giganto>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 struct InnerNode {
     id: u32,
-    pub name: String,
-    pub name_draft: Option<String>,
-    pub settings: Option<InnerSettings>,
-    pub settings_draft: Option<InnerSettings>,
-    pub creation_time: DateTime<Utc>,
+    name: String,
+    name_draft: Option<String>,
+    settings: Option<InnerSettings>,
+    settings_draft: Option<InnerSettings>,
+    creation_time: DateTime<Utc>,
 
-    agents: Vec<u32>,
+    agents: Vec<String>,
 }
 
 impl Settings {
@@ -113,6 +142,15 @@ impl Settings {
             hostname: self.hostname,
             giganto,
         }
+    }
+
+    fn add_agent(&mut self, kind: AgentKind, config: Option<Config>) -> Result<()> {
+        match kind {
+            AgentKind::Reconverge => {}
+            AgentKind::Piglet => {}
+            AgentKind::Hog => {}
+        }
+        Ok(())
     }
 
     fn agents(&self) -> Result<Vec<Agent>> {
@@ -188,13 +226,33 @@ impl Settings {
     }
 }
 
-impl FromKeyValue for Node {
+impl From<InnerSettings> for Settings {
+    fn from(inner: InnerSettings) -> Self {
+        let mut settings = Self::default();
+        settings.customer_id = inner.customer_id;
+        settings.description = inner.description;
+        settings.hostname = inner.hostname;
+
+        if let Some(giganto) = inner.giganto {
+            settings.giganto = true;
+            settings.giganto_graphql_ip = giganto.graphql_ip;
+            settings.giganto_graphql_port = giganto.graphql_port;
+            settings.giganto_ingestion_ip = giganto.ingestion_ip;
+            settings.giganto_ingestion_port = giganto.ingestion_port;
+            settings.giganto_publish_ip = giganto.publish_ip;
+            settings.giganto_publish_port = giganto.publish_port;
+        }
+        settings
+    }
+}
+
+impl FromKeyValue for InnerNode {
     fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
         super::deserialize(value)
     }
 }
 
-impl Indexable for Node {
+impl Indexable for InnerNode {
     fn key(&self) -> Cow<[u8]> {
         Cow::from(self.name.as_bytes())
     }
@@ -217,7 +275,7 @@ impl Indexable for Node {
 }
 
 /// Functions for the `node` indexed map.
-impl<'d> IndexedTable<'d, Node> {
+impl<'d> IndexedTable<'d, InnerNode> {
     /// Opens the `node` table in the database.
     ///
     /// Returns `None` if the table does not exist.
@@ -231,14 +289,14 @@ impl<'d> IndexedTable<'d, Node> {
         &self.indexed_map
     }
 
-    /// Updates the `Node` from `old` to `new`, given `id`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the `id` is invalid or the database operation fails.
-    pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
-        self.indexed_map.update(id, old, new)
-    }
+    // /// Updates the `Node` from `old` to `new`, given `id`.
+    // ///
+    // /// # Errors
+    // ///
+    // /// Returns an error if the `id` is invalid or the database operation fails.
+    // pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
+    //     self.indexed_map.update(id, old, new)
+    // }
 }
 
 pub struct Update {

@@ -69,13 +69,13 @@ pub use self::tables::{
     AccessToken, AccountPolicy, Agent, AgentKind, AllowNetwork, AllowNetworkUpdate, AttrCmpKind,
     BlockNetwork, BlockNetworkUpdate, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
     CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, Filter, IndexedTable,
-    Iterable, ModelIndicator, Network, NetworkUpdate, Node, NodeSettings, NodeUpdate, OutlierInfo,
-    OutlierInfoKey, OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind,
-    SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate,
-    Structured, StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind,
-    TidbRule, TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
-    TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
-    UnstructuredClusteringAlgorithm, ValueKind,
+    Iterable, ModelIndicator, Network, NetworkUpdate, Node, NodeSettings, NodeTable, NodeUpdate,
+    OutlierInfo, OutlierInfoKey, OutlierInfoValue, PacketAttr, ProtocolPorts, Response,
+    ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
+    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, Ti,
+    TiCmpKind, Tidb, TidbKind, TidbRule, TorExitNode, TrafficFilter, TriagePolicy,
+    TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent,
+    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -254,7 +254,7 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn node_map(&self) -> IndexedTable<Node> {
+    pub fn node_map(&self) -> NodeTable {
         self.states.nodes()
     }
 
