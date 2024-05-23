@@ -13,45 +13,6 @@ use crate::{
 
 type PortNumber = u16;
 
-#[allow(clippy::struct_excessive_bools)]
-#[derive(Clone, Default, Deserialize, Serialize, PartialEq)]
-pub struct Settings {
-    pub customer_id: u32,
-    pub description: String,
-    pub hostname: String,
-
-    pub piglet: bool,
-    pub piglet_giganto_ip: Option<IpAddr>,
-    pub piglet_giganto_port: Option<PortNumber>,
-    pub save_packets: bool,
-    pub http: bool,
-    pub office: bool,
-    pub exe: bool,
-    pub pdf: bool,
-    pub txt: bool,
-    pub vbs: bool,
-    pub smtp_eml: bool,
-    pub ftp: bool,
-
-    pub giganto: bool,
-    pub giganto_ingestion_ip: Option<IpAddr>,
-    pub giganto_ingestion_port: Option<PortNumber>,
-    pub giganto_publish_ip: Option<IpAddr>,
-    pub giganto_publish_port: Option<PortNumber>,
-    pub giganto_graphql_ip: Option<IpAddr>,
-    pub giganto_graphql_port: Option<PortNumber>,
-    pub retention_period: Option<u16>,
-
-    pub reconverge: bool,
-
-    pub hog: bool,
-    pub hog_giganto_ip: Option<IpAddr>,
-    pub hog_giganto_port: Option<PortNumber>,
-    pub protocols: Option<Vec<String>>,
-
-    pub sensors: Option<Vec<String>>,
-}
-
 #[derive(Serialize, Deserialize)]
 struct Review {
     pub port: Option<PortNumber>,
@@ -79,29 +40,23 @@ struct Reconverge {
 
 #[derive(Serialize, Deserialize)]
 struct Hog {
-    pub review_ip: Option<IpAddr>,
-    pub review_port: Option<PortNumber>,
     pub giganto_ip: Option<IpAddr>,
     pub giganto_port: Option<PortNumber>,
-    pub protocols: bool,
-    pub protocol_list: HashMap<String, bool>,
+    pub protocols: Option<Vec<String>>,
 
-    pub sensors: bool,
-    pub sensor_list: HashMap<String, bool>,
+    pub sensors: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct Piglet {
     pub giganto_ip: Option<IpAddr>,
     pub giganto_port: Option<PortNumber>,
-    pub review_ip: Option<IpAddr>,
-    pub review_port: Option<PortNumber>,
     pub save_packets: bool,
     pub http: bool,
     pub office: bool,
     pub exe: bool,
     pub pdf: bool,
-    pub html: bool,
+    pub vbs: bool,
     pub txt: bool,
     pub smtp_eml: bool,
     pub ftp: bool,
@@ -117,67 +72,64 @@ pub struct Node {
     pub creation_time: DateTime<Utc>,
 }
 
+struct InnerSettings {
+    pub customer_id: u32,
+    pub description: String,
+    pub hostname: String,
+
+    pub giganto: Option<Giganto>,
+}
+
 struct InnerNode {
     id: u32,
-    name: String,
-    customer_id: u32,
-    description: String,
-    hostname: String,
-    creation_time: DateTime<Utc>,
+    pub name: String,
+    pub name_draft: Option<String>,
+    pub settings: Option<InnerSettings>,
+    pub settings_draft: Option<InnerSettings>,
+    pub creation_time: DateTime<Utc>,
 
-    review: Option<Review>,
-    giganto: Option<Giganto>,
     agents: Vec<u32>,
 }
 
-impl Node {
-    fn into_storage(self) -> Result<(InnerNode, Vec<Agent>)> {
-        use anyhow::anyhow;
-        let settings = self.settings.ok_or(anyhow!("expecting settings"))?;
-        let draft = self.settings_draft;
-        let agents = settings.get_agents(self.id, draft)?;
-        let inner = InnerNode {
-            id: self.id,
-            name: self.name,
-            customer_id: settings.customer_id,
-            description: settings.description,
-            hostname: settings.hostname,
-            creation_time: self.creation_time,
-            review: None,
-            giganto: None,
-            agents: vec![],
+impl Settings {
+    fn into_inner(self) -> InnerSettings {
+        
+        let giganto = if self.giganto {
+            Some(Giganto {
+                ingestion_ip: self.giganto_ingestion_ip,
+                ingestion_port: self.giganto_ingestion_port,
+                publish_ip: self.giganto_publish_ip,
+                publish_port: self.giganto_publish_port,
+                graphql_ip: self.giganto_graphql_ip,
+                graphql_port: self.giganto_graphql_port,
+                retention_period: self.retention_period,
+            })
+        } else {
+            None
         };
-
-        Ok((inner, agents))
-    }
-
-    fn from_storage(inner: InnerNode, _agents: Vec<Agent>) -> Self {
-        Self {
-            id: inner.id,
-            name: inner.name,
-            name_draft: None,
-            settings: None,
-            settings_draft: None,
-            creation_time: inner.creation_time,
+        InnerSettings {
+            customer_id: self.customer_id,
+            description: self.description,
+            hostname: self.hostname,
+            giganto,
         }
     }
-}
 
-impl Settings {
-    fn get_agents(&self, node: u32, other: Option<Settings>) -> Result<Vec<Agent>> {
+    fn agents(&self) -> Result<Vec<Agent>> {
+        let node = u32::MAX;
+        let draft = None;
+
         let mut agents = vec![];
         let config = if self.piglet {
             let config = Piglet {
                 giganto_ip: self.piglet_giganto_ip,
                 giganto_port: self.piglet_giganto_port,
-                review_ip: self.piglet_review_ip,
-                review_port: self.piglet_review_port,
                 save_packets: self.save_packets,
                 http: self.http,
                 office: self.office,
                 exe: self.exe,
                 pdf: self.pdf,
-                html: self.html,
+                vbs: self.vbs,
                 txt: self.txt,
                 smtp_eml: self.smtp_eml,
                 ftp: self.ftp,
@@ -186,36 +138,13 @@ impl Settings {
         } else {
             None
         };
-        let draft = if let Some(other) = &other {
-            if other.piglet {
-                let draft = Piglet {
-                    giganto_ip: other.piglet_giganto_ip,
-                    giganto_port: other.piglet_giganto_port,
-                    review_ip: other.piglet_review_ip,
-                    review_port: other.piglet_review_port,
-                    save_packets: other.save_packets,
-                    http: other.http,
-                    office: other.office,
-                    exe: other.exe,
-                    pdf: other.pdf,
-                    html: other.html,
-                    txt: other.txt,
-                    smtp_eml: other.smtp_eml,
-                    ftp: other.ftp,
-                };
-                Some(toml::to_string(&draft)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+
         let agent = Agent::new(
             node,
             "piglet".to_string(),
             "piglet".try_into()?,
             config,
-            draft,
+            draft.clone(),
         )?;
         agents.push(agent);
 
@@ -223,65 +152,29 @@ impl Settings {
             let config = Hog {
                 giganto_ip: self.hog_giganto_ip,
                 giganto_port: self.hog_giganto_port,
-                review_ip: self.hog_review_ip,
-                review_port: self.hog_review_port,
-                protocol_list: self.protocol_list.clone(),
-                protocols: self.protocols,
-                sensors: self.sensors,
-                sensor_list: self.sensor_list.clone(),
+                protocols: self.protocols.clone(),
+                sensors: self.sensors.clone(),
             };
             Some(toml::to_string(&config)?)
         } else {
             None
         };
-        let draft = if let Some(other) = &other {
-            if other.hog {
-                let draft = Hog {
-                    giganto_ip: other.hog_giganto_ip,
-                    giganto_port: other.hog_giganto_port,
-                    review_ip: other.hog_review_ip,
-                    review_port: other.hog_review_port,
-                    protocol_list: other.protocol_list.clone(),
-                    protocols: other.protocols,
-                    sensors: other.sensors,
-                    sensor_list: other.sensor_list.clone(),
-                };
-                Some(toml::to_string(&draft)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let agent = Agent::new(node, "hog".to_string(), "hog".try_into()?, config, draft)?;
+
+        let agent = Agent::new(
+            node,
+            "hog".to_string(),
+            "hog".try_into()?,
+            config,
+            draft.clone(),
+        )?;
         agents.push(agent);
 
         let config = if self.reconverge {
-            let config = Reconverge {
-                giganto_ip: self.reconverge_giganto_ip,
-                giganto_port: self.reconverge_giganto_port,
-                review_ip: self.reconverge_review_ip,
-                review_port: self.reconverge_review_port,
-            };
-            Some(toml::to_string(&config)?)
+            Some("".to_string())
         } else {
             None
         };
-        let draft = if let Some(other) = &other {
-            if other.reconverge {
-                let draft = Reconverge {
-                    giganto_ip: other.reconverge_giganto_ip,
-                    giganto_port: other.reconverge_giganto_port,
-                    review_ip: other.reconverge_review_ip,
-                    review_port: other.reconverge_review_port,
-                };
-                Some(toml::to_string(&draft)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+
         let agent = Agent::new(
             node,
             "reconverge".to_string(),
@@ -397,4 +290,43 @@ impl IndexedMapUpdate for Update {
         }
         self.settings_draft == value.settings_draft
     }
+}
+
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Clone, Default, Deserialize, Serialize, PartialEq)]
+pub struct Settings {
+    pub customer_id: u32,
+    pub description: String,
+    pub hostname: String,
+
+    pub piglet: bool,
+    pub piglet_giganto_ip: Option<IpAddr>,
+    pub piglet_giganto_port: Option<PortNumber>,
+    pub save_packets: bool,
+    pub http: bool,
+    pub office: bool,
+    pub exe: bool,
+    pub pdf: bool,
+    pub txt: bool,
+    pub vbs: bool,
+    pub smtp_eml: bool,
+    pub ftp: bool,
+
+    pub giganto: bool,
+    pub giganto_ingestion_ip: Option<IpAddr>,
+    pub giganto_ingestion_port: Option<PortNumber>,
+    pub giganto_publish_ip: Option<IpAddr>,
+    pub giganto_publish_port: Option<PortNumber>,
+    pub giganto_graphql_ip: Option<IpAddr>,
+    pub giganto_graphql_port: Option<PortNumber>,
+    pub retention_period: Option<u16>,
+
+    pub reconverge: bool,
+
+    pub hog: bool,
+    pub hog_giganto_ip: Option<IpAddr>,
+    pub hog_giganto_port: Option<PortNumber>,
+    pub protocols: Option<Vec<String>>,
+
+    pub sensors: Option<Vec<String>>,
 }

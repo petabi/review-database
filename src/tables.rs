@@ -179,9 +179,9 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn agents(&self) -> IndexedTable<Agent> {
+    pub(crate) fn agents(&self) -> Table<Agent> {
         let inner = self.inner.as_ref().expect("database must be open");
-        IndexedTable::<Agent>::open(inner).expect("{AGENTS} table must be present")
+        Table::<Agent>::open(inner).expect("{AGENTS} table must be present")
     }
 
     #[must_use]
