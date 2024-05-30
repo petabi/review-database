@@ -18,6 +18,7 @@ pub struct BlockListSmtpFields {
     pub to: String,
     pub subject: String,
     pub agent: String,
+    pub state: String,
 }
 
 impl fmt::Display for BlockListSmtpFields {
@@ -46,6 +47,7 @@ pub struct BlockListSmtp {
     pub to: String,
     pub subject: String,
     pub agent: String,
+    pub state: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -81,6 +83,7 @@ impl BlockListSmtp {
             to: fields.to,
             subject: fields.subject,
             agent: fields.agent,
+            state: fields.state,
             triage_scores: None,
         }
     }

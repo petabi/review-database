@@ -140,6 +140,12 @@ pub struct HttpThreatFields {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
     pub db_name: String,
     pub rule_id: u32,
     pub matched_to: String,
@@ -199,6 +205,12 @@ pub struct HttpThreat {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
     pub db_name: String,
     pub rule_id: u32,
     pub matched_to: String,
@@ -263,6 +275,12 @@ impl HttpThreat {
             content_encoding: fields.content_encoding,
             content_type: fields.content_type,
             cache_control: fields.cache_control,
+            orig_filenames: fields.orig_filenames,
+            orig_mime_types: fields.orig_mime_types,
+            resp_filenames: fields.resp_filenames,
+            resp_mime_types: fields.resp_mime_types,
+            post_body: fields.post_body,
+            state: fields.state,
             db_name: fields.db_name,
             rule_id: fields.rule_id,
             matched_to: fields.matched_to,
@@ -369,6 +387,12 @@ pub struct DgaFields {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
     pub confidence: f32,
 }
 
@@ -420,6 +444,12 @@ pub struct DomainGenerationAlgorithm {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
     pub confidence: f32,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -473,6 +503,12 @@ impl DomainGenerationAlgorithm {
             content_encoding: fields.content_encoding,
             content_type: fields.content_type,
             cache_control: fields.cache_control,
+            orig_filenames: fields.orig_filenames,
+            orig_mime_types: fields.orig_mime_types,
+            resp_filenames: fields.resp_filenames,
+            resp_mime_types: fields.resp_mime_types,
+            post_body: fields.post_body,
+            state: fields.state,
             confidence: fields.confidence,
             triage_scores: None,
         }
@@ -553,6 +589,12 @@ pub struct NonBrowserFields {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
 }
 
 impl fmt::Display for NonBrowserFields {
@@ -592,6 +634,12 @@ pub struct NonBrowser {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -639,6 +687,12 @@ impl NonBrowser {
             content_encoding: fields.content_encoding.clone(),
             content_type: fields.content_type.clone(),
             cache_control: fields.cache_control.clone(),
+            orig_filenames: fields.orig_filenames.clone(),
+            orig_mime_types: fields.orig_mime_types.clone(),
+            resp_filenames: fields.resp_filenames.clone(),
+            resp_mime_types: fields.resp_mime_types.clone(),
+            post_body: fields.post_body.clone(),
+            state: fields.state.clone(),
             triage_scores: None,
         }
     }
@@ -720,6 +774,8 @@ pub struct BlockListHttpFields {
     pub orig_mime_types: Vec<String>,
     pub resp_filenames: Vec<String>,
     pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
 }
 
 impl fmt::Display for BlockListHttpFields {
@@ -764,6 +820,8 @@ pub struct BlockListHttp {
     pub orig_mime_types: Vec<String>,
     pub resp_filenames: Vec<String>,
     pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -811,10 +869,12 @@ impl BlockListHttp {
             content_encoding: fields.content_encoding.clone(),
             content_type: fields.content_type.clone(),
             cache_control: fields.cache_control.clone(),
-            orig_filenames: fields.orig_filenames,
-            orig_mime_types: fields.orig_mime_types,
-            resp_filenames: fields.resp_filenames,
-            resp_mime_types: fields.resp_mime_types,
+            orig_filenames: fields.orig_filenames.clone(),
+            orig_mime_types: fields.orig_mime_types.clone(),
+            resp_filenames: fields.resp_filenames.clone(),
+            resp_mime_types: fields.resp_mime_types.clone(),
+            post_body: fields.post_body.clone(),
+            state: fields.state.clone(),
             triage_scores: None,
         }
     }
