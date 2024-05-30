@@ -1,6 +1,8 @@
 //! Routines to check the database format version and migrate it if necessary.
 #![allow(clippy::too_many_lines)]
 
+mod migration_structures;
+
 use anyhow::{anyhow, Context, Result};
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
@@ -34,7 +36,7 @@ use crate::IterableMap;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.28.0-alpha.2,<0.29.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.1,<0.30.0-alpha";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -120,7 +122,12 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         (
             VersionReq::parse(">=0.26.0,<0.28.0")?,
             Version::parse("0.28.0")?,
-            migrate_0_27_to_0_28,
+            migrate_0_26_to_0_28,
+        ),
+        (
+            VersionReq::parse(">=0.28.0,<0.29.0-alpha.1")?,
+            Version::parse("0.29.0-alpha.1")?,
+            migrate_0_28_to_0_29_0,
         ),
     ];
 
@@ -197,7 +204,103 @@ fn read_version_file(path: &Path) -> Result<Version> {
     Version::parse(&ver).context("cannot parse VERSION")
 }
 
-fn migrate_0_27_to_0_28(store: &super::Store) -> Result<()> {
+fn migrate_0_28_to_0_29_0(store: &super::Store) -> Result<()> {
+    use crate::event::{
+        BlockListConnFields, BlockListHttpFields, BlockListNtlmFields, BlockListSmtpFields,
+        BlockListSshFields, BlockListTlsFields, DgaFields, EventKind, HttpThreatFields,
+        NonBrowserFields,
+    };
+    use migration_structures::{
+        BlockListConnBeforeV29, BlockListHttpBeforeV29, BlockListNtlmBeforeV29,
+        BlockListSmtpBeforeV29, BlockListSshBeforeV29, BlockListTlsBeforeV29, DgaBeforeV29,
+        HttpThreatBeforeV29, NonBrowserBeforeV29,
+    };
+    use num_traits::FromPrimitive;
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        match event_kind {
+            EventKind::HttpThreat => {
+                update_event_db_with_new_event::<HttpThreatBeforeV29, HttpThreatFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::DomainGenerationAlgorithm => {
+                update_event_db_with_new_event::<DgaBeforeV29, DgaFields>(&k, &v, &event_db)?;
+            }
+            EventKind::NonBrowser => {
+                update_event_db_with_new_event::<NonBrowserBeforeV29, NonBrowserFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::BlockListHttp => {
+                update_event_db_with_new_event::<BlockListHttpBeforeV29, BlockListHttpFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::BlockListConn => {
+                update_event_db_with_new_event::<BlockListConnBeforeV29, BlockListConnFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::BlockListNtlm => {
+                update_event_db_with_new_event::<BlockListNtlmBeforeV29, BlockListNtlmFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::BlockListSmtp => {
+                update_event_db_with_new_event::<BlockListSmtpBeforeV29, BlockListSmtpFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::BlockListSsh => {
+                update_event_db_with_new_event::<BlockListSshBeforeV29, BlockListSshFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::BlockListTls => {
+                update_event_db_with_new_event::<BlockListTlsBeforeV29, BlockListTlsFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            _ => continue,
+        }
+    }
+    Ok(())
+}
+
+fn update_event_db_with_new_event<'a, T, K>(
+    k: &[u8],
+    v: &'a [u8],
+    event_db: &crate::EventDb,
+) -> Result<()>
+where
+    T: Deserialize<'a> + Into<K>,
+    K: Serialize,
+{
+    let Ok(from_event) = bincode::deserialize::<T>(v) else {
+        return Err(anyhow!("Failed to migrate events: invalid event value"));
+    };
+    let to_event: K = from_event.into();
+    let new = bincode::serialize(&to_event).unwrap_or_default();
+    event_db.update((k, v), (k, &new))?;
+    Ok(())
+}
+
+fn migrate_0_26_to_0_28(store: &super::Store) -> Result<()> {
     migrate_outlier_info(store)?;
     migrate_account_policy(store)
 }
@@ -670,7 +773,7 @@ mod tests {
     }
 
     #[test]
-    fn migrate_0_27_to_0_28_outlier_info() {
+    fn migrate_0_26_to_0_28_outlier_info() {
         use crate::tables::Iterable;
         use bincode::Options;
 
@@ -719,7 +822,7 @@ mod tests {
     }
 
     #[test]
-    fn migrate_0_27_to_0_28_account_policy() {
+    fn migrate_0_26_to_0_28_account_policy() {
         use crate::collections::IterableMap;
         use bincode::Options;
         use serde::Serialize;
@@ -753,5 +856,442 @@ mod tests {
         let res = map.current_expiry_period();
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), Some(time));
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_block_list_conn() {
+        use crate::{
+            migration::migration_structures::BlockListConnBeforeV29, EventKind, EventMessage,
+        };
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = BlockListConnBeforeV29 {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            duration: 1230000,
+            service: "-".to_string(),
+            orig_bytes: 77,
+            resp_bytes: 295,
+            orig_pkts: 397,
+            resp_pkts: 511,
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::BlockListConn,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_http_threat() {
+        use crate::{
+            migration::migration_structures::HttpThreatBeforeV29, EventKind, EventMessage,
+        };
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = HttpThreatBeforeV29 {
+            time,
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            duration: 1,
+            method: "POST".to_string(),
+            host: "cluml".to_string(),
+            uri: "/cluml.gif".to_string(),
+            referer: "cluml.com".to_string(),
+            version: "version".to_string(),
+            user_agent: "review-database".to_string(),
+            request_len: 0,
+            response_len: 0,
+            status_code: 200,
+            status_msg: "status_msg".to_string(),
+            username: "username".to_string(),
+            password: "password".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "content_encoding".to_string(),
+            content_type: "content_type".to_string(),
+            cache_control: "cache_control".to_string(),
+            db_name: "db_name".to_string(),
+            rule_id: 10,
+            matched_to: "matched_to".to_string(),
+            cluster_id: 200,
+            attack_kind: "attack_kind".to_string(),
+            confidence: 0.3,
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::HttpThreat,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_dga() {
+        use crate::{migration::migration_structures::DgaBeforeV29, EventKind, EventMessage};
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = DgaBeforeV29 {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            duration: 1,
+            method: "POST".to_string(),
+            host: "cluml".to_string(),
+            uri: "/cluml.gif".to_string(),
+            referer: "cluml.com".to_string(),
+            version: "version".to_string(),
+            user_agent: "review-database".to_string(),
+            request_len: 0,
+            response_len: 0,
+            status_code: 200,
+            status_msg: "status_msg".to_string(),
+            username: "username".to_string(),
+            password: "password".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "content_encoding".to_string(),
+            content_type: "content_type".to_string(),
+            cache_control: "cache_control".to_string(),
+            confidence: 0.3,
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::DomainGenerationAlgorithm,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_non_browser() {
+        use crate::{
+            migration::migration_structures::NonBrowserBeforeV29, EventKind, EventMessage,
+        };
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = NonBrowserBeforeV29 {
+            source: "source_1".to_string(),
+            session_end_time: time,
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            method: "POST".to_string(),
+            host: "cluml".to_string(),
+            uri: "/cluml.gif".to_string(),
+            referrer: "cluml.com".to_string(),
+            version: "version".to_string(),
+            user_agent: "review-database".to_string(),
+            request_len: 0,
+            response_len: 0,
+            status_code: 200,
+            status_msg: "status_msg".to_string(),
+            username: "username".to_string(),
+            password: "password".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "content_encoding".to_string(),
+            content_type: "content_type".to_string(),
+            cache_control: "cache_control".to_string(),
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::NonBrowser,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_block_list_http() {
+        use crate::{
+            migration::migration_structures::BlockListHttpBeforeV29, EventKind, EventMessage,
+        };
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = BlockListHttpBeforeV29 {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            last_time: 1,
+            method: "POST".to_string(),
+            host: "cluml".to_string(),
+            uri: "/cluml.gif".to_string(),
+            referrer: "cluml.com".to_string(),
+            version: "version".to_string(),
+            user_agent: "review-database".to_string(),
+            request_len: 0,
+            response_len: 0,
+            status_code: 200,
+            status_msg: "status_msg".to_string(),
+            username: "username".to_string(),
+            password: "password".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "content_encoding".to_string(),
+            content_type: "content_type".to_string(),
+            cache_control: "cache_control".to_string(),
+            orig_filenames: Vec::new(),
+            orig_mime_types: Vec::new(),
+            resp_filenames: Vec::new(),
+            resp_mime_types: Vec::new(),
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::BlockListHttp,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_block_list_ntlm() {
+        use crate::{
+            migration::migration_structures::BlockListNtlmBeforeV29, EventKind, EventMessage,
+        };
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = BlockListNtlmBeforeV29 {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            last_time: 1,
+            username: "cluml".to_string(),
+            hostname: "host".to_string(),
+            domainname: "domain".to_string(),
+            server_nb_computer_name: "NB".to_string(),
+            server_dns_computer_name: "dns".to_string(),
+            server_tree_name: "tree".to_string(),
+            success: "tf".to_string(),
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::BlockListNtlm,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_block_list_smtp() {
+        use crate::{
+            migration::migration_structures::BlockListSmtpBeforeV29, EventKind, EventMessage,
+        };
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = BlockListSmtpBeforeV29 {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            last_time: 1,
+            mailfrom: "mailfrom".to_string(),
+            date: "date".to_string(),
+            from: "from".to_string(),
+            to: "to".to_string(),
+            subject: "subject".to_string(),
+            agent: "agent".to_string(),
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::BlockListSmtp,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_block_list_ssh() {
+        use crate::{
+            migration::migration_structures::BlockListSshBeforeV29, EventKind, EventMessage,
+        };
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = BlockListSshBeforeV29 {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            last_time: 1,
+            version: 1,
+            auth_success: "auth_success".to_string(),
+            auth_attempts: 3,
+            direction: "direction".to_string(),
+            client: "client".to_string(),
+            server: "server".to_string(),
+            cipher_alg: "cipher_alg".to_string(),
+            mac_alg: "mac_alg".to_string(),
+            compression_alg: "compression_alg".to_string(),
+            kex_alg: "kex_alg".to_string(),
+            host_key_alg: "host_key_alg".to_string(),
+            host_key: "host_key".to_string(),
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::BlockListSsh,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_28_to_0_29_0_block_list_tls() {
+        use crate::{
+            migration::migration_structures::BlockListTlsBeforeV29, EventKind, EventMessage,
+        };
+        use chrono::Utc;
+        use std::net::IpAddr;
+
+        let settings = TestSchema::new();
+        let time = Utc::now();
+        let value = BlockListTlsBeforeV29 {
+            source: "source_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            last_time: 1,
+            server_name: "server_name".to_string(),
+            alpn_protocol: "alpn_protocol".to_string(),
+            ja3: "ja3".to_string(),
+            version: "version".to_string(),
+            cipher: 10,
+            ja3s: "ja3s".to_string(),
+            serial: "serial".to_string(),
+            subject_country: "sub_country".to_string(),
+            subject_org_name: "sub_org".to_string(),
+            subject_common_name: "sub_comm".to_string(),
+            validity_not_before: 11,
+            validity_not_after: 12,
+            subject_alt_name: "sub_alt".to_string(),
+            issuer_country: "issuer_country".to_string(),
+            issuer_org_name: "issuer_org".to_string(),
+            issuer_org_unit_name: "issuer_org_unit".to_string(),
+            issuer_common_name: "issuer_comm".to_string(),
+            last_alert: 13,
+        };
+
+        let message = EventMessage {
+            time,
+            kind: EventKind::BlockListTls,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
     }
 }

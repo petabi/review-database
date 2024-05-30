@@ -69,7 +69,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::{thread_rng, RngCore};
 pub use rocksdb::Direction;
-use rocksdb::IteratorMode;
+use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -1777,6 +1777,14 @@ impl<'a> EventDb<'a> {
         EventIterator { inner: iter }
     }
 
+    /// Creates an raw iterator over key-value pairs for the entire events.
+    #[must_use]
+    pub(crate) fn raw_iter_forward(
+        &self,
+    ) -> DBIteratorWithThreadMode<rocksdb::OptimisticTransactionDB> {
+        self.inner.iterator(IteratorMode::Start)
+    }
+
     /// Stores a new event into the database.
     ///
     /// # Errors
@@ -2405,6 +2413,12 @@ mod tests {
             content_encoding: "encoding type".to_string(),
             content_type: "content type".to_string(),
             cache_control: "no cache".to_string(),
+            orig_filenames: Vec::new(),
+            orig_mime_types: Vec::new(),
+            resp_filenames: Vec::new(),
+            resp_mime_types: Vec::new(),
+            post_body: Vec::new(),
+            state: String::new(),
             confidence: 0.8,
         };
         let msg = EventMessage {

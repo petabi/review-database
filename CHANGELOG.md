@@ -5,6 +5,20 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added `migrate_0_28_to_0_29_0` function. This function performs migration
+  for events detected from HTTP, SMTP, CONN, NTLM, SSH, and TLS protocols
+  that have changed fields.
+- Added migration test code for `migrate_0_28_to_0_29_0`.
+
+### Changed
+
+- Change the fields for events detected from the HTTP, SMTP, CONN, NTLM, SSH,
+  and TLS protocols.
+
 ## [0.28.0] - 2024-05-16
 
 ### Added
@@ -944,6 +958,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.28.0...main
 [0.28.0]: https://github.com/petabi/review-database/compare/0.27.1...0.28.0
 [0.27.1]: https://github.com/petabi/review-database/compare/0.27.0...0.27.1
 [0.27.0]: https://github.com/petabi/review-database/compare/0.26.0...0.27.0
