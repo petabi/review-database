@@ -582,7 +582,7 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
         pub smtp_eml: bool,
         pub ftp: bool,
 
-        pub giganto: bool,
+        pub giganto: bool, 
         pub giganto_ingestion_ip: Option<IpAddr>,
         pub giganto_ingestion_port: Option<PortNumber>,
         pub giganto_publish_ip: Option<IpAddr>,
