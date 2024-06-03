@@ -1,9 +1,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use rocksdb::IteratorMode;
 
-use super::IterableMap;
-use crate::EXCLUSIVE;
-
+#[derive(Clone)]
 pub struct Map<'a> {
     pub(crate) db: &'a rocksdb::OptimisticTransactionDB,
     pub(crate) cf: &'a rocksdb::ColumnFamily,

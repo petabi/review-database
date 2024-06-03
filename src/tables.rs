@@ -46,7 +46,7 @@ pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
-pub use self::node::{Node, NodeTable, Settings as NodeSettings, Update as NodeUpdate};
+pub use self::node::{Node, Settings as NodeSettings, Table as NodeTable, Update as NodeUpdate};
 pub use self::outlier_info::{Key as OutlierInfoKey, OutlierInfo, Value as OutlierInfoValue};
 pub use self::sampling_policy::{
     Interval as SamplingInterval, Kind as SamplingKind, Period as SamplingPeriod, SamplingPolicy,
@@ -492,6 +492,7 @@ where
 }
 
 /// A database table storing records of type `R`.
+#[derive(Clone)]
 pub struct Table<'d, R> {
     map: Map<'d>,
     _phantom: std::marker::PhantomData<R>,

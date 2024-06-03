@@ -8,7 +8,7 @@ use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{tables::Value as ValueTrait, types::FromKeyValue, Map, Table, UniqueKey};
 
 #[derive(
     Serialize,
@@ -58,6 +58,7 @@ impl Display for Config {
     }
 }
 
+#[derive(Clone)]
 pub struct Agent {
     pub node: u32,
     pub key: String,
@@ -117,6 +118,17 @@ impl UniqueKey for Agent {
     }
 }
 
+impl ValueTrait for Agent {
+    fn value(&self) -> Cow<[u8]> {
+        let value = Value {
+            kind: self.kind,
+            config: self.config.clone(),
+            draft: self.draft.clone(),
+        };
+        Cow::Owned(super::serialize(&value).expect("serializable"))
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct Value {
     kind: Kind,
@@ -133,6 +145,11 @@ impl<'d> Table<'d, Agent> {
         Map::open(db, super::AGENTS).map(Table::new)
     }
 
+    /// Returns an agent with the given `node` and `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the agent does not exist or the database operation fails.
     pub fn get(&self, node: u32, id: &str) -> Result<Option<Agent>> {
         let mut key = node.to_be_bytes().to_vec();
         key.extend(id.as_bytes());
@@ -140,5 +157,16 @@ impl<'d> Table<'d, Agent> {
             return Ok(None);
         };
         Ok(Some(Agent::from_key_value(&key, value.as_ref())?))
+    }
+
+    /// Deletes the agent with given `node` and `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `None` if the table does not exist.
+    pub fn delete(&self, node: u32, id: &str) -> Result<()> {
+        let mut key = node.to_be_bytes().to_vec();
+        key.extend(id.as_bytes());
+        self.map.delete(&key)
     }
 }

@@ -4,15 +4,15 @@ use std::{borrow::Cow, net::IpAddr};
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use rocksdb::OptimisticTransactionDB;
+use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    types::FromKeyValue, Agent, AgentKind, Indexable, IndexedMap, IndexedMapUpdate,
-    IndexedTable, Map, Table,
+    types::FromKeyValue, Agent, AgentKind, Indexable, IndexedMap, IndexedMapUpdate, IndexedTable,
+    Iterable, Map, Table as CrateTable,
 };
 
-use super::agent::Config;
+use super::{agent::Config, TableIter as TI};
 
 type PortNumber = u16;
 
@@ -60,24 +60,41 @@ pub struct Node {
     pub settings_draft: Option<Settings>,
     pub creation_time: DateTime<Utc>,
 }
-pub struct NodeTable<'d> {
+pub struct Table<'d> {
     node: IndexedTable<'d, InnerNode>,
-    agent: Table<'d, Agent>,
+    agent: CrateTable<'d, Agent>,
 }
 
-impl<'d> NodeTable<'d> {
+impl<'d> Table<'d> {
+    /// Opens the node table in the database.
+    ///
+    /// Returns `None` if the table does not exist.
+    ///
+    /// # Panics
+    ///
+    /// Panics if node map doesn't exist.
     pub fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
         let node = IndexedMap::new(db, super::NODES)
             .map(IndexedTable::new)
             .expect("{super::NODES} must be present");
-        let agent = Map::open(db, super::AGENTS).map(Table::new)?;
+        let agent = Map::open(db, super::AGENTS).map(CrateTable::new)?;
         Some(Self { node, agent })
     }
 
+    /// Returns the total count of nodes available.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     pub fn count(&self) -> Result<usize> {
         self.node.count()
     }
 
+    /// Returns a tuple of `(node, invalid_agents)` when node with `id` exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
     pub fn get_by_id(&self, id: u32) -> Result<Option<(Node, Vec<String>)>> {
         let Some(inner) = self.node.get_by_id(id)? else {
             return Ok(None);
@@ -93,9 +110,134 @@ impl<'d> NodeTable<'d> {
         }
         let mut settings: Option<Settings> = inner.settings.map(Into::into);
         let mut settings_draft: Option<Settings> = inner.settings_draft.map(Into::into);
+        for agent in agents {
+            if let Some(settings) = settings.as_mut() {
+                settings.add_agent(agent.kind, agent.config.as_ref())?;
+            }
+            if let Some(settings_draft) = settings_draft.as_mut() {
+                settings_draft.add_agent(agent.kind, agent.config.as_ref())?;
+            }
+        }
+        let node = Node {
+            id: inner.id,
+            name: inner.name,
+            name_draft: inner.name_draft,
+            settings,
+            settings_draft,
+            creation_time: inner.creation_time,
+        };
+        Ok(Some((node, invalid_agents)))
+    }
 
-        // agent + innter_settings + inner_draft_settings -> settings + draft_settings
-        Ok(None)
+    /// Inserts a node entry, returns the `id` of the inserted node.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn put(&self, entry: Node) -> Result<u32> {
+        let settings = entry.settings;
+        let agents = settings.as_ref().map_or(Ok(vec![]), Settings::agents)?;
+        let settings_draft = entry.settings_draft;
+        let draft_agents = settings_draft
+            .as_ref()
+            .map_or(Ok(vec![]), Settings::agents)?;
+        let mut agent_keys = vec![];
+        for (agent, draft) in agents.into_iter().zip(draft_agents.into_iter()) {
+            let agent = match (agent, draft) {
+                (None, None) => continue,
+                (Some(mut agent), Some(draft)) => {
+                    agent.draft = draft.draft;
+                    agent
+                }
+                (Some(agent), None) => agent,
+                (None, Some(mut draft)) => {
+                    std::mem::swap(&mut draft.config, &mut draft.draft);
+                    draft
+                }
+            };
+            self.agent.put(&agent)?;
+            agent_keys.push(agent.key);
+        }
+
+        let inner = InnerNode {
+            id: entry.id,
+            name: entry.name,
+            name_draft: entry.name_draft,
+            settings: settings.map(Settings::into_inner),
+            settings_draft: settings_draft.map(Settings::into_inner),
+            creation_time: entry.creation_time,
+            agents: agent_keys,
+        };
+        self.node.put(inner)
+    }
+
+    /// Removes a node with given `id`, returns `(key, invalid_agents)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.   
+    pub fn remove(&self, id: u32) -> Result<(Vec<u8>, Vec<String>)> {
+        use anyhow::anyhow;
+        let inner = self.node.get_by_id(id)?.ok_or(anyhow!("No such id"))?;
+        let mut invalids = vec![];
+        for agent in inner.agents {
+            if self.agent.delete(id, &agent).is_err() {
+                invalids.push(agent);
+            }
+        }
+        self.node.remove(id).map(|key| (key, invalids))
+    }
+
+    #[must_use]
+    pub fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_> {
+        TableIter {
+            node: self.node.iter(direction, from),
+            agent: self.agent.clone(),
+        }
+    }
+}
+
+pub struct TableIter<'d> {
+    node: TI<'d, InnerNode>,
+    agent: CrateTable<'d, Agent>,
+}
+
+impl<'d> Iterator for TableIter<'d> {
+    type Item = Result<Node, anyhow::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.node.next().map(|res| {
+            res.map(|inner| {
+                let mut agents = vec![];
+                for aid in inner.agents {
+                    if let Ok(Some(agent)) = self.agent.get(inner.id, &aid) {
+                        agents.push(agent);
+                    }
+                }
+                let mut settings: Option<Settings> = inner.settings.map(Into::into);
+                let mut settings_draft: Option<Settings> = inner.settings_draft.map(Into::into);
+                for agent in agents {
+                    if let Some(settings) = settings.as_mut() {
+                        settings
+                            .add_agent(agent.kind, agent.config.as_ref())
+                            .expect("invalid agent config");
+                    }
+                    if let Some(settings_draft) = settings_draft.as_mut() {
+                        settings_draft
+                            .add_agent(agent.kind, agent.config.as_ref())
+                            .expect("invalid agent config");
+                    }
+                }
+                Node {
+                    id: inner.id,
+                    name: inner.name,
+                    name_draft: inner.name_draft,
+                    settings,
+                    settings_draft,
+                    creation_time: inner.creation_time,
+                }
+            })
+        })
     }
 }
 
@@ -144,21 +286,48 @@ impl Settings {
         }
     }
 
-    fn add_agent(&mut self, kind: AgentKind, config: Option<Config>) -> Result<()> {
+    fn add_agent(&mut self, kind: AgentKind, config: Option<&Config>) -> Result<()> {
         match kind {
-            AgentKind::Reconverge => {}
-            AgentKind::Piglet => {}
-            AgentKind::Hog => {}
+            AgentKind::Reconverge => {
+                if let Some(config) = config {
+                    let config: Reconverge = toml::from_str(config.as_ref())?;
+                    self.reconverge = true;
+                    self.reconverge_giganto_ip = config.giganto_ip;
+                    self.reconverge_giganto_port = config.giganto_port;
+                    self.reconverge_review_ip = config.review_ip;
+                    self.reconverge_review_port = config.review_port;
+                }
+            }
+            AgentKind::Piglet => {
+                if let Some(config) = config {
+                    let config: Piglet = toml::from_str(config.as_ref())?;
+                    self.piglet = true;
+                    self.piglet_giganto_ip = config.giganto_ip;
+                    self.piglet_giganto_port = config.giganto_port;
+                    self.piglet_review_ip = config.review_ip;
+                    self.piglet_review_port = config.review_port;
+                }
+            }
+            AgentKind::Hog => {
+                if let Some(config) = config {
+                    let config: Hog = toml::from_str(config.as_ref())?;
+                    self.hog = true;
+                    self.hog_giganto_ip = config.giganto_ip;
+                    self.hog_giganto_port = config.giganto_port;
+                    self.hog_review_ip = config.review_ip;
+                    self.hog_review_port = config.review_port;
+                }
+            }
         }
         Ok(())
     }
 
-    fn agents(&self) -> Result<Vec<Agent>> {
+    fn agents(&self) -> Result<Vec<Option<Agent>>> {
         let node = u32::MAX;
         let draft = None;
 
         let mut agents = vec![];
-        let config = if self.piglet {
+        if self.piglet {
             let config = Piglet {
                 giganto_ip: self.piglet_giganto_ip,
                 giganto_port: self.piglet_giganto_port,
@@ -172,55 +341,55 @@ impl Settings {
                 smtp_eml: self.smtp_eml,
                 ftp: self.ftp,
             };
-            Some(toml::to_string(&config)?)
+            let agent = Agent::new(
+                node,
+                "piglet".to_string(),
+                "piglet".try_into()?,
+                Some(toml::to_string(&config)?),
+                draft.clone(),
+            )?;
+            agents.push(Some(agent));
         } else {
-            None
-        };
+            agents.push(None);
+        }
 
-        let agent = Agent::new(
-            node,
-            "piglet".to_string(),
-            "piglet".try_into()?,
-            config,
-            draft.clone(),
-        )?;
-        agents.push(agent);
-
-        let config = if self.hog {
+        if self.hog {
             let config = Hog {
                 giganto_ip: self.hog_giganto_ip,
                 giganto_port: self.hog_giganto_port,
                 protocols: self.protocols.clone(),
                 sensors: self.sensors.clone(),
             };
-            Some(toml::to_string(&config)?)
+            let agent = Agent::new(
+                node,
+                "hog".to_string(),
+                "hog".try_into()?,
+                Some(toml::to_string(&config)?),
+                draft.clone(),
+            )?;
+            agents.push(Some(agent));
         } else {
-            None
-        };
+            agents.push(None);
+        }
 
-        let agent = Agent::new(
-            node,
-            "hog".to_string(),
-            "hog".try_into()?,
-            config,
-            draft.clone(),
-        )?;
-        agents.push(agent);
-
-        let config = if self.reconverge {
-            Some("".to_string())
+        if self.reconverge {
+            let config = Reconverge {
+                giganto_ip: self.reconverge_giganto_ip,
+                giganto_port: self.reconverge_giganto_port,
+                review_ip: self.reconverge_review_ip,
+                review_port: self.reconverge_review_port,
+            };
+            let agent = Agent::new(
+                node,
+                "reconverge".to_string(),
+                "reconverge".try_into()?,
+                Some(toml::to_string(&config)?),
+                draft.clone(),
+            )?;
+            agents.push(Some(agent));
         } else {
-            None
-        };
-
-        let agent = Agent::new(
-            node,
-            "reconverge".to_string(),
-            "reconverge".try_into()?,
-            config,
-            draft,
-        )?;
-        agents.push(agent);
+            agents.push(None);
+        }
 
         Ok(agents)
     }
@@ -228,10 +397,12 @@ impl Settings {
 
 impl From<InnerSettings> for Settings {
     fn from(inner: InnerSettings) -> Self {
-        let mut settings = Self::default();
-        settings.customer_id = inner.customer_id;
-        settings.description = inner.description;
-        settings.hostname = inner.hostname;
+        let mut settings = Settings {
+            customer_id: inner.customer_id,
+            description: inner.description,
+            hostname: inner.hostname,
+            ..Default::default()
+        };
 
         if let Some(giganto) = inner.giganto {
             settings.giganto = true;
@@ -279,12 +450,14 @@ impl<'d> IndexedTable<'d, InnerNode> {
     /// Opens the `node` table in the database.
     ///
     /// Returns `None` if the table does not exist.
+    #[allow(dead_code)]
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
         IndexedMap::new(db, super::NODES)
             .map(IndexedTable::new)
             .ok()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn raw(&self) -> &IndexedMap<'_> {
         &self.indexed_map
     }
