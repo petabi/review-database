@@ -1,14 +1,16 @@
-use crate::{
-    self as database,
-    schema::{cluster, time_series},
-    Database, Error, TimeCount,
-};
+use std::{cmp::Reverse, collections::HashMap};
+
 use chrono::{NaiveDateTime, TimeDelta, Utc};
 use diesel::{dsl::max, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
 use serde::Deserialize;
-use std::{cmp::Reverse, collections::HashMap};
+
+use crate::{
+    self as database,
+    schema::{cluster, time_series},
+    Database, Error, TimeCount,
+};
 
 #[derive(Debug, Queryable)]
 struct TimeSeriesLoadByCluster {

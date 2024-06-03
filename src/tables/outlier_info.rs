@@ -6,9 +6,8 @@ use anyhow::{bail, Result};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
-use crate::{tables::Value as ValueTrait, types::FromKeyValue, Iterable, Map, Table, UniqueKey};
-
 use super::TableIter;
+use crate::{tables::Value as ValueTrait, types::FromKeyValue, Iterable, Map, Table, UniqueKey};
 
 #[derive(Debug, PartialEq)]
 pub struct OutlierInfo {

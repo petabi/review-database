@@ -1,3 +1,8 @@
+use chrono::NaiveDateTime;
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use structured::{Description, Element, ElementCount, NLargestCount};
+
 use super::{
     schema::{
         column_description::dsl as cd, description_text::dsl as desc, top_n_text::dsl as top_n,
@@ -5,10 +10,6 @@ use super::{
     BatchTimestamp, ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription,
     ToElementCount, ToNLargestCount,
 };
-use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
-use structured::{Description, Element, ElementCount, NLargestCount};
 
 #[derive(Debug, Queryable)]
 struct DescriptionText {

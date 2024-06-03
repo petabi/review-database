@@ -138,11 +138,12 @@ mod tests {
 
     #[test]
     fn serde() {
+        use std::collections::HashSet;
+        use std::io::{Cursor, Read};
+
         use chrono::Utc;
         use data_encoding::BASE64;
         use flate2::{bufread::GzEncoder, Compression};
-        use std::collections::HashSet;
-        use std::io::{Cursor, Read};
 
         let name = "mi_1";
         let value = super::Value {

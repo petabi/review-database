@@ -1,3 +1,13 @@
+use std::collections::HashSet;
+
+use chrono::NaiveDateTime;
+use cluster::dsl as c_d;
+use column_description::dsl as col_d;
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl};
+use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use num_traits::ToPrimitive;
+use structured::{Element, FloatRange};
+
 use super::{
     filter_by_whitelists, get_limited_cluster_ids, limited_top_n_of_clusters, total_of_top_n,
     TopElementCountsByColumn, TopNOfMultipleCluster, ValueType, DEFAULT_NUMBER_OF_CLUSTER,
@@ -11,15 +21,6 @@ use crate::{
     },
     Database, Error,
 };
-use chrono::NaiveDateTime;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
-use num_traits::ToPrimitive;
-use std::collections::HashSet;
-use structured::{Element, FloatRange};
-
-use cluster::dsl as c_d;
-use column_description::dsl as col_d;
 
 macro_rules! get_top_n_of_column {
     ($conn:expr, $top_d:ident, $top_table:ident, $value_type:ty, $c:expr, $i:expr, $tc:expr, $time:expr) => {{

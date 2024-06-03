@@ -1,4 +1,3 @@
-use crate::Error;
 use bb8_postgres::{
     bb8::PooledConnection,
     tokio_postgres::{
@@ -9,6 +8,8 @@ use bb8_postgres::{
     },
     PostgresConnectionManager,
 };
+
+use crate::Error;
 
 pub struct Transaction<'a>(tokio_postgres::Transaction<'a>);
 

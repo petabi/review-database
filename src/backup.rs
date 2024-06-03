@@ -1,11 +1,13 @@
 //! Database backup utilities.
 
-use crate::Store;
+use std::sync::Arc;
+
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
 use rocksdb::backup::BackupEngineInfo;
-use std::sync::Arc;
 use tokio::sync::RwLock;
+
+use crate::Store;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BackupInfo {
@@ -68,13 +70,15 @@ pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use crate::{event::DnsEventFields, EventKind, EventMessage, Store};
-    use bincode::Options;
-    use chrono::Utc;
     use std::{
         net::{IpAddr, Ipv4Addr},
         sync::Arc,
     };
+
+    use bincode::Options;
+    use chrono::Utc;
+
+    use crate::{event::DnsEventFields, EventKind, EventMessage, Store};
 
     fn example_message() -> EventMessage {
         let codec = bincode::DefaultOptions::new();
@@ -109,8 +113,9 @@ mod tests {
 
     #[tokio::test]
     async fn db_backup_list() {
-        use crate::backup::list;
         use tokio::sync::RwLock;
+
+        use crate::backup::list;
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();

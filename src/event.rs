@@ -20,6 +20,25 @@ mod sysmon;
 mod tls;
 mod tor;
 
+use std::{
+    collections::HashMap,
+    convert::TryInto,
+    fmt,
+    net::IpAddr,
+    num::NonZeroU8,
+    sync::{Arc, Mutex, MutexGuard},
+};
+
+use aho_corasick::AhoCorasickBuilder;
+use anyhow::{bail, Context, Result};
+use chrono::{serde::ts_nanoseconds, DateTime, TimeZone, Utc};
+use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
+use rand::{thread_rng, RngCore};
+pub use rocksdb::Direction;
+use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
+use serde::{Deserialize, Serialize};
+
 use self::{common::Match, http::RepeatedHttpSessionsFields};
 pub use self::{
     common::TriageScore,
@@ -61,23 +80,6 @@ pub use self::{
 use super::{
     types::{Endpoint, EventCategory, HostNetworkGroup},
     Customer, Network, TriagePolicy,
-};
-use aho_corasick::AhoCorasickBuilder;
-use anyhow::{bail, Context, Result};
-use chrono::{serde::ts_nanoseconds, DateTime, TimeZone, Utc};
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive, ToPrimitive};
-use rand::{thread_rng, RngCore};
-pub use rocksdb::Direction;
-use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
-use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    convert::TryInto,
-    fmt,
-    net::IpAddr,
-    num::NonZeroU8,
-    sync::{Arc, Mutex, MutexGuard},
 };
 
 // event levels (currently unused ones commented out)
@@ -2270,15 +2272,17 @@ fn get_record_country_short_name(record: &ip2location::Record) -> Option<String>
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        event::{DgaFields, DnsEventFields, LOCKY_RANSOMWARE},
-        DomainGenerationAlgorithm, EventCategory, EventFilter, EventKind, EventMessage, Store,
-    };
-    use chrono::{TimeZone, Utc};
     use std::{
         collections::HashMap,
         net::{IpAddr, Ipv4Addr},
         sync::Arc,
+    };
+
+    use chrono::{TimeZone, Utc};
+
+    use crate::{
+        event::{DgaFields, DnsEventFields, LOCKY_RANSOMWARE},
+        DomainGenerationAlgorithm, EventCategory, EventFilter, EventKind, EventMessage, Store,
     };
 
     fn example_message(kind: EventKind) -> EventMessage {

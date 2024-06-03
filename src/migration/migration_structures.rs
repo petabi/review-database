@@ -1,11 +1,13 @@
+use std::net::IpAddr;
+
+use chrono::{serde::ts_nanoseconds, DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
 use crate::{
     event::{DgaFields, HttpThreatFields, NonBrowserFields},
     BlockListConnFields, BlockListHttpFields, BlockListNtlmFields, BlockListSmtpFields,
     BlockListSshFields, BlockListTlsFields,
 };
-use chrono::{serde::ts_nanoseconds, DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use std::net::IpAddr;
 
 #[derive(Deserialize, Serialize)]
 pub struct BlockListConnBeforeV29 {

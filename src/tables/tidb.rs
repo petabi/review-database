@@ -216,9 +216,10 @@ mod tests {
 
     #[test]
     fn serde() {
+        use std::io::{Cursor, Read};
+
         use data_encoding::BASE64;
         use flate2::{bufread::GzEncoder, Compression};
-        use std::io::{Cursor, Read};
 
         let name = "tidb";
         let value = create_entry(name);

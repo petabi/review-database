@@ -1,3 +1,16 @@
+use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr};
+use std::str::FromStr;
+
+use chrono::NaiveDateTime;
+use cluster::dsl as c_d;
+use column_description::dsl as cd_d;
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel_async::RunQueryDsl;
+use model::dsl as m_d;
+use num_traits::ToPrimitive;
+use structured::Element;
+
 use crate::{
     csv_indicator::get_csv_indicators,
     schema::{
@@ -6,18 +19,6 @@ use crate::{
     },
     Database, Error, StructuredColumnType,
 };
-use chrono::NaiveDateTime;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
-use diesel_async::RunQueryDsl;
-use num_traits::ToPrimitive;
-use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr};
-use std::str::FromStr;
-use structured::Element;
-
-use cluster::dsl as c_d;
-use column_description::dsl as cd_d;
-use model::dsl as m_d;
 
 // As structured::ElementCount has count as usize, redefine this here.
 #[derive(Debug)]

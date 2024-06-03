@@ -1,8 +1,10 @@
-use super::{common::Match, EventCategory, EventFilter, TriagePolicy, TriageScore, LOW, MEDIUM};
+use std::{fmt, net::IpAddr, num::NonZeroU8};
+
 use aho_corasick::AhoCorasickBuilder;
 use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
-use std::{fmt, net::IpAddr, num::NonZeroU8};
+
+use super::{common::Match, EventCategory, EventFilter, TriagePolicy, TriageScore, LOW, MEDIUM};
 
 #[derive(Deserialize)]
 pub(super) struct RepeatedHttpSessionsFields {

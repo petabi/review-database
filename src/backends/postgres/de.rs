@@ -1,4 +1,5 @@
-use super::error::{Error, Result};
+use std::{fmt, ops::Deref};
+
 use bb8_postgres::tokio_postgres::{
     types::{FromSql, Type},
     Row,
@@ -9,7 +10,8 @@ use serde::{
     de::{self, DeserializeSeed, IntoDeserializer, MapAccess, SeqAccess, Visitor},
     Deserialize,
 };
-use std::{fmt, ops::Deref};
+
+use super::error::{Error, Result};
 
 pub struct Deserializer<'de> {
     input: &'de Row,

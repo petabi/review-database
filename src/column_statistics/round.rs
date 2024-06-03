@@ -1,11 +1,12 @@
-use crate::{
-    schema::{cluster::dsl as c_d, column_description::dsl as cd_d},
-    Database, Error,
-};
 use chrono::NaiveDateTime;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
+
+use crate::{
+    schema::{cluster::dsl as c_d, column_description::dsl as cd_d},
+    Database, Error,
+};
 
 #[derive(Deserialize, Queryable)]
 #[allow(clippy::module_name_repetitions)]

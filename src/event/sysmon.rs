@@ -1,12 +1,14 @@
 #![allow(clippy::module_name_repetitions)]
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
-use serde::{Deserialize, Serialize};
 use std::{
     fmt,
     net::{IpAddr, Ipv4Addr},
     num::NonZeroU8,
 };
+
+use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
+use serde::{Deserialize, Serialize};
+
+use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
 
 #[derive(Serialize, Deserialize)]
 pub struct WindowsThreat {

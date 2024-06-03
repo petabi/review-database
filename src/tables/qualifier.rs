@@ -146,9 +146,8 @@ impl<'d> IndexedTable<'d, Qualifier> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{types::Qualifier, Store};
-
     use super::DEFAULT_ENTRIES;
+    use crate::{types::Qualifier, Store};
 
     fn set_up_db() -> (Arc<Store>, Vec<Qualifier>) {
         let db_dir = tempfile::tempdir().unwrap();

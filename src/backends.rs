@@ -5,6 +5,5 @@
 
 mod postgres;
 
-use postgres as backend;
-
 pub(super) use backend::{ConnectionPool, Value};
+use postgres as backend;

@@ -2,7 +2,15 @@ mod de;
 mod error;
 mod transaction;
 
-use crate::{self as database, Error};
+use std::{
+    cmp::min,
+    fmt::Write,
+    fs, io,
+    path::Path,
+    sync::Arc,
+    time::{Duration, Instant},
+};
+
 use bb8_postgres::{
     bb8,
     tokio_postgres::{
@@ -18,16 +26,10 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use rustls::{CertificateError, ClientConfig, RootCertStore};
 use rustls_pki_types::CertificateDer;
 use serde::de::DeserializeOwned;
-use std::{
-    cmp::min,
-    fmt::Write,
-    fs, io,
-    path::Path,
-    sync::Arc,
-    time::{Duration, Instant},
-};
 use tokio_postgres_rustls::MakeRustlsConnect;
 pub use transaction::Transaction;
+
+use crate::{self as database, Error};
 
 pub type Value = dyn ToSql + Sync;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./src/backends/postgres/migrations/");

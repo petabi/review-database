@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
+use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+
 use crate::{
     schema::{csv_column_list, csv_indicator, csv_whitelist},
     Error,
 };
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
-use std::collections::HashMap;
 
 pub(crate) async fn get_whitelists(
     conn: &mut AsyncPgConnection,

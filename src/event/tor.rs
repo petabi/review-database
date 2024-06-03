@@ -1,7 +1,9 @@
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use std::{fmt, net::IpAddr, num::NonZeroU8};
+
 use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
-use std::{fmt, net::IpAddr, num::NonZeroU8};
+
+use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
 
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]

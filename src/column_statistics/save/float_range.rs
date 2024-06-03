@@ -1,11 +1,13 @@
+use std::convert::TryFrom;
+
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use serde::Deserialize;
+use structured::{ColumnStatistics, Element, FloatRange};
+
 use crate::{
     schema::{description_float::dsl as desc_d, top_n_float::dsl as topn_d},
     Error,
 };
-use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use serde::Deserialize;
-use std::convert::TryFrom;
-use structured::{ColumnStatistics, Element, FloatRange};
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]
 #[diesel(table_name = crate::schema::description_float)]

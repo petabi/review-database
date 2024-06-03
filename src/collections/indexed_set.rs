@@ -1,8 +1,8 @@
-use crate::EXCLUSIVE;
-
-use super::KeyIndex;
 use anyhow::{anyhow, Context, Result};
 use bincode::Options;
+
+use super::KeyIndex;
+use crate::EXCLUSIVE;
 
 pub struct IndexedSet<'a> {
     db: &'a rocksdb::OptimisticTransactionDB,

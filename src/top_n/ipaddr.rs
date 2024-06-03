@@ -1,3 +1,13 @@
+use std::{cmp::Reverse, collections::HashMap};
+
+use chrono::NaiveDateTime;
+use cluster::dsl as c_d;
+use column_description::dsl as col_d;
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use num_traits::ToPrimitive;
+use top_n_ipaddr::dsl as top_d;
+
 use super::{
     filter_by_whitelists, get_cluster_sizes, get_limited_cluster_ids, limited_top_n_of_clusters,
     total_of_top_n, ElementCount, TopElementCountsByColumn, TopNOfCluster, TopNOfMultipleCluster,
@@ -9,15 +19,6 @@ use crate::{
     schema::{cluster, column_description, top_n_ipaddr},
     Database, Error,
 };
-use chrono::NaiveDateTime;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
-use num_traits::ToPrimitive;
-use std::{cmp::Reverse, collections::HashMap};
-
-use cluster::dsl as c_d;
-use column_description::dsl as col_d;
-use top_n_ipaddr::dsl as top_d;
 
 async fn get_top_n_of_multiple_clusters(
     conn: &mut AsyncPgConnection,

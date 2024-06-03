@@ -1,12 +1,14 @@
+use std::convert::TryFrom;
+
+use chrono::NaiveDateTime;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use serde::Deserialize;
+use structured::{ColumnStatistics, Element};
+
 use crate::{
     schema::{description_datetime::dsl as desc_d, top_n_datetime::dsl as topn_d},
     Error,
 };
-use chrono::NaiveDateTime;
-use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use serde::Deserialize;
-use std::convert::TryFrom;
-use structured::{ColumnStatistics, Element};
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]
 #[diesel(table_name = crate::schema::description_datetime)]

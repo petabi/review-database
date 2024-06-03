@@ -75,8 +75,9 @@ impl<'d> Table<'d, AccountPolicy> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Store;
     use std::sync::Arc;
+
+    use crate::Store;
 
     #[test]
     fn operations() {

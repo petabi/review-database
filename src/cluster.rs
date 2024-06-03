@@ -1,8 +1,9 @@
-use crate::{tokio_postgres::types::ToSql, types::Cluster, Database, Error, Type, Value};
 use chrono::NaiveDateTime;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use tracing::error;
+
+use crate::{tokio_postgres::types::ToSql, types::Cluster, Database, Error, Type, Value};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UpdateClusterRequest {
@@ -138,9 +139,10 @@ impl Database {
         is_first: bool,
         limit: usize,
     ) -> Result<Vec<Cluster>, Error> {
-        use super::schema::cluster::dsl;
         use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
         use diesel_async::RunQueryDsl;
+
+        use super::schema::cluster::dsl;
 
         let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
         let mut query = dsl::cluster

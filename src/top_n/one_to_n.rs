@@ -1,12 +1,5 @@
-use super::{ElementCount, StructuredColumnType, TopElementCountsByColumn};
-use crate::{
-    self as database,
-    schema::{
-        cluster, column_description, csv_column_extra, model, top_n_binary, top_n_datetime,
-        top_n_enum, top_n_float, top_n_int, top_n_ipaddr, top_n_text,
-    },
-    Database, Error,
-};
+use std::collections::HashMap;
+
 use chrono::NaiveDateTime;
 use diesel::{
     sql_query,
@@ -16,8 +9,17 @@ use diesel::{
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use structured::{Element, FloatRange};
+
+use super::{ElementCount, StructuredColumnType, TopElementCountsByColumn};
+use crate::{
+    self as database,
+    schema::{
+        cluster, column_description, csv_column_extra, model, top_n_binary, top_n_datetime,
+        top_n_enum, top_n_float, top_n_int, top_n_ipaddr, top_n_text,
+    },
+    Database, Error,
+};
 
 #[derive(Debug, QueryableByName, Serialize)]
 pub struct SelectedCluster {

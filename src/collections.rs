@@ -2,16 +2,16 @@ mod indexed_map;
 mod indexed_set;
 mod map;
 
-use crate::EXCLUSIVE;
+use std::{borrow::Cow, cmp::Ordering, convert::TryFrom, mem};
 
-pub use self::{indexed_map::IndexedMap, indexed_set::IndexedSet, map::Map};
 use anyhow::{bail, Context, Result};
 use bincode::Options;
 use rocksdb::{Direction, IteratorMode};
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, cmp::Ordering, convert::TryFrom, mem};
 
+pub use self::{indexed_map::IndexedMap, indexed_set::IndexedSet, map::Map};
 use super::types::FromKeyValue;
+use crate::EXCLUSIVE;
 
 pub trait IterableMap<'i, I: Iterator + 'i> {
     /// Creates an iterator that iterates forward over key-value pairs.

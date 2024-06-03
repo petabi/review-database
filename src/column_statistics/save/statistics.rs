@@ -1,13 +1,15 @@
-use super::{binary, datetime, float_range, int, ipaddr, r#enum, text};
-use crate::schema::{cluster::dsl as cluster_d, column_description::dsl as cd_d};
-use crate::Database;
+use std::convert::TryFrom;
+
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
-use std::convert::TryFrom;
 use structured::{ColumnStatistics, Element};
+
+use super::{binary, datetime, float_range, int, ipaddr, r#enum, text};
+use crate::schema::{cluster::dsl as cluster_d, column_description::dsl as cd_d};
+use crate::Database;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]

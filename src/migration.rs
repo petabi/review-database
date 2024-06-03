@@ -3,15 +3,16 @@
 
 mod migration_structures;
 
-use anyhow::{anyhow, Context, Result};
-use semver::{Version, VersionReq};
-use serde::{Deserialize, Serialize};
 use std::{
     fs::{create_dir_all, File},
     io::{Read, Write},
     net::IpAddr,
     path::{Path, PathBuf},
 };
+
+use anyhow::{anyhow, Context, Result};
+use semver::{Version, VersionReq};
+use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
 use crate::IterableMap;
@@ -205,17 +206,18 @@ fn read_version_file(path: &Path) -> Result<Version> {
 }
 
 fn migrate_0_28_to_0_29_0(store: &super::Store) -> Result<()> {
-    use crate::event::{
-        BlockListConnFields, BlockListHttpFields, BlockListNtlmFields, BlockListSmtpFields,
-        BlockListSshFields, BlockListTlsFields, DgaFields, EventKind, HttpThreatFields,
-        NonBrowserFields,
-    };
     use migration_structures::{
         BlockListConnBeforeV29, BlockListHttpBeforeV29, BlockListNtlmBeforeV29,
         BlockListSmtpBeforeV29, BlockListSshBeforeV29, BlockListTlsBeforeV29, DgaBeforeV29,
         HttpThreatBeforeV29, NonBrowserBeforeV29,
     };
     use num_traits::FromPrimitive;
+
+    use crate::event::{
+        BlockListConnFields, BlockListHttpFields, BlockListNtlmFields, BlockListSmtpFields,
+        BlockListSshFields, BlockListTlsFields, DgaFields, EventKind, HttpThreatFields,
+        NonBrowserFields,
+    };
 
     let event_db = store.events();
     let iter = event_db.raw_iter_forward();
@@ -306,9 +308,10 @@ fn migrate_0_26_to_0_28(store: &super::Store) -> Result<()> {
 }
 
 fn migrate_outlier_info(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
     use crate::collections::IterableMap;
     use crate::OutlierInfoKey;
-    use bincode::Options;
 
     let map = store.outlier_map();
     let raw = map.raw();
@@ -357,12 +360,14 @@ fn migrate_account_policy(store: &super::Store) -> Result<()> {
 }
 
 fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
+    use std::collections::HashMap;
+
+    use bincode::Options;
+    use chrono::{DateTime, Utc};
+
     use crate::collections::Indexed;
     use crate::IterableMap;
     use crate::{Node, NodeSettings};
-    use bincode::Options;
-    use chrono::{DateTime, Utc};
-    use std::collections::HashMap;
 
     type PortNumber = u16;
 
@@ -526,10 +531,11 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
 mod tests {
     use std::borrow::Cow;
 
-    use super::COMPATIBLE_VERSION_REQ;
-    use crate::Store;
     use rocksdb::Direction;
     use semver::{Version, VersionReq};
+
+    use super::COMPATIBLE_VERSION_REQ;
+    use crate::Store;
 
     #[allow(dead_code)]
     struct TestSchema {
@@ -599,15 +605,17 @@ mod tests {
     #[test]
     fn migrate_0_25_to_0_26_node() {
         type PortNumber = u16;
-        use crate::Node;
-        use crate::{collections::Indexed, Indexable};
-        use bincode::Options;
-        use chrono::{DateTime, Utc};
-        use serde::{Deserialize, Serialize};
         use std::{
             collections::HashMap,
             net::{IpAddr, Ipv4Addr},
         };
+
+        use bincode::Options;
+        use chrono::{DateTime, Utc};
+        use serde::{Deserialize, Serialize};
+
+        use crate::Node;
+        use crate::{collections::Indexed, Indexable};
 
         #[derive(Deserialize, Serialize, Clone)]
         pub struct OldNode {
@@ -774,8 +782,9 @@ mod tests {
 
     #[test]
     fn migrate_0_26_to_0_28_outlier_info() {
-        use crate::tables::Iterable;
         use bincode::Options;
+
+        use crate::tables::Iterable;
 
         let settings = TestSchema::new();
         let map = settings.store.outlier_map();
@@ -823,9 +832,10 @@ mod tests {
 
     #[test]
     fn migrate_0_26_to_0_28_account_policy() {
-        use crate::collections::IterableMap;
         use bincode::Options;
         use serde::Serialize;
+
+        use crate::collections::IterableMap;
 
         #[derive(Serialize)]
         pub struct OldAccountPolicy {
@@ -860,11 +870,13 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_block_list_conn() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
         use crate::{
             migration::migration_structures::BlockListConnBeforeV29, EventKind, EventMessage,
         };
-        use chrono::Utc;
-        use std::net::IpAddr;
 
         let settings = TestSchema::new();
         let time = Utc::now();
@@ -900,11 +912,13 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_http_threat() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
         use crate::{
             migration::migration_structures::HttpThreatBeforeV29, EventKind, EventMessage,
         };
-        use chrono::Utc;
-        use std::net::IpAddr;
 
         let settings = TestSchema::new();
         let time = Utc::now();
@@ -958,9 +972,11 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_dga() {
-        use crate::{migration::migration_structures::DgaBeforeV29, EventKind, EventMessage};
-        use chrono::Utc;
         use std::net::IpAddr;
+
+        use chrono::Utc;
+
+        use crate::{migration::migration_structures::DgaBeforeV29, EventKind, EventMessage};
 
         let settings = TestSchema::new();
         let time = Utc::now();
@@ -1008,11 +1024,13 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_non_browser() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
         use crate::{
             migration::migration_structures::NonBrowserBeforeV29, EventKind, EventMessage,
         };
-        use chrono::Utc;
-        use std::net::IpAddr;
 
         let settings = TestSchema::new();
         let time = Utc::now();
@@ -1059,11 +1077,13 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_block_list_http() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
         use crate::{
             migration::migration_structures::BlockListHttpBeforeV29, EventKind, EventMessage,
         };
-        use chrono::Utc;
-        use std::net::IpAddr;
 
         let settings = TestSchema::new();
         let time = Utc::now();
@@ -1114,11 +1134,13 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_block_list_ntlm() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
         use crate::{
             migration::migration_structures::BlockListNtlmBeforeV29, EventKind, EventMessage,
         };
-        use chrono::Utc;
-        use std::net::IpAddr;
 
         let settings = TestSchema::new();
         let time = Utc::now();
@@ -1156,11 +1178,13 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_block_list_smtp() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
         use crate::{
             migration::migration_structures::BlockListSmtpBeforeV29, EventKind, EventMessage,
         };
-        use chrono::Utc;
-        use std::net::IpAddr;
 
         let settings = TestSchema::new();
         let time = Utc::now();
@@ -1197,11 +1221,13 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_block_list_ssh() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
         use crate::{
             migration::migration_structures::BlockListSshBeforeV29, EventKind, EventMessage,
         };
-        use chrono::Utc;
-        use std::net::IpAddr;
 
         let settings = TestSchema::new();
         let time = Utc::now();
@@ -1244,11 +1270,13 @@ mod tests {
 
     #[test]
     fn migrate_0_28_to_0_29_0_block_list_tls() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
         use crate::{
             migration::migration_structures::BlockListTlsBeforeV29, EventKind, EventMessage,
         };
-        use chrono::Utc;
-        use std::net::IpAddr;
 
         let settings = TestSchema::new();
         let time = Utc::now();

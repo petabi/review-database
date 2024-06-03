@@ -4,17 +4,19 @@ mod one_to_n;
 mod score;
 mod time_series;
 
-pub use self::one_to_n::{TopColumnsOfCluster, TopMultimaps};
-pub use self::score::{ClusterScore, ClusterScoreSet};
-pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByColumn};
-use super::{Database, Error};
+use std::cmp::Reverse;
+use std::collections::{HashMap, HashSet};
+
 use chrono::NaiveDateTime;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::pg::AsyncPgConnection;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
-use std::cmp::Reverse;
-use std::collections::{HashMap, HashSet};
+
+pub use self::one_to_n::{TopColumnsOfCluster, TopMultimaps};
+pub use self::score::{ClusterScore, ClusterScoreSet};
+pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByColumn};
+use super::{Database, Error};
 
 const DEFAULT_PORTION_OF_CLUSTER: f64 = 0.3;
 const DEFAULT_NUMBER_OF_CLUSTER: usize = 10;
@@ -119,10 +121,11 @@ impl Database {
         &self,
         model_id: i32,
     ) -> Result<Vec<StructuredColumnType>, Error> {
+        use diesel_async::RunQueryDsl;
+
         use crate::schema::{
             cluster::dsl as cluster_d, column_description::dsl as cd_d, model::dsl as m_d,
         };
-        use diesel_async::RunQueryDsl;
 
         let mut conn = self.pool.get_diesel_conn().await?;
         let cluster_ids = cluster_d::cluster
@@ -165,8 +168,9 @@ async fn get_cluster_sizes(
     conn: &mut AsyncPgConnection,
     model_id: i32,
 ) -> Result<Vec<ClusterSize>, diesel::result::Error> {
-    use super::schema::cluster::dsl;
     use diesel_async::RunQueryDsl;
+
+    use super::schema::cluster::dsl;
 
     dsl::cluster
         .select((dsl::id, dsl::size))

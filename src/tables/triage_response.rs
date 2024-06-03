@@ -216,8 +216,9 @@ impl IndexedMapUpdate for Update {
 
 #[cfg(test)]
 mod test {
-    use chrono::Utc;
     use std::sync::Arc;
+
+    use chrono::Utc;
 
     use crate::{Iterable, Store, TriageResponse, TriageResponseUpdate};
 

@@ -1,11 +1,13 @@
-use super::TrafficDirection;
-pub use crate::account::{Account, Role};
+use std::{cmp::Ordering, convert::TryFrom, net::IpAddr, ops::RangeInclusive};
+
 use anyhow::Result;
 use chrono::{naive::serde::ts_nanoseconds_option, NaiveDateTime};
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, convert::TryFrom, net::IpAddr, ops::RangeInclusive};
 use strum_macros::Display;
+
+use super::TrafficDirection;
+pub use crate::account::{Account, Role};
 
 pub trait FromKeyValue: Sized {
     /// Creates a new instance from the given key and value.

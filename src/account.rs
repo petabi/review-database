@@ -1,3 +1,5 @@
+use std::{borrow::Cow, net::IpAddr, num::NonZeroU32};
+
 use anyhow::Result;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
@@ -9,7 +11,6 @@ use ring::{
     rand::{self, SecureRandom},
 };
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, net::IpAddr, num::NonZeroU32};
 use strum_macros::{Display, EnumString};
 
 use crate::{tables::Value, UniqueKey};

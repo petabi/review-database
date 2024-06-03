@@ -1,11 +1,13 @@
+use std::convert::TryFrom;
+
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use serde::Deserialize;
+use structured::{ColumnStatistics, Element};
+
 use crate::{
     schema::{description_ipaddr::dsl as desc_d, top_n_ipaddr::dsl as topn_d},
     Error,
 };
-use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use serde::Deserialize;
-use std::convert::TryFrom;
-use structured::{ColumnStatistics, Element};
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]
 #[diesel(table_name = crate::schema::description_ipaddr)]

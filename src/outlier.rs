@@ -1,9 +1,9 @@
-use crate::types::{Outlier, Source, Timestamp};
-
-use super::{tokio_postgres::types::ToSql, Database, Error, Type};
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use tracing::error;
+
+use super::{tokio_postgres::types::ToSql, Database, Error, Type};
+use crate::types::{Outlier, Source, Timestamp};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateOutlierRequest {
@@ -101,9 +101,10 @@ impl Database {
         is_first: bool,
         limit: usize,
     ) -> Result<Vec<Outlier>, Error> {
-        use super::schema::outlier::dsl;
         use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
         use diesel_async::RunQueryDsl;
+
+        use super::schema::outlier::dsl;
 
         let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
         let mut query = dsl::outlier

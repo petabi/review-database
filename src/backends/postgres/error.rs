@@ -1,5 +1,6 @@
-use serde::de;
 use std::fmt;
+
+use serde::de;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

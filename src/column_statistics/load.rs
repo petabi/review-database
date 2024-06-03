@@ -6,18 +6,20 @@ mod int;
 mod ipaddr;
 mod text;
 
-use crate::{
-    schema::{self, column_description::dsl as cd_d},
-    Database, Error,
-};
+use std::{cmp::Reverse, collections::HashMap};
+
 use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use futures::future::join_all;
 use serde::Serialize;
-use std::{cmp::Reverse, collections::HashMap};
 use structured::{ColumnStatistics, Description, ElementCount, NLargestCount};
 use tracing::error;
+
+use crate::{
+    schema::{self, column_description::dsl as cd_d},
+    Database, Error,
+};
 
 #[derive(Debug, Queryable)]
 struct ColumnDescriptionLoad {

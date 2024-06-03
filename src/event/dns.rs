@@ -1,8 +1,10 @@
 #![allow(clippy::module_name_repetitions, clippy::struct_excessive_bools)]
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, HIGH, MEDIUM};
+use std::{fmt, net::IpAddr, num::NonZeroU8};
+
 use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
-use std::{fmt, net::IpAddr, num::NonZeroU8};
+
+use super::{common::Match, EventCategory, TriagePolicy, TriageScore, HIGH, MEDIUM};
 
 #[derive(Deserialize, Serialize)]
 pub struct DnsEventFields {

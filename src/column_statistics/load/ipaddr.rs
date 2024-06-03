@@ -1,3 +1,13 @@
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    str::FromStr,
+};
+
+use chrono::NaiveDateTime;
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use structured::{Description, Element, ElementCount, NLargestCount};
+
 use super::{
     schema::{
         column_description::dsl as cd, description_ipaddr::dsl as desc, top_n_ipaddr::dsl as top_n,
@@ -5,14 +15,6 @@ use super::{
     BatchTimestamp, ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription,
     ToElementCount, ToNLargestCount,
 };
-use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    str::FromStr,
-};
-use structured::{Description, Element, ElementCount, NLargestCount};
 
 #[derive(Debug, Queryable)]
 struct DescriptionIpAddr {

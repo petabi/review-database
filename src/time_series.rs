@@ -1,9 +1,8 @@
-use super::{
-    schema::{cluster, time_series},
-    Database, Error, Type,
-};
+use std::collections::HashMap;
+
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use cluster::dsl as c_d;
 use diesel::{
     dsl::{max, min},
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
@@ -12,10 +11,12 @@ use diesel_async::RunQueryDsl;
 use futures::future::join_all;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-
-use cluster::dsl as c_d;
 use time_series::dsl as t_d;
+
+use super::{
+    schema::{cluster, time_series},
+    Database, Error, Type,
+};
 
 const MAX_CSV_COLUMNS: usize = 200;
 

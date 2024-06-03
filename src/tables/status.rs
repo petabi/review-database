@@ -143,9 +143,8 @@ impl<'d> IndexedTable<'d, Status> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{types::Status, Store};
-
     use super::DEFAULT_ENTRIES;
+    use crate::{types::Status, Store};
 
     fn set_up_db() -> (Arc<Store>, Vec<Status>) {
         let db_dir = tempfile::tempdir().unwrap();

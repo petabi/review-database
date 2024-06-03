@@ -1,14 +1,16 @@
-use super::{
-    eq_ip_country, EventCategory, EventFilter, FlowKind, LearningMethod, TrafficDirection,
-    TriagePolicy,
-};
-use anyhow::{bail, Result};
-use num_traits::ToPrimitive;
-use serde::{Deserialize, Serialize};
 use std::{
     net::IpAddr,
     num::NonZeroU8,
     sync::{Arc, Mutex},
+};
+
+use anyhow::{bail, Result};
+use num_traits::ToPrimitive;
+use serde::{Deserialize, Serialize};
+
+use super::{
+    eq_ip_country, EventCategory, EventFilter, FlowKind, LearningMethod, TrafficDirection,
+    TriagePolicy,
 };
 
 // TODO: Make new Match trait to support Windows Events

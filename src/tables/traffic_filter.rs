@@ -8,9 +8,8 @@ use ipnet::IpNet;
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, Iterable, Map, Table, UniqueKey};
-
 use super::Value;
+use crate::{types::FromKeyValue, Iterable, Map, Table, UniqueKey};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct TrafficFilter {

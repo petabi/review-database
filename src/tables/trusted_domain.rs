@@ -5,9 +5,8 @@ use std::borrow::Cow;
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
-
 use super::Value;
+use crate::{types::FromKeyValue, Map, Table, UniqueKey};
 
 #[derive(Clone)]
 pub struct TrustedDomain {

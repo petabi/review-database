@@ -1,8 +1,9 @@
-use super::{Database, Error, Type};
 use anyhow::Result;
 use bincode::Options;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
+
+use super::{Database, Error, Type};
 
 #[derive(Deserialize, Queryable)]
 pub struct Digest {
@@ -446,9 +447,10 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn load_model_by_name(&self, name: &str) -> Result<SqlModel, Error> {
-        use super::schema::model::dsl;
         use diesel::{ExpressionMethods, QueryDsl};
         use diesel_async::RunQueryDsl;
+
+        use super::schema::model::dsl;
 
         let query = dsl::model
             .select((
@@ -479,9 +481,10 @@ impl Database {
         is_first: bool,
         limit: usize,
     ) -> Result<Vec<Digest>, Error> {
-        use super::schema::model::dsl;
         use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
         use diesel_async::RunQueryDsl;
+
+        use super::schema::model::dsl;
 
         let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
         let mut query = dsl::model

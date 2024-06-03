@@ -24,6 +24,20 @@ mod time_series;
 mod top_n;
 pub mod types;
 
+use std::io;
+use std::path::{Path, PathBuf};
+
+use anyhow::{anyhow, Result};
+use backends::Value;
+use bb8_postgres::{
+    bb8,
+    tokio_postgres::{self, types::Type},
+};
+pub use rocksdb::backup::BackupEngineInfo;
+pub use tags::TagSet;
+use tags::{EventTagId, NetworkTagId, WorkflowTagId};
+use thiserror::Error;
+
 pub use self::account::Role;
 use self::backends::ConnectionPool;
 pub use self::batch_info::BatchInfo;
@@ -71,18 +85,6 @@ pub use self::top_n::{
     StructuredColumnType, TopColumnsOfCluster, TopMultimaps, TopTrendsByColumn,
 };
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
-use anyhow::{anyhow, Result};
-use backends::Value;
-use bb8_postgres::{
-    bb8,
-    tokio_postgres::{self, types::Type},
-};
-pub use rocksdb::backup::BackupEngineInfo;
-use std::io;
-use std::path::{Path, PathBuf};
-pub use tags::TagSet;
-use tags::{EventTagId, NetworkTagId, WorkflowTagId};
-use thiserror::Error;
 
 #[derive(Clone)]
 pub struct Database {

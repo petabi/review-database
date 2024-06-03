@@ -1,5 +1,6 @@
-use super::Indexed;
 use anyhow::{anyhow, bail, Context, Result};
+
+use super::Indexed;
 
 /// A map where each key has an associated numerical ID.
 ///
