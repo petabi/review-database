@@ -8,8 +8,8 @@ use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    types::FromKeyValue, Agent, AgentKind, Indexable, IndexedMap, IndexedMapUpdate, IndexedTable,
-    Iterable, Map, Table as CrateTable,
+    types::FromKeyValue, Agent, AgentKind, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
+    IndexedTable, Iterable, Map, Table as CrateTable,
 };
 
 use super::{agent::Config, TableIter as TI};
@@ -60,6 +60,14 @@ pub struct Node {
     pub settings_draft: Option<Settings>,
     pub creation_time: DateTime<Utc>,
 }
+
+pub struct Update {
+    pub name: Option<String>,
+    pub name_draft: Option<String>,
+    pub settings: Option<Settings>,
+    pub settings_draft: Option<Settings>,
+}
+
 pub struct Table<'d> {
     node: IndexedTable<'d, InnerNode>,
     agent: CrateTable<'d, Agent>,
@@ -195,6 +203,98 @@ impl<'d> Table<'d> {
             agent: self.agent.clone(),
         }
     }
+
+    /// Updates the `Node` from `old` to `new`, given `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `id` is invalid or the database operation fails.
+    pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
+        let settings = old.settings.clone();
+        let agents = settings.as_ref().map_or(Ok(vec![]), Settings::agents)?;
+        let settings_draft = old.settings_draft.clone();
+        let draft_agents = settings_draft
+            .as_ref()
+            .map_or(Ok(vec![]), Settings::agents)?;
+
+        let old_agents: Vec<_> = agents
+            .into_iter()
+            .zip(draft_agents.into_iter())
+            .map(|(agent, draft)| match (agent, draft) {
+                (None, None) => None,
+                (Some(mut agent), Some(draft)) => {
+                    agent.draft = draft.draft;
+                    Some(agent)
+                }
+                (Some(agent), None) => Some(agent),
+                (None, Some(mut draft)) => {
+                    std::mem::swap(&mut draft.config, &mut draft.draft);
+                    Some(draft)
+                }
+            })
+            .collect();
+
+        let old_inner = InnerUpdate {
+            name: old.name.clone(),
+            name_draft: old.name_draft.clone(),
+            settings: settings.map(Settings::into_inner),
+            settings_draft: settings_draft.map(Settings::into_inner),
+            agents: old_agents
+                .iter()
+                .filter_map(|a| a.as_ref().map(|a| a.key.clone()))
+                .collect(),
+        };
+
+        let settings = new.settings.clone();
+        let agents = settings.as_ref().map_or(Ok(vec![]), Settings::agents)?;
+        let settings_draft = new.settings_draft.clone();
+        let draft_agents = settings_draft
+            .as_ref()
+            .map_or(Ok(vec![]), Settings::agents)?;
+
+        let new_agents: Vec<_> = agents
+            .into_iter()
+            .zip(draft_agents.into_iter())
+            .map(|(agent, draft)| match (agent, draft) {
+                (None, None) => None,
+                (Some(mut agent), Some(draft)) => {
+                    agent.draft = draft.draft;
+                    Some(agent)
+                }
+                (Some(agent), None) => Some(agent),
+                (None, Some(mut draft)) => {
+                    std::mem::swap(&mut draft.config, &mut draft.draft);
+                    Some(draft)
+                }
+            })
+            .collect();
+        let new_inner = InnerUpdate {
+            name: new.name.clone(),
+            name_draft: new.name_draft.clone(),
+            settings: settings.map(Settings::into_inner),
+            settings_draft: settings_draft.map(Settings::into_inner),
+            agents: new_agents
+                .iter()
+                .filter_map(|a| a.as_ref().map(|a| a.key.clone()))
+                .collect(),
+        };
+
+        for (old, new) in old_agents.into_iter().zip(new_agents.into_iter()) {
+            match (old, new) {
+                (None, None) => {}
+                (Some(old), None) => self.agent.delete(id, &old.key)?,
+                (None, Some(new)) => {
+                    self.agent.put(&new)?;
+                }
+                (Some(old), Some(new)) => {
+                    if old != new {
+                        self.agent.update(&old, &new)?;
+                    }
+                }
+            }
+        }
+        self.node.update(id, &old_inner, &new_inner)
+    }
 }
 
 pub struct TableIter<'d> {
@@ -241,7 +341,7 @@ impl<'d> Iterator for TableIter<'d> {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, PartialEq)]
 struct InnerSettings {
     customer_id: u32,
     description: String,
@@ -290,12 +390,8 @@ impl Settings {
         match kind {
             AgentKind::Reconverge => {
                 if let Some(config) = config {
-                    let config: Reconverge = toml::from_str(config.as_ref())?;
                     self.reconverge = true;
-                    self.reconverge_giganto_ip = config.giganto_ip;
-                    self.reconverge_giganto_port = config.giganto_port;
-                    self.reconverge_review_ip = config.review_ip;
-                    self.reconverge_review_port = config.review_port;
+                    
                 }
             }
             AgentKind::Piglet => {
@@ -373,17 +469,12 @@ impl Settings {
         }
 
         if self.reconverge {
-            let config = Reconverge {
-                giganto_ip: self.reconverge_giganto_ip,
-                giganto_port: self.reconverge_giganto_port,
-                review_ip: self.reconverge_review_ip,
-                review_port: self.reconverge_review_port,
-            };
+
             let agent = Agent::new(
                 node,
                 "reconverge".to_string(),
                 "reconverge".try_into()?,
-                Some(toml::to_string(&config)?),
+                Some("".to_string()),
                 draft.clone(),
             )?;
             agents.push(Some(agent));
@@ -462,36 +553,38 @@ impl<'d> IndexedTable<'d, InnerNode> {
         &self.indexed_map
     }
 
-    // /// Updates the `Node` from `old` to `new`, given `id`.
-    // ///
-    // /// # Errors
-    // ///
-    // /// Returns an error if the `id` is invalid or the database operation fails.
-    // pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
-    //     self.indexed_map.update(id, old, new)
-    // }
+    /// Updates the `Node` from `old` to `new`, given `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `id` is invalid or the database operation fails.
+    pub fn update(&mut self, id: u32, old: &InnerUpdate, new: &InnerUpdate) -> Result<()> {
+        self.indexed_map.update(id, old, new)
+    }
 }
 
-pub struct Update {
+struct InnerUpdate {
     pub name: Option<String>,
     pub name_draft: Option<String>,
-    pub settings: Option<Settings>,
-    pub settings_draft: Option<Settings>,
+    pub settings: Option<InnerSettings>,
+    pub settings_draft: Option<InnerSettings>,
+    pub agents: Vec<String>,
 }
 
-impl From<Node> for Update {
-    fn from(input: Node) -> Update {
+impl From<InnerNode> for InnerUpdate {
+    fn from(input: InnerNode) -> InnerUpdate {
         Self {
             name: Some(input.name),
             name_draft: input.name_draft,
             settings: input.settings,
             settings_draft: input.settings_draft,
+            agents: input.agents,
         }
     }
 }
 
-impl IndexedMapUpdate for Update {
-    type Entry = Node;
+impl IndexedMapUpdate for InnerUpdate {
+    type Entry = InnerNode;
 
     fn key(&self) -> Option<Cow<[u8]>> {
         self.name.as_deref().map(|n| Cow::Borrowed(n.as_bytes()))
@@ -504,6 +597,7 @@ impl IndexedMapUpdate for Update {
         value.name_draft.clone_from(&self.name_draft);
         value.settings.clone_from(&self.settings);
         value.settings_draft.clone_from(&self.settings_draft);
+        value.agents.clone_from(&self.agents);
         Ok(value)
     }
 
@@ -519,7 +613,10 @@ impl IndexedMapUpdate for Update {
         if self.settings != value.settings {
             return false;
         }
-        self.settings_draft == value.settings_draft
+        if self.settings_draft != value.settings_draft {
+            return false;
+        }
+        self.agents == value.agents
     }
 }
 

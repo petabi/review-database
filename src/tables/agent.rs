@@ -32,7 +32,7 @@ pub enum Kind {
     // Crusher,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     inner: String,
 }
@@ -58,7 +58,7 @@ impl Display for Config {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Agent {
     pub node: u32,
     pub key: String,
@@ -168,5 +168,16 @@ impl<'d> Table<'d, Agent> {
         let mut key = node.to_be_bytes().to_vec();
         key.extend(id.as_bytes());
         self.map.delete(&key)
+    }
+
+    /// Updates the `Agent` in the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the serialization fails or the database operation fails.
+    pub fn update(&self, old: &Agent, new: &Agent) -> Result<()> {
+        let (ok, ov) = (old.unique_key(), old.value());
+        let (nk, nv) = (new.unique_key(), new.value());
+        self.map.update((&ok, &ov), (&nk, &nv))
     }
 }
