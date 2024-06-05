@@ -18,6 +18,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Change the fields for events detected from the HTTP, SMTP, CONN, NTLM, SSH,
   and TLS protocols.
+- Fixed to provide crypto libraries directly as `builder_with_provider` when
+  generating `rustls::ClientConfig`.
 
 ## [0.28.0] - 2024-05-16
 
