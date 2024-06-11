@@ -46,7 +46,7 @@ pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
-pub use self::node::{Node, Settings as NodeSettings, Table as NodeTable};
+pub use self::node::{Node, Settings as NodeSettings, Table as NodeTable, Update as NodeUpdate};
 pub use self::outlier_info::{Key as OutlierInfoKey, OutlierInfo, Value as OutlierInfoValue};
 pub use self::sampling_policy::{
     Interval as SamplingInterval, Kind as SamplingKind, Period as SamplingPeriod, SamplingPolicy,
@@ -429,16 +429,14 @@ impl StateDb {
 }
 
 /// Represents a table that can be iterated over.
-pub trait Iterable<R: FromKeyValue> {
+pub trait Iterable<'i, I>
+where
+    I: Iterator,
+{
     /// Returns an iterator over the records in the table.
-    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R>;
+    fn iter(&'i self, direction: Direction, from: Option<&[u8]>) -> I;
     /// Returns an iterator over the records with prefix in the table.
-    fn prefix_iter(
-        &self,
-        direction: Direction,
-        from: Option<&[u8]>,
-        prefix: &[u8],
-    ) -> TableIter<'_, R>;
+    fn prefix_iter(&'i self, direction: Direction, from: Option<&[u8]>, prefix: &[u8]) -> I;
 }
 
 /// An iterator over the records in a table.
@@ -528,8 +526,13 @@ impl<'d, R: UniqueKey + Value> Table<'d, R> {
     }
 }
 
-impl<R: FromKeyValue> Iterable<R> for Table<'_, R> {
-    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R> {
+impl<'i, 'j, 'k, R> Iterable<'i, TableIter<'k, R>> for Table<'j, R>
+where
+    'j: 'k,
+    'i: 'k,
+    R: FromKeyValue,
+{
+    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'k, R> {
         use rocksdb::IteratorMode;
 
         match direction {
@@ -553,11 +556,11 @@ impl<R: FromKeyValue> Iterable<R> for Table<'_, R> {
     }
 
     fn prefix_iter(
-        &self,
+        &'i self,
         direction: Direction,
         from: Option<&[u8]>,
         prefix: &[u8],
-    ) -> TableIter<'_, R> {
+    ) -> TableIter<'k, R> {
         let mut readopts = rocksdb::ReadOptions::default();
         readopts.set_iterate_range(rocksdb::PrefixRange(prefix));
         let mode = {
@@ -643,8 +646,13 @@ impl<'d, R> IndexedTable<'d, R> {
     }
 }
 
-impl<R: FromKeyValue> Iterable<R> for IndexedTable<'_, R> {
-    fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_, R> {
+impl<'i, 'j, 'k, R> Iterable<'i, TableIter<'k, R>> for IndexedTable<'j, R>
+where
+    'j: 'k,
+    'i: 'k,
+    R: FromKeyValue,
+{
+    fn iter(&'i self, direction: Direction, from: Option<&[u8]>) -> TableIter<'k, R> {
         use rocksdb::IteratorMode;
 
         match direction {
@@ -674,11 +682,11 @@ impl<R: FromKeyValue> Iterable<R> for IndexedTable<'_, R> {
     }
 
     fn prefix_iter(
-        &self,
+        &'i self,
         direction: Direction,
         from: Option<&[u8]>,
         prefix: &[u8],
-    ) -> TableIter<'_, R> {
+    ) -> TableIter<'k, R> {
         let mut readopts = rocksdb::ReadOptions::default();
         readopts.set_iterate_range(rocksdb::PrefixRange(prefix));
         let mode = {
