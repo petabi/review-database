@@ -20,6 +20,18 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   and TLS protocols.
 - Fixed to provide crypto libraries directly as `builder_with_provider` when
   generating `rustls::ClientConfig`.
+- Modified the `NodeSettings` fields.
+  - Removed `reconverge_giganto_[ip|port]` fields.
+  - Removed central server's address fields.
+  - Removed the redundant `html` field as both `html` and `txt` represented the
+    existing `MIME FileType::Text`. The `txt` field should be used for `MIME FileType::Text`.
+  - Added `vbs` field.
+  - Merged `protocols` (boolean) and `protocol_list` (`HashMap<String, bool>`) into
+    `protocols: Option<Vec<String>>`.
+    - The new protocols field should be sorted in alphabetical order.
+  - Merged `sensors` (boolean) and `sensor_list` (`HashMap<String, bool>`) into
+    `sensors: Option<Vec<String>>`.
+    - The new sensors field should also be sorted in alphabetical order.
 
 ## [0.28.0] - 2024-05-16
 

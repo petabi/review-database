@@ -1,6 +1,6 @@
 //! The `network` table.
 
-use std::{borrow::Cow, collections::HashMap, net::IpAddr};
+use std::{borrow::Cow, net::IpAddr};
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -18,22 +18,16 @@ pub struct Settings {
     pub description: String,
     pub hostname: String,
 
-    pub review: bool,
-    pub review_port: Option<PortNumber>,
-    pub review_web_port: Option<PortNumber>,
-
     pub piglet: bool,
     pub piglet_giganto_ip: Option<IpAddr>,
     pub piglet_giganto_port: Option<PortNumber>,
-    pub piglet_review_ip: Option<IpAddr>,
-    pub piglet_review_port: Option<PortNumber>,
     pub save_packets: bool,
     pub http: bool,
     pub office: bool,
     pub exe: bool,
     pub pdf: bool,
-    pub html: bool,
     pub txt: bool,
+    pub vbs: bool,
     pub smtp_eml: bool,
     pub ftp: bool,
 
@@ -47,21 +41,13 @@ pub struct Settings {
     pub retention_period: Option<u16>,
 
     pub reconverge: bool,
-    pub reconverge_review_ip: Option<IpAddr>,
-    pub reconverge_review_port: Option<PortNumber>,
-    pub reconverge_giganto_ip: Option<IpAddr>,
-    pub reconverge_giganto_port: Option<PortNumber>,
 
     pub hog: bool,
-    pub hog_review_ip: Option<IpAddr>,
-    pub hog_review_port: Option<PortNumber>,
     pub hog_giganto_ip: Option<IpAddr>,
     pub hog_giganto_port: Option<PortNumber>,
-    pub protocols: bool,
-    pub protocol_list: HashMap<String, bool>,
+    pub protocols: Option<Vec<String>>,
 
-    pub sensors: bool,
-    pub sensor_list: HashMap<String, bool>,
+    pub sensors: Option<Vec<String>>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
