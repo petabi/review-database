@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     types::FromKeyValue, Agent, AgentKind, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
-    IndexedTable, Iterable, Map, Table as CrateTable,
+    IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey,
 };
 
 use super::{agent::Config, TableIter as TI};
@@ -66,6 +66,48 @@ pub struct Update {
     pub name_draft: Option<String>,
     pub settings: Option<Settings>,
     pub settings_draft: Option<Settings>,
+}
+
+impl UniqueKey for Node {
+    fn unique_key(&self) -> Cow<[u8]> {
+        Cow::from(self.name.as_bytes())
+    }
+}
+
+impl From<Node> for Update {
+    fn from(input: Node) -> Self {
+        Self {
+            name: Some(input.name),
+            name_draft: input.name_draft,
+            settings: input.settings,
+            settings_draft: input.settings_draft,
+        }
+    }
+}
+
+impl<'i, 'j, 'k> Iterable<'i, TableIter<'j>> for Table<'k>
+where
+    'i: 'j,
+{
+    fn iter(&'i self, direction: Direction, from: Option<&[u8]>) -> TableIter<'j> {
+        TableIter {
+            node: self.node.iter(direction, from),
+            agent: self.agent.clone(),
+        }
+    }
+
+    fn prefix_iter(
+        &'i self,
+        direction: Direction,
+        from: Option<&[u8]>,
+        prefix: &[u8],
+    ) -> TableIter<'j> {
+        let iter = self.node.prefix_iter(direction, from, prefix);
+        TableIter {
+            node: iter,
+            agent: self.agent.clone(),
+        }
+    }
 }
 
 pub struct Table<'d> {
@@ -219,7 +261,7 @@ impl<'d> Table<'d> {
 
         let old_agents: Vec<_> = agents
             .into_iter()
-            .zip(draft_agents.into_iter())
+            .zip(draft_agents)
             .map(|(agent, draft)| match (agent, draft) {
                 (None, None) => None,
                 (Some(mut agent), Some(draft)) => {
@@ -254,7 +296,7 @@ impl<'d> Table<'d> {
 
         let new_agents: Vec<_> = agents
             .into_iter()
-            .zip(draft_agents.into_iter())
+            .zip(draft_agents)
             .map(|(agent, draft)| match (agent, draft) {
                 (None, None) => None,
                 (Some(mut agent), Some(draft)) => {
