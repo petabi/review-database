@@ -16,7 +16,7 @@ use super::{agent::Config, TableIter as TI};
 
 type PortNumber = u16;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 struct Giganto {
     pub ingestion_ip: Option<IpAddr>,
     pub ingestion_port: Option<PortNumber>,
@@ -431,7 +431,7 @@ impl Settings {
     fn add_agent(&mut self, kind: AgentKind, config: Option<&Config>) -> Result<()> {
         match kind {
             AgentKind::Reconverge => {
-                if let Some(config) = config {
+                if let Some(_) = config {
                     self.reconverge = true;
                     
                 }
@@ -442,8 +442,6 @@ impl Settings {
                     self.piglet = true;
                     self.piglet_giganto_ip = config.giganto_ip;
                     self.piglet_giganto_port = config.giganto_port;
-                    self.piglet_review_ip = config.review_ip;
-                    self.piglet_review_port = config.review_port;
                 }
             }
             AgentKind::Hog => {
@@ -452,8 +450,6 @@ impl Settings {
                     self.hog = true;
                     self.hog_giganto_ip = config.giganto_ip;
                     self.hog_giganto_port = config.giganto_port;
-                    self.hog_review_ip = config.review_ip;
-                    self.hog_review_port = config.review_port;
                 }
             }
         }
