@@ -15,7 +15,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
-use crate::IterableMap;
+use crate::{Indexed, IterableMap};
 
 /// The range of versions that use the current database format.
 ///
@@ -37,7 +37,7 @@ use crate::IterableMap;
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.1,<0.30.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.2,<=0.29.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -295,7 +295,6 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
     use bincode::Options;
     use chrono::{DateTime, Utc};
 
-    use crate::collections::Indexed;
     use crate::IterableMap;
     use crate::{Node, NodeSettings};
 
@@ -368,27 +367,27 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
         fn from(input: OldNodeSettings) -> Self {
             let txt = input.html || input.txt;
 
-            let protocols: Option<Vec<String>> = if input.protocol_list.is_empty() {
+            let protocols = if input.protocol_list.is_empty() {
                 None
             } else {
                 let mut list: Vec<String> = input
                     .protocol_list
-                    .iter()
-                    .filter_map(|(k, v)| if *v { Some(k.clone()) } else { None })
+                    .into_iter()
+                    .filter_map(|(k, v)| if v { Some(k) } else { None })
                     .collect();
-                list.sort();
+                list.sort_unstable();
                 Some(list)
             };
 
-            let sensors: Option<Vec<String>> = if input.sensor_list.is_empty() {
+            let sensors = if input.sensor_list.is_empty() {
                 None
             } else {
                 let mut list: Vec<String> = input
                     .sensor_list
-                    .iter()
-                    .filter_map(|(k, v)| if *v { Some(k.clone()) } else { None })
+                    .into_iter()
+                    .filter_map(|(k, v)| if v { Some(k) } else { None })
                     .collect();
-                list.sort();
+                list.sort_unstable();
                 Some(list)
             };
 
@@ -443,19 +442,24 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
 
     let map = store.node_map();
     let raw = map.raw();
+    let mut nodes = vec![];
     for (_key, old_value) in raw.iter_forward()? {
         let old_node = bincode::DefaultOptions::new()
             .deserialize::<OldNode>(&old_value)
             .context("Failed to migrate node database: invalid node value")?;
-
         match TryInto::<Node>::try_into(old_node) {
             Ok(new_node) => {
-                raw.overwrite(&new_node)?;
+                raw.deactivate(new_node.id)?;
+                nodes.push(new_node);
             }
             Err(e) => {
                 warn!("Skip the migration for an item: {e}");
             }
         }
+    }
+    raw.clear_inactive()?;
+    for node in nodes {
+        let _ = map.put(node)?;
     }
     Ok(())
 }
@@ -582,7 +586,7 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
         pub smtp_eml: bool,
         pub ftp: bool,
 
-        pub giganto: bool, 
+        pub giganto: bool,
         pub giganto_ingestion_ip: Option<IpAddr>,
         pub giganto_ingestion_port: Option<PortNumber>,
         pub giganto_publish_ip: Option<IpAddr>,
@@ -1686,7 +1690,6 @@ mod tests {
         use chrono::{DateTime, Utc};
         use serde::{Deserialize, Serialize};
 
-        use crate::Node;
         use crate::{collections::Indexed, Indexable};
 
         #[derive(Clone, Deserialize, Serialize)]
@@ -1832,19 +1835,19 @@ mod tests {
             }),
         };
 
-        assert!(node_db.insert(old_node.clone()).is_ok());
+        let res = node_db.insert(old_node.clone());
+        assert!(res.is_ok());
+        let id = res.unwrap();
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
         assert!(super::migrate_0_29_node(&settings.store).is_ok());
 
         let map = settings.store.node_map();
-        let node_db = map.raw();
-        let new_node = node_db.get_by_key("name".as_bytes()).unwrap().unwrap();
-        let new_node: Node = bincode::DefaultOptions::new()
-            .deserialize(new_node.as_ref())
-            .expect("deserializable");
+        let (new_node, invalid_agent) = map.get_by_id(id).unwrap().unwrap();
 
-        assert_eq!(new_node.id, 0);
+        assert!(invalid_agent.is_empty());
+        assert_eq!(new_node.id, id);
         assert_eq!(new_node.name, "name");
         assert!(!new_node.settings_draft.unwrap().vbs);
     }

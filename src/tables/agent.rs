@@ -177,6 +177,7 @@ impl<'d> Table<'d, Agent> {
     ///
     /// Returns an error if the serialization fails or the database operation fails.
     pub fn update(&self, old: &Agent, new: &Agent) -> Result<()> {
+        dbg!(old, new);
         let (ok, ov) = (old.unique_key(), old.value());
         let (nk, nv) = (new.unique_key(), new.value());
         self.map.update((&ok, &ov), (&nk, &nv))
@@ -185,11 +186,11 @@ impl<'d> Table<'d, Agent> {
 
 #[cfg(test)]
 mod test {
-    use crate::Store;
+    use std::sync::Arc;
 
     use super::*;
-    use std::sync::Arc;
-    const VALID_TOML:&str = r#"test = "true""#;
+    use crate::Store;
+    const VALID_TOML: &str = r#"test = "true""#;
     fn setup_store() -> Arc<Store> {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
@@ -215,7 +216,13 @@ mod test {
 
     #[test]
     fn agent_creation() {
-        let agent = create_agent(1, "test_key", Kind::Reconverge, Some(VALID_TOML), Some(VALID_TOML));
+        let agent = create_agent(
+            1,
+            "test_key",
+            Kind::Reconverge,
+            Some(VALID_TOML),
+            Some(VALID_TOML),
+        );
         assert_eq!(agent.node, 1);
         assert_eq!(agent.key, "test_key");
         assert_eq!(agent.kind, Kind::Reconverge);
@@ -258,13 +265,7 @@ mod test {
         let store = setup_store();
         let table = store.agents_map();
 
-        let agent = create_agent(
-            1,
-            "test_key",
-            Kind::Reconverge,
-            Some(VALID_TOML),
-            None,
-        );
+        let agent = create_agent(1, "test_key", Kind::Reconverge, Some(VALID_TOML), None);
 
         // Insert and retrieve agent
         assert!(table.insert(&agent).is_ok());
@@ -273,13 +274,8 @@ mod test {
 
         let new_toml = r#"another_test = "abc""#;
         // Update agent
-        let updated_agent = create_agent(
-            1,
-            "test_key",
-            Kind::Piglet,
-            Some(new_toml),
-            Some(new_toml),
-        );
+        let updated_agent =
+            create_agent(1, "test_key", Kind::Piglet, Some(new_toml), Some(new_toml));
         table.update(&agent, &updated_agent).unwrap();
         let retrieved_updated_agent = table.get(1, "test_key").unwrap().unwrap();
         assert_eq!(updated_agent, retrieved_updated_agent);

@@ -7,6 +7,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Introduced `Agent`, `AgentKind` to describe data stored in `Table<Agent>`.
+- Added new functions to facilitate insert, remove operations, ensuring a more
+  controlled and secure agent management.
+
 ### Changed
 
 - Change the fields for events detected from the HTTP, SMTP, CONN, NTLM, SSH,
