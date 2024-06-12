@@ -7,16 +7,15 @@ use chrono::{DateTime, Utc};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
+use super::{agent::Config, TableIter as TI};
 use crate::{
     types::FromKeyValue, Agent, AgentKind, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
     IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey,
 };
 
-use super::{agent::Config, TableIter as TI};
-
 type PortNumber = u16;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct Giganto {
     pub ingestion_ip: Option<IpAddr>,
     pub ingestion_port: Option<PortNumber>,
@@ -27,7 +26,7 @@ struct Giganto {
     pub retention_period: Option<u16>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct Hog {
     pub giganto_ip: Option<IpAddr>,
     pub giganto_port: Option<PortNumber>,
@@ -36,7 +35,8 @@ struct Hog {
     pub sensors: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct Piglet {
     pub giganto_ip: Option<IpAddr>,
     pub giganto_port: Option<PortNumber>,
@@ -51,7 +51,7 @@ struct Piglet {
     pub ftp: bool,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
 pub struct Node {
     pub id: u32,
     pub name: String,
@@ -131,6 +131,10 @@ impl<'d> Table<'d> {
         Some(Self { node, agent })
     }
 
+    pub(crate) fn raw(&self) -> &IndexedMap<'_> {
+        self.node.raw()
+    }
+
     /// Returns the total count of nodes available.
     ///
     /// # Errors
@@ -149,6 +153,7 @@ impl<'d> Table<'d> {
         let Some(inner) = self.node.get_by_id(id)? else {
             return Ok(None);
         };
+
         let mut agents = vec![];
         let mut invalid_agents = vec![];
         for aid in inner.agents {
@@ -165,9 +170,10 @@ impl<'d> Table<'d> {
                 settings.add_agent(agent.kind, agent.config.as_ref())?;
             }
             if let Some(settings_draft) = settings_draft.as_mut() {
-                settings_draft.add_agent(agent.kind, agent.config.as_ref())?;
+                settings_draft.add_agent(agent.kind, agent.draft.as_ref())?;
             }
         }
+
         let node = Node {
             id: inner.id,
             name: inner.name,
@@ -186,12 +192,16 @@ impl<'d> Table<'d> {
     /// Returns an error if the database operation fails.
     pub fn put(&self, entry: Node) -> Result<u32> {
         let settings = entry.settings;
-        let agents = settings.as_ref().map_or(Ok(vec![]), Settings::agents)?;
+        let agents = settings
+            .as_ref()
+            .map_or(Ok(vec![None, None, None]), Settings::agents)?;
         let settings_draft = entry.settings_draft;
         let draft_agents = settings_draft
             .as_ref()
-            .map_or(Ok(vec![]), Settings::agents)?;
-        let mut agent_keys = vec![];
+            .map_or(Ok(vec![None, None, None]), Settings::agents)?;
+
+        let mut agents_to_insert = vec![];
+
         for (agent, draft) in agents.into_iter().zip(draft_agents.into_iter()) {
             let agent = match (agent, draft) {
                 (None, None) => continue,
@@ -205,8 +215,7 @@ impl<'d> Table<'d> {
                     draft
                 }
             };
-            self.agent.put(&agent)?;
-            agent_keys.push(agent.key);
+            agents_to_insert.push(agent);
         }
 
         let inner = InnerNode {
@@ -216,9 +225,16 @@ impl<'d> Table<'d> {
             settings: settings.map(Settings::into_inner),
             settings_draft: settings_draft.map(Settings::into_inner),
             creation_time: entry.creation_time,
-            agents: agent_keys,
+            agents: agents_to_insert.iter().map(|a| a.key.clone()).collect(),
         };
-        self.node.put(inner)
+
+        let node = self.node.put(inner)?;
+
+        for mut agent in agents_to_insert {
+            agent.node = node;
+            self.agent.put(&agent)?;
+        }
+        Ok(node)
     }
 
     /// Removes a node with given `id`, returns `(key, invalid_agents)`.
@@ -253,11 +269,13 @@ impl<'d> Table<'d> {
     /// Returns an error if the `id` is invalid or the database operation fails.
     pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
         let settings = old.settings.clone();
-        let agents = settings.as_ref().map_or(Ok(vec![]), Settings::agents)?;
+        let agents = settings
+            .as_ref()
+            .map_or(Ok(vec![None, None, None]), Settings::agents)?;
         let settings_draft = old.settings_draft.clone();
         let draft_agents = settings_draft
             .as_ref()
-            .map_or(Ok(vec![]), Settings::agents)?;
+            .map_or(Ok(vec![None, None, None]), Settings::agents)?;
 
         let old_agents: Vec<_> = agents
             .into_iter()
@@ -288,19 +306,20 @@ impl<'d> Table<'d> {
         };
 
         let settings = new.settings.clone();
-        let agents = settings.as_ref().map_or(Ok(vec![]), Settings::agents)?;
+        let agents = settings
+            .as_ref()
+            .map_or(Ok(vec![None, None, None]), Settings::agents)?;
         let settings_draft = new.settings_draft.clone();
         let draft_agents = settings_draft
             .as_ref()
-            .map_or(Ok(vec![]), Settings::agents)?;
-
+            .map_or(Ok(vec![None, None, None]), Settings::agents)?;
         let new_agents: Vec<_> = agents
             .into_iter()
             .zip(draft_agents)
             .map(|(agent, draft)| match (agent, draft) {
                 (None, None) => None,
                 (Some(mut agent), Some(draft)) => {
-                    agent.draft = draft.draft;
+                    agent.draft = draft.config;
                     Some(agent)
                 }
                 (Some(agent), None) => Some(agent),
@@ -310,6 +329,7 @@ impl<'d> Table<'d> {
                 }
             })
             .collect();
+
         let new_inner = InnerUpdate {
             name: new.name.clone(),
             name_draft: new.name_draft.clone(),
@@ -324,12 +344,17 @@ impl<'d> Table<'d> {
         for (old, new) in old_agents.into_iter().zip(new_agents.into_iter()) {
             match (old, new) {
                 (None, None) => {}
-                (Some(old), None) => self.agent.delete(id, &old.key)?,
-                (None, Some(new)) => {
+                (Some(old), None) => {
+                    self.agent.delete(id, &old.key)?;
+                }
+                (None, Some(mut new)) => {
+                    new.node = id;
                     self.agent.put(&new)?;
                 }
-                (Some(old), Some(new)) => {
+                (Some(mut old), Some(mut new)) => {
                     if old != new {
+                        old.node = id;
+                        new.node = id;
                         self.agent.update(&old, &new)?;
                     }
                 }
@@ -406,7 +431,6 @@ struct InnerNode {
 
 impl Settings {
     fn into_inner(self) -> InnerSettings {
-        
         let giganto = if self.giganto {
             Some(Giganto {
                 ingestion_ip: self.giganto_ingestion_ip,
@@ -431,9 +455,8 @@ impl Settings {
     fn add_agent(&mut self, kind: AgentKind, config: Option<&Config>) -> Result<()> {
         match kind {
             AgentKind::Reconverge => {
-                if let Some(_) = config {
+                if config.is_some() {
                     self.reconverge = true;
-                    
                 }
             }
             AgentKind::Piglet => {
@@ -507,12 +530,11 @@ impl Settings {
         }
 
         if self.reconverge {
-
             let agent = Agent::new(
                 node,
                 "reconverge".to_string(),
                 "reconverge".try_into()?,
-                Some("".to_string()),
+                Some(String::new()),
                 draft.clone(),
             )?;
             agents.push(Some(agent));
@@ -659,7 +681,7 @@ impl IndexedMapUpdate for InnerUpdate {
 }
 
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Clone, Default, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Default, Deserialize, Serialize, PartialEq, Debug)]
 pub struct Settings {
     pub customer_id: u32,
     pub description: String,
@@ -695,4 +717,201 @@ pub struct Settings {
     pub protocols: Option<Vec<String>>,
 
     pub sensors: Option<Vec<String>>,
+}
+
+#[cfg(test)]
+mod test {
+    use std::sync::Arc;
+
+    use super::*;
+    use crate::AgentKind;
+    use crate::Store;
+
+    fn setup_store() -> Arc<Store> {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap())
+    }
+
+    fn create_node(
+        id: u32,
+        name: &str,
+        name_draft: Option<&str>,
+        settings: Option<Settings>,
+        settings_draft: Option<Settings>,
+    ) -> Node {
+        let creation_time = Utc::now();
+        Node {
+            id,
+            name: name.to_string(),
+            name_draft: name_draft.map(|s| s.to_string()),
+            settings,
+            settings_draft,
+            creation_time,
+        }
+    }
+
+    fn create_settings(agents: &[AgentKind]) -> Settings {
+        let mut settings = Settings::default();
+        let ip = Some("127.0.0.1".parse::<IpAddr>().unwrap());
+        let port = Some(1234);
+
+        for agent in agents {
+            match agent {
+                AgentKind::Reconverge => {
+                    settings.reconverge = true;
+                }
+                AgentKind::Hog => {
+                    settings.hog = true;
+                    settings.hog_giganto_ip = ip;
+                    settings.hog_giganto_port = port;
+                }
+                AgentKind::Piglet => {
+                    settings.piglet = true;
+                    settings.piglet_giganto_ip = ip;
+                    settings.piglet_giganto_port = port;
+                }
+            }
+        }
+        settings
+    }
+
+    fn create_configs(agents: &[AgentKind]) -> Vec<Config> {
+        let ip = Some("127.0.0.1".parse::<IpAddr>().unwrap());
+        let port = Some(1234);
+        agents
+            .iter()
+            .map(|agent| match agent {
+                AgentKind::Reconverge => "".to_string().try_into().unwrap(),
+                AgentKind::Hog => {
+                    let mut config = Hog::default();
+                    config.giganto_ip = ip;
+                    config.giganto_port = port;
+                    toml::to_string(&config).unwrap().try_into().unwrap()
+                }
+                AgentKind::Piglet => {
+                    let mut config = Piglet::default();
+                    config.giganto_ip = ip;
+                    config.giganto_port = port;
+                    toml::to_string(&config).unwrap().try_into().unwrap()
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn settings_creation() {
+        let agents = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+        let settings1 = create_settings(&agents);
+
+        let mut settings2 = create_settings(&[]);
+        let configs = create_configs(&agents);
+        for (agent, config) in agents.iter().zip(configs) {
+            assert!(settings2.add_agent(*agent, Some(&config)).is_ok());
+        }
+        assert_eq!(settings1, settings2);
+    }
+
+    #[test]
+    fn node_creation() {
+        let agents = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+
+        let settings = create_settings(&agents);
+        let draft = create_settings(&[]);
+
+        let node = create_node(1, "test", None, Some(settings), Some(draft));
+        let agents = node.settings.map(|s| s.agents()).unwrap().unwrap();
+        for agent in agents {
+            assert!(agent.is_some());
+        }
+
+        let agents = node.settings_draft.map(|s| s.agents()).unwrap().unwrap();
+        for agent in agents {
+            assert!(agent.is_none());
+        }
+    }
+
+    #[test]
+    fn put_and_get() {
+        let store = setup_store();
+
+        let agents = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+        let draft = create_settings(&agents);
+        let mut node = create_node(123, "test", None, None, Some(draft));
+
+        let node_table = store.node_map();
+        assert_eq!(node_table.count().unwrap(), 0);
+        let res = node_table.put(node.clone());
+        assert!(res.is_ok());
+        node.id = res.unwrap();
+
+        let res = node_table.get_by_id(node.id).unwrap();
+        assert!(res.is_some());
+
+        let (returned, invalid_agents) = res.unwrap();
+        assert!(invalid_agents.is_empty());
+        assert_eq!(returned, node);
+    }
+
+    #[test]
+    fn remove() {
+        let store = setup_store();
+
+        let agents = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+        let draft = create_settings(&agents);
+        let mut node = create_node(123, "test", None, None, Some(draft));
+
+        let node_table = store.node_map();
+        assert_eq!(node_table.count().unwrap(), 0);
+        assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 0);
+        let res = node_table.put(node.clone());
+        assert!(res.is_ok());
+        node.id = res.unwrap();
+        assert_eq!(node_table.count().unwrap(), 1);
+        assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 3);
+
+        assert!(node_table.remove(node.id).is_ok());
+        let res = node_table.get_by_id(node.id).unwrap();
+        assert!(res.is_none());
+
+        assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 0);
+    }
+
+    #[test]
+    fn update() {
+        let store = setup_store();
+
+        let agents = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+        let draft = create_settings(&agents);
+        let mut node = create_node(123, "test", None, None, Some(draft));
+
+        let mut node_table = store.node_map();
+
+        let res = node_table.put(node.clone());
+        assert!(res.is_ok());
+        node.id = res.unwrap();
+
+        let id = node.id;
+        let update_settings = create_settings(&agents[1..]);
+        let update = Update {
+            name: Some("test".to_string()),
+            name_draft: Some("update".to_string()),
+            settings: Some(update_settings.clone()),
+            settings_draft: Some(update_settings.clone()),
+        };
+        let old = node.clone().into();
+        assert!(node_table.update(id, &old, &update).is_ok());
+
+        let updated = node_table.get_by_id(id).unwrap();
+        assert!(updated.is_some());
+        let (updated, invalid) = updated.unwrap();
+
+        assert!(invalid.is_empty());
+
+        node.name_draft = Some("update".to_string());
+        node.settings = Some(update_settings.clone());
+        node.settings_draft = Some(update_settings);
+
+        assert_eq!(updated, node);
+    }
 }
