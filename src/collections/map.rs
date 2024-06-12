@@ -1,6 +1,8 @@
 use anyhow::{anyhow, bail, Context, Result};
 use rocksdb::IteratorMode;
 
+use crate::{IterableMap, EXCLUSIVE};
+
 #[derive(Clone)]
 pub struct Map<'a> {
     pub(crate) db: &'a rocksdb::OptimisticTransactionDB,
