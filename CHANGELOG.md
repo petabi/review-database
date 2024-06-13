@@ -7,13 +7,6 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-
-- Added `migrate_0_28_to_0_29_0` function. This function performs migration
-  for events detected from HTTP, SMTP, CONN, NTLM, SSH, and TLS protocols
-  that have changed fields.
-- Added migration test code for `migrate_0_28_to_0_29_0`.
-
 ### Changed
 
 - Change the fields for events detected from the HTTP, SMTP, CONN, NTLM, SSH,
