@@ -1,10 +1,11 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
+use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct NetworkThreat {
@@ -27,27 +28,27 @@ pub struct NetworkThreat {
     pub confidence: f32,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-
 impl fmt::Display for NetworkThreat {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},NetworkThreat,{},{},{},{},{},{},{},{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.orig_addr,
-            self.orig_port,
-            self.resp_addr,
-            self.resp_port,
-            self.proto,
+            "source={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} last_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            self.source,
+            self.orig_addr.to_string(),
+            self.orig_port.to_string(),
+            self.resp_addr.to_string(),
+            self.resp_port.to_string(),
+            self.proto.to_string(),
             self.service,
-            self.last_time,
+            self.last_time.to_string(),
             self.content,
             self.db_name,
-            self.rule_id,
+            self.rule_id.to_string(),
             self.matched_to,
-            self.cluster_id,
+            self.cluster_id.to_string(),
             self.attack_kind,
-            self.confidence,
+            self.confidence.to_string(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }

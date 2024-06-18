@@ -6,10 +6,14 @@ use std::{
     num::NonZeroU8,
 };
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use super::{
+    common::{vector_to_string, Match},
+    EventCategory, TriagePolicy, TriageScore, MEDIUM,
+};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct RdpBruteForceFields {
@@ -19,17 +23,19 @@ pub struct RdpBruteForceFields {
     pub last_time: DateTime<Utc>,
     pub proto: u8,
 }
-
 impl fmt::Display for RdpBruteForceFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},-,-,-,{},RDP Brute Force,3,{},{}",
-            self.src_addr, self.proto, self.start_time, self.last_time,
+            "src_addr={:?} dst_addrs={:?} start_time={:?} last_time={:?} proto={:?}",
+            self.src_addr.to_string(),
+            vector_to_string(&self.dst_addrs),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            self.proto.to_string()
         )
     }
 }
-
 pub struct RdpBruteForce {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -41,15 +47,16 @@ pub struct RdpBruteForce {
 }
 
 impl fmt::Display for RdpBruteForce {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},-,-,-,{},RDP Brute Force,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.proto,
-            self.start_time,
-            self.last_time,
+            "src_addr={:?} dst_addrs={:?} start_time={:?} last_time={:?} proto={:?} triage_scores={:?}",
+            self.src_addr.to_string(),
+            vector_to_string(&self.dst_addrs),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            self.proto.to_string(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
@@ -126,17 +133,22 @@ pub struct BlockListRdpFields {
     pub last_time: i64,
     pub cookie: String,
 }
-
 impl fmt::Display for BlockListRdpFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListRdp,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} cookie={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.cookie
         )
     }
 }
-
 pub struct BlockListRdp {
     pub time: DateTime<Utc>,
     pub source: String,
@@ -149,18 +161,20 @@ pub struct BlockListRdp {
     pub cookie: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-
 impl fmt::Display for BlockListRdp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListRdp",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} cookie={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.cookie,
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }

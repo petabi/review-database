@@ -29,6 +29,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   and TLS protocols.
 - Fixed to provide crypto libraries directly as `builder_with_provider` when
   generating `rustls::ClientConfig`.
+- Change the display message format of `EventMessage` and `Event` to RFC5424.
+  Modified messages will be sent to syslog.
 
 ### Removed
 

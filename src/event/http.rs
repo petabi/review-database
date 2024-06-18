@@ -1,27 +1,33 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use aho_corasick::AhoCorasickBuilder;
-use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
+use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, EventFilter, TriagePolicy, TriageScore, LOW, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub(super) struct RepeatedHttpSessionsFields {
-    source: String,
-    src_addr: IpAddr,
-    src_port: u16,
-    dst_addr: IpAddr,
-    dst_port: u16,
-    proto: u8,
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
 }
 
 impl fmt::Display for RepeatedHttpSessionsFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},Repeated HTTP Sessions,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string()
         )
     }
 }
@@ -38,16 +44,17 @@ pub struct RepeatedHttpSessions {
 }
 
 impl fmt::Display for RepeatedHttpSessions {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},Repeated HTTP Sessions",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
@@ -156,26 +163,62 @@ pub struct HttpThreatFields {
     pub confidence: f32,
 }
 
-// Syslog format: 5-tuple,attack-name,severity,content
 impl fmt::Display for HttpThreatFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let user_agent = self.user_agent.replace(',', " ");
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},2,{},{},{},{},{},{}",
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            self.attack_kind,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} duration={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.duration.to_string(),
             self.method,
             self.host,
             self.uri,
             self.referer,
-            self.status_code,
-            user_agent
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
+            self.db_name,
+            self.rule_id.to_string(),
+            self.matched_to,
+            self.cluster_id.to_string(),
+            self.attack_kind,
+            self.confidence.to_string(),
         )
+    }
+}
+
+// HTTP Request body has Vec<u8> type, and it's too large to print.
+const MAX_POST_BODY_LEN: usize = 10;
+fn get_post_body(post_body: &[u8]) -> String {
+    let post_body = String::from_utf8_lossy(post_body);
+    if post_body.len() > MAX_POST_BODY_LEN {
+        let mut trimmed = post_body
+            .get(..MAX_POST_BODY_LEN)
+            .map_or(String::new(), ToString::to_string);
+        trimmed.push_str("...");
+        trimmed
+    } else {
+        post_body.to_string()
     }
 }
 
@@ -223,29 +266,46 @@ pub struct HttpThreat {
 }
 
 impl fmt::Display for HttpThreat {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut content = format!(
-            "{} {} {} {} {} {}",
-            self.method, self.host, self.uri, self.referer, self.status_code, self.user_agent
-        );
-        content = content.replace(',', " ");
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},{},HttpThreat,{},{},{},{},{},{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} duration={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.source,
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.duration.to_string(),
+            self.method,
             self.host,
-            content,
+            self.uri,
+            self.referer,
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
             self.db_name,
-            self.rule_id,
-            self.cluster_id,
+            self.rule_id.to_string(),
+            self.matched_to,
+            self.cluster_id.to_string(),
             self.attack_kind,
-            self.confidence
+            self.confidence.to_string(),
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }
@@ -399,22 +459,40 @@ pub struct DgaFields {
 }
 
 impl fmt::Display for DgaFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let user_agent = self.user_agent.replace(',', " ");
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},DGA,3,{},{},{},{},{},{}",
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} duration={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.duration.to_string(),
             self.method,
             self.host,
             self.uri,
             self.referer,
-            self.status_code,
-            user_agent
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
+            self.confidence.to_string(),
         )
     }
 }
@@ -457,23 +535,41 @@ pub struct DomainGenerationAlgorithm {
 }
 
 impl fmt::Display for DomainGenerationAlgorithm {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let user_agent = self.user_agent.replace(',', " ");
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},DGA,{},{},{},{},{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} duration={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.duration.to_string(),
             self.method,
             self.host,
             self.uri,
             self.referer,
-            self.status_code,
-            user_agent
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
+            self.confidence.to_string(),
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }
@@ -600,12 +696,39 @@ pub struct NonBrowserFields {
 }
 
 impl fmt::Display for NonBrowserFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let user_agent = self.user_agent.replace(',', " ");
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},Non Browser,3,{}",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto, user_agent
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.session_end_time.to_rfc3339(),
+            self.method,
+            self.host,
+            self.uri,
+            self.referrer,
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
         )
     }
 }
@@ -646,18 +769,40 @@ pub struct NonBrowser {
 }
 
 impl fmt::Display for NonBrowser {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let user_agent = self.user_agent.replace(',', " ");
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},Non Browser,{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            user_agent
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.session_end_time.to_rfc3339(),
+            self.method,
+            self.host,
+            self.uri,
+            self.referrer,
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }
@@ -781,12 +926,39 @@ pub struct BlockListHttpFields {
 }
 
 impl fmt::Display for BlockListHttpFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let user_agent = self.user_agent.replace(',', " ");
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListHttp,3,{}",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto, user_agent
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.method,
+            self.host,
+            self.uri,
+            self.referrer,
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
         )
     }
 }
@@ -828,18 +1000,40 @@ pub struct BlockListHttp {
 }
 
 impl fmt::Display for BlockListHttp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let user_agent = self.user_agent.replace(',', " ");
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListHttp,{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            user_agent
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.method,
+            self.host,
+            self.uri,
+            self.referrer,
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }

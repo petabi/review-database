@@ -5,10 +5,11 @@ use std::{
     num::NonZeroU8,
 };
 
-use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
+use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct WindowsThreat {
@@ -32,31 +33,31 @@ pub struct WindowsThreat {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
+// image, user, content field enclosed with double quotes(\") instead of "{:?}" because they may contain escape characters
 impl fmt::Display for WindowsThreat {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "-,-,-,-,-,WindowsThreat,3,{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
+            "source={:?} service={:?} agent_name={:?} agent_id={:?} process_guid={:?} process_id={:?} image=\"{}\" user=\"{}\" content=\"{}\" db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.source,
             self.service,
             self.agent_name,
             self.agent_id,
             self.process_guid,
-            self.process_id,
+            self.process_id.to_string(),
             self.image,
             self.user,
             self.content,
             self.db_name,
-            self.rule_id,
+            self.rule_id.to_string(),
             self.matched_to,
-            self.cluster_id,
+            self.cluster_id.to_string(),
             self.attack_kind,
-            self.confidence,
+            self.confidence.to_string(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
-
 // TODO: Make new Match trait for Windows threat events
 impl Match for WindowsThreat {
     fn source(&self) -> &str {

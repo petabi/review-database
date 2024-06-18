@@ -1,10 +1,11 @@
 #![allow(clippy::module_name_repetitions, clippy::struct_excessive_bools)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
+use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, HIGH, MEDIUM};
+use crate::event::common::{triage_scores_to_string, vector_to_string};
 
 #[derive(Deserialize, Serialize)]
 pub struct DnsEventFields {
@@ -32,11 +33,30 @@ pub struct DnsEventFields {
 }
 
 impl fmt::Display for DnsEventFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},DNS covert channel,3,{}",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto, self.query,
+            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
+            self.source,
+            self.session_end_time.to_rfc3339(),
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.query,
+            self.answer.join(","),
+            self.trans_id.to_string(),
+            self.rtt.to_string(),
+            self.qclass.to_string(),
+            self.qtype.to_string(),
+            self.rcode.to_string(),
+            self.aa_flag.to_string(),
+            self.tc_flag.to_string(),
+            self.rd_flag.to_string(),
+            self.ra_flag.to_string(),
+            vector_to_string(&self.ttl),
+            self.confidence.to_string(),
         )
     }
 }
@@ -67,18 +87,31 @@ pub struct DnsCovertChannel {
 }
 
 impl fmt::Display for DnsCovertChannel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},DNS covert channel,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
+            self.source,
+            self.session_end_time.to_rfc3339(),
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
             self.query,
-            self.confidence
+            self.answer.join(","),
+            self.trans_id.to_string(),
+            self.rtt.to_string(),
+            self.qclass.to_string(),
+            self.qtype.to_string(),
+            self.rcode.to_string(),
+            self.aa_flag.to_string(),
+            self.tc_flag.to_string(),
+            self.rd_flag.to_string(),
+            self.ra_flag.to_string(),
+            vector_to_string(&self.ttl),
+            self.confidence.to_string(),
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }
@@ -186,18 +219,31 @@ pub struct LockyRansomware {
 }
 
 impl fmt::Display for LockyRansomware {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},Locky Ransomware,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
+            self.source,
+            self.session_end_time.to_rfc3339(),
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
             self.query,
-            self.confidence
+            self.answer.join(","),
+            self.trans_id.to_string(),
+            self.rtt.to_string(),
+            self.qclass.to_string(),
+            self.qtype.to_string(),
+            self.rcode.to_string(),
+            self.aa_flag.to_string(),
+            self.tc_flag.to_string(),
+            self.rd_flag.to_string(),
+            self.ra_flag.to_string(),
+            vector_to_string(&self.ttl),
+            self.confidence.to_string(),
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }
@@ -304,11 +350,30 @@ pub struct CryptocurrencyMiningPoolFields {
 }
 
 impl fmt::Display for CryptocurrencyMiningPoolFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},Cryptocurrency Mining Pool,3,{}",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto, self.query,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.session_end_time.to_rfc3339(),
+            self.query,
+            self.answer.join(","),
+            self.trans_id.to_string(),
+            self.rtt.to_string(),
+            self.qclass.to_string(),
+            self.qtype.to_string(),
+            self.rcode.to_string(),
+            self.aa_flag.to_string(),
+            self.tc_flag.to_string(),
+            self.rd_flag.to_string(),
+            self.ra_flag.to_string(),
+            vector_to_string(&self.ttl),
+            self.coins.join(","),
         )
     }
 }
@@ -339,17 +404,31 @@ pub struct CryptocurrencyMiningPool {
 }
 
 impl fmt::Display for CryptocurrencyMiningPool {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},Cryptocurrency Mining Pool,{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.session_end_time.to_rfc3339(),
             self.query,
+            self.answer.join(","),
+            self.trans_id.to_string(),
+            self.rtt.to_string(),
+            self.qclass.to_string(),
+            self.qtype.to_string(),
+            self.rcode.to_string(),
+            self.aa_flag.to_string(),
+            self.tc_flag.to_string(),
+            self.rd_flag.to_string(),
+            self.ra_flag.to_string(),
+            vector_to_string(&self.ttl),
+            self.coins.join(","),
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }
@@ -454,11 +533,29 @@ pub struct BlockListDnsFields {
 }
 
 impl fmt::Display for BlockListDnsFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListDns,3,{}",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto, self.query,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.query,
+            self.answer.join(","),
+            self.trans_id.to_string(),
+            self.rtt.to_string(),
+            self.qclass.to_string(),
+            self.qtype.to_string(),
+            self.rcode.to_string(),
+            self.aa_flag.to_string(),
+            self.tc_flag.to_string(),
+            self.rd_flag.to_string(),
+            self.ra_flag.to_string(),
+            vector_to_string(&self.ttl),
         )
     }
 }
@@ -488,17 +585,30 @@ pub struct BlockListDns {
 }
 
 impl fmt::Display for BlockListDns {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListDns,{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
             self.query,
+            self.answer.join(","),
+            self.trans_id.to_string(),
+            self.rtt.to_string(),
+            self.qclass.to_string(),
+            self.qtype.to_string(),
+            self.rcode.to_string(),
+            self.aa_flag.to_string(),
+            self.tc_flag.to_string(),
+            self.rd_flag.to_string(),
+            self.ra_flag.to_string(),
+            vector_to_string(&self.ttl),
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }

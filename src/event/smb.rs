@@ -1,9 +1,10 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListSmbFields {
@@ -26,13 +27,29 @@ pub struct BlockListSmbFields {
     pub write_time: i64,
     pub change_time: i64,
 }
-
 impl fmt::Display for BlockListSmbFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListSmb,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} command={:?} path={:?} service={:?} file_name={:?} file_size={:?} resource_type={:?} fid={:?} create_time={:?} access_time={:?} write_time={:?} change_time={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.command.to_string(),
+            self.path,
+            self.service,
+            self.file_name,
+            self.file_size.to_string(),
+            self.resource_type.to_string(),
+            self.fid.to_string(),
+            self.create_time.to_string(),
+            self.access_time.to_string(),
+            self.write_time.to_string(),
+            self.change_time.to_string()
         )
     }
 }
@@ -60,22 +77,33 @@ pub struct BlockListSmb {
     pub change_time: i64,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-
 impl fmt::Display for BlockListSmb {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListSmb",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} command={:?} path={:?} service={:?} file_name={:?} file_size={:?} resource_type={:?} fid={:?} create_time={:?} access_time={:?} write_time={:?} change_time={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.command.to_string(),
+            self.path,
+            self.service,
+            self.file_name,
+            self.file_size.to_string(),
+            self.resource_type.to_string(),
+            self.fid.to_string(),
+            self.create_time.to_string(),
+            self.access_time.to_string(),
+            self.write_time.to_string(),
+            self.change_time.to_string(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
-
 impl BlockListSmb {
     pub(super) fn new(time: DateTime<Utc>, fields: BlockListSmbFields) -> Self {
         Self {
