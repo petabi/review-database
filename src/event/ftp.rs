@@ -1,10 +1,11 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct FtpBruteForceFields {
@@ -19,17 +20,18 @@ pub struct FtpBruteForceFields {
 }
 
 impl fmt::Display for FtpBruteForceFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},-,{},{},{},FTP Brute Force,3,{},{},{}",
-            self.src_addr,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            self.start_time,
-            self.last_time,
-            self.is_internal,
+            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} last_time={:?} is_internal={:?}",
+            self.src_addr.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.user_list.join(","),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            self.is_internal.to_string()
         )
     }
 }
@@ -48,18 +50,19 @@ pub struct FtpBruteForce {
 }
 
 impl fmt::Display for FtpBruteForce {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},-,{},{},{},FTP Brute Force,{},{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            self.start_time,
-            self.last_time,
-            self.is_internal
+            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} last_time={:?} is_internal={:?} triage_scores={:?}",
+            self.src_addr.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.user_list.join(","),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            self.is_internal.to_string(),
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }
@@ -152,17 +155,29 @@ pub struct FtpPlainTextFields {
 }
 
 impl fmt::Display for FtpPlainTextFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},FTP Plain Text,3,{},{}",
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
             self.user,
             self.password,
+            self.command,
+            self.reply_code,
+            self.reply_msg,
+            self.data_passive.to_string(),
+            self.data_orig_addr.to_string(),
+            self.data_resp_addr.to_string(),
+            self.data_resp_port.to_string(),
+            self.file,
+            self.file_size.to_string(),
+            self.file_id,
         )
     }
 }
@@ -193,18 +208,30 @@ pub struct FtpPlainText {
 }
 
 impl fmt::Display for FtpPlainText {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},FTP Plain Text,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
             self.user,
             self.password,
+            self.command,
+            self.reply_code,
+            self.reply_msg,
+            self.data_passive.to_string(),
+            self.data_orig_addr.to_string(),
+            self.data_resp_addr.to_string(),
+            self.data_resp_port.to_string(),
+            self.file,
+            self.file_size.to_string(),
+            self.file_id,
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }
@@ -308,17 +335,29 @@ pub struct BlockListFtpFields {
 }
 
 impl fmt::Display for BlockListFtpFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListFtp,3,{},{}",
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
             self.user,
             self.password,
+            self.command,
+            self.reply_code,
+            self.reply_msg,
+            self.data_passive.to_string(),
+            self.data_orig_addr.to_string(),
+            self.data_resp_addr.to_string(),
+            self.data_resp_port.to_string(),
+            self.file,
+            self.file_size.to_string(),
+            self.file_id,
         )
     }
 }
@@ -349,18 +388,30 @@ pub struct BlockListFtp {
 }
 
 impl fmt::Display for BlockListFtp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListFtp,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
             self.user,
             self.password,
+            self.command,
+            self.reply_code,
+            self.reply_msg,
+            self.data_passive.to_string(),
+            self.data_orig_addr.to_string(),
+            self.data_resp_addr.to_string(),
+            self.data_resp_port.to_string(),
+            self.file,
+            self.file_size.to_string(),
+            self.file_id,
+            triage_scores_to_string(&self.triage_scores),
         )
     }
 }

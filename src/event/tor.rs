@@ -1,9 +1,10 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
+use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -33,13 +34,34 @@ pub struct TorConnectionFields {
     pub content_type: String,
     pub cache_control: String,
 }
-
 impl fmt::Display for TorConnectionFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},Tor Exit Nodes,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto
+            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?}",
+            self.source,
+            self.session_end_time.to_rfc3339(),
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.method,
+            self.host,
+            self.uri,
+            self.referrer,
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control
         )
     }
 }
@@ -72,22 +94,38 @@ pub struct TorConnection {
     pub cache_control: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-
 impl fmt::Display for TorConnection {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},Tor Exit Nodes",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto
+            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} triage_scores={:?}",
+            self.source,
+            self.session_end_time.to_rfc3339(),
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.method,
+            self.host,
+            self.uri,
+            self.referrer,
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
-
 impl TorConnection {
     pub(super) fn new(time: DateTime<Utc>, fields: &TorConnectionFields) -> Self {
         TorConnection {

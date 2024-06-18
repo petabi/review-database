@@ -4,10 +4,11 @@ use std::{
     num::NonZeroU8,
 };
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, vector_to_string};
 
 #[derive(Serialize, Deserialize)]
 pub struct PortScanFields {
@@ -23,8 +24,13 @@ impl fmt::Display for PortScanFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},-,{},-,{},Port Scan,3,{},{}",
-            self.src_addr, self.dst_addr, self.proto, self.start_time, self.last_time,
+            "src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} last_time={:?} proto={:?}",
+            self.src_addr.to_string(),
+            self.dst_addr.to_string(),
+            vector_to_string(&self.dst_ports),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            self.proto.to_string()
         )
     }
 }
@@ -45,13 +51,14 @@ impl fmt::Display for PortScan {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},-,{},-,{},Port Scan,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.dst_addr,
-            self.proto,
-            self.start_time,
-            self.last_time,
+            "src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} last_time={:?} proto={:?} triage_scores={:?}",
+            self.src_addr.to_string(),
+            self.dst_addr.to_string(),
+            vector_to_string(&self.dst_ports),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            self.proto.to_string(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
@@ -132,8 +139,13 @@ impl fmt::Display for MultiHostPortScanFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},-,-,{},{},Multi Host Port Scan,3,{},{}",
-            self.src_addr, self.dst_port, self.proto, self.start_time, self.last_time,
+            "src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} last_time={:?}",
+            self.src_addr.to_string(),
+            vector_to_string(&self.dst_addrs),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339()
         )
     }
 }
@@ -154,13 +166,14 @@ impl fmt::Display for MultiHostPortScan {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},-,-,{},{},Multi Host Port Scan,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.dst_port,
-            self.proto,
-            self.start_time,
-            self.last_time,
+            "src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} last_time={:?} triage_scores={:?}",
+            self.src_addr.to_string(),
+            vector_to_string(&self.dst_addrs),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
@@ -240,8 +253,12 @@ impl fmt::Display for ExternalDdosFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "-,-,{},-,{},External DDos,3,{},{}",
-            self.dst_addr, self.proto, self.start_time, self.last_time,
+            "src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} last_time={:?}",
+            vector_to_string(&self.src_addrs),
+            self.dst_addr.to_string(),
+            self.proto.to_string(),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339()
         )
     }
 }
@@ -261,12 +278,13 @@ impl fmt::Display for ExternalDdos {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},-,-,{},-,{},External DDos,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.dst_addr,
-            self.proto,
-            self.start_time,
-            self.last_time,
+            "src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} last_time={:?} triage_scores={:?}",
+            vector_to_string(&self.src_addrs),
+            self.dst_addr.to_string(),
+            self.proto.to_string(),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
@@ -353,8 +371,20 @@ impl fmt::Display for BlockListConnFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListConn,3,{}",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto, self.duration,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.conn_state,
+            self.duration.to_string(),
+            self.service,
+            self.orig_bytes.to_string(),
+            self.resp_bytes.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string()
         )
     }
 }
@@ -382,14 +412,21 @@ impl fmt::Display for BlockListConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListConn,{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            self.duration,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.conn_state,
+            self.duration.to_string(),
+            self.service,
+            self.orig_bytes.to_string(),
+            self.resp_bytes.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }

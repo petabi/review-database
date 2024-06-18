@@ -1,4 +1,5 @@
 use std::{
+    fmt::{self, Formatter},
     net::IpAddr,
     num::NonZeroU8,
     sync::{Arc, Mutex},
@@ -237,4 +238,32 @@ pub(super) trait Match {
 pub struct TriageScore {
     pub policy_id: u32,
     pub score: f64,
+}
+
+impl fmt::Display for TriageScore {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}:{:.2}", self.policy_id, self.score)
+    }
+}
+
+pub fn triage_scores_to_string(v: &Option<Vec<TriageScore>>) -> String {
+    if let Some(v) = v {
+        v.iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    } else {
+        String::new()
+    }
+}
+
+pub fn vector_to_string<T: ToString>(v: &[T]) -> String {
+    if v.is_empty() {
+        String::new()
+    } else {
+        v.iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    }
 }

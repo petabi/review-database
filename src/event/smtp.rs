@@ -1,9 +1,10 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListSmtpFields {
@@ -24,11 +25,24 @@ pub struct BlockListSmtpFields {
 }
 
 impl fmt::Display for BlockListSmtpFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListSmtp,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.mailfrom,
+            self.date,
+            self.from,
+            self.to,
+            self.subject,
+            self.agent,
+            self.state
         )
     }
 }
@@ -52,18 +66,26 @@ pub struct BlockListSmtp {
     pub state: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-
 impl fmt::Display for BlockListSmtp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListSmtp",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.mailfrom,
+            self.date,
+            self.from,
+            self.to,
+            self.subject,
+            self.agent,
+            self.state,
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }

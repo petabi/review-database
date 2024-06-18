@@ -1,10 +1,11 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForceFields {
@@ -18,17 +19,30 @@ pub struct LdapBruteForceFields {
 }
 
 impl fmt::Display for LdapBruteForceFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},-,{},{},{},LDAP Brute Force,3,{},{}",
-            self.src_addr,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            self.start_time,
-            self.last_time,
+            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} last_time={:?}",
+            self.src_addr.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            get_user_pw_list(&self.user_pw_list),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339()
         )
+    }
+}
+
+fn get_user_pw_list(user_pw_list: &[(String, String)]) -> String {
+    if user_pw_list.is_empty() {
+        String::new()
+    } else {
+        user_pw_list
+            .iter()
+            .map(|(user, pw)| format!("{user}:{pw}"))
+            .collect::<Vec<String>>()
+            .join(",")
     }
 }
 
@@ -45,17 +59,18 @@ pub struct LdapBruteForce {
 }
 
 impl fmt::Display for LdapBruteForce {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},-,{},{},{},LDAP Brute Force,{},{}",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
-            self.start_time,
-            self.last_time,
+            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} last_time={:?} triage_scores={:?}",
+            self.src_addr.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            get_user_pw_list(&self.user_pw_list),
+            self.start_time.to_rfc3339(),
+            self.last_time.to_rfc3339(),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
@@ -142,11 +157,24 @@ pub struct LdapPlainTextFields {
 }
 
 impl fmt::Display for LdapPlainTextFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},LDAP Plain Text,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.message_id.to_string(),
+            self.version.to_string(),
+            self.opcode.join(","),
+            self.result.join(","),
+            self.diagnostic_message.join(","),
+            self.object.join(","),
+            self.argument.join(",")
         )
     }
 }
@@ -172,16 +200,25 @@ pub struct LdapPlainText {
 }
 
 impl fmt::Display for LdapPlainText {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},LDAP Plain Text",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.message_id.to_string(),
+            self.version.to_string(),
+            self.opcode.join(","),
+            self.result.join(","),
+            self.diagnostic_message.join(","),
+            self.object.join(","),
+            self.argument.join(","),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
@@ -273,13 +310,25 @@ pub struct BlockListLdapFields {
     pub object: Vec<String>,
     pub argument: Vec<String>,
 }
-
 impl fmt::Display for BlockListLdapFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListLdap,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.message_id.to_string(),
+            self.version.to_string(),
+            self.opcode.join(","),
+            self.result.join(","),
+            self.diagnostic_message.join(","),
+            self.object.join(","),
+            self.argument.join(",")
         )
     }
 }
@@ -305,16 +354,25 @@ pub struct BlockListLdap {
 }
 
 impl fmt::Display for BlockListLdap {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListLdap",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.message_id.to_string(),
+            self.version.to_string(),
+            self.opcode.join(","),
+            self.result.join(","),
+            self.diagnostic_message.join(","),
+            self.object.join(","),
+            self.argument.join(","),
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }

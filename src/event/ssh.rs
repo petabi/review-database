@@ -1,9 +1,10 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListSshFields {
@@ -28,13 +29,31 @@ pub struct BlockListSshFields {
     pub client_shka: String,
     pub server_shka: String,
 }
-
 impl fmt::Display for BlockListSshFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListSsh,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} client={:?} server={:?} cipher_alg={:?} mac_alg={:?} compression_alg={:?} kex_alg={:?} host_key_alg={:?} hassh_algorithms={:?} hassh={:?} hassh_server_algorithms={:?} hassh_server={:?} client_shka={:?} server_shka={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.client,
+            self.server,
+            self.cipher_alg,
+            self.mac_alg,
+            self.compression_alg,
+            self.kex_alg,
+            self.host_key_alg,
+            self.hassh_algorithms,
+            self.hassh,
+            self.hassh_server_algorithms,
+            self.hassh_server,
+            self.client_shka,
+            self.server_shka
         )
     }
 }
@@ -64,18 +83,32 @@ pub struct BlockListSsh {
     pub server_shka: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-
 impl fmt::Display for BlockListSsh {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListSsh",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} client={:?} server={:?} cipher_alg={:?} mac_alg={:?} compression_alg={:?} kex_alg={:?} host_key_alg={:?} hassh_algorithms={:?} hassh={:?} hassh_server_algorithms={:?} hassh_server={:?} client_shka={:?} server_shka={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.client,
+            self.server,
+            self.cipher_alg,
+            self.mac_alg,
+            self.compression_alg,
+            self.kex_alg,
+            self.host_key_alg,
+            self.hassh_algorithms,
+            self.hassh,
+            self.hassh_server_algorithms,
+            self.hassh_server,
+            self.client_shka,
+            self.server_shka,
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }

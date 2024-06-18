@@ -23,7 +23,7 @@ mod tor;
 use std::{
     collections::HashMap,
     convert::TryInto,
-    fmt,
+    fmt::{self},
     net::IpAddr,
     num::NonZeroU8,
     sync::{Arc, Mutex, MutexGuard},
@@ -168,6 +168,257 @@ pub enum Event {
     ExtraThreat(ExtraThreat),
 
     LockyRansomware(LockyRansomware),
+}
+
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (event_kind, category) = self.kind_and_category();
+        let event_kind = format!("{event_kind:?}");
+        let category = format!("{category:?}");
+
+        match self {
+            Event::DnsCovertChannel(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::HttpThreat(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::RdpBruteForce(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::RepeatedHttpSessions(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::TorConnection(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::DomainGenerationAlgorithm(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::FtpBruteForce(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::FtpPlainText(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::PortScan(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::MultiHostPortScan(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::ExternalDdos(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::NonBrowser(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::LdapBruteForce(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::LdapPlainText(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::CryptocurrencyMiningPool(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::DceRpc(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Dns(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Ftp(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Http(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Kerberos(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Ldap(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Mqtt(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Nfs(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Ntlm(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Rdp(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Smb(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Smtp(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Ssh(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Tls(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+            },
+            Event::WindowsThreat(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::NetworkThreat(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::ExtraThreat(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::LockyRansomware(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+        }
+    }
 }
 
 pub enum RecordType {
@@ -597,6 +848,51 @@ impl Event {
             }
         }
         Ok(kind)
+    }
+
+    fn kind_and_category(&self) -> (EventKind, EventCategory) {
+        match self {
+            Event::DnsCovertChannel(e) => (EventKind::DnsCovertChannel, e.category()),
+            Event::HttpThreat(e) => (EventKind::HttpThreat, e.category()),
+            Event::RdpBruteForce(e) => (EventKind::RdpBruteForce, e.category()),
+            Event::RepeatedHttpSessions(e) => (EventKind::RepeatedHttpSessions, e.category()),
+            Event::TorConnection(e) => (EventKind::TorConnection, e.category()),
+            Event::DomainGenerationAlgorithm(e) => {
+                (EventKind::DomainGenerationAlgorithm, e.category())
+            }
+            Event::FtpBruteForce(e) => (EventKind::FtpBruteForce, e.category()),
+            Event::FtpPlainText(e) => (EventKind::FtpPlainText, e.category()),
+            Event::PortScan(e) => (EventKind::PortScan, e.category()),
+            Event::MultiHostPortScan(e) => (EventKind::MultiHostPortScan, e.category()),
+            Event::ExternalDdos(e) => (EventKind::ExternalDdos, e.category()),
+            Event::NonBrowser(e) => (EventKind::NonBrowser, e.category()),
+            Event::LdapBruteForce(e) => (EventKind::LdapBruteForce, e.category()),
+            Event::LdapPlainText(e) => (EventKind::LdapPlainText, e.category()),
+            Event::CryptocurrencyMiningPool(e) => {
+                (EventKind::CryptocurrencyMiningPool, e.category())
+            }
+            Event::BlockList(record_type) => match record_type {
+                RecordType::Conn(e) => (EventKind::BlockListConn, e.category()),
+                RecordType::Dns(e) => (EventKind::BlockListDns, e.category()),
+                RecordType::DceRpc(e) => (EventKind::BlockListDceRpc, e.category()),
+                RecordType::Ftp(e) => (EventKind::BlockListFtp, e.category()),
+                RecordType::Http(e) => (EventKind::BlockListHttp, e.category()),
+                RecordType::Kerberos(e) => (EventKind::BlockListKerberos, e.category()),
+                RecordType::Ldap(e) => (EventKind::BlockListLdap, e.category()),
+                RecordType::Mqtt(e) => (EventKind::BlockListMqtt, e.category()),
+                RecordType::Nfs(e) => (EventKind::BlockListNfs, e.category()),
+                RecordType::Ntlm(e) => (EventKind::BlockListNtlm, e.category()),
+                RecordType::Rdp(e) => (EventKind::BlockListRdp, e.category()),
+                RecordType::Smb(e) => (EventKind::BlockListSmb, e.category()),
+                RecordType::Smtp(e) => (EventKind::BlockListSmtp, e.category()),
+                RecordType::Ssh(e) => (EventKind::BlockListSsh, e.category()),
+                RecordType::Tls(e) => (EventKind::BlockListTls, e.category()),
+            },
+            Event::WindowsThreat(e) => (EventKind::WindowsThreat, e.category()),
+            Event::NetworkThreat(e) => (EventKind::NetworkThreat, e.category()),
+            Event::ExtraThreat(e) => (EventKind::ExtraThreat, e.category()),
+            Event::LockyRansomware(e) => (EventKind::LockyRansomware, e.category()),
+        }
     }
 
     // TODO: Need to implement country counting for `WindowsThreat`.
@@ -1313,6 +1609,13 @@ impl Event {
             }
         }
     }
+
+    /// Generate syslog msgid and message body for RFC5424.
+    #[must_use]
+    pub fn syslog_message(&self) -> (String, String, String) {
+        let (kind, _category) = self.kind_and_category();
+        ("DETECT".to_string(), format!("{kind:?}"), format!("{self}"))
+    }
 }
 
 fn find_network(ip: IpAddr, networks: &[Network]) -> Option<u32> {
@@ -1361,6 +1664,52 @@ pub enum EventKind {
     WindowsThreat,
     NetworkThreat,
     LockyRansomware,
+}
+
+impl From<&EventKind> for EventCategory {
+    fn from(kind: &EventKind) -> Self {
+        match *kind {
+            EventKind::DnsCovertChannel
+            | EventKind::TorConnection
+            | EventKind::DomainGenerationAlgorithm
+            | EventKind::NonBrowser
+            | EventKind::CryptocurrencyMiningPool => EventCategory::CommandAndControl,
+
+            EventKind::HttpThreat => EventCategory::HttpThreat,
+
+            EventKind::RdpBruteForce | EventKind::RepeatedHttpSessions => {
+                EventCategory::Exfiltration
+            }
+
+            EventKind::FtpBruteForce | EventKind::LdapBruteForce => EventCategory::CredentialAccess,
+            EventKind::FtpPlainText | EventKind::LdapPlainText => EventCategory::LateralMovement,
+
+            EventKind::BlockListConn
+            | EventKind::BlockListDns
+            | EventKind::BlockListDceRpc
+            | EventKind::BlockListFtp
+            | EventKind::BlockListHttp
+            | EventKind::BlockListKerberos
+            | EventKind::BlockListLdap
+            | EventKind::BlockListMqtt
+            | EventKind::BlockListNfs
+            | EventKind::BlockListNtlm
+            | EventKind::BlockListRdp
+            | EventKind::BlockListSmb
+            | EventKind::BlockListSmtp
+            | EventKind::BlockListSsh
+            | EventKind::BlockListTls => EventCategory::InitialAccess,
+
+            EventKind::PortScan
+            | EventKind::MultiHostPortScan
+            | EventKind::NetworkThreat
+            | EventKind::ExtraThreat => EventCategory::Reconnaissance,
+
+            EventKind::ExternalDdos | EventKind::WindowsThreat | EventKind::LockyRansomware => {
+                EventCategory::Impact
+            }
+        }
+    }
 }
 
 /// Machine Learning Method.
@@ -1503,252 +1852,108 @@ pub struct EventMessage {
     pub fields: Vec<u8>,
 }
 
+impl EventMessage {
+    #[must_use]
+    pub fn syslog_message(&self) -> (String, String, String) {
+        (
+            "DETECT".to_string(),
+            format!("{:?}", self.kind),
+            format!("{self}"),
+        )
+    }
+}
+
 impl fmt::Display for EventMessage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{},", self.time.to_rfc3339())?;
-        match self.kind {
-            EventKind::DnsCovertChannel => {
-                if let Ok(fields) = bincode::deserialize::<DnsEventFields>(&self.fields) {
-                    write!(f, "DnsCovertChannel,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::HttpThreat => {
-                if let Ok(fields) = bincode::deserialize::<HttpThreatFields>(&self.fields) {
-                    write!(f, "HttpThreat,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::RdpBruteForce => {
-                if let Ok(fields) = bincode::deserialize::<RdpBruteForceFields>(&self.fields) {
-                    write!(f, "RdpBruteForce,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
+        write!(
+            f,
+            "time={:?} event_kind={:?} category={:?} ",
+            self.time.to_rfc3339(),
+            format!("{:?}", self.kind),
+            EventCategory::from(&self.kind).to_string()
+        )?;
+        let _r = match self.kind {
+            EventKind::DnsCovertChannel => bincode::deserialize::<DnsEventFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::HttpThreat => bincode::deserialize::<HttpThreatFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::RdpBruteForce => bincode::deserialize::<RdpBruteForceFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
             EventKind::RepeatedHttpSessions => {
-                if let Ok(fields) = bincode::deserialize::<RepeatedHttpSessionsFields>(&self.fields)
-                {
-                    write!(f, "RepeatedHttpSessions,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
+                bincode::deserialize::<RepeatedHttpSessionsFields>(&self.fields)
+                    .map(|fields| write!(f, "{fields}"))
             }
-            EventKind::TorConnection => {
-                if let Ok(fields) = bincode::deserialize::<TorConnectionFields>(&self.fields) {
-                    write!(f, "TorConnection,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
+            EventKind::TorConnection => bincode::deserialize::<TorConnectionFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
             EventKind::DomainGenerationAlgorithm => {
-                if let Ok(fields) = bincode::deserialize::<DgaFields>(&self.fields) {
-                    write!(f, "DomainGenerationAlgorithm,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
+                bincode::deserialize::<DgaFields>(&self.fields).map(|fields| write!(f, "{fields}"))
             }
-            EventKind::FtpBruteForce => {
-                if let Ok(fields) = bincode::deserialize::<FtpBruteForceFields>(&self.fields) {
-                    write!(f, "FtpBruteForce,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::FtpPlainText => {
-                if let Ok(fields) = bincode::deserialize::<FtpPlainTextFields>(&self.fields) {
-                    write!(f, "FtpPlainText,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::PortScan => {
-                if let Ok(fields) = bincode::deserialize::<PortScanFields>(&self.fields) {
-                    write!(f, "PortScan,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
+            EventKind::FtpBruteForce => bincode::deserialize::<FtpBruteForceFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::FtpPlainText => bincode::deserialize::<FtpPlainTextFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::PortScan => bincode::deserialize::<PortScanFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
             EventKind::MultiHostPortScan => {
-                if let Ok(fields) = bincode::deserialize::<MultiHostPortScanFields>(&self.fields) {
-                    write!(f, "MultiHostPortScan,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
+                bincode::deserialize::<MultiHostPortScanFields>(&self.fields)
+                    .map(|fields| write!(f, "{fields}"))
             }
-            EventKind::NonBrowser => {
-                if let Ok(fields) = bincode::deserialize::<NonBrowserFields>(&self.fields) {
-                    write!(f, "NonBrowser,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::LdapBruteForce => {
-                if let Ok(fields) = bincode::deserialize::<LdapBruteForceFields>(&self.fields) {
-                    write!(f, "LdapBruteForce,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::LdapPlainText => {
-                if let Ok(fields) = bincode::deserialize::<LdapPlainTextFields>(&self.fields) {
-                    write!(f, "LdapPlainText,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::ExternalDdos => {
-                if let Ok(fields) = bincode::deserialize::<ExternalDdosFields>(&self.fields) {
-                    write!(f, "ExternalDdos,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
+            EventKind::NonBrowser => bincode::deserialize::<NonBrowserFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::LdapBruteForce => bincode::deserialize::<LdapBruteForceFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::LdapPlainText => bincode::deserialize::<LdapPlainTextFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::ExternalDdos => bincode::deserialize::<ExternalDdosFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
             EventKind::CryptocurrencyMiningPool => {
-                if let Ok(fields) =
-                    bincode::deserialize::<CryptocurrencyMiningPoolFields>(&self.fields)
-                {
-                    write!(f, "CryptocurrencyMiningPool,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
+                bincode::deserialize::<CryptocurrencyMiningPoolFields>(&self.fields)
+                    .map(|fields| write!(f, "{fields}"))
             }
-            EventKind::BlockListConn => {
-                if let Ok(fields) = bincode::deserialize::<BlockListConnFields>(&self.fields) {
-                    write!(f, "BlockListConn,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListDns => {
-                if let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(&self.fields) {
-                    write!(f, "BlockListDns,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
+            EventKind::BlockListConn => bincode::deserialize::<BlockListConnFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListDns => bincode::deserialize::<BlockListDnsFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
             EventKind::BlockListDceRpc => {
-                if let Ok(fields) = bincode::deserialize::<BlockListDceRpcFields>(&self.fields) {
-                    write!(f, "BlockListDceRpc,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
+                bincode::deserialize::<BlockListDceRpcFields>(&self.fields)
+                    .map(|fields| write!(f, "{fields}"))
             }
-            EventKind::BlockListFtp => {
-                if let Ok(fields) = bincode::deserialize::<BlockListFtpFields>(&self.fields) {
-                    write!(f, "BlockListFtp,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListHttp => {
-                if let Ok(fields) = bincode::deserialize::<BlockListHttpFields>(&self.fields) {
-                    write!(f, "BlockListHttp,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
+            EventKind::BlockListFtp => bincode::deserialize::<BlockListFtpFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListHttp => bincode::deserialize::<BlockListHttpFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
             EventKind::BlockListKerberos => {
-                if let Ok(fields) = bincode::deserialize::<BlockListKerberosFields>(&self.fields) {
-                    write!(f, "BlockListKerberos,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
+                bincode::deserialize::<BlockListKerberosFields>(&self.fields)
+                    .map(|fields| write!(f, "{fields}"))
             }
-            EventKind::BlockListLdap => {
-                if let Ok(fields) = bincode::deserialize::<BlockListLdapFields>(&self.fields) {
-                    write!(f, "BlockListLdap,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListMqtt => {
-                if let Ok(fields) = bincode::deserialize::<BlockListMqttFields>(&self.fields) {
-                    write!(f, "BlcokListMqtt,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListNfs => {
-                if let Ok(fields) = bincode::deserialize::<BlockListNfsFields>(&self.fields) {
-                    write!(f, "BlockListNfs,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListNtlm => {
-                if let Ok(fields) = bincode::deserialize::<BlockListNtlmFields>(&self.fields) {
-                    write!(f, "BlockListNtlm,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListRdp => {
-                if let Ok(fields) = bincode::deserialize::<BlockListRdpFields>(&self.fields) {
-                    write!(f, "BlockListRdp,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListSmb => {
-                if let Ok(fields) = bincode::deserialize::<BlockListSmbFields>(&self.fields) {
-                    write!(f, "BlockListSmb,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListSmtp => {
-                if let Ok(fields) = bincode::deserialize::<BlockListSmtpFields>(&self.fields) {
-                    write!(f, "BlockListSmtp,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListSsh => {
-                if let Ok(fields) = bincode::deserialize::<BlockListSshFields>(&self.fields) {
-                    write!(f, "BlockListSsh,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::BlockListTls => {
-                if let Ok(fields) = bincode::deserialize::<BlockListTlsFields>(&self.fields) {
-                    write!(f, "BlockListTls,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::WindowsThreat => {
-                if let Ok(fields) = bincode::deserialize::<WindowsThreat>(&self.fields) {
-                    write!(f, "WindowsThreat,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::NetworkThreat => {
-                if let Ok(fields) = bincode::deserialize::<NetworkThreat>(&self.fields) {
-                    write!(f, "NetworkThreat,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::ExtraThreat => {
-                if let Ok(fields) = bincode::deserialize::<ExtraThreat>(&self.fields) {
-                    write!(f, "ExtraThreat,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-            EventKind::LockyRansomware => {
-                if let Ok(fields) = bincode::deserialize::<DnsEventFields>(&self.fields) {
-                    write!(f, "LockyRansomware,{fields}")
-                } else {
-                    write!(f, "invalid event")
-                }
-            }
-        }
+            EventKind::BlockListLdap => bincode::deserialize::<BlockListLdapFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListMqtt => bincode::deserialize::<BlockListMqttFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListNfs => bincode::deserialize::<BlockListNfsFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListNtlm => bincode::deserialize::<BlockListNtlmFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListRdp => bincode::deserialize::<BlockListRdpFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListSmb => bincode::deserialize::<BlockListSmbFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListSmtp => bincode::deserialize::<BlockListSmtpFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListSsh => bincode::deserialize::<BlockListSshFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::BlockListTls => bincode::deserialize::<BlockListTlsFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::WindowsThreat => bincode::deserialize::<WindowsThreat>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::NetworkThreat => bincode::deserialize::<NetworkThreat>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::ExtraThreat => bincode::deserialize::<ExtraThreat>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+            EventKind::LockyRansomware => bincode::deserialize::<DnsEventFields>(&self.fields)
+                .map(|fields| write!(f, "{fields}")),
+        };
+        Ok(())
     }
 }
 
@@ -2281,8 +2486,20 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use crate::{
-        event::{DgaFields, DnsEventFields, LOCKY_RANSOMWARE},
-        DomainGenerationAlgorithm, EventCategory, EventFilter, EventKind, EventMessage, Store,
+        event::{
+            http::RepeatedHttpSessionsFields, CryptocurrencyMiningPoolFields, DgaFields,
+            DnsEventFields, ExternalDdosFields, FtpBruteForceFields, FtpPlainTextFields,
+            HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields, MultiHostPortScanFields,
+            NonBrowserFields, PortScanFields, RdpBruteForceFields, TorConnectionFields,
+            LOCKY_RANSOMWARE,
+        },
+        BlockListConnFields, BlockListDceRpcFields, BlockListDnsFields, BlockListFtpFields,
+        BlockListHttp, BlockListHttpFields, BlockListKerberosFields, BlockListLdapFields,
+        BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields, BlockListRdpFields,
+        BlockListSmbFields, BlockListSmtpFields, BlockListSshFields, BlockListTlsFields,
+        DomainGenerationAlgorithm, Event, EventCategory, EventFilter, EventKind, EventMessage,
+        ExternalDdos, ExtraThreat, HttpThreat, NetworkThreat, RecordType, Store, TriageScore,
+        WindowsThreat,
     };
 
     fn example_message(kind: EventKind) -> EventMessage {
@@ -2392,7 +2609,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn event_display_for_syslog() {
+    async fn syslog_for_dga() {
         let fields = DgaFields {
             source: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
@@ -2400,7 +2617,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            duration: Utc::now().timestamp_nanos_opt().unwrap(),
+            duration: 1000,
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -2417,11 +2634,11 @@ mod tests {
             content_encoding: "encoding type".to_string(),
             content_type: "content type".to_string(),
             cache_control: "no cache".to_string(),
-            orig_filenames: Vec::new(),
+            orig_filenames: vec!["a1".to_string(), "a2".to_string()],
             orig_mime_types: Vec::new(),
             resp_filenames: Vec::new(),
-            resp_mime_types: Vec::new(),
-            post_body: Vec::new(),
+            resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
+            post_body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 0.8,
         };
@@ -2431,16 +2648,21 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
         let syslog_message = format!("{msg}");
-        assert_eq!(syslog_message, "1970-01-01T00:01:01+00:00,DomainGenerationAlgorithm,127.0.0.1,10000,127.0.0.2,80,6,DGA,3,GET,example.com,/uri/path,-,200,browser".to_string());
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" duration="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="0.8""#
+        );
 
         let dga = DomainGenerationAlgorithm::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             fields,
         );
-        let dga_display = format!("{dga}");
-        assert!(dga_display.ends_with(
-            ",127.0.0.1,10000,127.0.0.2,80,6,DGA,GET,example.com,/uri/path,-,200,browser"
-        ));
+        let event = Event::DomainGenerationAlgorithm(dga);
+        let dga_display = format!("{event}");
+        assert_eq!(
+            &dga_display,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" duration="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="0.8" triage_scores="""#
+        );
     }
 
     #[tokio::test]
@@ -2518,5 +2740,1447 @@ mod tests {
         let info = backup.get_backup_info();
         assert_eq!(info.len(), 1);
         assert_eq!(info[0].backup_id, 1);
+    }
+
+    #[tokio::test]
+    async fn syslog_for_httpthreat() {
+        let fields = HttpThreatFields {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 80,
+            proto: 6,
+            duration: 1000,
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            uri: "/uri/path".to_string(),
+            referer: "-".to_string(),
+            version: "1.1".to_string(),
+            user_agent: "browser".to_string(),
+            request_len: 100,
+            response_len: 100,
+            status_code: 200,
+            status_msg: "-".to_string(),
+            username: "-".to_string(),
+            password: "-".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "encoding type".to_string(),
+            content_type: "content type".to_string(),
+            cache_control: "no cache".to_string(),
+            orig_filenames: vec!["a1".to_string(), "a2".to_string()],
+            orig_mime_types: Vec::new(),
+            resp_filenames: Vec::new(),
+            resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
+            post_body: "12345678901234567890".to_string().into_bytes(),
+            state: String::new(),
+            db_name: "db".to_string(),
+            rule_id: 12000,
+            cluster_id: 1111,
+            matched_to: "match".to_string(),
+            attack_kind: "attack".to_string(),
+            confidence: 0.8,
+        };
+        let msg = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::HttpThreat,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let syslog_message = format!("{msg}");
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="HttpThreat" category="HttpThreat" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" duration="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" db_name="db" rule_id="12000" matched_to="match" cluster_id="1111" attack_kind="attack" confidence="0.8""#
+        );
+
+        let http_threat =
+            HttpThreat::new(Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(), fields);
+        let event = Event::HttpThreat(http_threat);
+        let http_threat_display = format!("{event}");
+        assert!(http_threat_display.contains("post_body=\"1234567890...\""));
+        assert!(http_threat_display.contains("confidence=\"0.8\""));
+    }
+
+    #[tokio::test]
+    async fn syslog_for_nonbrowser() {
+        let fields = NonBrowserFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 80,
+            proto: 6,
+            session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap(),
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            uri: "/uri/path".to_string(),
+            referrer: "-".to_string(),
+            version: "1.1".to_string(),
+            user_agent: "browser".to_string(),
+            request_len: 100,
+            response_len: 100,
+            status_code: 200,
+            status_msg: "-".to_string(),
+            username: "-".to_string(),
+            password: "-".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "encoding type".to_string(),
+            content_type: "content type".to_string(),
+            cache_control: "no cache".to_string(),
+            orig_filenames: vec!["a1".to_string(), "a2".to_string()],
+            orig_mime_types: Vec::new(),
+            resp_filenames: Vec::new(),
+            resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
+            post_body: "12345678901234567890".to_string().into_bytes(),
+            state: String::new(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::NonBrowser,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" session_end_time="1970-01-01T00:10:10+00:00" method="GET" host="example.com" uri="/uri/path" referrer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="""#
+        );
+
+        let non_browser = Event::NonBrowser(crate::NonBrowser::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+        assert!(non_browser.contains("post_body=\"1234567890...\""));
+        assert!(non_browser.contains("state=\"\""));
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_http() {
+        let fields = BlockListHttpFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 80,
+            proto: 6,
+            last_time: 600,
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            uri: "/uri/path".to_string(),
+            referrer: "-".to_string(),
+            version: "1.1".to_string(),
+            user_agent: "browser".to_string(),
+            request_len: 100,
+            response_len: 100,
+            status_code: 200,
+            status_msg: "-".to_string(),
+            username: "-".to_string(),
+            password: "-".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "encoding type".to_string(),
+            content_type: "content type".to_string(),
+            cache_control: "no cache".to_string(),
+            orig_filenames: vec!["a1".to_string(), "a2".to_string()],
+            orig_mime_types: Vec::new(),
+            resp_filenames: Vec::new(),
+            resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
+            post_body: "12345678901234567890".to_string().into_bytes(),
+            state: String::new(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::BlockListHttp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlockListHttp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" last_time="600" method="GET" host="example.com" uri="/uri/path" referrer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="""#
+        );
+
+        let blocklist_http = Event::BlockList(RecordType::Http(BlockListHttp::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert!(blocklist_http.contains("post_body=\"1234567890...\""));
+        assert!(blocklist_http.contains("resp_mime_types=\"b1,b2\""));
+    }
+
+    #[tokio::test]
+    async fn syslog_for_lockyransomware() {
+        let fields = DnsEventFields {
+            source: "collector1".to_string(),
+            session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
+            dst_port: 53,
+            proto: 17,
+            query: "locky.com".to_string(),
+            answer: vec!["1.1.1.100".to_string()],
+            trans_id: 1100,
+            rtt: 1,
+            qclass: 0,
+            qtype: 0,
+            rcode: 0,
+            aa_flag: false,
+            tc_flag: true,
+            rd_flag: false,
+            ra_flag: false,
+            ttl: vec![120; 5],
+            confidence: 0.8,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::LockyRansomware,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="LockyRansomware" category="Impact" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.3" src_port="10000" dst_addr="127.0.0.4" dst_port="53" proto="17" query="locky.com" answer="1.1.1.100" trans_id="1100" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="true" rd_flag="false" ra_flag="false" ttl="120,120,120,120,120" confidence="0.8""#
+        );
+
+        let locky_ransomware = Event::LockyRansomware(crate::LockyRansomware::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            fields,
+        ))
+        .to_string();
+        assert!(locky_ransomware.contains("source=\"collector1\""));
+        assert!(locky_ransomware.contains("query=\"locky.com\""));
+        assert!(locky_ransomware.contains("ttl=\"120,120,120,120,120\""));
+        assert!(locky_ransomware.contains("confidence=\"0.8\""));
+        assert!(locky_ransomware.contains("triage_scores=\"\""));
+    }
+
+    #[tokio::test]
+    async fn syslog_for_portscan() {
+        let fields = PortScanFields {
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            proto: 6,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::PortScan,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" proto="6""#
+        );
+
+        let port_scan = Event::PortScan(crate::PortScan::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+        assert_eq!(
+            &port_scan,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" proto="6" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_multihostportscan() {
+        let fields = MultiHostPortScanFields {
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            dst_addrs: vec![
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            ],
+            dst_port: 80,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            proto: 6,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::MultiHostPortScan,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00""#
+        );
+
+        let multi_host_port_scan = Event::MultiHostPortScan(crate::MultiHostPortScan::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+        assert_eq!(
+            &multi_host_port_scan,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_externalddos() {
+        let fields = ExternalDdosFields {
+            src_addrs: vec![
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            ],
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            proto: 6,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::ExternalDdos,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00""#
+        );
+
+        let external_ddos = Event::ExternalDdos(ExternalDdos::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+        assert_eq!(
+            &external_ddos,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_conn() {
+        let fields = BlockListConnFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 80,
+            proto: 6,
+            conn_state: "SAF".to_string(),
+            duration: 1000,
+            service: "http".to_string(),
+            orig_bytes: 100,
+            orig_pkts: 1,
+            resp_bytes: 100,
+            resp_pkts: 1,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListConn,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListConn" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1""#
+        );
+
+        let block_list_conn = Event::BlockList(RecordType::Conn(crate::BlockListConn::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+        assert_eq!(
+            &block_list_conn,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListConn" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_dcerpc() {
+        let fields = BlockListDceRpcFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 135,
+            proto: 6,
+            last_time: 100,
+            rtt: 1,
+            named_pipe: "svcctl".to_string(),
+            endpoint: "epmapper".to_string(),
+            operation: "bind".to_string(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListDceRpc,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDceRpc" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" last_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind""#
+        );
+
+        let block_list_dce_rpc = Event::BlockList(RecordType::DceRpc(crate::BlockListDceRpc::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+        assert_eq!(
+            &block_list_dce_rpc,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDceRpc" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" last_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_dnscovertchannel() {
+        let fields = DnsEventFields {
+            source: "collector1".to_string(),
+            session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 53,
+            proto: 17,
+            query: "foo.com".to_string(),
+            answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
+            trans_id: 123,
+            rtt: 1,
+            qclass: 0,
+            qtype: 0,
+            rcode: 0,
+            aa_flag: false,
+            tc_flag: false,
+            rd_flag: false,
+            ra_flag: true,
+            ttl: vec![120; 5],
+            confidence: 0.9,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::DnsCovertChannel,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="DnsCovertChannel" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="0.9""#
+        );
+
+        let triage_scores = vec![TriageScore {
+            policy_id: 109,
+            score: 0.9,
+        }];
+        let mut dns_covert_channel = Event::DnsCovertChannel(crate::DnsCovertChannel::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        ));
+        dns_covert_channel.set_triage_scores(triage_scores);
+        let dns_covert_channel = dns_covert_channel.to_string();
+
+        assert_eq!(
+            &dns_covert_channel,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="DnsCovertChannel" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="0.9" triage_scores="109:0.90""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_cryptocurrencyminingpool() {
+        let fields = CryptocurrencyMiningPoolFields {
+            source: "collector1".to_string(),
+            session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 53,
+            proto: 17,
+            query: "foo.com".to_string(),
+            answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
+            trans_id: 123,
+            rtt: 1,
+            qclass: 0,
+            qtype: 0,
+            rcode: 0,
+            aa_flag: false,
+            tc_flag: false,
+            rd_flag: false,
+            ra_flag: true,
+            ttl: vec![120; 5],
+            coins: vec!["bitcoin".to_string(), "monero".to_string()],
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::CryptocurrencyMiningPool,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" session_end_time="1970-01-01T01:01:01+00:00" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero""#
+        );
+
+        let cryptocurrency_mining_pool =
+            Event::CryptocurrencyMiningPool(crate::CryptocurrencyMiningPool::new(
+                Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+                fields,
+            ))
+            .to_string();
+        assert_eq!(
+            &cryptocurrency_mining_pool,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" session_end_time="1970-01-01T01:01:01+00:00" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_dns() {
+        let fields = BlockListDnsFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 53,
+            proto: 17,
+            last_time: 100,
+            query: "foo.com".to_string(),
+            answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
+            trans_id: 123,
+            rtt: 1,
+            qclass: 0,
+            qtype: 0,
+            rcode: 0,
+            aa_flag: false,
+            tc_flag: false,
+            rd_flag: false,
+            ra_flag: true,
+            ttl: vec![120; 5],
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListDns,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDns" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" last_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120""#
+        );
+        let block_list_dns = Event::BlockList(RecordType::Dns(crate::BlockListDns::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+        assert_eq!(
+            &block_list_dns,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDns" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" last_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_ftpbruteforce() {
+        let fields = FtpBruteForceFields {
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 21,
+            proto: 6,
+            user_list: vec!["user1".to_string(), "user_2".to_string()],
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            is_internal: true,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::FtpBruteForce,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" is_internal="true""#
+        );
+
+        let ftp_brute_force = Event::FtpBruteForce(crate::FtpBruteForce::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+
+        assert_eq!(
+            &ftp_brute_force,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" is_internal="true" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_ftpplaintext() {
+        let fields = FtpPlainTextFields {
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 21,
+            proto: 6,
+            last_time: 100,
+            user: "user1".to_string(),
+            password: "password".to_string(),
+            command: "ls".to_string(),
+            reply_code: "200".to_string(),
+            reply_msg: "OK".to_string(),
+            data_passive: false,
+            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            source: "collector1".to_string(),
+            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
+            data_resp_port: 10001,
+            file: "/etc/passwd".to_string(),
+            file_size: 5000,
+            file_id: "123".to_string(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::FtpPlainText,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123""#
+        );
+
+        let ftp_plain_text = Event::FtpPlainText(crate::FtpPlainText::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        ))
+        .to_string();
+        assert_eq!(
+            &ftp_plain_text,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_ftp() {
+        let fields = BlockListFtpFields {
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 21,
+            proto: 6,
+            last_time: 100,
+            user: "user1".to_string(),
+            password: "password".to_string(),
+            command: "ls".to_string(),
+            reply_code: "200".to_string(),
+            reply_msg: "OK".to_string(),
+            data_passive: false,
+            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            source: "collector1".to_string(),
+            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
+            data_resp_port: 10001,
+            file: "/etc/passwd".to_string(),
+            file_size: 5000,
+            file_id: "123".to_string(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListFtp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListFtp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123""#
+        );
+
+        let block_list_ftp = Event::BlockList(RecordType::Ftp(crate::BlockListFtp::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_ftp,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListFtp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_repeatedhttpsessions() {
+        let fields = RepeatedHttpSessionsFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 443,
+            proto: 6,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::RepeatedHttpSessions,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6""#
+        );
+        let repeated_http_sessions = Event::RepeatedHttpSessions(crate::RepeatedHttpSessions::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+        assert_eq!(
+            &repeated_http_sessions,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_kerberos() {
+        let fields = BlockListKerberosFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 88,
+            proto: 17,
+            last_time: 100,
+            client_time: 100,
+            server_time: 101,
+            error_code: 0,
+            client_realm: "EXAMPLE.COM".to_string(),
+            cname_type: 1,
+            client_name: vec!["user1".to_string()],
+            realm: "EXAMPLE.COM".to_string(),
+            sname_type: 1,
+            service_name: vec!["krbtgt/EXAMPLE.COM".to_string()],
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListKerberos,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListKerberos" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" last_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM""#
+        );
+
+        let block_list_kerberos =
+            Event::BlockList(RecordType::Kerberos(crate::BlockListKerberos::new(
+                Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+                fields,
+            )))
+            .to_string();
+
+        assert_eq!(
+            &block_list_kerberos,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListKerberos" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" last_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_ldapbruteforce() {
+        let fields = LdapBruteForceFields {
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 389,
+            proto: 6,
+            user_pw_list: vec![
+                ("user1".to_string(), "pw1".to_string()),
+                ("user_2".to_string(), "pw2".to_string()),
+            ],
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::LdapBruteForce,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00""#
+        );
+
+        let ldap_brute_force = Event::LdapBruteForce(crate::LdapBruteForce::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+
+        assert_eq!(
+            &ldap_brute_force,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_ldapplaintext() {
+        let fields = LdapPlainTextFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 389,
+            proto: 6,
+            last_time: 100,
+            message_id: 1,
+            version: 3,
+            opcode: vec!["bind".to_string()],
+            result: vec!["success".to_string()],
+            diagnostic_message: vec!["msg".to_string()],
+            object: vec!["object".to_string()],
+            argument: vec!["argument".to_string()],
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::LdapPlainText,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument""#
+        );
+
+        let ldap_plain_text = Event::LdapPlainText(crate::LdapPlainText::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        ))
+        .to_string();
+
+        assert_eq!(
+            &ldap_plain_text,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_ldap() {
+        let fields = BlockListLdapFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 389,
+            proto: 6,
+            last_time: 100,
+            message_id: 1,
+            version: 3,
+            opcode: vec!["bind".to_string()],
+            result: vec!["success".to_string()],
+            diagnostic_message: vec!["msg".to_string()],
+            object: vec!["object".to_string()],
+            argument: vec!["argument".to_string()],
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListLdap,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListLdap" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument""#
+        );
+
+        let block_list_ldap = Event::BlockList(RecordType::Ldap(crate::BlockListLdap::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_ldap,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListLdap" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_extrathreat() {
+        let fields = ExtraThreat {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            source: "collector1".to_string(),
+            service: "service".to_string(),
+            content: "content".to_string(),
+            db_name: "db_name".to_string(),
+            rule_id: 1,
+            matched_to: "matched_to".to_string(),
+            cluster_id: 1,
+            attack_kind: "attack_kind".to_string(),
+            confidence: 0.9,
+            triage_scores: None,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::ExtraThreat,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExtraThreat" category="Reconnaissance" source="collector1" service="service" content="content" db_name="db_name" rule_id="1" matched_to="matched_to" cluster_id="1" attack_kind="attack_kind" confidence="0.9" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_mqtt() {
+        let fields = BlockListMqttFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 1883,
+            proto: 6,
+            last_time: 100,
+            protocol: "mqtt".to_string(),
+            version: 211,
+            client_id: "client1".to_string(),
+            connack_reason: 0,
+            subscribe: vec!["topic".to_string()],
+            suback_reason: "error".to_string().into_bytes(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListMqtt,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListMqtt" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" last_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error""#
+        );
+
+        let block_list_mqtt = Event::BlockList(RecordType::Mqtt(crate::BlockListMqtt::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_mqtt,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListMqtt" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" last_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_networkthreat() {
+        let fields = NetworkThreat {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            source: "collector1".to_string(),
+            orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            orig_port: 10000,
+            resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            resp_port: 80,
+            proto: 6,
+            service: "http".to_string(),
+            last_time: 100,
+            content: "content".to_string(),
+            db_name: "db_name".to_string(),
+            rule_id: 1,
+            matched_to: "matched_to".to_string(),
+            cluster_id: 1,
+            attack_kind: "attack_kind".to_string(),
+            confidence: 0.9,
+            triage_scores: None,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::NetworkThreat,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="NetworkThreat" category="Reconnaissance" source="collector1" orig_addr="127.0.0.1" orig_port="10000" resp_addr="127.0.0.2" resp_port="80" proto="6" service="http" last_time="100" content="content" db_name="db_name" rule_id="1" matched_to="matched_to" cluster_id="1" attack_kind="attack_kind" confidence="0.9" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_nfs() {
+        let fields = BlockListNfsFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 2049,
+            proto: 6,
+            last_time: 100,
+            read_files: vec!["/etc/passwd".to_string()],
+            write_files: vec!["/etc/shadow".to_string()],
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListNfs,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListNfs" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" last_time="100" read_files="/etc/passwd" write_files="/etc/shadow""#
+        );
+
+        let block_list_nfs = Event::BlockList(RecordType::Nfs(crate::BlockListNfs::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_nfs,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListNfs" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" last_time="100" read_files="/etc/passwd" write_files="/etc/shadow" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_ntlm() {
+        let fields = BlockListNtlmFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 445,
+            proto: 6,
+            last_time: 100,
+            protocol: "ntlm".to_string(),
+            username: "user1".to_string(),
+            hostname: "host1".to_string(),
+            domainname: "domain1".to_string(),
+            success: "true".to_string(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListNtlm,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListNtlm" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true""#
+        );
+
+        let block_list_ntlm = Event::BlockList(RecordType::Ntlm(crate::BlockListNtlm::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_ntlm,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListNtlm" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_rdpbruteforce() {
+        let fields = RdpBruteForceFields {
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            dst_addrs: vec![
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            ],
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
+            proto: 6,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::RdpBruteForce,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Exfiltration" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:10:02+00:00" proto="6""#
+        );
+
+        let rdp_brute_force = Event::RdpBruteForce(crate::RdpBruteForce::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+
+        assert_eq!(
+            &rdp_brute_force,
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Exfiltration" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:10:02+00:00" proto="6" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_rdp() {
+        let fields = BlockListRdpFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 3389,
+            proto: 6,
+            last_time: 100,
+            cookie: "cookie".to_string(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListRdp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListRdp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" last_time="100" cookie="cookie""#
+        );
+
+        let block_list_rdp = Event::BlockList(RecordType::Rdp(crate::BlockListRdp::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_rdp,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListRdp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" last_time="100" cookie="cookie" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_smb() {
+        let fields = BlockListSmbFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 445,
+            proto: 6,
+            last_time: 100,
+            command: 1,
+            path: "path".to_string(),
+            service: "service".to_string(),
+            file_name: "file_name".to_string(),
+            file_size: 100,
+            resource_type: 1,
+            fid: 1,
+            create_time: 100,
+            access_time: 200,
+            write_time: 300,
+            change_time: 400,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListSmb,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSmb" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400""#
+        );
+
+        let block_list_smb = Event::BlockList(RecordType::Smb(crate::BlockListSmb::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_smb,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSmb" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_smtp() {
+        let fields = BlockListSmtpFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 25,
+            proto: 6,
+            last_time: 100,
+            mailfrom: "mailfrom".to_string(),
+            date: "date".to_string(),
+            from: "from".to_string(),
+            to: "to".to_string(),
+            subject: "subject".to_string(),
+            agent: "agent".to_string(),
+            state: "state".to_string(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListSmtp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSmtp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" last_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state""#
+        );
+
+        let block_list_smtp = Event::BlockList(RecordType::Smtp(crate::BlockListSmtp::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_smtp,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSmtp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" last_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_ssh() {
+        let fields = BlockListSshFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 22,
+            proto: 6,
+            last_time: 100,
+            client: "client".to_string(),
+            server: "server".to_string(),
+            cipher_alg: "cipher_alg".to_string(),
+            mac_alg: "mac_alg".to_string(),
+            compression_alg: "compression_alg".to_string(),
+            kex_alg: "kex_alg".to_string(),
+            host_key_alg: "host_key_alg".to_string(),
+            hassh_algorithms: "hassh_algorithms".to_string(),
+            hassh: "hassh".to_string(),
+            hassh_server_algorithms: "hassh_server_algorithms".to_string(),
+            hassh_server: "hassh_server".to_string(),
+            client_shka: "client_shka".to_string(),
+            server_shka: "server_shka".to_string(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListSsh,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSsh" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" last_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka""#
+        );
+
+        let block_list_ssh = Event::BlockList(RecordType::Ssh(crate::BlockListSsh::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_ssh,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSsh" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" last_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_windowsthreat() {
+        let fields = WindowsThreat {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            source: "collector1".to_string(),
+            service: "notepad".to_string(),
+            agent_name: "win64".to_string(),
+            agent_id: "e7e2386a-5485-4da9-b388-b3e50ee7cbb0".to_string(),
+            process_guid: "{bac98147-6b03-64d4-8200-000000000700}".to_string(),
+            process_id: 2972,
+            image: r#"C:\Users\vboxuser\Desktop\mal_bazaar\ransomware\918504.exe"#.to_string(),
+            user: r#"WIN64\vboxuser"#.to_string(),
+            content: r#"cmd /c "vssadmin.exe Delete Shadows /all /quiet""#.to_string(),
+            db_name: "db".to_string(),
+            rule_id: 100,
+            matched_to: "match".to_string(),
+            cluster_id: 900,
+            attack_kind: "Ransomware_Alcatraz".to_string(),
+            confidence: 0.9,
+            triage_scores: None,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            kind: EventKind::WindowsThreat,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = format!("{message}");
+        assert_eq!(&syslog_message,
+            "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"WindowsThreat\" category=\"Impact\" source=\"collector1\" service=\"notepad\" agent_name=\"win64\" agent_id=\"e7e2386a-5485-4da9-b388-b3e50ee7cbb0\" process_guid=\"{bac98147-6b03-64d4-8200-000000000700}\" process_id=\"2972\" image=\"C:\\Users\\vboxuser\\Desktop\\mal_bazaar\\ransomware\\918504.exe\" user=\"WIN64\\vboxuser\" content=\"cmd /c \"vssadmin.exe Delete Shadows /all /quiet\"\" db_name=\"db\" rule_id=\"100\" matched_to=\"match\" cluster_id=\"900\" attack_kind=\"Ransomware_Alcatraz\" confidence=\"0.9\" triage_scores=\"\""
+        );
+        assert!(syslog_message.contains("user=\"WIN64\\vboxuser\""));
+        assert!(syslog_message
+            .contains("content=\"cmd /c \"vssadmin.exe Delete Shadows /all /quiet\"\""));
+
+        let windows_threat = Event::WindowsThreat(fields).to_string();
+        assert_eq!(&windows_threat,
+            "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"WindowsThreat\" category=\"Impact\" source=\"collector1\" service=\"notepad\" agent_name=\"win64\" agent_id=\"e7e2386a-5485-4da9-b388-b3e50ee7cbb0\" process_guid=\"{bac98147-6b03-64d4-8200-000000000700}\" process_id=\"2972\" image=\"C:\\Users\\vboxuser\\Desktop\\mal_bazaar\\ransomware\\918504.exe\" user=\"WIN64\\vboxuser\" content=\"cmd /c \"vssadmin.exe Delete Shadows /all /quiet\"\" db_name=\"db\" rule_id=\"100\" matched_to=\"match\" cluster_id=\"900\" attack_kind=\"Ransomware_Alcatraz\" confidence=\"0.9\" triage_scores=\"\""
+        );
+        assert!(windows_threat.contains("process_guid=\"{bac98147-6b03-64d4-8200-000000000700}\""));
+        assert!(windows_threat
+            .contains(r#"image="C:\Users\vboxuser\Desktop\mal_bazaar\ransomware\918504.exe""#));
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_tls() {
+        let fields = BlockListTlsFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 443,
+            proto: 6,
+            last_time: 100,
+            server_name: "server".to_string(),
+            alpn_protocol: "alpn".to_string(),
+            ja3: "ja3".to_string(),
+            version: "version".to_string(),
+            client_cipher_suites: vec![1, 2, 3],
+            client_extensions: vec![4, 5, 6],
+            cipher: 1,
+            extensions: vec![7, 8, 9],
+            ja3s: "ja3s".to_string(),
+            serial: "serial".to_string(),
+            subject_country: "country".to_string(),
+            subject_org_name: "org".to_string(),
+            subject_common_name: "common".to_string(),
+            validity_not_before: 100,
+            validity_not_after: 200,
+            subject_alt_name: "alt".to_string(),
+            issuer_country: "country".to_string(),
+            issuer_org_name: "org".to_string(),
+            issuer_org_unit_name: "unit".to_string(),
+            issuer_common_name: "common".to_string(),
+            last_alert: 1,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListTls,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListTls" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1""#
+        );
+
+        let block_list_tls = Event::BlockList(RecordType::Tls(crate::BlockListTls::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_tls,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListTls" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_torconnection() {
+        let fields = TorConnectionFields {
+            source: "collector1".to_string(),
+            session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 443,
+            proto: 6,
+            method: "GET".to_string(),
+            host: "host".to_string(),
+            uri: "uri".to_string(),
+            referrer: "referrer".to_string(),
+            version: "version".to_string(),
+            user_agent: "user_agent".to_string(),
+            request_len: 100,
+            response_len: 200,
+            status_code: 200,
+            status_msg: "OK".to_string(),
+            username: "user".to_string(),
+            password: "password".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "content_encoding".to_string(),
+            content_type: "content_type".to_string(),
+            cache_control: "cache_control".to_string(),
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::TorConnection,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control""#
+        );
+
+        let tor_connection = Event::TorConnection(crate::TorConnection::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            &fields,
+        ))
+        .to_string();
+
+        assert_eq!(
+            &tor_connection,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" triage_scores="""#
+        );
     }
 }

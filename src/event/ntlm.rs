@@ -1,9 +1,10 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListNtlmFields {
@@ -20,17 +21,26 @@ pub struct BlockListNtlmFields {
     pub domainname: String,
     pub success: String,
 }
-
 impl fmt::Display for BlockListNtlmFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},BlockListNtlm,3",
-            self.src_addr, self.src_port, self.dst_addr, self.dst_port, self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.protocol,
+            self.username,
+            self.hostname,
+            self.domainname,
+            self.success
         )
     }
 }
-
 #[allow(clippy::module_name_repetitions)]
 pub struct BlockListNtlm {
     pub time: DateTime<Utc>,
@@ -48,22 +58,27 @@ pub struct BlockListNtlm {
     pub success: String,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-
 impl fmt::Display for BlockListNtlm {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{},{},{},{},{},{},BlockListNtlm",
-            DateTime::<Local>::from(self.time).format("%Y-%m-%d %H:%M:%S"),
-            self.src_addr,
-            self.src_port,
-            self.dst_addr,
-            self.dst_port,
-            self.proto,
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} triage_scores={:?}",
+            self.source,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.protocol,
+            self.username,
+            self.hostname,
+            self.domainname,
+            self.success,
+            triage_scores_to_string(&self.triage_scores)
         )
     }
 }
-
 impl BlockListNtlm {
     pub(super) fn new(time: DateTime<Utc>, fields: BlockListNtlmFields) -> Self {
         Self {
