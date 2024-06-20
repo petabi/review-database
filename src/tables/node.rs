@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{agent::Config, TableIter as TI};
 use crate::{
-    types::FromKeyValue, Agent, AgentKind, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
-    IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey,
+    types::FromKeyValue, Agent, AgentKind, AgentStatus, Indexable, Indexed, IndexedMap,
+    IndexedMapUpdate, IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey,
 };
 
 type PortNumber = u16;
@@ -163,8 +163,8 @@ impl<'d> Table<'d> {
                 invalid_agents.push(aid);
             }
         }
-        let mut settings: Option<Settings> = inner.settings.map(Into::into);
-        let mut settings_draft: Option<Settings> = inner.settings_draft.map(Into::into);
+        let mut settings: Option<Settings> = inner.profile.map(Into::into);
+        let mut settings_draft: Option<Settings> = inner.profile_draft.map(Into::into);
         for agent in agents {
             if let Some(settings) = settings.as_mut() {
                 settings.add_agent(agent.kind, agent.config.as_ref())?;
@@ -222,8 +222,8 @@ impl<'d> Table<'d> {
             id: entry.id,
             name: entry.name,
             name_draft: entry.name_draft,
-            settings: settings.map(Settings::into_inner),
-            settings_draft: settings_draft.map(Settings::into_inner),
+            profile: settings.map(Settings::into_inner),
+            profile_draft: settings_draft.map(Settings::into_inner),
             creation_time: entry.creation_time,
             agents: agents_to_insert.iter().map(|a| a.key.clone()).collect(),
         };
@@ -297,8 +297,8 @@ impl<'d> Table<'d> {
         let old_inner = InnerUpdate {
             name: old.name.clone(),
             name_draft: old.name_draft.clone(),
-            settings: settings.map(Settings::into_inner),
-            settings_draft: settings_draft.map(Settings::into_inner),
+            profile: settings.map(Settings::into_inner),
+            profile_draft: settings_draft.map(Settings::into_inner),
             agents: old_agents
                 .iter()
                 .filter_map(|a| a.as_ref().map(|a| a.key.clone()))
@@ -333,8 +333,8 @@ impl<'d> Table<'d> {
         let new_inner = InnerUpdate {
             name: new.name.clone(),
             name_draft: new.name_draft.clone(),
-            settings: settings.map(Settings::into_inner),
-            settings_draft: settings_draft.map(Settings::into_inner),
+            profile: settings.map(Settings::into_inner),
+            profile_draft: settings_draft.map(Settings::into_inner),
             agents: new_agents
                 .iter()
                 .filter_map(|a| a.as_ref().map(|a| a.key.clone()))
@@ -381,15 +381,15 @@ impl<'d> Iterator for TableIter<'d> {
                         agents.push(agent);
                     }
                 }
-                let mut settings: Option<Settings> = inner.settings.map(Into::into);
-                let mut settings_draft: Option<Settings> = inner.settings_draft.map(Into::into);
+                let mut profile: Option<Settings> = inner.profile.map(Into::into);
+                let mut profile_draft: Option<Settings> = inner.profile_draft.map(Into::into);
                 for agent in agents {
-                    if let Some(settings) = settings.as_mut() {
+                    if let Some(settings) = profile.as_mut() {
                         settings
                             .add_agent(agent.kind, agent.config.as_ref())
                             .expect("invalid agent config");
                     }
-                    if let Some(settings_draft) = settings_draft.as_mut() {
+                    if let Some(settings_draft) = profile_draft.as_mut() {
                         settings_draft
                             .add_agent(agent.kind, agent.config.as_ref())
                             .expect("invalid agent config");
@@ -399,8 +399,8 @@ impl<'d> Iterator for TableIter<'d> {
                     id: inner.id,
                     name: inner.name,
                     name_draft: inner.name_draft,
-                    settings,
-                    settings_draft,
+                    settings: profile,
+                    settings_draft: profile_draft,
                     creation_time: inner.creation_time,
                 }
             })
@@ -409,7 +409,7 @@ impl<'d> Iterator for TableIter<'d> {
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq)]
-struct InnerSettings {
+struct Profile {
     customer_id: u32,
     description: String,
     hostname: String,
@@ -422,15 +422,15 @@ struct InnerNode {
     id: u32,
     name: String,
     name_draft: Option<String>,
-    settings: Option<InnerSettings>,
-    settings_draft: Option<InnerSettings>,
+    profile: Option<Profile>,
+    profile_draft: Option<Profile>,
     creation_time: DateTime<Utc>,
 
     agents: Vec<String>,
 }
 
 impl Settings {
-    fn into_inner(self) -> InnerSettings {
+    fn into_inner(self) -> Profile {
         let giganto = if self.giganto {
             Some(Giganto {
                 ingestion_ip: self.giganto_ingestion_ip,
@@ -444,7 +444,7 @@ impl Settings {
         } else {
             None
         };
-        InnerSettings {
+        Profile {
             customer_id: self.customer_id,
             description: self.description,
             hostname: self.hostname,
@@ -481,6 +481,7 @@ impl Settings {
 
     fn agents(&self) -> Result<Vec<Option<Agent>>> {
         let node = u32::MAX;
+        let status = AgentStatus::Enabled;
         let draft = None;
 
         let mut agents = vec![];
@@ -502,6 +503,7 @@ impl Settings {
                 node,
                 "piglet".to_string(),
                 "piglet".try_into()?,
+                status,
                 Some(toml::to_string(&config)?),
                 draft.clone(),
             )?;
@@ -521,6 +523,7 @@ impl Settings {
                 node,
                 "hog".to_string(),
                 "hog".try_into()?,
+                status,
                 Some(toml::to_string(&config)?),
                 draft.clone(),
             )?;
@@ -534,6 +537,7 @@ impl Settings {
                 node,
                 "reconverge".to_string(),
                 "reconverge".try_into()?,
+                status,
                 Some(String::new()),
                 draft.clone(),
             )?;
@@ -546,8 +550,8 @@ impl Settings {
     }
 }
 
-impl From<InnerSettings> for Settings {
-    fn from(inner: InnerSettings) -> Self {
+impl From<Profile> for Settings {
+    fn from(inner: Profile) -> Self {
         let mut settings = Settings {
             customer_id: inner.customer_id,
             description: inner.description,
@@ -626,8 +630,8 @@ impl<'d> IndexedTable<'d, InnerNode> {
 struct InnerUpdate {
     pub name: Option<String>,
     pub name_draft: Option<String>,
-    pub settings: Option<InnerSettings>,
-    pub settings_draft: Option<InnerSettings>,
+    pub profile: Option<Profile>,
+    pub profile_draft: Option<Profile>,
     pub agents: Vec<String>,
 }
 
@@ -636,8 +640,8 @@ impl From<InnerNode> for InnerUpdate {
         Self {
             name: Some(input.name),
             name_draft: input.name_draft,
-            settings: input.settings,
-            settings_draft: input.settings_draft,
+            profile: input.profile,
+            profile_draft: input.profile_draft,
             agents: input.agents,
         }
     }
@@ -655,8 +659,8 @@ impl IndexedMapUpdate for InnerUpdate {
             n.clone_into(&mut value.name);
         }
         value.name_draft.clone_from(&self.name_draft);
-        value.settings.clone_from(&self.settings);
-        value.settings_draft.clone_from(&self.settings_draft);
+        value.profile.clone_from(&self.profile);
+        value.profile_draft.clone_from(&self.profile_draft);
         value.agents.clone_from(&self.agents);
         Ok(value)
     }
@@ -670,10 +674,10 @@ impl IndexedMapUpdate for InnerUpdate {
         if self.name_draft != value.name_draft {
             return false;
         }
-        if self.settings != value.settings {
+        if self.profile != value.profile {
             return false;
         }
-        if self.settings_draft != value.settings_draft {
+        if self.profile_draft != value.profile_draft {
             return false;
         }
         self.agents == value.agents

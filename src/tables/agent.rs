@@ -33,6 +33,29 @@ pub enum Kind {
     // Crusher,
 }
 
+#[derive(
+    Serialize,
+    Deserialize,
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    EnumString,
+    FromPrimitive,
+    ToPrimitive,
+)]
+#[repr(u8)]
+#[strum(serialize_all = "snake_case")]
+pub enum Status {
+    Disabled = 0,
+    Enabled = 1,
+    ReloadFailed = 2,
+    Unknown = u8::MAX,
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct Config {
     inner: String,
@@ -64,6 +87,7 @@ pub struct Agent {
     pub node: u32,
     pub key: String,
     pub kind: Kind,
+    pub status: Status,
     pub config: Option<Config>,
     pub draft: Option<Config>,
 }
@@ -76,6 +100,7 @@ impl Agent {
         node: u32,
         key: String,
         kind: Kind,
+        status: Status,
         config: Option<String>,
         draft: Option<String>,
     ) -> Result<Self> {
@@ -85,6 +110,7 @@ impl Agent {
             node,
             key,
             kind,
+            status,
             config,
             draft,
         })
@@ -105,6 +131,7 @@ impl FromKeyValue for Agent {
             node,
             key,
             kind: value.kind,
+            status: value.status,
             config: value.config,
             draft: value.draft,
         })
@@ -123,6 +150,7 @@ impl ValueTrait for Agent {
     fn value(&self) -> Cow<[u8]> {
         let value = Value {
             kind: self.kind,
+            status: self.status,
             config: self.config.clone(),
             draft: self.draft.clone(),
         };
@@ -133,6 +161,7 @@ impl ValueTrait for Agent {
 #[derive(Serialize, Deserialize)]
 struct Value {
     kind: Kind,
+    status: Status,
     config: Option<Config>,
     draft: Option<Config>,
 }
@@ -208,6 +237,7 @@ mod test {
             node,
             key.to_string(),
             kind,
+            Status::Enabled,
             config.map(|s| s.to_string()),
             draft.map(|s| s.to_string()),
         )
@@ -234,6 +264,7 @@ mod test {
             1,
             "test_key".to_string(),
             Kind::Reconverge,
+            Status::Enabled,
             Some(invalid.to_string()),
             Some(invalid.to_string()),
         )
