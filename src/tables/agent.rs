@@ -82,7 +82,7 @@ impl Display for Config {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Agent {
     pub node: u32,
     pub key: String,
@@ -206,7 +206,6 @@ impl<'d> Table<'d, Agent> {
     ///
     /// Returns an error if the serialization fails or the database operation fails.
     pub fn update(&self, old: &Agent, new: &Agent) -> Result<()> {
-        dbg!(old, new);
         let (ok, ov) = (old.unique_key(), old.value());
         let (nk, nv) = (new.unique_key(), new.value());
         self.map.update((&ok, &ov), (&nk, &nv))

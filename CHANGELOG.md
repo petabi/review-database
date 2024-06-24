@@ -9,9 +9,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Introduced `Agent`, `AgentKind` to describe data stored in `Table<Agent>`.
+- Introduced `Agent`, `AgentKind` to describe data stored in `Table<Agent>`. Each
+  `Agent` is uniquely identified by the node id `Agent::node` and node specific
+  agent key `Agent::key`.
 - Added new functions to facilitate insert, remove operations, ensuring a more
   controlled and secure agent management.
+- Introduced `Node::agents` to store `agents` of the `node`.
 
 ### Changed
 
@@ -19,18 +22,17 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   and TLS protocols.
 - Fixed to provide crypto libraries directly as `builder_with_provider` when
   generating `rustls::ClientConfig`.
-- Modified the `NodeSettings` fields.
-  - Removed `reconverge_giganto_[ip|port]` fields.
-  - Removed central server's address fields.
-  - Removed the redundant `html` field as both `html` and `txt` represented the
-    existing `MIME FileType::Text`. The `txt` field should be used for `MIME FileType::Text`.
-  - Added `vbs` field.
-  - Merged `protocols` (boolean) and `protocol_list` (`HashMap<String, bool>`) into
-    `protocols: Option<Vec<String>>`.
-    - The new protocols field should be sorted in alphabetical order.
-  - Merged `sensors` (boolean) and `sensor_list` (`HashMap<String, bool>`) into
-    `sensors: Option<Vec<String>>`.
-    - The new sensors field should also be sorted in alphabetical order.
+
+### Removed
+
+- `NodeSettings` is removed. Information stored in `Node::settings` and `Node::settings_draft`
+  are splitted.
+  - `NodeProfile`, reflects the information of node. `Node::profile` and
+    `Node::profile_draft` inherit node related information from `Node::settings`
+    and `Node::settings_draft` respectively.
+  - `Agent` related information is now stored in `Agent::config` and `Agent::draft`
+    as a TOML formattted string. The actual configuration should be defined and
+    maintained through UI.
 
 ## [0.28.0] - 2024-05-16
 
