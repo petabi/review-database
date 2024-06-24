@@ -15,7 +15,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
-use crate::{Indexed, IterableMap};
+use crate::{Agent, Giganto, Indexed, IterableMap};
 
 /// The range of versions that use the current database format.
 ///
@@ -37,7 +37,7 @@ use crate::{Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.3,<=0.29.0-alpha.3";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.4,<=0.29.0-alpha.4";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -296,7 +296,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
     use chrono::{DateTime, Utc};
 
     use crate::IterableMap;
-    use crate::{Node, NodeSettings};
+    use crate::{Node, NodeProfile};
 
     type PortNumber = u16;
 
@@ -362,7 +362,44 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
         pub sensors: bool,
         pub sensor_list: HashMap<String, bool>,
     }
+    #[allow(clippy::struct_excessive_bools)]
+    #[derive(Clone, Default, Deserialize, Serialize, PartialEq)]
+    pub struct NodeSettings {
+        pub customer_id: u32,
+        pub description: String,
+        pub hostname: String,
 
+        pub piglet: bool,
+        pub piglet_giganto_ip: Option<IpAddr>,
+        pub piglet_giganto_port: Option<PortNumber>,
+        pub save_packets: bool,
+        pub http: bool,
+        pub office: bool,
+        pub exe: bool,
+        pub pdf: bool,
+        pub vbs: bool,
+        pub txt: bool,
+        pub smtp_eml: bool,
+        pub ftp: bool,
+
+        pub giganto: bool,
+        pub giganto_ingestion_ip: Option<IpAddr>,
+        pub giganto_ingestion_port: Option<PortNumber>,
+        pub giganto_publish_ip: Option<IpAddr>,
+        pub giganto_publish_port: Option<PortNumber>,
+        pub giganto_graphql_ip: Option<IpAddr>,
+        pub giganto_graphql_port: Option<PortNumber>,
+        pub retention_period: Option<u16>,
+
+        pub reconverge: bool,
+
+        pub hog: bool,
+        pub hog_giganto_ip: Option<IpAddr>,
+        pub hog_giganto_port: Option<PortNumber>,
+        pub protocols: Option<Vec<String>>,
+
+        pub sensors: Option<Vec<String>>,
+    }
     impl From<OldNodeSettings> for NodeSettings {
         fn from(input: OldNodeSettings) -> Self {
             let txt = input.html || input.txt;
@@ -425,16 +462,214 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
         }
     }
 
+    impl From<OldNodeSettings> for NodeProfile {
+        fn from(input: OldNodeSettings) -> Self {
+            let giganto = if input.giganto {
+                Some(Giganto {
+                    ingestion_ip: input.giganto_ingestion_ip,
+                    ingestion_port: input.giganto_ingestion_port,
+                    publish_ip: input.giganto_publish_ip,
+                    publish_port: input.giganto_publish_port,
+                    graphql_ip: input.giganto_graphql_ip,
+                    graphql_port: input.giganto_graphql_port,
+                    retention_period: input.retention_period,
+                })
+            } else {
+                None
+            };
+            Self {
+                customer_id: input.customer_id,
+                description: input.description,
+                hostname: input.hostname,
+                giganto,
+            }
+        }
+    }
+
     impl TryFrom<OldNode> for Node {
-        type Error = &'static str;
+        type Error = anyhow::Error;
 
         fn try_from(input: OldNode) -> Result<Self, Self::Error> {
+            #[allow(clippy::struct_excessive_bools)]
+            #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
+            struct Piglet {
+                pub giganto_ip: Option<IpAddr>,
+                pub giganto_port: Option<PortNumber>,
+                pub save_packets: bool,
+                pub office: bool,
+                pub exe: bool,
+                pub pdf: bool,
+                pub vbs: bool,
+                pub txt: bool,
+                pub smtp_eml: bool,
+                pub ftp: bool,
+            }
+            #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
+            struct Hog {
+                pub giganto_ip: Option<IpAddr>,
+                pub giganto_port: Option<PortNumber>,
+                pub protocols: Option<Vec<String>>,
+
+                pub sensors: Option<Vec<String>>,
+            }
+            let mut agents = vec![None, None, None];
+            let status = crate::AgentStatus::Enabled;
+            if let Some(s) = input.settings.as_ref() {
+                if s.hog {
+                    let config = Hog {
+                        giganto_ip: s.hog_giganto_ip,
+                        giganto_port: s.hog_giganto_port,
+                        protocols: if s.protocols {
+                            let mut list: Vec<_> = s.protocol_list.keys().cloned().collect();
+                            list.sort_unstable();
+                            Some(list)
+                        } else {
+                            None
+                        },
+                        sensors: if s.sensors {
+                            let mut list: Vec<_> = s.sensor_list.keys().cloned().collect();
+                            list.sort_unstable();
+                            Some(list)
+                        } else {
+                            None
+                        },
+                    };
+                    let config = toml::to_string(&config)?.try_into()?;
+                    let agent = Agent {
+                        node: input.id,
+                        key: "hog".to_string(),
+                        kind: crate::AgentKind::Hog,
+                        config: Some(config),
+                        draft: None,
+                        status,
+                    };
+                    agents[0] = Some(agent);
+                }
+
+                if s.piglet {
+                    let config = Piglet {
+                        giganto_ip: s.piglet_giganto_ip,
+                        giganto_port: s.piglet_giganto_port,
+                        save_packets: s.save_packets,
+                        office: s.office,
+                        exe: s.exe,
+                        pdf: s.pdf,
+                        vbs: false,
+                        txt: s.http || s.txt,
+                        smtp_eml: s.smtp_eml,
+                        ftp: s.ftp,
+                    };
+                    let config = toml::to_string(&config)?.try_into()?;
+                    let agent = Agent {
+                        node: input.id,
+                        key: "piglet".to_string(),
+                        kind: crate::AgentKind::Piglet,
+                        config: Some(config),
+                        draft: None,
+                        status,
+                    };
+                    agents[1] = Some(agent);
+                }
+
+                if s.reconverge {
+                    let config = String::new().try_into()?;
+                    let agent = Agent {
+                        node: input.id,
+                        key: "reconverge".to_string(),
+                        kind: crate::AgentKind::Reconverge,
+                        config: Some(config),
+                        draft: None,
+                        status,
+                    };
+                    agents[2] = Some(agent);
+                }
+            }
+            if let Some(s) = input.settings_draft.as_ref() {
+                if s.hog {
+                    let draft = Hog {
+                        giganto_ip: s.hog_giganto_ip,
+                        giganto_port: s.hog_giganto_port,
+                        protocols: if s.protocols {
+                            let mut list: Vec<_> = s.protocol_list.keys().cloned().collect();
+                            list.sort_unstable();
+                            Some(list)
+                        } else {
+                            None
+                        },
+                        sensors: if s.sensors {
+                            let mut list: Vec<_> = s.sensor_list.keys().cloned().collect();
+                            list.sort_unstable();
+                            Some(list)
+                        } else {
+                            None
+                        },
+                    };
+                    let draft = toml::to_string(&draft)?.try_into()?;
+                    if let Some(a) = &mut agents[0] {
+                        a.draft = Some(draft);
+                    } else {
+                        agents[0] = Some(Agent {
+                            node: input.id,
+                            key: "hog".to_string(),
+                            kind: crate::AgentKind::Hog,
+                            config: None,
+                            draft: Some(draft),
+                            status,
+                        });
+                    }
+                }
+
+                if s.piglet {
+                    let draft = Piglet {
+                        giganto_ip: s.piglet_giganto_ip,
+                        giganto_port: s.piglet_giganto_port,
+                        save_packets: s.save_packets,
+                        office: s.office,
+                        exe: s.exe,
+                        pdf: s.pdf,
+                        vbs: false,
+                        txt: s.http || s.txt,
+                        smtp_eml: s.smtp_eml,
+                        ftp: s.ftp,
+                    };
+                    let draft = toml::to_string(&draft)?.try_into()?;
+                    if let Some(a) = &mut agents[1] {
+                        a.draft = Some(draft);
+                    } else {
+                        agents[1] = Some(Agent {
+                            node: input.id,
+                            key: "piglet".to_string(),
+                            kind: crate::AgentKind::Piglet,
+                            config: None,
+                            draft: Some(draft),
+                            status,
+                        });
+                    }
+                }
+
+                if s.reconverge {
+                    let draft = String::new().try_into()?;
+                    if let Some(a) = &mut agents[1] {
+                        a.draft = Some(draft);
+                    } else {
+                        agents[2] = Some(Agent {
+                            node: input.id,
+                            key: "reconverge".to_string(),
+                            kind: crate::AgentKind::Reconverge,
+                            config: None,
+                            draft: Some(draft),
+                            status,
+                        });
+                    }
+                }
+            }
             Ok(Self {
                 id: input.id,
                 name: input.name,
                 name_draft: input.name_draft,
-                settings: input.settings.map(std::convert::Into::into),
-                settings_draft: input.settings_draft.map(std::convert::Into::into),
+                profile: input.settings.map(std::convert::Into::into),
+                profile_draft: input.settings_draft.map(std::convert::Into::into),
+                agents: agents.into_iter().flatten().collect(),
                 creation_time: input.creation_time,
             })
         }
@@ -1692,6 +1927,21 @@ mod tests {
 
         use crate::{collections::Indexed, Indexable};
 
+        #[allow(clippy::struct_excessive_bools)]
+        #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
+        struct Piglet {
+            pub giganto_ip: Option<IpAddr>,
+            pub giganto_port: Option<PortNumber>,
+            pub save_packets: bool,
+            pub office: bool,
+            pub exe: bool,
+            pub pdf: bool,
+            pub vbs: bool,
+            pub txt: bool,
+            pub smtp_eml: bool,
+            pub ftp: bool,
+        }
+
         #[derive(Clone, Deserialize, Serialize)]
         pub struct OldNode {
             pub id: u32,
@@ -1849,6 +2099,14 @@ mod tests {
         assert!(invalid_agent.is_empty());
         assert_eq!(new_node.id, id);
         assert_eq!(new_node.name, "name");
-        assert!(!new_node.settings_draft.unwrap().vbs);
+        assert_eq!(new_node.agents.len(), 2);
+        assert_eq!(new_node.agents[0].key, "hog");
+        assert!(new_node.agents[0].config.is_none());
+        assert!(new_node.agents[0].draft.is_some());
+        assert_eq!(new_node.agents[1].key, "piglet");
+        assert!(new_node.agents[1].config.is_none());
+        let draft = new_node.agents[1].draft.clone().unwrap();
+        let piglet: Piglet = toml::from_str(draft.as_ref()).unwrap();
+        assert!(!piglet.vbs);
     }
 }
