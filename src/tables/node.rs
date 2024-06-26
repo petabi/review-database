@@ -1,6 +1,6 @@
 //! The `network` table.
 
-use std::{borrow::Cow, net::IpAddr};
+use std::borrow::Cow;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -9,21 +9,14 @@ use serde::{Deserialize, Serialize};
 
 use super::TableIter as TI;
 use crate::{
-    types::FromKeyValue, Agent, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
-    Iterable, Map, Table as CrateTable, UniqueKey,
+    types::FromKeyValue, Agent, AgentConfig, AgentStatus, Indexable, Indexed, IndexedMap,
+    IndexedMapUpdate, IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey,
 };
-
-type PortNumber = u16;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Giganto {
-    pub ingestion_ip: Option<IpAddr>,
-    pub ingestion_port: Option<PortNumber>,
-    pub publish_ip: Option<IpAddr>,
-    pub publish_port: Option<PortNumber>,
-    pub graphql_ip: Option<IpAddr>,
-    pub graphql_port: Option<PortNumber>,
-    pub retention_period: Option<u16>,
+    pub status: AgentStatus,
+    pub draft: Option<AgentConfig>,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
@@ -34,15 +27,18 @@ pub struct Node {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<Agent>,
+    pub giganto: Option<Giganto>,
     pub creation_time: DateTime<Utc>,
 }
 
+#[derive(Debug)]
 pub struct Update {
     pub name: Option<String>,
     pub name_draft: Option<String>,
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<Agent>,
+    pub giganto: Option<Giganto>,
 }
 
 impl UniqueKey for Node {
@@ -59,6 +55,7 @@ impl From<Node> for Update {
             profile: input.profile,
             profile_draft: input.profile_draft,
             agents: input.agents,
+            giganto: input.giganto,
         }
     }
 }
@@ -149,6 +146,7 @@ impl<'d> Table<'d> {
             profile: inner.profile,
             profile_draft: inner.profile_draft,
             agents,
+            giganto: inner.giganto,
             creation_time: inner.creation_time,
         };
         Ok(Some((node, invalid_agents)))
@@ -168,6 +166,7 @@ impl<'d> Table<'d> {
             profile_draft: entry.profile_draft,
             creation_time: entry.creation_time,
             agents: entry.agents.iter().map(|a| a.key.clone()).collect(),
+            giganto: entry.giganto,
         };
 
         let node = self.node.put(inner)?;
@@ -254,6 +253,7 @@ impl<'d> Table<'d> {
             profile: old.profile.clone(),
             profile_draft: old.profile_draft.clone(),
             agents: old.agents.iter().map(|a| a.key.clone()).collect(),
+            giganto: old.giganto.clone(),
         };
 
         let new_inner = InnerUpdate {
@@ -262,6 +262,7 @@ impl<'d> Table<'d> {
             profile: new.profile.clone(),
             profile_draft: new.profile_draft.clone(),
             agents: new.agents.iter().map(|a| a.key.clone()).collect(),
+            giganto: new.giganto.clone(),
         };
 
         self.node.update(id, &old_inner, &new_inner)
@@ -293,6 +294,7 @@ impl<'d> Iterator for TableIter<'d> {
                     profile: inner.profile,
                     profile_draft: inner.profile_draft,
                     agents,
+                    giganto: inner.giganto,
                     creation_time: inner.creation_time,
                 }
             })
@@ -305,8 +307,6 @@ pub struct Profile {
     pub customer_id: u32,
     pub description: String,
     pub hostname: String,
-
-    pub giganto: Option<Giganto>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -319,6 +319,7 @@ struct Inner {
     creation_time: DateTime<Utc>,
 
     agents: Vec<String>,
+    giganto: Option<Giganto>,
 }
 
 impl FromKeyValue for Inner {
@@ -382,6 +383,7 @@ struct InnerUpdate {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<String>,
+    pub giganto: Option<Giganto>,
 }
 
 impl From<Inner> for InnerUpdate {
@@ -392,6 +394,7 @@ impl From<Inner> for InnerUpdate {
             profile: input.profile,
             profile_draft: input.profile_draft,
             agents: input.agents,
+            giganto: input.giganto,
         }
     }
 }
@@ -411,6 +414,7 @@ impl IndexedMapUpdate for InnerUpdate {
         value.profile.clone_from(&self.profile);
         value.profile_draft.clone_from(&self.profile_draft);
         value.agents.clone_from(&self.agents);
+        value.giganto.clone_from(&self.giganto);
         Ok(value)
     }
 
@@ -429,12 +433,16 @@ impl IndexedMapUpdate for InnerUpdate {
         if self.profile_draft != value.profile_draft {
             return false;
         }
-        self.agents == value.agents
+        if self.agents != value.agents {
+            return false;
+        }
+        self.giganto == value.giganto
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::net::IpAddr;
     use std::sync::Arc;
 
     use num_traits::ToPrimitive;
@@ -444,6 +452,8 @@ mod test {
     use crate::AgentKind;
     use crate::AgentStatus;
     use crate::Store;
+
+    type PortNumber = u16;
 
     #[allow(clippy::struct_excessive_bools)]
     #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -493,6 +503,7 @@ mod test {
             profile_draft,
             agents,
             creation_time,
+            giganto: None,
         }
     }
 
@@ -661,8 +672,10 @@ mod test {
             profile: Some(profile.clone()),
             profile_draft: Some(profile.clone()),
             agents: agents[1..].into_iter().cloned().collect(),
+            giganto: Some(Giganto::default()),
         };
         let old = node.clone().into();
+
         assert!(node_table.update(id, &old, &update).is_ok());
 
         let updated = node_table.get_by_id(id).unwrap();
@@ -675,6 +688,7 @@ mod test {
         node.profile = Some(profile.clone());
         node.profile_draft = Some(profile.clone());
         node.agents = node.agents.into_iter().skip(1).collect();
+        node.giganto = Some(Giganto::default());
 
         assert_eq!(updated, node);
     }

@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
 pub use self::account_policy::AccountPolicy;
-pub use self::agent::{Agent, Kind as AgentKind, Status as AgentStatus};
+pub use self::agent::{Agent, Config as AgentConfig, Kind as AgentKind, Status as AgentStatus};
 pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::csv_column_extra::CsvColumnExtra;

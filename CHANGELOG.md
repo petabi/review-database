@@ -9,12 +9,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Introduced `Agent`, `AgentKind` to describe data stored in `Table<Agent>`. Each
-  `Agent` is uniquely identified by the node id `Agent::node` and node specific
-  agent key `Agent::key`.
+- Introduced `Agent`, `AgentKind`, `AgentConfig` to describe data stored in
+  `Table<Agent>`. Each `Agent` is uniquely identified by the node id
+  `Agent::node` and node specific agent key `Agent::key`. And `AgentConfig`
+  includes the configuration string of an agent following TOML format.
 - Added new functions to facilitate insert, remove operations, ensuring a more
   controlled and secure agent management.
 - Introduced `Node::agents` to store `agents` of the `node`.
+- Introduced `Giganto` to store giganto status and draft configuration in
+  `Node::giganto`.
 
 ### Changed
 
@@ -33,6 +36,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `Agent` related information is now stored in `Agent::config` and `Agent::draft`
     as a TOML formattted string. The actual configuration should be defined and
     maintained through UI.
+  - Giganto related settings in `Node::settings` are removed, those in `Node::settings_draft`
+    are stored in `Node::giganto::draft` as a TOML formatted string.
 
 ## [0.28.0] - 2024-05-16
 
