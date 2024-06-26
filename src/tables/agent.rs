@@ -35,6 +35,7 @@ pub enum Kind {
 
 #[derive(
     Serialize,
+    Default,
     Deserialize,
     Debug,
     Clone,
@@ -51,12 +52,13 @@ pub enum Kind {
 #[strum(serialize_all = "snake_case")]
 pub enum Status {
     Disabled = 0,
+    #[default]
     Enabled = 1,
     ReloadFailed = 2,
     Unknown = u8::MAX,
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug, Default)]
 pub struct Config {
     inner: String,
 }

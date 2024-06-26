@@ -66,8 +66,8 @@ pub use self::model::{Digest as ModelDigest, Model};
 pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, AccountPolicy, Agent, AgentKind, AgentStatus, AllowNetwork, AllowNetworkUpdate,
-    AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Confidence,
+    AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
+    AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Confidence,
     CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
     DataSourceUpdate, DataType, Filter, Giganto, IndexedTable, Iterable, ModelIndicator, Network,
     NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey,

@@ -15,7 +15,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
-use crate::{Agent, Giganto, Indexed, IterableMap};
+use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 
 /// The range of versions that use the current database format.
 ///
@@ -37,7 +37,7 @@ use crate::{Agent, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.4,<=0.29.0-alpha.4";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.5,<=0.29.0-alpha.5";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -464,24 +464,10 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
 
     impl From<OldNodeSettings> for NodeProfile {
         fn from(input: OldNodeSettings) -> Self {
-            let giganto = if input.giganto {
-                Some(Giganto {
-                    ingestion_ip: input.giganto_ingestion_ip,
-                    ingestion_port: input.giganto_ingestion_port,
-                    publish_ip: input.giganto_publish_ip,
-                    publish_port: input.giganto_publish_port,
-                    graphql_ip: input.giganto_graphql_ip,
-                    graphql_port: input.giganto_graphql_port,
-                    retention_period: input.retention_period,
-                })
-            } else {
-                None
-            };
             Self {
                 customer_id: input.customer_id,
                 description: input.description,
                 hostname: input.hostname,
-                giganto,
             }
         }
     }
@@ -504,6 +490,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                 pub smtp_eml: bool,
                 pub ftp: bool,
             }
+
             #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
             struct Hog {
                 pub giganto_ip: Option<IpAddr>,
@@ -512,6 +499,19 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
 
                 pub sensors: Option<Vec<String>>,
             }
+
+            #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
+            pub struct GigantoConfig {
+                pub ingestion_ip: Option<IpAddr>,
+                pub ingestion_port: Option<PortNumber>,
+                pub publish_ip: Option<IpAddr>,
+                pub publish_port: Option<PortNumber>,
+                pub graphql_ip: Option<IpAddr>,
+                pub graphql_port: Option<PortNumber>,
+                pub retention_period: Option<u16>,
+            }
+
+            let mut giganto = None;
             let mut agents = vec![None, None, None];
             let status = crate::AgentStatus::Enabled;
             if let Some(s) = input.settings.as_ref() {
@@ -582,6 +582,13 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         status,
                     };
                     agents[2] = Some(agent);
+                }
+
+                if s.giganto {
+                    giganto = Some(Giganto {
+                        status: AgentStatus::Enabled,
+                        draft: None,
+                    });
                 }
             }
             if let Some(s) = input.settings_draft.as_ref() {
@@ -662,6 +669,22 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         });
                     }
                 }
+                if s.giganto {
+                    let draft = GigantoConfig {
+                        ingestion_ip: s.giganto_ingestion_ip,
+                        ingestion_port: s.giganto_ingestion_port,
+                        publish_ip: s.giganto_publish_ip,
+                        publish_port: s.giganto_publish_port,
+                        graphql_ip: s.giganto_graphql_ip,
+                        graphql_port: s.giganto_graphql_port,
+                        retention_period: s.retention_period,
+                    };
+                    let draft = Some(toml::to_string(&draft)?.try_into()?);
+                    giganto = Some(Giganto {
+                        status: AgentStatus::Enabled,
+                        draft,
+                    });
+                }
             }
             Ok(Self {
                 id: input.id,
@@ -670,6 +693,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                 profile: input.settings.map(std::convert::Into::into),
                 profile_draft: input.settings_draft.map(std::convert::Into::into),
                 agents: agents.into_iter().flatten().collect(),
+                giganto,
                 creation_time: input.creation_time,
             })
         }
