@@ -28,18 +28,19 @@ pub enum Role {
     SecurityMonitor,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
 pub struct Account {
     pub username: String,
-    password: SaltedPassword,
+    pub(crate) password: SaltedPassword,
     pub role: Role,
     pub name: String,
     pub department: String,
-    creation_time: DateTime<Utc>,
-    last_signin_time: Option<DateTime<Utc>>,
+    pub(crate) creation_time: DateTime<Utc>,
+    pub(crate) last_signin_time: Option<DateTime<Utc>>,
     pub allow_access_from: Option<Vec<IpAddr>>,
     pub max_parallel_sessions: Option<u32>,
-    password_hash_algorithm: PasswordHashAlgorithm,
+    pub(crate) password_hash_algorithm: PasswordHashAlgorithm,
+    pub(crate) password_last_modified_at: DateTime<Utc>,
 }
 
 impl Account {
@@ -61,17 +62,19 @@ impl Account {
     ) -> Result<Self> {
         let password =
             SaltedPassword::new_with_hash_algorithm(password, &Self::DEFAULT_HASH_ALGORITHM)?;
+        let now = Utc::now();
         Ok(Self {
             username: username.to_string(),
             password,
             role,
             name,
             department,
-            creation_time: Utc::now(),
+            creation_time: now,
             last_signin_time: None,
             allow_access_from,
             max_parallel_sessions,
             password_hash_algorithm: Self::DEFAULT_HASH_ALGORITHM,
+            password_last_modified_at: now,
         })
     }
 
@@ -85,6 +88,7 @@ impl Account {
         self.password =
             SaltedPassword::new_with_hash_algorithm(password, &Self::DEFAULT_HASH_ALGORITHM)?;
         self.password_hash_algorithm = Self::DEFAULT_HASH_ALGORITHM;
+        self.password_last_modified_at = Utc::now();
         Ok(())
     }
 
@@ -106,6 +110,11 @@ impl Account {
     pub fn last_signin_time(&self) -> Option<DateTime<Utc>> {
         self.last_signin_time
     }
+
+    #[must_use]
+    pub fn password_last_modified_at(&self) -> DateTime<Utc> {
+        self.password_last_modified_at
+    }
 }
 
 impl UniqueKey for Account {
@@ -124,8 +133,8 @@ impl Value for Account {
     }
 }
 
-#[derive(Default, Debug, Deserialize, Serialize, PartialEq)]
-enum PasswordHashAlgorithm {
+#[derive(Clone, Default, Debug, Deserialize, Serialize, PartialEq)]
+pub(crate) enum PasswordHashAlgorithm {
     #[default]
     Pbkdf2HmacSha512 = 0,
     Argon2id = 1,
@@ -138,8 +147,8 @@ enum HashAlgorithm {
     Argon2id,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-struct SaltedPassword {
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
+pub(crate) struct SaltedPassword {
     salt: Vec<u8>,
     hash: Vec<u8>,
     algorithm: HashAlgorithm,
@@ -305,6 +314,7 @@ mod tests {
             allow_access_from: None,
             max_parallel_sessions: None,
             password_hash_algorithm: PasswordHashAlgorithm::Pbkdf2HmacSha512,
+            password_last_modified_at: Utc::now(),
         };
         assert!(account.verify_password("password"));
         assert!(!account.verify_password("updated"));

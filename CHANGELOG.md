@@ -18,6 +18,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `Node::agents` to store `agents` of the `node`.
 - Introduced `Giganto` to store giganto status and draft configuration in
   `Node::giganto`.
+- Added `Account::password_last_modified_at` field to track the timestamp of
+  the last password modification for an account. This enhancement improves
+  security and audit capabilities by allowing users and administrators to monitor
+  when passwords were last updated.
 
 ### Changed
 

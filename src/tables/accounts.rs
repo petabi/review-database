@@ -141,6 +141,10 @@ impl<'d> Table<'d, Account> {
         }
         Ok(())
     }
+
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
+    }
 }
 
 #[cfg(test)]
