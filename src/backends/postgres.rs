@@ -383,19 +383,17 @@ impl ConnectionPool {
             .parse::<tokio_postgres::Config>()
             .map_err(|e| Error::InvalidInput(e.to_string()))?;
 
-        match config.get_ssl_mode() {
+        let pool_type = match config.get_ssl_mode() {
             SslMode::Require | SslMode::Prefer => {
-                let inner = ConnectionPoolType::build_tls_pool(url, config, db_root_ca).await?;
-                run_migrations(url)?;
-                Ok(Self { inner })
+                ConnectionPoolType::build_tls_pool(url, config, db_root_ca).await
             }
             _ => {
                 is_pg_ready(url, NoTls).await?;
-                let inner = ConnectionPoolType::build_notls_pool(config).await?;
-                run_migrations(url)?;
-                Ok(Self { inner })
+                ConnectionPoolType::build_notls_pool(config).await
             }
-        }
+        }?;
+        run_migrations(url)?;
+        Ok(Self { inner: pool_type })
     }
 
     pub async fn get(&self) -> Result<Connection<'_>, Error> {
