@@ -10,80 +10,73 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Introduced `Agent`, `AgentKind`, `AgentConfig` to describe data stored in
-  `Table<Agent>`. Each `Agent` is uniquely identified by the node id
-  `Agent::node` and node specific agent key `Agent::key`. And `AgentConfig`
-  includes the configuration string of an agent following TOML format.
-- Added new functions to facilitate insert, remove operations, ensuring a more
+  `Table<Agent>`.
+  - Each `Agent` is uniquely identified by the node id `Agent::node` and
+    node-specific agent key `Agent::key`.
+  - `AgentConfig` includes the configuration string of an agent following TOML
+    format.
+- Added new functions to facilitate insert and remove operations for more
   controlled and secure agent management.
 - Introduced `Node::agents` to store `agents` of the `node`.
 - Introduced `Giganto` to store giganto status and draft configuration in
   `Node::giganto`.
-- Added `Account::password_last_modified_at` field to track the timestamp of
-  the last password modification for an account. This enhancement improves
-  security and audit capabilities by allowing users and administrators to monitor
-  when passwords were last updated.
+- Added `Account::password_last_modified_at` field to track the timestamp of the
+  last password modification.
 
 ### Changed
 
-- Change the fields for events detected from the HTTP, SMTP, CONN, NTLM, SSH,
-  and TLS protocols.
-- Fixed to provide crypto libraries directly as `builder_with_provider` when
+- Updated fields for events detected from HTTP, SMTP, CONN, NTLM, SSH, and TLS
+  protocols.
+- Modified to provide crypto libraries directly as `builder_with_provider` when
   generating `rustls::ClientConfig`.
-- Change the display message format of `EventMessage` and `Event` to RFC5424.
+- Changed the display message format of `EventMessage` and `Event` to RFC 5424.
   Modified messages will be sent to syslog.
 
 ### Removed
 
-- `NodeSettings` is removed. Information stored in `Node::settings` and `Node::settings_draft`
-  are splitted.
-  - `NodeProfile`, reflects the information of node. `Node::profile` and
-    `Node::profile_draft` inherit node related information from `Node::settings`
-    and `Node::settings_draft` respectively.
-  - `Agent` related information is now stored in `Agent::config` and `Agent::draft`
-    as a TOML formattted string. The actual configuration should be defined and
-    maintained through UI.
-  - Giganto related settings in `Node::settings` are removed, those in `Node::settings_draft`
-    are stored in `Node::giganto::draft` as a TOML formatted string.
+- `NodeSettings` is removed. Information stored in `Node::settings` and
+  `Node::settings_draft` are split:
+  - `NodeProfile` reflects node information in `Node::profile` and
+    `Node::profile_draft`.
+  - Agent-related information is now stored in `Agent::config` and
+    `Agent::draft` as TOML-formatted strings.
+  - Giganto-related settings from `Node::settings` are removed; those in
+    `Node::settings_draft` are stored in `Node::giganto::draft` as
+    TOML-formatted strings.
 
 ### Fixed
 
-- Fix the `EventCategory` for the events
-  - Event `RdpBruteForce`: `Exfiltration` -> `Discovery`
-  - Event `HttpThreat`: `HttpThreat` -> `Reconnaissance`
+- Corrected `EventCategory` for events:
+  - `RdpBruteForce`: Changed from `Exfiltration` to `Discovery`.
+  - `HttpThreat`: Changed from `HttpThreat` to `Reconnaissance`.
 
 ## [0.28.0] - 2024-05-16
 
 ### Added
 
-- Introduced `OutlierInfoKey`, `OutlierInfoValue` to describe data stored in `Table<OutlierInfo>`.
-- Added new functions to facilitate insert, remove operations, ensuring a more
-  controlled and secure outlier info management.
-- Added `prefix_iter` to `Iterable` trait to offer a prefix iterator for database
-  table.
-- Added new functions to facilitate initialize, update and get operations,
-  ensuring a more controlled and secure account policy management.
-- Added `Table<AccessToken>::tokens` for accessing all the access tokens for given
-  `username`.
+- Introduced `OutlierInfoKey`, `OutlierInfoValue` to describe data stored in
+  `Table<OutlierInfo>`.
+- Added new functions for insert and remove operations in outlier info
+  management.
+- Added `prefix_iter` to `Iterable` trait for database table prefix iteration.
+- Added new functions for initialize, update, and get operations in account
+  policy management.
+- Added `Table<AccessToken>::tokens` for accessing all access tokens for a given
+  username.
 
 ### Changed
 
-- Changed the return type of `Store::outlier_map` to `Table<OutlierInfo>` to
-  enhance security by preventing direct exposure of internal structure.
-- Moved `OutlierInfo` from `crate::outlier` to `crate` in order to align with
-  other type definitions.
-- Included `model_id`, `timestamp` and `is_saved` fields in `OutlierInfo` to align
-  with other database table type definitions.
-- Changed the return type of `Store::account_policy_map` to `Table<AccountPlicy>`
-  to enhance security by preventing direct exposure of internal structure.
-- Removed redundant log messages in the backup module. Errors are now reported
-  through return values only, allowing callers to handle and log errors
-  according to their needs.
+- Changed return type of `Store::outlier_map` to `Table<OutlierInfo>`.
+- Moved `OutlierInfo` from `crate::outlier` to `crate`.
+- Included `model_id`, `timestamp`, and `is_saved` fields in `OutlierInfo`.
+- Changed return type of `Store::account_policy_map` to `Table<AccountPlicy>`.
+- Removed redundant log messages in the backup module.
 
 ### Removed
 
-- `PrefixMap` has been removed from code base, for table that needs a prefix iterator
-  use `prefix_iter` in `Iterable` trait instead.
-- `Map`, `IterableMap`, `MapIterator` have been hidden from the user to enhance security.
+- Removed `PrefixMap` from codebase. Use `prefix_iter` in `Iterable` trait
+  instead.
+- Hidden `Map`, `IterableMap`, `MapIterator` from users for enhanced security.
 
 ## [0.27.1] - 2024-04-15
 
