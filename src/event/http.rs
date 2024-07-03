@@ -316,7 +316,7 @@ impl Match for HttpThreat {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::HttpThreat
+        EventCategory::Reconnaissance
     }
 
     fn level(&self) -> NonZeroU8 {
