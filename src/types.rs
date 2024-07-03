@@ -1,8 +1,9 @@
-use std::{cmp::Ordering, convert::TryFrom, net::IpAddr, ops::RangeInclusive};
+use std::{cmp::Ordering, net::IpAddr, ops::RangeInclusive};
 
 use anyhow::Result;
 use chrono::{naive::serde::ts_nanoseconds_option, NaiveDateTime};
 use ipnet::IpNet;
+use num_derive::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use strum_macros::Display;
 
@@ -25,7 +26,19 @@ pub(crate) type Id = (Timestamp, Source);
 pub struct PretrainedModel(pub Vec<u8>);
 
 #[derive(
-    Debug, Display, Copy, Clone, Eq, Hash, PartialEq, Deserialize, Serialize, PartialOrd, Ord,
+    Debug,
+    Display,
+    Copy,
+    Clone,
+    Eq,
+    Hash,
+    PartialEq,
+    Deserialize,
+    Serialize,
+    PartialOrd,
+    Ord,
+    FromPrimitive,
+    ToPrimitive,
 )]
 #[repr(u8)]
 pub enum EventCategory {
@@ -39,33 +52,6 @@ pub enum EventCategory {
     Exfiltration,
     Impact,
     HttpThreat,
-}
-
-impl TryFrom<u8> for EventCategory {
-    type Error = &'static str;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        let category = match value {
-            1 => Self::Reconnaissance,
-            2 => Self::InitialAccess,
-            3 => Self::Execution,
-            4 => Self::CredentialAccess,
-            5 => Self::Discovery,
-            6 => Self::LateralMovement,
-            7 => Self::CommandAndControl,
-            8 => Self::Exfiltration,
-            9 => Self::Impact,
-            10 => Self::HttpThreat,
-            _ => return Err("Invalid event category"),
-        };
-        Ok(category)
-    }
-}
-
-impl From<EventCategory> for u8 {
-    fn from(value: EventCategory) -> Self {
-        value as Self
-    }
 }
 
 #[derive(Deserialize)]

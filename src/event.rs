@@ -1677,9 +1677,8 @@ impl From<&EventKind> for EventCategory {
 
             EventKind::HttpThreat => EventCategory::HttpThreat,
 
-            EventKind::RdpBruteForce | EventKind::RepeatedHttpSessions => {
-                EventCategory::Exfiltration
-            }
+            EventKind::RdpBruteForce => EventCategory::Discovery,
+            EventKind::RepeatedHttpSessions => EventCategory::Exfiltration,
 
             EventKind::FtpBruteForce | EventKind::LdapBruteForce => EventCategory::CredentialAccess,
             EventKind::FtpPlainText | EventKind::LdapPlainText => EventCategory::LateralMovement,
@@ -3839,7 +3838,7 @@ mod tests {
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Exfiltration" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:10:02+00:00" proto="6""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:10:02+00:00" proto="6""#
         );
 
         let rdp_brute_force = Event::RdpBruteForce(crate::RdpBruteForce::new(
@@ -3850,7 +3849,7 @@ mod tests {
 
         assert_eq!(
             &rdp_brute_force,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Exfiltration" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:10:02+00:00" proto="6" triage_scores="""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:10:02+00:00" proto="6" triage_scores="""#
         );
     }
 
