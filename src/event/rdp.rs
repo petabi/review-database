@@ -90,7 +90,7 @@ impl Match for RdpBruteForce {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Exfiltration
+        EventCategory::Discovery
     }
 
     fn level(&self) -> NonZeroU8 {

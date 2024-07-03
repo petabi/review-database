@@ -43,6 +43,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - Giganto related settings in `Node::settings` are removed, those in `Node::settings_draft`
     are stored in `Node::giganto::draft` as a TOML formatted string.
 
+### Fixed
+
+- Fix the `EventCategory` for the events
+  - Event `RdpBruteForce`: `Exfiltration` -> `Discovery`
+  - Event `HttpThreat`: `HttpThreat` -> `Reconnaissance`
+
 ## [0.28.0] - 2024-05-16
 
 ### Added

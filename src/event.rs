@@ -659,174 +659,174 @@ impl Event {
         match self {
             Event::DnsCovertChannel(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::CommandAndControl);
+                    category = Some(event.category());
                 }
             }
             Event::HttpThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Reconnaissance);
+                    category = Some(event.category());
                 }
             }
             Event::RdpBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Discovery);
+                    category = Some(event.category());
                 }
             }
             Event::RepeatedHttpSessions(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Exfiltration);
+                    category = Some(event.category());
                 }
             }
             Event::TorConnection(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::CommandAndControl);
+                    category = Some(event.category());
                 }
             }
             Event::DomainGenerationAlgorithm(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::CommandAndControl);
+                    category = Some(event.category());
                 }
             }
             Event::FtpBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::CredentialAccess);
+                    category = Some(event.category());
                 }
             }
             Event::FtpPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::LateralMovement);
+                    category = Some(event.category());
                 }
             }
             Event::PortScan(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Reconnaissance);
+                    category = Some(event.category());
                 }
             }
             Event::MultiHostPortScan(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Reconnaissance);
+                    category = Some(event.category());
                 }
             }
             Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Impact);
+                    category = Some(event.category());
                 }
             }
             Event::NonBrowser(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::CommandAndControl);
+                    category = Some(event.category());
                 }
             }
             Event::LdapBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::CredentialAccess);
+                    category = Some(event.category());
                 }
             }
             Event::LdapPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::LateralMovement);
+                    category = Some(event.category());
                 }
             }
             Event::CryptocurrencyMiningPool(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::CommandAndControl);
+                    category = Some(event.category());
                 }
             }
             Event::BlockList(record_type) => match record_type {
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(conn_event.category());
                     }
                 }
                 RecordType::Dns(dns_event) => {
                     if dns_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(dns_event.category());
                     }
                 }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(dcerpc_event.category());
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
                     if ftp_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(ftp_event.category());
                     }
                 }
                 RecordType::Http(http_event) => {
                     if http_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(http_event.category());
                     }
                 }
                 RecordType::Kerberos(kerberos_event) => {
                     if kerberos_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(kerberos_event.category());
                     }
                 }
                 RecordType::Ldap(ldap_event) => {
                     if ldap_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(ldap_event.category());
                     }
                 }
                 RecordType::Mqtt(mqtt_event) => {
                     if mqtt_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(mqtt_event.category());
                     }
                 }
                 RecordType::Nfs(nfs_event) => {
                     if nfs_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(nfs_event.category());
                     }
                 }
                 RecordType::Ntlm(ntlm_event) => {
                     if ntlm_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(ntlm_event.category());
                     }
                 }
                 RecordType::Rdp(rdp_event) => {
                     if rdp_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(rdp_event.category());
                     }
                 }
                 RecordType::Smb(smb_event) => {
                     if smb_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(smb_event.category());
                     }
                 }
                 RecordType::Smtp(smtp_event) => {
                     if smtp_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(smtp_event.category());
                     }
                 }
                 RecordType::Ssh(ssh_event) => {
                     if ssh_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(ssh_event.category());
                     }
                 }
                 RecordType::Tls(tls_event) => {
                     if tls_event.matches(locator, filter)?.0 {
-                        category = Some(EventCategory::InitialAccess);
+                        category = Some(tls_event.category());
                     }
                 }
             },
             Event::WindowsThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Impact);
+                    category = Some(event.category());
                 }
             }
             Event::NetworkThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Reconnaissance);
+                    category = Some(event.category());
                 }
             }
             Event::ExtraThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Reconnaissance);
+                    category = Some(event.category());
                 }
             }
             Event::LockyRansomware(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(EventCategory::Impact);
+                    category = Some(event.category());
                 }
             }
         };
