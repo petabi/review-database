@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use std::{cmp::Ordering, net::IpAddr, ops::RangeInclusive};
 
 use anyhow::Result;
@@ -42,6 +43,7 @@ pub struct PretrainedModel(pub Vec<u8>);
 )]
 #[repr(u8)]
 pub enum EventCategory {
+    Unknown = 0,
     Reconnaissance = 1,
     InitialAccess,
     Execution,
@@ -51,6 +53,7 @@ pub enum EventCategory {
     CommandAndControl,
     Exfiltration,
     Impact,
+    #[deprecated(note = "Users should use `EventCategory::Reconnaissance` instead")]
     HttpThreat,
 }
 

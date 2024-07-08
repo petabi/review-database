@@ -78,8 +78,8 @@ pub use self::{
     tor::{TorConnection, TorConnectionFields},
 };
 use super::{
-    types::{Endpoint, EventCategory, HostNetworkGroup},
-    Customer, Network, TriagePolicy,
+    types::{Endpoint, HostNetworkGroup},
+    Customer, EventCategory, Network, TriagePolicy,
 };
 
 // event levels (currently unused ones commented out)
@@ -1675,8 +1675,6 @@ impl From<&EventKind> for EventCategory {
             | EventKind::NonBrowser
             | EventKind::CryptocurrencyMiningPool => EventCategory::CommandAndControl,
 
-            EventKind::HttpThreat => EventCategory::HttpThreat,
-
             EventKind::RdpBruteForce => EventCategory::Discovery,
             EventKind::RepeatedHttpSessions => EventCategory::Exfiltration,
 
@@ -1699,7 +1697,8 @@ impl From<&EventKind> for EventCategory {
             | EventKind::BlockListSsh
             | EventKind::BlockListTls => EventCategory::InitialAccess,
 
-            EventKind::PortScan
+            EventKind::HttpThreat
+            | EventKind::PortScan
             | EventKind::MultiHostPortScan
             | EventKind::NetworkThreat
             | EventKind::ExtraThreat => EventCategory::Reconnaissance,
@@ -1869,7 +1868,7 @@ impl fmt::Display for EventMessage {
             "time={:?} event_kind={:?} category={:?} ",
             self.time.to_rfc3339(),
             format!("{:?}", self.kind),
-            EventCategory::from(&self.kind).to_string()
+            format!("{:?}", EventCategory::from(&self.kind))
         )?;
         let _r = match self.kind {
             EventKind::DnsCovertChannel => bincode::deserialize::<DnsEventFields>(&self.fields)
@@ -2492,13 +2491,13 @@ mod tests {
             NonBrowserFields, PortScanFields, RdpBruteForceFields, TorConnectionFields,
             LOCKY_RANSOMWARE,
         },
+        types::EventCategory,
         BlockListConnFields, BlockListDceRpcFields, BlockListDnsFields, BlockListFtpFields,
         BlockListHttp, BlockListHttpFields, BlockListKerberosFields, BlockListLdapFields,
         BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields, BlockListRdpFields,
         BlockListSmbFields, BlockListSmtpFields, BlockListSshFields, BlockListTlsFields,
-        DomainGenerationAlgorithm, Event, EventCategory, EventFilter, EventKind, EventMessage,
-        ExternalDdos, ExtraThreat, HttpThreat, NetworkThreat, RecordType, Store, TriageScore,
-        WindowsThreat,
+        DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
+        ExtraThreat, HttpThreat, NetworkThreat, RecordType, Store, TriageScore, WindowsThreat,
     };
 
     fn example_message(kind: EventKind) -> EventMessage {
@@ -2789,7 +2788,7 @@ mod tests {
         let syslog_message = format!("{msg}");
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="HttpThreat" category="HttpThreat" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" duration="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" db_name="db" rule_id="12000" matched_to="match" cluster_id="1111" attack_kind="attack" confidence="0.8""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="HttpThreat" category="Reconnaissance" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" duration="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" db_name="db" rule_id="12000" matched_to="match" cluster_id="1111" attack_kind="attack" confidence="0.8""#
         );
 
         let http_threat =
