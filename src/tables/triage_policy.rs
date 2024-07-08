@@ -7,7 +7,10 @@ use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
+use crate::{
+    types::{EventCategory, FromKeyValue},
+    Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct TriagePolicy {
@@ -172,7 +175,7 @@ impl Ord for PacketAttr {
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
 pub struct Confidence {
-    pub threat_category: crate::EventCategory,
+    pub threat_category: EventCategory,
     pub threat_kind: String,
     pub confidence: f64,
     pub weight: Option<f64>,

@@ -33,6 +33,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   Modified messages will be sent to syslog.
 - Used `FromPrimitive` and `ToPrimitive` for converting `EventCategory` instead of
   manually implementing `TryFrom`.
+- `EventCategory` definition is moved to `review-protocol`.
 
 ### Removed
 
@@ -51,6 +52,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Corrected `EventCategory` for events:
   - `RdpBruteForce`: Changed from `Exfiltration` to `Discovery`.
   - `HttpThreat`: Changed from `HttpThreat` to `Reconnaissance`.
+
+### Deprecated
+
+- `EventCategory::HttpThreat` is deprecated and replaced with `Reconnaissance`.
+  After the modification of all programs using `EventCategory::HttpThreat`
+  are completed, the `HttpThreat` category will be deleted.
 
 ## [0.28.0] - 2024-05-16
 

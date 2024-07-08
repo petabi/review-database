@@ -164,7 +164,7 @@ pub(super) trait Match {
             let category = self.category();
             if learning_methods.iter().all(|learning_method| {
                 let unsuper = matches!(*learning_method, LearningMethod::Unsupervised);
-                let http = matches!(category, EventCategory::HttpThreat);
+                let http = matches!(category, EventCategory::Reconnaissance);
                 unsuper && !http || !unsuper && http
             }) {
                 return Ok((false, None));
