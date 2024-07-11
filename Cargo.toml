@@ -1,6 +1,6 @@
 [package]
 name = "review-database"
-version = "0.29.0-alpha.6"
+version = "0.29.0-alpha.7"
 edition = "2021"
 
 [dependencies]
@@ -23,6 +23,8 @@ diesel_migrations = "2"
 fallible-iterator = "0.2" # should be the same version as what postgres-protocol depends on
 flate2 = "1.0"
 futures = "0.3"
+humantime = "2.1"
+humantime-serde = "1"
 ip2location = "0.5"
 ipnet = { version = "2", features = ["serde"] }
 num-derive = "0.4"

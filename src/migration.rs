@@ -6,8 +6,9 @@ mod migration_structures;
 use std::{
     fs::{create_dir_all, File},
     io::{Read, Write},
-    net::IpAddr,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use anyhow::{anyhow, Context, Result};
@@ -37,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.6,<=0.29.0-alpha.6";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.7,<=0.29.0-alpha.7";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -363,105 +364,6 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
         pub sensors: bool,
         pub sensor_list: HashMap<String, bool>,
     }
-    #[allow(clippy::struct_excessive_bools)]
-    #[derive(Clone, Default, Deserialize, Serialize, PartialEq)]
-    pub struct NodeSettings {
-        pub customer_id: u32,
-        pub description: String,
-        pub hostname: String,
-
-        pub piglet: bool,
-        pub piglet_giganto_ip: Option<IpAddr>,
-        pub piglet_giganto_port: Option<PortNumber>,
-        pub save_packets: bool,
-        pub http: bool,
-        pub office: bool,
-        pub exe: bool,
-        pub pdf: bool,
-        pub vbs: bool,
-        pub txt: bool,
-        pub smtp_eml: bool,
-        pub ftp: bool,
-
-        pub giganto: bool,
-        pub giganto_ingestion_ip: Option<IpAddr>,
-        pub giganto_ingestion_port: Option<PortNumber>,
-        pub giganto_publish_ip: Option<IpAddr>,
-        pub giganto_publish_port: Option<PortNumber>,
-        pub giganto_graphql_ip: Option<IpAddr>,
-        pub giganto_graphql_port: Option<PortNumber>,
-        pub retention_period: Option<u16>,
-
-        pub reconverge: bool,
-
-        pub hog: bool,
-        pub hog_giganto_ip: Option<IpAddr>,
-        pub hog_giganto_port: Option<PortNumber>,
-        pub protocols: Option<Vec<String>>,
-
-        pub sensors: Option<Vec<String>>,
-    }
-    impl From<OldNodeSettings> for NodeSettings {
-        fn from(input: OldNodeSettings) -> Self {
-            let txt = input.html || input.txt;
-
-            let protocols = if input.protocol_list.is_empty() {
-                None
-            } else {
-                let mut list: Vec<String> = input
-                    .protocol_list
-                    .into_iter()
-                    .filter_map(|(k, v)| if v { Some(k) } else { None })
-                    .collect();
-                list.sort_unstable();
-                Some(list)
-            };
-
-            let sensors = if input.sensor_list.is_empty() {
-                None
-            } else {
-                let mut list: Vec<String> = input
-                    .sensor_list
-                    .into_iter()
-                    .filter_map(|(k, v)| if v { Some(k) } else { None })
-                    .collect();
-                list.sort_unstable();
-                Some(list)
-            };
-
-            Self {
-                customer_id: input.customer_id,
-                description: input.description,
-                hostname: input.hostname,
-                piglet: input.piglet,
-                piglet_giganto_ip: input.piglet_giganto_ip,
-                piglet_giganto_port: input.piglet_giganto_port,
-                save_packets: input.save_packets,
-                http: input.http,
-                office: input.office,
-                exe: input.exe,
-                pdf: input.pdf,
-                txt,
-                vbs: false,
-                smtp_eml: input.smtp_eml,
-                ftp: input.ftp,
-                giganto: input.giganto,
-                giganto_ingestion_ip: input.giganto_ingestion_ip,
-                giganto_ingestion_port: input.giganto_ingestion_port,
-                giganto_publish_ip: input.giganto_publish_ip,
-                giganto_publish_port: input.giganto_publish_port,
-                giganto_graphql_ip: input.giganto_graphql_ip,
-                giganto_graphql_port: input.giganto_graphql_port,
-                retention_period: input.retention_period,
-                reconverge: input.reconverge,
-                hog: input.hog,
-                hog_giganto_ip: input.hog_giganto_ip,
-                hog_giganto_port: input.hog_giganto_port,
-                protocols,
-                sensors,
-            }
-        }
-    }
 
     impl From<OldNodeSettings> for NodeProfile {
         fn from(input: OldNodeSettings) -> Self {
@@ -477,63 +379,44 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
         type Error = anyhow::Error;
 
         fn try_from(input: OldNode) -> Result<Self, Self::Error> {
-            #[allow(clippy::struct_excessive_bools)]
-            #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
-            struct Piglet {
-                pub giganto_ip: Option<IpAddr>,
-                pub giganto_port: Option<PortNumber>,
-                pub save_packets: bool,
-                pub office: bool,
-                pub exe: bool,
-                pub pdf: bool,
-                pub vbs: bool,
-                pub txt: bool,
-                pub smtp_eml: bool,
-                pub ftp: bool,
-            }
-
-            #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
-            struct Hog {
-                pub giganto_ip: Option<IpAddr>,
-                pub giganto_port: Option<PortNumber>,
-                pub protocols: Option<Vec<String>>,
-
-                pub sensors: Option<Vec<String>>,
-            }
-
-            #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
-            pub struct GigantoConfig {
-                pub ingestion_ip: Option<IpAddr>,
-                pub ingestion_port: Option<PortNumber>,
-                pub publish_ip: Option<IpAddr>,
-                pub publish_port: Option<PortNumber>,
-                pub graphql_ip: Option<IpAddr>,
-                pub graphql_port: Option<PortNumber>,
-                pub retention_period: Option<u16>,
-            }
+            use migration_structures::{
+                DumpHttpContentType, DumpItem, GigantoConfig, HogConfig, PigletConfig,
+                ProtocolForHog,
+            };
 
             let mut giganto = None;
             let mut agents = vec![None, None, None];
             let status = crate::AgentStatus::Enabled;
             if let Some(s) = input.settings.as_ref() {
                 if s.hog {
-                    let config = Hog {
-                        giganto_ip: s.hog_giganto_ip,
-                        giganto_port: s.hog_giganto_port,
-                        protocols: if s.protocols {
+                    let config = HogConfig {
+                        active_protocols: if s.protocols {
                             let mut list: Vec<_> = s.protocol_list.keys().cloned().collect();
                             list.sort_unstable();
-                            Some(list)
+
+                            let res_list = list
+                                .into_iter()
+                                .filter_map(|s| ProtocolForHog::from_str(&s).ok())
+                                .collect();
+                            Some(res_list)
                         } else {
-                            None
+                            Some(Vec::new())
                         },
-                        sensors: if s.sensors {
+                        active_sources: if s.sensors {
                             let mut list: Vec<_> = s.sensor_list.keys().cloned().collect();
                             list.sort_unstable();
                             Some(list)
                         } else {
-                            None
+                            Some(Vec::new())
                         },
+                        giganto_publish_srv_addr: s.hog_giganto_ip.map(|ip| {
+                            let port = s.hog_giganto_port.unwrap_or(u16::MIN);
+                            SocketAddr::new(ip, port)
+                        }),
+                        cryptocurrency_mining_pool: String::new(),
+                        log_dir: String::new(),
+                        export_dir: String::new(),
+                        services_path: String::new(),
                     };
                     let config = toml::to_string(&config)?.try_into()?;
                     let agent = Agent {
@@ -548,17 +431,65 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                 }
 
                 if s.piglet {
-                    let config = Piglet {
-                        giganto_ip: s.piglet_giganto_ip,
-                        giganto_port: s.piglet_giganto_port,
-                        save_packets: s.save_packets,
-                        office: s.office,
-                        exe: s.exe,
-                        pdf: s.pdf,
-                        vbs: false,
-                        txt: s.http || s.txt,
-                        smtp_eml: s.smtp_eml,
-                        ftp: s.ftp,
+                    let config = PigletConfig {
+                        dpdk_args: String::new(),
+                        dpdk_input: Vec::new(),
+                        dpdk_output: Vec::new(),
+                        src_mac: String::new(),
+                        dst_mac: String::new(),
+                        log_dir: String::new(),
+                        dump_dir: String::new(),
+                        dump_items: {
+                            let mut list = Vec::new();
+                            if s.save_packets {
+                                list.push(DumpItem::Pcap);
+                            }
+                            if s.http {
+                                list.push(DumpItem::Http);
+                            }
+                            if s.smtp_eml {
+                                list.push(DumpItem::Eml);
+                            }
+                            if s.ftp {
+                                list.push(DumpItem::Ftp);
+                            }
+
+                            if list.is_empty() {
+                                Some(Vec::new())
+                            } else {
+                                Some(list)
+                            }
+                        },
+                        dump_http_content_types: {
+                            let mut list = Vec::new();
+                            if s.html || s.txt {
+                                list.push(DumpHttpContentType::Txt);
+                            }
+                            if s.office {
+                                list.push(DumpHttpContentType::Office);
+                            }
+                            if s.exe {
+                                list.push(DumpHttpContentType::Exe);
+                            }
+                            if s.pdf {
+                                list.push(DumpHttpContentType::Pdf);
+                            }
+
+                            if list.is_empty() {
+                                Some(Vec::new())
+                            } else {
+                                Some(list)
+                            }
+                        },
+                        giganto_ingest_srv_addr: s.piglet_giganto_ip.map_or(
+                            SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), u16::MIN),
+                            |ip| {
+                                let port = s.piglet_giganto_port.unwrap_or(u16::MIN);
+                                SocketAddr::new(ip, port)
+                            },
+                        ),
+                        giganto_name: String::new(),
+                        pcap_max_size: u32::MAX,
                     };
                     let config = toml::to_string(&config)?.try_into()?;
                     let agent = Agent {
@@ -594,23 +525,34 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
             }
             if let Some(s) = input.settings_draft.as_ref() {
                 if s.hog {
-                    let draft = Hog {
-                        giganto_ip: s.hog_giganto_ip,
-                        giganto_port: s.hog_giganto_port,
-                        protocols: if s.protocols {
+                    let draft = HogConfig {
+                        active_protocols: if s.protocols {
                             let mut list: Vec<_> = s.protocol_list.keys().cloned().collect();
                             list.sort_unstable();
-                            Some(list)
+
+                            let res_list = list
+                                .into_iter()
+                                .filter_map(|s| ProtocolForHog::from_str(&s).ok())
+                                .collect();
+                            Some(res_list)
                         } else {
-                            None
+                            Some(Vec::new())
                         },
-                        sensors: if s.sensors {
+                        active_sources: if s.sensors {
                             let mut list: Vec<_> = s.sensor_list.keys().cloned().collect();
                             list.sort_unstable();
                             Some(list)
                         } else {
-                            None
+                            Some(Vec::new())
                         },
+                        giganto_publish_srv_addr: s.hog_giganto_ip.map(|ip| {
+                            let port = s.hog_giganto_port.unwrap_or(u16::MIN);
+                            SocketAddr::new(ip, port)
+                        }),
+                        cryptocurrency_mining_pool: String::new(),
+                        log_dir: String::new(),
+                        export_dir: String::new(),
+                        services_path: String::new(),
                     };
                     let draft = toml::to_string(&draft)?.try_into()?;
                     if let Some(a) = &mut agents[0] {
@@ -628,17 +570,65 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                 }
 
                 if s.piglet {
-                    let draft = Piglet {
-                        giganto_ip: s.piglet_giganto_ip,
-                        giganto_port: s.piglet_giganto_port,
-                        save_packets: s.save_packets,
-                        office: s.office,
-                        exe: s.exe,
-                        pdf: s.pdf,
-                        vbs: false,
-                        txt: s.http || s.txt,
-                        smtp_eml: s.smtp_eml,
-                        ftp: s.ftp,
+                    let draft = PigletConfig {
+                        dpdk_args: String::new(),
+                        dpdk_input: Vec::new(),
+                        dpdk_output: Vec::new(),
+                        src_mac: String::new(),
+                        dst_mac: String::new(),
+                        log_dir: String::new(),
+                        dump_dir: String::new(),
+                        dump_items: {
+                            let mut list = Vec::new();
+                            if s.save_packets {
+                                list.push(DumpItem::Pcap);
+                            }
+                            if s.http {
+                                list.push(DumpItem::Http);
+                            }
+                            if s.smtp_eml {
+                                list.push(DumpItem::Eml);
+                            }
+                            if s.ftp {
+                                list.push(DumpItem::Ftp);
+                            }
+
+                            if list.is_empty() {
+                                Some(Vec::new())
+                            } else {
+                                Some(list)
+                            }
+                        },
+                        dump_http_content_types: {
+                            let mut list = Vec::new();
+                            if s.html || s.txt {
+                                list.push(DumpHttpContentType::Txt);
+                            }
+                            if s.office {
+                                list.push(DumpHttpContentType::Office);
+                            }
+                            if s.exe {
+                                list.push(DumpHttpContentType::Exe);
+                            }
+                            if s.pdf {
+                                list.push(DumpHttpContentType::Pdf);
+                            }
+
+                            if list.is_empty() {
+                                Some(Vec::new())
+                            } else {
+                                Some(list)
+                            }
+                        },
+                        giganto_ingest_srv_addr: s.piglet_giganto_ip.map_or(
+                            SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), u16::MIN),
+                            |ip| {
+                                let port = s.piglet_giganto_port.unwrap_or(u16::MIN);
+                                SocketAddr::new(ip, port)
+                            },
+                        ),
+                        giganto_name: String::new(),
+                        pcap_max_size: u32::MAX,
                     };
                     let draft = toml::to_string(&draft)?.try_into()?;
                     if let Some(a) = &mut agents[1] {
@@ -672,13 +662,39 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                 }
                 if s.giganto {
                     let draft = GigantoConfig {
-                        ingestion_ip: s.giganto_ingestion_ip,
-                        ingestion_port: s.giganto_ingestion_port,
-                        publish_ip: s.giganto_publish_ip,
-                        publish_port: s.giganto_publish_port,
-                        graphql_ip: s.giganto_graphql_ip,
-                        graphql_port: s.giganto_graphql_port,
-                        retention_period: s.retention_period,
+                        ingest_srv_addr: s.giganto_ingestion_ip.map_or(
+                            SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), u16::MIN),
+                            |ip| {
+                                let port = s.giganto_ingestion_port.unwrap_or(u16::MIN);
+                                SocketAddr::new(ip, port)
+                            },
+                        ),
+                        publish_srv_addr: s.giganto_publish_ip.map_or(
+                            SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), u16::MIN),
+                            |ip| {
+                                let port = s.giganto_publish_port.unwrap_or(u16::MIN);
+                                SocketAddr::new(ip, port)
+                            },
+                        ),
+                        graphql_srv_addr: s.giganto_graphql_ip.map_or(
+                            SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), u16::MIN),
+                            |ip| {
+                                let port = s.giganto_graphql_port.unwrap_or(u16::MIN);
+                                SocketAddr::new(ip, port)
+                            },
+                        ),
+                        data_dir: String::new(),
+                        log_dir: String::new(),
+                        export_dir: String::new(),
+                        retention: {
+                            let dur_str = format!("{}d", s.retention_period.unwrap_or(u16::MAX));
+                            humantime::parse_duration(&dur_str)?
+                        },
+                        max_open_files: i32::MAX,
+                        max_mb_of_level_base: u64::MIN,
+                        num_of_thread: i32::MAX,
+                        max_sub_compactions: u32::MAX,
+                        ack_transmission: u16::MAX,
                     };
                     let draft = Some(toml::to_string(&draft)?.try_into()?);
                     giganto = Some(Giganto {
@@ -2003,22 +2019,9 @@ mod tests {
         use chrono::{DateTime, Utc};
         use serde::{Deserialize, Serialize};
 
-        use crate::{collections::Indexed, Indexable};
-
-        #[allow(clippy::struct_excessive_bools)]
-        #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
-        struct Piglet {
-            pub giganto_ip: Option<IpAddr>,
-            pub giganto_port: Option<PortNumber>,
-            pub save_packets: bool,
-            pub office: bool,
-            pub exe: bool,
-            pub pdf: bool,
-            pub vbs: bool,
-            pub txt: bool,
-            pub smtp_eml: bool,
-            pub ftp: bool,
-        }
+        use crate::{
+            collections::Indexed, migration::migration_structures::PigletConfig, Indexable,
+        };
 
         #[derive(Clone, Deserialize, Serialize)]
         pub struct OldNode {
@@ -2184,8 +2187,9 @@ mod tests {
         assert_eq!(new_node.agents[1].key, "piglet");
         assert!(new_node.agents[1].config.is_none());
         let draft = new_node.agents[1].draft.clone().unwrap();
-        let piglet: Piglet = toml::from_str(draft.as_ref()).unwrap();
-        assert!(!piglet.vbs);
+        let piglet: PigletConfig = toml::from_str(draft.as_ref()).unwrap();
+        assert!(piglet.dump_items.is_some());
+        assert!(piglet.dump_http_content_types.is_some_and(|v| v.is_empty()));
     }
 
     #[test]
