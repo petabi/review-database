@@ -687,8 +687,8 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         log_dir: String::new(),
                         export_dir: String::new(),
                         retention: {
-                            let dur_str = format!("{}d", s.retention_period.unwrap_or(u16::MAX));
-                            humantime::parse_duration(&dur_str)?
+                            let days = u64::from(s.retention_period.unwrap_or(u16::MAX));
+                            std::time::Duration::from_secs(days * 24 * 60 * 60)
                         },
                         max_open_files: i32::MAX,
                         max_mb_of_level_base: u64::MIN,
