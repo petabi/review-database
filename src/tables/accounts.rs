@@ -169,6 +169,7 @@ mod tests {
             "Department 1".to_string(),
             None,
             None,
+            None,
         )
         .unwrap();
         table.put(&acc1).unwrap();
@@ -180,6 +181,7 @@ mod tests {
             Role::SystemAdministrator,
             "User 2".to_string(),
             "Department 2".to_string(),
+            None,
             None,
             None,
         )
@@ -211,6 +213,7 @@ mod tests {
             "Department 1".to_string(),
             None,
             None,
+            None,
         )
         .unwrap();
         table.put(&acc1).unwrap();
@@ -226,6 +229,7 @@ mod tests {
             Role::SystemAdministrator,
             "User 2".to_string(),
             "Department 2".to_string(),
+            None,
             None,
             None,
         )

@@ -22,6 +22,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `Node::giganto`.
 - Added `Account::password_last_modified_at` field to track the timestamp of the
   last password modification.
+- Added `Account::language` field to represent user's selected language on the
+  user interface.
 
 ### Changed
 

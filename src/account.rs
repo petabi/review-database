@@ -35,6 +35,7 @@ pub struct Account {
     pub role: Role,
     pub name: String,
     pub department: String,
+    pub language: Option<String>,
     pub(crate) creation_time: DateTime<Utc>,
     pub(crate) last_signin_time: Option<DateTime<Utc>>,
     pub allow_access_from: Option<Vec<IpAddr>>,
@@ -51,12 +52,14 @@ impl Account {
     /// # Errors
     ///
     /// Returns an error if account creation fails.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         username: &str,
         password: &str,
         role: Role,
         name: String,
         department: String,
+        language: Option<String>,
         allow_access_from: Option<Vec<IpAddr>>,
         max_parallel_sessions: Option<u32>,
     ) -> Result<Self> {
@@ -69,6 +72,7 @@ impl Account {
             role,
             name,
             department,
+            language,
             creation_time: now,
             last_signin_time: None,
             allow_access_from,
@@ -283,6 +287,7 @@ mod tests {
             String::new(),
             None,
             None,
+            None,
         );
         assert!(account.is_ok());
 
@@ -298,7 +303,7 @@ mod tests {
     }
 
     #[test]
-    fn account_passowrd_update() {
+    fn account_password_update() {
         let mut account = Account {
             username: "test".to_string(),
             password: SaltedPassword::new_with_hash_algorithm(
@@ -309,6 +314,7 @@ mod tests {
             role: Role::SecurityAdministrator,
             department: String::new(),
             name: String::new(),
+            language: None,
             creation_time: Utc::now(),
             last_signin_time: None,
             allow_access_from: None,
