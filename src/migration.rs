@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.7,<=0.29.0-alpha.7";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0-alpha.8,<=0.29.0-alpha.8";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -769,6 +769,7 @@ fn migrate_0_29_account(store: &super::Store) -> Result<()> {
                 role: input.role,
                 name: input.name,
                 department: input.department,
+                language: None,
                 creation_time: input.creation_time,
                 last_signin_time: input.last_signin_time,
                 allow_access_from: input.allow_access_from,
@@ -2225,6 +2226,7 @@ mod tests {
                     role: input.role,
                     name: input.name,
                     department: input.department,
+                    language: None,
                     creation_time: input.creation_time,
                     last_signin_time: input.last_signin_time,
                     allow_access_from: input.allow_access_from,
@@ -2262,6 +2264,7 @@ mod tests {
             Role::SecurityAdministrator,
             "name".to_string(),
             "department".to_string(),
+            None,
             None,
             None,
         )
