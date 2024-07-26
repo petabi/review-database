@@ -11,6 +11,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Extended the `Table<'d, Account>::update` method signature to include the
   `language` parameter, enabling language updates alongside existing fields.
+- Added `category` field to TI db and TI rules.
 
 ## [0.29.1] - 2024-08-05
 

@@ -8,7 +8,7 @@ use flate2::read::GzDecoder;
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, Iterable, Map, Table, UniqueKey};
+use crate::{types::FromKeyValue, EventCategory, Iterable, Map, Table, UniqueKey};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Tidb {
@@ -16,6 +16,7 @@ pub struct Tidb {
     pub name: String,
     pub description: Option<String>,
     pub kind: Kind,
+    pub category: EventCategory,
     pub version: String,
     pub patterns: Vec<Rule>,
 }
@@ -64,6 +65,7 @@ impl Tidb {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Rule {
     pub rule_id: u32,
+    pub category: EventCategory,
     pub name: String,
     pub description: Option<String>,
     pub references: Option<Vec<String>>,
@@ -206,6 +208,10 @@ impl<'d> Table<'d, Tidb> {
     pub fn remove(&self, name: &str) -> Result<()> {
         self.map.delete(name.as_bytes())
     }
+
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
+    }
 }
 
 #[cfg(test)]
@@ -281,6 +287,7 @@ mod tests {
             name: name.to_string(),
             description: None,
             kind: super::Kind::Regex,
+            category: crate::EventCategory::Reconnaissance,
             version: "1".to_string(),
             patterns: vec![],
         }

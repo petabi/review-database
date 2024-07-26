@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.29.0,<0.30.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">0.29.1,<=0.30.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -131,6 +131,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.29.1")?,
             migrate_0_28_to_0_29_0,
         ),
+        (
+            VersionReq::parse(">=0.29.1,<0.30.0-alpha.1")?,
+            Version::parse("0.30.0-alpha.1")?,
+            migrate_0_29_to_0_30_0,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -204,6 +209,85 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_29_to_0_30_0(store: &super::Store) -> Result<()> {
+    migrate_0_30_tidb(store)
+}
+
+fn migrate_0_30_tidb(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
+    use crate::EventCategory;
+    use crate::{Tidb, TidbKind, TidbRule};
+    #[derive(Clone, Deserialize, Serialize)]
+    struct OldTidb {
+        pub id: u32,
+        pub name: String,
+        pub description: Option<String>,
+        pub kind: TidbKind,
+        pub version: String,
+        pub patterns: Vec<OldRule>,
+    }
+
+    #[derive(Clone, Deserialize, Serialize)]
+    struct OldRule {
+        pub rule_id: u32,
+        pub name: String,
+        pub description: Option<String>,
+        pub references: Option<Vec<String>>,
+        pub samples: Option<Vec<String>>,
+        pub signatures: Option<Vec<String>>,
+    }
+
+    impl TryFrom<(OldTidb, EventCategory)> for Tidb {
+        type Error = anyhow::Error;
+
+        fn try_from((input, category): (OldTidb, EventCategory)) -> Result<Self, Self::Error> {
+            Ok(Self {
+                id: input.id,
+                name: input.name,
+                description: input.description,
+                kind: input.kind,
+                category,
+                version: input.version,
+                patterns: input
+                    .patterns
+                    .into_iter()
+                    .map(|rule| TidbRule {
+                        rule_id: rule.rule_id,
+                        category,
+                        name: rule.name,
+                        description: rule.description,
+                        references: rule.references,
+                        samples: rule.samples,
+                        signatures: rule.signatures,
+                    })
+                    .collect(),
+            })
+        }
+    }
+
+    let map = store.tidb_map();
+    let raw = map.raw();
+    let mut tidbs = vec![];
+    for (key, value) in raw.iter_forward()? {
+        let old_tidb: OldTidb = bincode::DefaultOptions::new().deserialize(value.as_ref())?;
+        let category = match old_tidb.name.as_str() {
+            "HttpUriThreat" => EventCategory::Reconnaissance,
+            "ProcessCreate" => EventCategory::Impact,
+            "spamhaus drop ip" => EventCategory::InitialAccess,
+            _ => EventCategory::Unknown,
+        };
+        let new_tidb = Tidb::try_from((old_tidb, category))?;
+
+        tidbs.push(new_tidb);
+        raw.delete(&key)?;
+    }
+    for tidb in tidbs {
+        map.insert(tidb)?;
+    }
+    Ok(())
 }
 
 fn migrate_0_28_to_0_29_0(store: &super::Store) -> Result<()> {
@@ -2289,5 +2373,75 @@ mod tests {
             test.password_last_modified_at = a.password_last_modified_at;
         }
         assert_eq!(account, Some(test));
+    }
+
+    #[test]
+    fn migrate_0_30_tidb() {
+        use bincode::Options;
+        use serde::{Deserialize, Serialize};
+
+        use crate::{EventCategory, TidbKind};
+        #[derive(Clone, Deserialize, Serialize)]
+        struct OldTidb {
+            pub id: u32,
+            pub name: String,
+            pub description: Option<String>,
+            pub kind: TidbKind,
+            pub version: String,
+            pub patterns: Vec<OldRule>,
+        }
+
+        #[derive(Clone, Deserialize, Serialize)]
+        struct OldRule {
+            pub rule_id: u32,
+            pub name: String,
+            pub description: Option<String>,
+            pub references: Option<Vec<String>>,
+            pub samples: Option<Vec<String>>,
+            pub signatures: Option<Vec<String>>,
+        }
+
+        let settings = TestSchema::new();
+        let map = settings.store.tidb_map();
+        let raw = map.raw();
+
+        let tidb_name = "HttpUriThreat".to_string();
+        let old = OldTidb {
+            id: 201,
+            name: tidb_name.clone(),
+            description: None,
+            kind: TidbKind::Token,
+            version: "1.0".to_string(),
+            patterns: vec![OldRule {
+                rule_id: 2010100,
+                name: "http_uri_threat".to_string(),
+                description: None,
+                references: None,
+                samples: None,
+                signatures: Some(vec!["sql,injection,attack".to_string()]),
+            }],
+        };
+        let value = bincode::DefaultOptions::new()
+            .serialize(&old)
+            .expect("serializable");
+
+        assert!(raw.insert(tidb_name.as_bytes(), &value).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        assert!(super::migrate_0_30_tidb(&settings.store).is_ok());
+
+        let map = settings.store.tidb_map();
+        let res = map.get(&tidb_name);
+        assert!(res.is_ok());
+        let new = res.unwrap();
+        assert!(new.is_some());
+        let new = new.unwrap();
+        assert_eq!(new.id, 201);
+        assert_eq!(new.category, EventCategory::Reconnaissance);
+        new.patterns.iter().for_each(|rule| {
+            assert_eq!(rule.category, EventCategory::Reconnaissance);
+        });
     }
 }
