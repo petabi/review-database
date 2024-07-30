@@ -1983,7 +1983,6 @@ mod tests {
 
         let settings = TestSchema::new();
         let value = http_threat_before_v29();
-
         let message = EventMessage {
             time: value.time,
             kind: EventKind::HttpThreat,
@@ -2265,7 +2264,6 @@ mod tests {
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-
             kind: EventKind::BlockListHttp,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };

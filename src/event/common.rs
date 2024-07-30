@@ -274,3 +274,11 @@ pub fn vector_to_string<T: ToString>(v: &[T]) -> String {
             .join(",")
     }
 }
+
+pub fn to_hardware_address(chaddr: &[u8]) -> String {
+    chaddr
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join(":")
+}

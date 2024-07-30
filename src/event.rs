@@ -1,7 +1,9 @@
 #![allow(clippy::too_many_lines)]
+mod bootp;
 mod common;
 mod conn;
 mod dcerpc;
+mod dhcp;
 mod dns;
 mod ftp;
 mod http;
@@ -41,12 +43,14 @@ use serde::{Deserialize, Serialize};
 
 use self::common::Match;
 pub use self::{
+    bootp::{BlockListBootp, BlockListBootpFields},
     common::TriageScore,
     conn::{
         BlockListConn, BlockListConnFields, ExternalDdos, ExternalDdosFields, MultiHostPortScan,
         MultiHostPortScanFields, PortScan, PortScanFields,
     },
     dcerpc::{BlockListDceRpc, BlockListDceRpcFields},
+    dhcp::{BlockListDhcp, BlockListDhcpFields},
     dns::{
         BlockListDns, BlockListDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
         DnsCovertChannel, DnsEventFields, LockyRansomware,
@@ -75,7 +79,7 @@ pub use self::{
     smtp::{BlockListSmtp, BlockListSmtpFields},
     ssh::{BlockListSsh, BlockListSshFields},
     sysmon::WindowsThreat,
-    tls::{BlockListTls, BlockListTlsFields},
+    tls::{BlockListTls, BlockListTlsFields, SuspiciousTlsTraffic},
     tor::{TorConnection, TorConnectionFields},
 };
 use super::{
@@ -111,6 +115,7 @@ const WINDOWS_THREAT_EVENT: &str = "Windows Threat Events";
 const NETWORK_THREAT_EVENT: &str = "Network Threat Events";
 const MISC_LOG_THREAT: &str = "Log Threat";
 const LOCKY_RANSOMWARE: &str = "Locky Ransomware";
+const SUSPICIOUS_TLS_TRAFFIC: &str = "Suspicious TLS Traffic";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -169,6 +174,8 @@ pub enum Event {
     ExtraThreat(ExtraThreat),
 
     LockyRansomware(LockyRansomware),
+
+    SuspiciousTlsTraffic(SuspiciousTlsTraffic),
 }
 
 impl fmt::Display for Event {
@@ -284,6 +291,13 @@ impl fmt::Display for Event {
                 )
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
                 RecordType::Conn(event) => {
                     write!(
                         f,
@@ -292,6 +306,13 @@ impl fmt::Display for Event {
                     )
                 }
                 RecordType::DceRpc(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Dhcp(event) => {
                     write!(
                         f,
                         "time={:?} event_kind={event_kind:?} category={category:?} {event}",
@@ -418,6 +439,13 @@ impl fmt::Display for Event {
                     event.time.to_rfc3339(),
                 )
             }
+            Event::SuspiciousTlsTraffic(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
         }
     }
 }
@@ -438,6 +466,8 @@ pub enum RecordType {
     Smtp(BlockListSmtp),
     Ssh(BlockListSsh),
     Tls(BlockListTls),
+    Bootp(BlockListBootp),
+    Dhcp(BlockListDhcp),
 }
 
 impl Event {
@@ -470,9 +500,11 @@ impl Event {
             Event::LdapPlainText(event) => event.matches(locator, filter),
             Event::CryptocurrencyMiningPool(event) => event.matches(locator, filter),
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => bootp_event.matches(locator, filter),
                 RecordType::Conn(conn_event) => conn_event.matches(locator, filter),
-                RecordType::Dns(dns_event) => dns_event.matches(locator, filter),
                 RecordType::DceRpc(dcerpc_event) => dcerpc_event.matches(locator, filter),
+                RecordType::Dhcp(dhcp_event) => dhcp_event.matches(locator, filter),
+                RecordType::Dns(dns_event) => dns_event.matches(locator, filter),
                 RecordType::Ftp(ftp_event) => ftp_event.matches(locator, filter),
                 RecordType::Http(http_event) => http_event.matches(locator, filter),
                 RecordType::Kerberos(kerberos_event) => kerberos_event.matches(locator, filter),
@@ -490,6 +522,7 @@ impl Event {
             Event::NetworkThreat(event) => event.matches(locator, filter),
             Event::ExtraThreat(event) => event.matches(locator, filter),
             Event::LockyRansomware(event) => event.matches(locator, filter),
+            Event::SuspiciousTlsTraffic(event) => event.matches(locator, filter),
         }
     }
 
@@ -576,19 +609,29 @@ impl Event {
                 }
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    if bootp_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(bootp_event.src_addr), Some(bootp_event.dst_addr));
+                    }
+                }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
                         addr_pair = (Some(conn_event.src_addr), Some(conn_event.dst_addr));
                     }
                 }
-                RecordType::Dns(dns_event) => {
-                    if dns_event.matches(locator, filter)?.0 {
-                        addr_pair = (Some(dns_event.src_addr), Some(dns_event.dst_addr));
-                    }
-                }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
                         addr_pair = (Some(dcerpc_event.src_addr), Some(dcerpc_event.dst_addr));
+                    }
+                }
+                RecordType::Dhcp(dhcp_event) => {
+                    if dhcp_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(dhcp_event.src_addr), Some(dhcp_event.dst_addr));
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(dns_event.src_addr), Some(dns_event.dst_addr));
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
@@ -660,6 +703,11 @@ impl Event {
             }
             Event::ExtraThreat(_event) => {}
             Event::LockyRansomware(event) => {
+                if event.matches(locator, filter)?.0 {
+                    addr_pair = (Some(event.src_addr), Some(event.dst_addr));
+                }
+            }
+            Event::SuspiciousTlsTraffic(event) => {
                 if event.matches(locator, filter)?.0 {
                     addr_pair = (Some(event.src_addr), Some(event.dst_addr));
                 }
@@ -751,18 +799,28 @@ impl Event {
                 }
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    if bootp_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCK_LIST);
                     }
                 }
-                RecordType::Dns(dns_event) => {
-                    if dns_event.matches(locator, filter)?.0 {
+                RecordType::DceRpc(dcerpc_event) => {
+                    if dcerpc_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCK_LIST);
                     }
                 }
-                RecordType::DceRpc(dcerpc_event) => {
-                    if dcerpc_event.matches(locator, filter)?.0 {
+                RecordType::Dhcp(dhcp_event) => {
+                    if dhcp_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCK_LIST);
                     }
                 }
@@ -847,6 +905,11 @@ impl Event {
                     kind = Some(LOCKY_RANSOMWARE);
                 }
             }
+            Event::SuspiciousTlsTraffic(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(SUSPICIOUS_TLS_TRAFFIC);
+                }
+            }
         }
         Ok(kind)
     }
@@ -873,9 +936,11 @@ impl Event {
                 (EventKind::CryptocurrencyMiningPool, e.category())
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(e) => (EventKind::BlockListBootp, e.category()),
                 RecordType::Conn(e) => (EventKind::BlockListConn, e.category()),
-                RecordType::Dns(e) => (EventKind::BlockListDns, e.category()),
                 RecordType::DceRpc(e) => (EventKind::BlockListDceRpc, e.category()),
+                RecordType::Dhcp(e) => (EventKind::BlockListDhcp, e.category()),
+                RecordType::Dns(e) => (EventKind::BlockListDns, e.category()),
                 RecordType::Ftp(e) => (EventKind::BlockListFtp, e.category()),
                 RecordType::Http(e) => (EventKind::BlockListHttp, e.category()),
                 RecordType::Kerberos(e) => (EventKind::BlockListKerberos, e.category()),
@@ -893,6 +958,7 @@ impl Event {
             Event::NetworkThreat(e) => (EventKind::NetworkThreat, e.category()),
             Event::ExtraThreat(e) => (EventKind::ExtraThreat, e.category()),
             Event::LockyRansomware(e) => (EventKind::LockyRansomware, e.category()),
+            Event::SuspiciousTlsTraffic(e) => (EventKind::SuspiciousTlsTraffic, e.category()),
         }
     }
 
@@ -1030,19 +1096,29 @@ impl Event {
                 }
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    if bootp_event.matches(locator, filter)?.0 {
+                        category = Some(bootp_event.category());
+                    }
+                }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
                         category = Some(conn_event.category());
                     }
                 }
-                RecordType::Dns(dns_event) => {
-                    if dns_event.matches(locator, filter)?.0 {
-                        category = Some(dns_event.category());
-                    }
-                }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
                         category = Some(dcerpc_event.category());
+                    }
+                }
+                RecordType::Dhcp(dhcp_event) => {
+                    if dhcp_event.matches(locator, filter)?.0 {
+                        category = Some(dhcp_event.category());
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        category = Some(dns_event.category());
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
@@ -1122,6 +1198,11 @@ impl Event {
                 }
             }
             Event::LockyRansomware(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(event.category());
+                }
+            }
+            Event::SuspiciousTlsTraffic(event) => {
                 if event.matches(locator, filter)?.0 {
                     category = Some(event.category());
                 }
@@ -1368,18 +1449,28 @@ impl Event {
                 }
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    if bootp_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
                         level = Some(MEDIUM);
                     }
                 }
-                RecordType::Dns(dns_event) => {
-                    if dns_event.matches(locator, filter)?.0 {
+                RecordType::DceRpc(dcerpc_event) => {
+                    if dcerpc_event.matches(locator, filter)?.0 {
                         level = Some(MEDIUM);
                     }
                 }
-                RecordType::DceRpc(dcerpc_event) => {
-                    if dcerpc_event.matches(locator, filter)?.0 {
+                RecordType::Dhcp(dhcp_event) => {
+                    if dhcp_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
                         level = Some(MEDIUM);
                     }
                 }
@@ -1462,6 +1553,11 @@ impl Event {
             Event::LockyRansomware(event) => {
                 if event.matches(locator, filter)?.0 {
                     level = Some(HIGH);
+                }
+            }
+            Event::SuspiciousTlsTraffic(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(MEDIUM);
                 }
             }
         }
@@ -1550,14 +1646,20 @@ impl Event {
                 event.triage_scores = Some(triage_scores);
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    bootp_event.triage_scores = Some(triage_scores);
+                }
                 RecordType::Conn(conn_event) => {
                     conn_event.triage_scores = Some(triage_scores);
                 }
-                RecordType::Dns(dns_event) => {
-                    dns_event.triage_scores = Some(triage_scores);
-                }
                 RecordType::DceRpc(dcerpc_event) => {
                     dcerpc_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Dhcp(dhcp_event) => {
+                    dhcp_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Dns(dns_event) => {
+                    dns_event.triage_scores = Some(triage_scores);
                 }
                 RecordType::Ftp(ftp_event) => {
                     ftp_event.triage_scores = Some(triage_scores);
@@ -1606,6 +1708,9 @@ impl Event {
                 event.triage_scores = Some(triage_scores);
             }
             Event::LockyRansomware(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::SuspiciousTlsTraffic(event) => {
                 event.triage_scores = Some(triage_scores);
             }
         }
@@ -1665,6 +1770,9 @@ pub enum EventKind {
     WindowsThreat,
     NetworkThreat,
     LockyRansomware,
+    SuspiciousTlsTraffic,
+    BlockListBootp,
+    BlockListDhcp,
 }
 
 /// Machine Learning Method.
@@ -1759,9 +1867,11 @@ impl EventFilter {
                 &["cryptocurrency", "mining", "pool"],
                 "cryptocurrency mining pool",
             );
+            moderate_kinds_by(kinds, &["block", "list", "bootp"], "block list bootp");
             moderate_kinds_by(kinds, &["block", "list", "conn"], "block list conn");
-            moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
             moderate_kinds_by(kinds, &["block", "list", "dcerpc"], "block list dcerpc");
+            moderate_kinds_by(kinds, &["block", "list", "dhcp"], "block list dhcp");
+            moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
             moderate_kinds_by(kinds, &["block", "list", "ftp"], "block list ftp");
             moderate_kinds_by(kinds, &["block", "list", "http"], "block list http");
             moderate_kinds_by(kinds, &["block", "list", "kerberos"], "block list kerberos");
@@ -1778,6 +1888,11 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["network", "threat"], "network threat");
             moderate_kinds_by(kinds, &["extra", "threat"], "extra threat");
             moderate_kinds_by(kinds, &["locky", "ransomware"], "locky ransomware");
+            moderate_kinds_by(
+                kinds,
+                &["suspicious", "tls", "traffic"],
+                "suspicious tls traffic",
+            );
         }
     }
 }
@@ -1863,12 +1978,16 @@ impl fmt::Display for EventMessage {
                 bincode::deserialize::<CryptocurrencyMiningPoolFields>(&self.fields)
                     .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
+            EventKind::BlockListBootp => bincode::deserialize::<BlockListBootpFields>(&self.fields)
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListConn => bincode::deserialize::<BlockListConnFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListDceRpc => {
                 bincode::deserialize::<BlockListDceRpcFields>(&self.fields)
                     .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
+            EventKind::BlockListDhcp => bincode::deserialize::<BlockListDhcpFields>(&self.fields)
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListDns => bincode::deserialize::<BlockListDnsFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListFtp => bincode::deserialize::<BlockListFtpFields>(&self.fields)
@@ -1905,6 +2024,10 @@ impl fmt::Display for EventMessage {
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::LockyRansomware => bincode::deserialize::<DnsEventFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+            EventKind::SuspiciousTlsTraffic => {
+                bincode::deserialize::<BlockListTlsFields>(&self.fields)
+                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
+            }
         };
         Ok(())
     }
@@ -2189,6 +2312,15 @@ impl<'i> Iterator for EventIterator<'i> {
                     Event::CryptocurrencyMiningPool(CryptocurrencyMiningPool::new(time, fields)),
                 )))
             }
+            EventKind::BlockListBootp => {
+                let Ok(fields) = bincode::deserialize::<BlockListBootpFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Bootp(BlockListBootp::new(time, fields))),
+                )))
+            }
             EventKind::BlockListConn => {
                 let Ok(fields) = bincode::deserialize::<BlockListConnFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
@@ -2198,15 +2330,6 @@ impl<'i> Iterator for EventIterator<'i> {
                     Event::BlockList(RecordType::Conn(BlockListConn::new(time, fields))),
                 )))
             }
-            EventKind::BlockListDns => {
-                let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::BlockList(RecordType::Dns(BlockListDns::new(time, fields))),
-                )))
-            }
             EventKind::BlockListDceRpc => {
                 let Ok(fields) = bincode::deserialize::<BlockListDceRpcFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
@@ -2214,6 +2337,24 @@ impl<'i> Iterator for EventIterator<'i> {
                 Some(Ok((
                     key,
                     Event::BlockList(RecordType::DceRpc(BlockListDceRpc::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListDhcp => {
+                let Ok(fields) = bincode::deserialize::<BlockListDhcpFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListDns => {
+                let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Dns(BlockListDns::new(time, fields))),
                 )))
             }
             EventKind::BlockListFtp => {
@@ -2351,6 +2492,15 @@ impl<'i> Iterator for EventIterator<'i> {
                     Event::LockyRansomware(LockyRansomware::new(time, fields)),
                 )))
             }
+            EventKind::SuspiciousTlsTraffic => {
+                let Ok(fields) = bincode::deserialize::<BlockListTlsFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, fields)),
+                )))
+            }
         }
     }
 }
@@ -2433,13 +2583,15 @@ mod tests {
     use std::{
         collections::HashMap,
         net::{IpAddr, Ipv4Addr},
+        str::FromStr,
         sync::Arc,
     };
 
     use chrono::{TimeZone, Utc};
 
     use crate::{
-        event::LOCKY_RANSOMWARE, types::EventCategory, BlockListConnFields, BlockListDceRpcFields,
+        event::LOCKY_RANSOMWARE, types::EventCategory, BlockListBootp, BlockListBootpFields,
+        BlockListConnFields, BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields,
         BlockListDnsFields, BlockListFtpFields, BlockListHttp, BlockListHttpFields,
         BlockListKerberosFields, BlockListLdapFields, BlockListMqttFields, BlockListNfsFields,
         BlockListNtlmFields, BlockListRdpFields, BlockListSmbFields, BlockListSmtpFields,
@@ -2448,8 +2600,8 @@ mod tests {
         ExternalDdos, ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpPlainTextFields,
         HttpThreat, HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields,
         MultiHostPortScanFields, NetworkThreat, NonBrowserFields, PortScanFields,
-        RdpBruteForceFields, RecordType, RepeatedHttpSessionsFields, Store, TorConnectionFields,
-        TriageScore, WindowsThreat,
+        RdpBruteForceFields, RecordType, RepeatedHttpSessionsFields, Store, SuspiciousTlsTraffic,
+        TorConnectionFields, TriageScore, WindowsThreat,
     };
 
     fn example_message(kind: EventKind, category: EventCategory) -> EventMessage {
@@ -3032,6 +3184,125 @@ mod tests {
         );
     }
 
+    fn blocklist_bootp_fields() -> BlockListBootpFields {
+        BlockListBootpFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 68,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 67,
+            proto: 17,
+            last_time: 100,
+            op: 1,
+            htype: 2,
+            hops: 1,
+            xid: 1,
+            ciaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 5)),
+            yiaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 6)),
+            siaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 7)),
+            giaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 8)),
+            chaddr: vec![1, 2, 3, 4, 5, 6],
+            sname: "server_name".to_string(),
+            file: "boot_file_name".to_string(),
+            category: EventCategory::InitialAccess,
+        }
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_bootp() {
+        let fields = blocklist_bootp_fields();
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListBootp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListBootp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name""#,
+        );
+        let block_list_bootp = Event::BlockList(RecordType::Bootp(BlockListBootp::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_bootp,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListBootp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn event_blocklist_bootp() {
+        use super::{BLOCK_LIST, MEDIUM};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let fields = blocklist_bootp_fields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListBootp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: Some(vec![MEDIUM]),
+            kinds: Some(vec!["block list bootp".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: None,
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.address_pair(None, &filter).unwrap(),
+            (
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
+            )
+        );
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCK_LIST));
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(BLOCK_LIST), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::InitialAccess), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
+        );
+    }
+
     #[tokio::test]
     async fn syslog_for_blocklist_conn() {
         let fields = BlockListConnFields {
@@ -3113,6 +3384,132 @@ mod tests {
         assert_eq!(
             &block_list_dce_rpc,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDceRpc" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" last_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" triage_scores="""#
+        );
+    }
+
+    fn blocklist_dhcp_fields() -> BlockListDhcpFields {
+        BlockListDhcpFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::from_str("127.0.0.1").unwrap(),
+            src_port: 68,
+            dst_addr: IpAddr::from_str("127.0.0.2").unwrap(),
+            dst_port: 67,
+            proto: 17,
+            last_time: 100,
+            msg_type: 1,
+            ciaddr: IpAddr::from_str("127.0.0.5").unwrap(),
+            yiaddr: IpAddr::from_str("127.0.0.6").unwrap(),
+            siaddr: IpAddr::from_str("127.0.0.7").unwrap(),
+            giaddr: IpAddr::from_str("127.0.0.8").unwrap(),
+            subnet_mask: IpAddr::from_str("255.255.255.0").unwrap(),
+            router: vec![IpAddr::from_str("127.0.0.1").unwrap()],
+            domain_name_server: vec![IpAddr::from_str("127.0.0.1").unwrap()],
+            req_ip_addr: IpAddr::from_str("127.0.0.100").unwrap(),
+            lease_time: 100,
+            server_id: IpAddr::from_str("127.0.0.1").unwrap(),
+            param_req_list: vec![1, 2, 3],
+            message: "message".to_string(),
+            renewal_time: 100,
+            rebinding_time: 200,
+            class_id: vec![4, 5, 6],
+            client_id_type: 1,
+            client_id: vec![7, 8, 9],
+            category: EventCategory::InitialAccess,
+        }
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_dhcp() {
+        let fields = blocklist_dhcp_fields();
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListDhcp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDhcp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09""#,
+        );
+
+        let block_list_dhcp = Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_dhcp,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDhcp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn event_blocklist_dhcp() {
+        use super::{BLOCK_LIST, MEDIUM};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let fields = blocklist_dhcp_fields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListDhcp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: Some(vec![MEDIUM]),
+            kinds: Some(vec!["block list dhcp".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: None,
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.address_pair(None, &filter).unwrap(),
+            (
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
+            )
+        );
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCK_LIST));
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(BLOCK_LIST), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::InitialAccess), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
         );
     }
 
@@ -4180,6 +4577,151 @@ mod tests {
         assert_eq!(
             &tor_connection,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" triage_scores="""#
+        );
+    }
+
+    fn blocklist_tls_fields() -> BlockListTlsFields {
+        BlockListTlsFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 443,
+            proto: 6,
+            last_time: 100,
+            server_name: "server".to_string(),
+            alpn_protocol: "alpn".to_string(),
+            ja3: "ja3".to_string(),
+            version: "version".to_string(),
+            client_cipher_suites: vec![1, 2, 3],
+            client_extensions: vec![4, 5, 6],
+            cipher: 1,
+            extensions: vec![7, 8, 9],
+            ja3s: "ja3s".to_string(),
+            serial: "serial".to_string(),
+            subject_country: "country".to_string(),
+            subject_org_name: "org".to_string(),
+            subject_common_name: "common".to_string(),
+            validity_not_before: 100,
+            validity_not_after: 200,
+            subject_alt_name: "alt".to_string(),
+            issuer_country: "country".to_string(),
+            issuer_org_name: "org".to_string(),
+            issuer_org_unit_name: "unit".to_string(),
+            issuer_common_name: "common".to_string(),
+            category: EventCategory::Unknown,
+            last_alert: 1,
+        }
+    }
+
+    #[tokio::test]
+    async fn syslog_for_suspicious_tls_traffic() {
+        use super::common::Match;
+
+        let fields = blocklist_tls_fields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::SuspiciousTlsTraffic,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1""#
+        );
+
+        let suspicious_tls_traffic =
+            SuspiciousTlsTraffic::new(Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(), fields);
+        assert_eq!(
+            suspicious_tls_traffic.src_addr(),
+            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
+        );
+        assert_eq!(
+            suspicious_tls_traffic.dst_addr(),
+            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+        );
+        assert_eq!(suspicious_tls_traffic.category(), EventCategory::Unknown);
+        assert_eq!(suspicious_tls_traffic.src_port(), 10000);
+        assert_eq!(suspicious_tls_traffic.dst_port(), 443);
+        assert_eq!(suspicious_tls_traffic.proto(), 6);
+        let event = Event::SuspiciousTlsTraffic(suspicious_tls_traffic);
+        let block_list_tls = event.to_string();
+
+        assert_eq!(
+            &block_list_tls,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn event_suspicious_tls_traffic() {
+        use super::{MEDIUM, SUSPICIOUS_TLS_TRAFFIC};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let fields = blocklist_tls_fields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::SuspiciousTlsTraffic,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: Some(vec![MEDIUM]),
+            kinds: Some(vec!["suspicious tls traffic".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: Some(0.5),
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.address_pair(None, &filter).unwrap(),
+            (
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
+            )
+        );
+        assert_eq!(
+            event.kind(None, &filter).unwrap(),
+            Some(SUSPICIOUS_TLS_TRAFFIC)
+        );
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(SUSPICIOUS_TLS_TRAFFIC), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::Unknown), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
         );
     }
 }
