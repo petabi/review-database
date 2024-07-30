@@ -7,11 +7,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added `BlockListBootp`, `BlockListDhcp`, `SuspiciousTlsTraffic` events.
+
 ### Changed
 
 - Extended the `Table<'d, Account>::update` method signature to include the
   `language` parameter, enabling language updates alongside existing fields.
 - Added `category` field to all the detected event structures.
+- Added `category` field to TI db and TI rules.
 - Modified all the detected events to use its own category field value
   instead of statically assigned values.
 - Added fields to some detected event structures
