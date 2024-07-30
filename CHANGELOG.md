@@ -11,7 +11,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Extended the `Table<'d, Account>::update` method signature to include the
   `language` parameter, enabling language updates alongside existing fields.
-- Added `category` field to TI db and TI rules.
+- Added `category` field to all the detected event structures.
+- Modified all the detected events to use its own category field value
+  instead of statically assigned values.
+- Added fields to some detected event structures
+  - `BlockListConn`: `orig_l2_bytes`, `resp_l2_bytes`
+  - `TorConnection`: `orig_filenames`, `orig_mime_types`, `resp_filenames`,
+    `resp_mime_types`, `post_body`, `state`
 - Added `update` method in `TrustedDomain`.
 
 ### Removed

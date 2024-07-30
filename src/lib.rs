@@ -53,12 +53,16 @@ pub use self::event::{
     BlockListLdapFields, BlockListMqtt, BlockListMqttFields, BlockListNfs, BlockListNfsFields,
     BlockListNtlm, BlockListNtlmFields, BlockListRdp, BlockListRdpFields, BlockListSmb,
     BlockListSmbFields, BlockListSmtp, BlockListSmtpFields, BlockListSsh, BlockListSshFields,
-    BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool, Direction, DnsCovertChannel,
-    DomainGenerationAlgorithm, Event, EventDb, EventFilter, EventIterator, EventMessage,
-    ExternalDdos, ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce, FtpPlainText, HttpThreat,
-    LdapBruteForce, LdapPlainText, LearningMethod, LockyRansomware, MultiHostPortScan,
-    NetworkThreat, NetworkType, NonBrowser, PortScan, RdpBruteForce, RecordType,
-    RepeatedHttpSessions, TorConnection, TrafficDirection, TriageScore, WindowsThreat,
+    BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
+    DgaFields, Direction, DnsCovertChannel, DnsEventFields, DomainGenerationAlgorithm, Event,
+    EventDb, EventFilter, EventIterator, EventMessage, ExternalDdos, ExternalDdosFields,
+    ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce, FtpBruteForceFields, FtpPlainText,
+    FtpPlainTextFields, HttpThreat, HttpThreatFields, LdapBruteForce, LdapBruteForceFields,
+    LdapPlainText, LdapPlainTextFields, LearningMethod, LockyRansomware, MultiHostPortScan,
+    MultiHostPortScanFields, NetworkThreat, NetworkType, NonBrowser, NonBrowserFields, PortScan,
+    PortScanFields, RdpBruteForce, RdpBruteForceFields, RecordType, RepeatedHttpSessions,
+    RepeatedHttpSessionsFields, TorConnection, TorConnectionFields, TrafficDirection, TriageScore,
+    WindowsThreat,
 };
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};

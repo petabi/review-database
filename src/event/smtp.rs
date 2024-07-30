@@ -22,6 +22,7 @@ pub struct BlockListSmtpFields {
     pub subject: String,
     pub agent: String,
     pub state: String,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for BlockListSmtpFields {
@@ -64,6 +65,7 @@ pub struct BlockListSmtp {
     pub subject: String,
     pub agent: String,
     pub state: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlockListSmtp {
@@ -108,6 +110,7 @@ impl BlockListSmtp {
             subject: fields.subject,
             agent: fields.agent,
             state: fields.state,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -135,7 +138,7 @@ impl Match for BlockListSmtp {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -155,7 +158,6 @@ impl Match for BlockListSmtp {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

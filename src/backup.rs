@@ -103,6 +103,7 @@ mod tests {
             ra_flag: false,
             ttl: vec![1; 5],
             confidence: 0.8,
+            category: crate::EventCategory::CommandAndControl,
         };
         EventMessage {
             time: Utc::now(),

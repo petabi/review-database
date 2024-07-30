@@ -4,7 +4,7 @@ use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use crate::event::{common::triage_scores_to_string, http::get_post_body};
 
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -33,12 +33,20 @@ pub struct TorConnectionFields {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub category: EventCategory,
 }
+
 impl fmt::Display for TorConnectionFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?}",
+            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?}",
             self.source,
             self.session_end_time.to_rfc3339(),
             self.src_addr.to_string(),
@@ -61,7 +69,13 @@ impl fmt::Display for TorConnectionFields {
             self.cookie,
             self.content_encoding,
             self.content_type,
-            self.cache_control
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state
         )
     }
 }
@@ -92,13 +106,21 @@ pub struct TorConnection {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
+
 impl fmt::Display for TorConnection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} triage_scores={:?}",
+            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
             self.source,
             self.session_end_time.to_rfc3339(),
             self.src_addr.to_string(),
@@ -122,10 +144,17 @@ impl fmt::Display for TorConnection {
             self.content_encoding,
             self.content_type,
             self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
             triage_scores_to_string(&self.triage_scores)
         )
     }
 }
+
 impl TorConnection {
     pub(super) fn new(time: DateTime<Utc>, fields: &TorConnectionFields) -> Self {
         TorConnection {
@@ -153,6 +182,13 @@ impl TorConnection {
             content_encoding: fields.content_encoding.clone(),
             content_type: fields.content_type.clone(),
             cache_control: fields.cache_control.clone(),
+            orig_filenames: fields.orig_filenames.clone(),
+            orig_mime_types: fields.orig_mime_types.clone(),
+            resp_filenames: fields.resp_filenames.clone(),
+            resp_mime_types: fields.resp_mime_types.clone(),
+            post_body: fields.post_body.clone(),
+            state: fields.state.clone(),
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -180,7 +216,7 @@ impl Match for TorConnection {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::CommandAndControl
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -200,7 +236,6 @@ impl Match for TorConnection {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
