@@ -36,6 +36,7 @@ pub struct BlockListTlsFields {
     pub issuer_org_unit_name: String,
     pub issuer_common_name: String,
     pub last_alert: u8,
+    pub category: EventCategory,
 }
 impl fmt::Display for BlockListTlsFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -69,7 +70,7 @@ impl fmt::Display for BlockListTlsFields {
             self.issuer_org_name,
             self.issuer_org_unit_name,
             self.issuer_common_name,
-            self.last_alert.to_string()
+            self.last_alert.to_string(),
         )
     }
 }
@@ -105,8 +106,10 @@ pub struct BlockListTls {
     pub issuer_org_unit_name: String,
     pub issuer_common_name: String,
     pub last_alert: u8,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
+
 impl fmt::Display for BlockListTls {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -177,6 +180,7 @@ impl BlockListTls {
             issuer_org_unit_name: fields.issuer_org_unit_name,
             issuer_common_name: fields.issuer_common_name,
             last_alert: fields.last_alert,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -204,7 +208,7 @@ impl Match for BlockListTls {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -224,7 +228,6 @@ impl Match for BlockListTls {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

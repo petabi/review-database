@@ -17,6 +17,7 @@ pub struct BlockListNfsFields {
     pub last_time: i64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
+    pub category: EventCategory,
 }
 impl fmt::Display for BlockListNfsFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -48,6 +49,7 @@ pub struct BlockListNfs {
     pub last_time: i64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlockListNfs {
@@ -82,6 +84,7 @@ impl BlockListNfs {
             last_time: fields.last_time,
             read_files: fields.read_files,
             write_files: fields.write_files,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -109,7 +112,7 @@ impl Match for BlockListNfs {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -129,7 +132,6 @@ impl Match for BlockListNfs {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

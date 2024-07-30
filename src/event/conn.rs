@@ -18,6 +18,7 @@ pub struct PortScanFields {
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
     pub proto: u8,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for PortScanFields {
@@ -30,7 +31,7 @@ impl fmt::Display for PortScanFields {
             vector_to_string(&self.dst_ports),
             self.start_time.to_rfc3339(),
             self.last_time.to_rfc3339(),
-            self.proto.to_string()
+            self.proto.to_string(),
         )
     }
 }
@@ -44,6 +45,7 @@ pub struct PortScan {
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
     pub proto: u8,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -73,6 +75,7 @@ impl PortScan {
             proto: fields.proto,
             start_time: fields.start_time,
             last_time: fields.last_time,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -100,7 +103,7 @@ impl Match for PortScan {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Reconnaissance
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -120,7 +123,6 @@ impl Match for PortScan {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -133,6 +135,7 @@ pub struct MultiHostPortScanFields {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for MultiHostPortScanFields {
@@ -145,7 +148,7 @@ impl fmt::Display for MultiHostPortScanFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339()
+            self.last_time.to_rfc3339(),
         )
     }
 }
@@ -159,6 +162,7 @@ pub struct MultiHostPortScan {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -188,6 +192,7 @@ impl MultiHostPortScan {
             proto: fields.proto,
             start_time: fields.start_time,
             last_time: fields.last_time,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -215,7 +220,7 @@ impl Match for MultiHostPortScan {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Reconnaissance
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -235,7 +240,6 @@ impl Match for MultiHostPortScan {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -247,6 +251,7 @@ pub struct ExternalDdosFields {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for ExternalDdosFields {
@@ -258,7 +263,7 @@ impl fmt::Display for ExternalDdosFields {
             self.dst_addr.to_string(),
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339()
+            self.last_time.to_rfc3339(),
         )
     }
 }
@@ -271,6 +276,7 @@ pub struct ExternalDdos {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -298,6 +304,7 @@ impl ExternalDdos {
             proto: fields.proto,
             start_time: fields.start_time,
             last_time: fields.last_time,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -325,7 +332,7 @@ impl Match for ExternalDdos {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Impact
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -345,7 +352,6 @@ impl Match for ExternalDdos {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -365,13 +371,16 @@ pub struct BlockListConnFields {
     pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for BlockListConnFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?}",
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?}",
             self.source,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -384,7 +393,9 @@ impl fmt::Display for BlockListConnFields {
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
-            self.resp_pkts.to_string()
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
         )
     }
 }
@@ -405,6 +416,9 @@ pub struct BlockListConn {
     pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -412,7 +426,7 @@ impl fmt::Display for BlockListConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} triage_scores={:?}",
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
             self.source,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -426,6 +440,8 @@ impl fmt::Display for BlockListConn {
             self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             triage_scores_to_string(&self.triage_scores)
         )
     }
@@ -448,6 +464,9 @@ impl BlockListConn {
             resp_bytes: fields.resp_bytes,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -475,7 +494,7 @@ impl Match for BlockListConn {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -495,7 +514,6 @@ impl Match for BlockListConn {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

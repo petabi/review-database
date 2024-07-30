@@ -26,8 +26,10 @@ pub struct NetworkThreat {
     pub cluster_id: usize,
     pub attack_kind: String,
     pub confidence: f32,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
+
 impl fmt::Display for NetworkThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -75,7 +77,7 @@ impl Match for NetworkThreat {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Reconnaissance
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -95,7 +97,6 @@ impl Match for NetworkThreat {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
