@@ -30,6 +30,7 @@ pub struct DnsEventFields {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for DnsEventFields {
@@ -83,6 +84,7 @@ pub struct DnsCovertChannel {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -140,6 +142,7 @@ impl DnsCovertChannel {
             ra_flag: fields.ra_flag,
             ttl: fields.ttl,
             confidence: fields.confidence,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -167,7 +170,7 @@ impl Match for DnsCovertChannel {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::CommandAndControl
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -187,12 +190,11 @@ impl Match for DnsCovertChannel {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
 
-// TODO: Locky ransomware event uses same sruct with DnsCovertChannel. It should be merged.
+// TODO: Locky ransomware event uses same sruct with DnsCovertChannel. It can be merged.
 pub struct LockyRansomware {
     pub time: DateTime<Utc>,
     pub source: String,
@@ -215,6 +217,7 @@ pub struct LockyRansomware {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -272,6 +275,7 @@ impl LockyRansomware {
             ra_flag: fields.ra_flag,
             ttl: fields.ttl,
             confidence: fields.confidence,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -299,7 +303,7 @@ impl Match for LockyRansomware {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Impact
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -319,7 +323,6 @@ impl Match for LockyRansomware {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -347,6 +350,7 @@ pub struct CryptocurrencyMiningPoolFields {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for CryptocurrencyMiningPoolFields {
@@ -400,6 +404,7 @@ pub struct CryptocurrencyMiningPool {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -457,6 +462,7 @@ impl CryptocurrencyMiningPool {
             ra_flag: fields.ra_flag,
             ttl: fields.ttl,
             coins: fields.coins,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -484,7 +490,7 @@ impl Match for CryptocurrencyMiningPool {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::CommandAndControl
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -504,7 +510,6 @@ impl Match for CryptocurrencyMiningPool {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -530,6 +535,7 @@ pub struct BlockListDnsFields {
     pub rd_flag: bool,
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for BlockListDnsFields {
@@ -581,6 +587,7 @@ pub struct BlockListDns {
     pub rd_flag: bool,
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -636,6 +643,7 @@ impl BlockListDns {
             rd_flag: fields.rd_flag,
             ra_flag: fields.ra_flag,
             ttl: fields.ttl,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -663,7 +671,7 @@ impl Match for BlockListDns {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -683,7 +691,6 @@ impl Match for BlockListDns {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

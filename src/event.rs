@@ -1,7 +1,9 @@
 #![allow(clippy::too_many_lines)]
+mod bootp;
 mod common;
 mod conn;
 mod dcerpc;
+mod dhcp;
 mod dns;
 mod ftp;
 mod http;
@@ -39,14 +41,16 @@ pub use rocksdb::Direction;
 use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
 use serde::{Deserialize, Serialize};
 
-use self::{common::Match, http::RepeatedHttpSessionsFields};
+use self::common::Match;
 pub use self::{
+    bootp::{BlockListBootp, BlockListBootpFields},
     common::TriageScore,
     conn::{
         BlockListConn, BlockListConnFields, ExternalDdos, ExternalDdosFields, MultiHostPortScan,
         MultiHostPortScanFields, PortScan, PortScanFields,
     },
     dcerpc::{BlockListDceRpc, BlockListDceRpcFields},
+    dhcp::{BlockListDhcp, BlockListDhcpFields},
     dns::{
         BlockListDns, BlockListDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
         DnsCovertChannel, DnsEventFields, LockyRansomware,
@@ -58,6 +62,7 @@ pub use self::{
     http::{
         BlockListHttp, BlockListHttpFields, DgaFields, DomainGenerationAlgorithm, HttpThreat,
         HttpThreatFields, NonBrowser, NonBrowserFields, RepeatedHttpSessions,
+        RepeatedHttpSessionsFields,
     },
     kerberos::{BlockListKerberos, BlockListKerberosFields},
     ldap::{
@@ -74,7 +79,7 @@ pub use self::{
     smtp::{BlockListSmtp, BlockListSmtpFields},
     ssh::{BlockListSsh, BlockListSshFields},
     sysmon::WindowsThreat,
-    tls::{BlockListTls, BlockListTlsFields},
+    tls::{BlockListTls, BlockListTlsFields, SuspiciousTlsTraffic},
     tor::{TorConnection, TorConnectionFields},
 };
 use super::{
@@ -110,6 +115,7 @@ const WINDOWS_THREAT_EVENT: &str = "Windows Threat Events";
 const NETWORK_THREAT_EVENT: &str = "Network Threat Events";
 const MISC_LOG_THREAT: &str = "Log Threat";
 const LOCKY_RANSOMWARE: &str = "Locky Ransomware";
+const SUSPICIOUS_TLS_TRAFFIC: &str = "Suspicious TLS Traffic";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -168,6 +174,8 @@ pub enum Event {
     ExtraThreat(ExtraThreat),
 
     LockyRansomware(LockyRansomware),
+
+    SuspiciousTlsTraffic(SuspiciousTlsTraffic),
 }
 
 impl fmt::Display for Event {
@@ -283,6 +291,13 @@ impl fmt::Display for Event {
                 )
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
                 RecordType::Conn(event) => {
                     write!(
                         f,
@@ -291,6 +306,13 @@ impl fmt::Display for Event {
                     )
                 }
                 RecordType::DceRpc(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
+                RecordType::Dhcp(event) => {
                     write!(
                         f,
                         "time={:?} event_kind={event_kind:?} category={category:?} {event}",
@@ -417,6 +439,13 @@ impl fmt::Display for Event {
                     event.time.to_rfc3339(),
                 )
             }
+            Event::SuspiciousTlsTraffic(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
         }
     }
 }
@@ -437,6 +466,8 @@ pub enum RecordType {
     Smtp(BlockListSmtp),
     Ssh(BlockListSsh),
     Tls(BlockListTls),
+    Bootp(BlockListBootp),
+    Dhcp(BlockListDhcp),
 }
 
 impl Event {
@@ -469,9 +500,11 @@ impl Event {
             Event::LdapPlainText(event) => event.matches(locator, filter),
             Event::CryptocurrencyMiningPool(event) => event.matches(locator, filter),
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => bootp_event.matches(locator, filter),
                 RecordType::Conn(conn_event) => conn_event.matches(locator, filter),
-                RecordType::Dns(dns_event) => dns_event.matches(locator, filter),
                 RecordType::DceRpc(dcerpc_event) => dcerpc_event.matches(locator, filter),
+                RecordType::Dhcp(dhcp_event) => dhcp_event.matches(locator, filter),
+                RecordType::Dns(dns_event) => dns_event.matches(locator, filter),
                 RecordType::Ftp(ftp_event) => ftp_event.matches(locator, filter),
                 RecordType::Http(http_event) => http_event.matches(locator, filter),
                 RecordType::Kerberos(kerberos_event) => kerberos_event.matches(locator, filter),
@@ -489,6 +522,7 @@ impl Event {
             Event::NetworkThreat(event) => event.matches(locator, filter),
             Event::ExtraThreat(event) => event.matches(locator, filter),
             Event::LockyRansomware(event) => event.matches(locator, filter),
+            Event::SuspiciousTlsTraffic(event) => event.matches(locator, filter),
         }
     }
 
@@ -575,19 +609,29 @@ impl Event {
                 }
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    if bootp_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(bootp_event.src_addr), Some(bootp_event.dst_addr));
+                    }
+                }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
                         addr_pair = (Some(conn_event.src_addr), Some(conn_event.dst_addr));
                     }
                 }
-                RecordType::Dns(dns_event) => {
-                    if dns_event.matches(locator, filter)?.0 {
-                        addr_pair = (Some(dns_event.src_addr), Some(dns_event.dst_addr));
-                    }
-                }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
                         addr_pair = (Some(dcerpc_event.src_addr), Some(dcerpc_event.dst_addr));
+                    }
+                }
+                RecordType::Dhcp(dhcp_event) => {
+                    if dhcp_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(dhcp_event.src_addr), Some(dhcp_event.dst_addr));
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(dns_event.src_addr), Some(dns_event.dst_addr));
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
@@ -659,6 +703,11 @@ impl Event {
             }
             Event::ExtraThreat(_event) => {}
             Event::LockyRansomware(event) => {
+                if event.matches(locator, filter)?.0 {
+                    addr_pair = (Some(event.src_addr), Some(event.dst_addr));
+                }
+            }
+            Event::SuspiciousTlsTraffic(event) => {
                 if event.matches(locator, filter)?.0 {
                     addr_pair = (Some(event.src_addr), Some(event.dst_addr));
                 }
@@ -750,18 +799,28 @@ impl Event {
                 }
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    if bootp_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCK_LIST);
                     }
                 }
-                RecordType::Dns(dns_event) => {
-                    if dns_event.matches(locator, filter)?.0 {
+                RecordType::DceRpc(dcerpc_event) => {
+                    if dcerpc_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCK_LIST);
                     }
                 }
-                RecordType::DceRpc(dcerpc_event) => {
-                    if dcerpc_event.matches(locator, filter)?.0 {
+                RecordType::Dhcp(dhcp_event) => {
+                    if dhcp_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCK_LIST);
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCK_LIST);
                     }
                 }
@@ -846,6 +905,11 @@ impl Event {
                     kind = Some(LOCKY_RANSOMWARE);
                 }
             }
+            Event::SuspiciousTlsTraffic(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(SUSPICIOUS_TLS_TRAFFIC);
+                }
+            }
         }
         Ok(kind)
     }
@@ -872,9 +936,11 @@ impl Event {
                 (EventKind::CryptocurrencyMiningPool, e.category())
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(e) => (EventKind::BlockListBootp, e.category()),
                 RecordType::Conn(e) => (EventKind::BlockListConn, e.category()),
-                RecordType::Dns(e) => (EventKind::BlockListDns, e.category()),
                 RecordType::DceRpc(e) => (EventKind::BlockListDceRpc, e.category()),
+                RecordType::Dhcp(e) => (EventKind::BlockListDhcp, e.category()),
+                RecordType::Dns(e) => (EventKind::BlockListDns, e.category()),
                 RecordType::Ftp(e) => (EventKind::BlockListFtp, e.category()),
                 RecordType::Http(e) => (EventKind::BlockListHttp, e.category()),
                 RecordType::Kerberos(e) => (EventKind::BlockListKerberos, e.category()),
@@ -892,12 +958,13 @@ impl Event {
             Event::NetworkThreat(e) => (EventKind::NetworkThreat, e.category()),
             Event::ExtraThreat(e) => (EventKind::ExtraThreat, e.category()),
             Event::LockyRansomware(e) => (EventKind::LockyRansomware, e.category()),
+            Event::SuspiciousTlsTraffic(e) => (EventKind::SuspiciousTlsTraffic, e.category()),
         }
     }
 
     // TODO: Need to implement country counting for `WindowsThreat`.
     // 1. for Network Connection: count country via ip
-    // 2. for other Sysmon events: count the country by KR.
+    // 2. for other Sysmon events: count the country by KR because the event does not have ip address.
     /// Counts the number of events per country.
     ///
     /// # Errors
@@ -1029,19 +1096,29 @@ impl Event {
                 }
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    if bootp_event.matches(locator, filter)?.0 {
+                        category = Some(bootp_event.category());
+                    }
+                }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
                         category = Some(conn_event.category());
                     }
                 }
-                RecordType::Dns(dns_event) => {
-                    if dns_event.matches(locator, filter)?.0 {
-                        category = Some(dns_event.category());
-                    }
-                }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
                         category = Some(dcerpc_event.category());
+                    }
+                }
+                RecordType::Dhcp(dhcp_event) => {
+                    if dhcp_event.matches(locator, filter)?.0 {
+                        category = Some(dhcp_event.category());
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
+                        category = Some(dns_event.category());
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
@@ -1121,6 +1198,11 @@ impl Event {
                 }
             }
             Event::LockyRansomware(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(event.category());
+                }
+            }
+            Event::SuspiciousTlsTraffic(event) => {
                 if event.matches(locator, filter)?.0 {
                     category = Some(event.category());
                 }
@@ -1367,18 +1449,28 @@ impl Event {
                 }
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    if bootp_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
                         level = Some(MEDIUM);
                     }
                 }
-                RecordType::Dns(dns_event) => {
-                    if dns_event.matches(locator, filter)?.0 {
+                RecordType::DceRpc(dcerpc_event) => {
+                    if dcerpc_event.matches(locator, filter)?.0 {
                         level = Some(MEDIUM);
                     }
                 }
-                RecordType::DceRpc(dcerpc_event) => {
-                    if dcerpc_event.matches(locator, filter)?.0 {
+                RecordType::Dhcp(dhcp_event) => {
+                    if dhcp_event.matches(locator, filter)?.0 {
+                        level = Some(MEDIUM);
+                    }
+                }
+                RecordType::Dns(dns_event) => {
+                    if dns_event.matches(locator, filter)?.0 {
                         level = Some(MEDIUM);
                     }
                 }
@@ -1461,6 +1553,11 @@ impl Event {
             Event::LockyRansomware(event) => {
                 if event.matches(locator, filter)?.0 {
                     level = Some(HIGH);
+                }
+            }
+            Event::SuspiciousTlsTraffic(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(MEDIUM);
                 }
             }
         }
@@ -1549,14 +1646,20 @@ impl Event {
                 event.triage_scores = Some(triage_scores);
             }
             Event::BlockList(record_type) => match record_type {
+                RecordType::Bootp(bootp_event) => {
+                    bootp_event.triage_scores = Some(triage_scores);
+                }
                 RecordType::Conn(conn_event) => {
                     conn_event.triage_scores = Some(triage_scores);
                 }
-                RecordType::Dns(dns_event) => {
-                    dns_event.triage_scores = Some(triage_scores);
-                }
                 RecordType::DceRpc(dcerpc_event) => {
                     dcerpc_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Dhcp(dhcp_event) => {
+                    dhcp_event.triage_scores = Some(triage_scores);
+                }
+                RecordType::Dns(dns_event) => {
+                    dns_event.triage_scores = Some(triage_scores);
                 }
                 RecordType::Ftp(ftp_event) => {
                     ftp_event.triage_scores = Some(triage_scores);
@@ -1605,6 +1708,9 @@ impl Event {
                 event.triage_scores = Some(triage_scores);
             }
             Event::LockyRansomware(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
+            Event::SuspiciousTlsTraffic(event) => {
                 event.triage_scores = Some(triage_scores);
             }
         }
@@ -1664,50 +1770,9 @@ pub enum EventKind {
     WindowsThreat,
     NetworkThreat,
     LockyRansomware,
-}
-
-impl From<&EventKind> for EventCategory {
-    fn from(kind: &EventKind) -> Self {
-        match *kind {
-            EventKind::DnsCovertChannel
-            | EventKind::TorConnection
-            | EventKind::DomainGenerationAlgorithm
-            | EventKind::NonBrowser
-            | EventKind::CryptocurrencyMiningPool => EventCategory::CommandAndControl,
-
-            EventKind::RdpBruteForce => EventCategory::Discovery,
-            EventKind::RepeatedHttpSessions => EventCategory::Exfiltration,
-
-            EventKind::FtpBruteForce | EventKind::LdapBruteForce => EventCategory::CredentialAccess,
-            EventKind::FtpPlainText | EventKind::LdapPlainText => EventCategory::LateralMovement,
-
-            EventKind::BlockListConn
-            | EventKind::BlockListDns
-            | EventKind::BlockListDceRpc
-            | EventKind::BlockListFtp
-            | EventKind::BlockListHttp
-            | EventKind::BlockListKerberos
-            | EventKind::BlockListLdap
-            | EventKind::BlockListMqtt
-            | EventKind::BlockListNfs
-            | EventKind::BlockListNtlm
-            | EventKind::BlockListRdp
-            | EventKind::BlockListSmb
-            | EventKind::BlockListSmtp
-            | EventKind::BlockListSsh
-            | EventKind::BlockListTls => EventCategory::InitialAccess,
-
-            EventKind::HttpThreat
-            | EventKind::PortScan
-            | EventKind::MultiHostPortScan
-            | EventKind::NetworkThreat
-            | EventKind::ExtraThreat => EventCategory::Reconnaissance,
-
-            EventKind::ExternalDdos | EventKind::WindowsThreat | EventKind::LockyRansomware => {
-                EventCategory::Impact
-            }
-        }
-    }
+    SuspiciousTlsTraffic,
+    BlockListBootp,
+    BlockListDhcp,
 }
 
 /// Machine Learning Method.
@@ -1802,9 +1867,11 @@ impl EventFilter {
                 &["cryptocurrency", "mining", "pool"],
                 "cryptocurrency mining pool",
             );
+            moderate_kinds_by(kinds, &["block", "list", "bootp"], "block list bootp");
             moderate_kinds_by(kinds, &["block", "list", "conn"], "block list conn");
-            moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
             moderate_kinds_by(kinds, &["block", "list", "dcerpc"], "block list dcerpc");
+            moderate_kinds_by(kinds, &["block", "list", "dhcp"], "block list dhcp");
+            moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
             moderate_kinds_by(kinds, &["block", "list", "ftp"], "block list ftp");
             moderate_kinds_by(kinds, &["block", "list", "http"], "block list http");
             moderate_kinds_by(kinds, &["block", "list", "kerberos"], "block list kerberos");
@@ -1821,6 +1888,11 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["network", "threat"], "network threat");
             moderate_kinds_by(kinds, &["extra", "threat"], "extra threat");
             moderate_kinds_by(kinds, &["locky", "ransomware"], "locky ransomware");
+            moderate_kinds_by(
+                kinds,
+                &["suspicious", "tls", "traffic"],
+                "suspicious tls traffic",
+            );
         }
     }
 }
@@ -1865,91 +1937,97 @@ impl fmt::Display for EventMessage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "time={:?} event_kind={:?} category={:?} ",
+            "time={:?} event_kind={:?} ",
             self.time.to_rfc3339(),
             format!("{:?}", self.kind),
-            format!("{:?}", EventCategory::from(&self.kind))
         )?;
         let _r = match self.kind {
             EventKind::DnsCovertChannel => bincode::deserialize::<DnsEventFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::HttpThreat => bincode::deserialize::<HttpThreatFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::RdpBruteForce => bincode::deserialize::<RdpBruteForceFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::RepeatedHttpSessions => {
                 bincode::deserialize::<RepeatedHttpSessionsFields>(&self.fields)
-                    .map(|fields| write!(f, "{fields}"))
+                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
             EventKind::TorConnection => bincode::deserialize::<TorConnectionFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
-            EventKind::DomainGenerationAlgorithm => {
-                bincode::deserialize::<DgaFields>(&self.fields).map(|fields| write!(f, "{fields}"))
-            }
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+            EventKind::DomainGenerationAlgorithm => bincode::deserialize::<DgaFields>(&self.fields)
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::FtpBruteForce => bincode::deserialize::<FtpBruteForceFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::FtpPlainText => bincode::deserialize::<FtpPlainTextFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::PortScan => bincode::deserialize::<PortScanFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::MultiHostPortScan => {
                 bincode::deserialize::<MultiHostPortScanFields>(&self.fields)
-                    .map(|fields| write!(f, "{fields}"))
+                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
             EventKind::NonBrowser => bincode::deserialize::<NonBrowserFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::LdapBruteForce => bincode::deserialize::<LdapBruteForceFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::LdapPlainText => bincode::deserialize::<LdapPlainTextFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::ExternalDdos => bincode::deserialize::<ExternalDdosFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::CryptocurrencyMiningPool => {
                 bincode::deserialize::<CryptocurrencyMiningPoolFields>(&self.fields)
-                    .map(|fields| write!(f, "{fields}"))
+                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
+            EventKind::BlockListBootp => bincode::deserialize::<BlockListBootpFields>(&self.fields)
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListConn => bincode::deserialize::<BlockListConnFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
-            EventKind::BlockListDns => bincode::deserialize::<BlockListDnsFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListDceRpc => {
                 bincode::deserialize::<BlockListDceRpcFields>(&self.fields)
-                    .map(|fields| write!(f, "{fields}"))
+                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
+            EventKind::BlockListDhcp => bincode::deserialize::<BlockListDhcpFields>(&self.fields)
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+            EventKind::BlockListDns => bincode::deserialize::<BlockListDnsFields>(&self.fields)
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListFtp => bincode::deserialize::<BlockListFtpFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListHttp => bincode::deserialize::<BlockListHttpFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListKerberos => {
                 bincode::deserialize::<BlockListKerberosFields>(&self.fields)
-                    .map(|fields| write!(f, "{fields}"))
+                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
             EventKind::BlockListLdap => bincode::deserialize::<BlockListLdapFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListMqtt => bincode::deserialize::<BlockListMqttFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListNfs => bincode::deserialize::<BlockListNfsFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListNtlm => bincode::deserialize::<BlockListNtlmFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListRdp => bincode::deserialize::<BlockListRdpFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListSmb => bincode::deserialize::<BlockListSmbFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListSmtp => bincode::deserialize::<BlockListSmtpFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListSsh => bincode::deserialize::<BlockListSshFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListTls => bincode::deserialize::<BlockListTlsFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::WindowsThreat => bincode::deserialize::<WindowsThreat>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::NetworkThreat => bincode::deserialize::<NetworkThreat>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::ExtraThreat => bincode::deserialize::<ExtraThreat>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::LockyRansomware => bincode::deserialize::<DnsEventFields>(&self.fields)
-                .map(|fields| write!(f, "{fields}")),
+                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+            EventKind::SuspiciousTlsTraffic => {
+                bincode::deserialize::<BlockListTlsFields>(&self.fields)
+                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
+            }
         };
         Ok(())
     }
@@ -2234,6 +2312,15 @@ impl<'i> Iterator for EventIterator<'i> {
                     Event::CryptocurrencyMiningPool(CryptocurrencyMiningPool::new(time, fields)),
                 )))
             }
+            EventKind::BlockListBootp => {
+                let Ok(fields) = bincode::deserialize::<BlockListBootpFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Bootp(BlockListBootp::new(time, fields))),
+                )))
+            }
             EventKind::BlockListConn => {
                 let Ok(fields) = bincode::deserialize::<BlockListConnFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
@@ -2243,15 +2330,6 @@ impl<'i> Iterator for EventIterator<'i> {
                     Event::BlockList(RecordType::Conn(BlockListConn::new(time, fields))),
                 )))
             }
-            EventKind::BlockListDns => {
-                let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::BlockList(RecordType::Dns(BlockListDns::new(time, fields))),
-                )))
-            }
             EventKind::BlockListDceRpc => {
                 let Ok(fields) = bincode::deserialize::<BlockListDceRpcFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
@@ -2259,6 +2337,24 @@ impl<'i> Iterator for EventIterator<'i> {
                 Some(Ok((
                     key,
                     Event::BlockList(RecordType::DceRpc(BlockListDceRpc::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListDhcp => {
+                let Ok(fields) = bincode::deserialize::<BlockListDhcpFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(time, fields))),
+                )))
+            }
+            EventKind::BlockListDns => {
+                let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::BlockList(RecordType::Dns(BlockListDns::new(time, fields))),
                 )))
             }
             EventKind::BlockListFtp => {
@@ -2396,6 +2492,15 @@ impl<'i> Iterator for EventIterator<'i> {
                     Event::LockyRansomware(LockyRansomware::new(time, fields)),
                 )))
             }
+            EventKind::SuspiciousTlsTraffic => {
+                let Ok(fields) = bincode::deserialize::<BlockListTlsFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, fields)),
+                )))
+            }
         }
     }
 }
@@ -2478,29 +2583,28 @@ mod tests {
     use std::{
         collections::HashMap,
         net::{IpAddr, Ipv4Addr},
+        str::FromStr,
         sync::Arc,
     };
 
     use chrono::{TimeZone, Utc};
 
     use crate::{
-        event::{
-            http::RepeatedHttpSessionsFields, CryptocurrencyMiningPoolFields, DgaFields,
-            DnsEventFields, ExternalDdosFields, FtpBruteForceFields, FtpPlainTextFields,
-            HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields, MultiHostPortScanFields,
-            NonBrowserFields, PortScanFields, RdpBruteForceFields, TorConnectionFields,
-            LOCKY_RANSOMWARE,
-        },
-        types::EventCategory,
-        BlockListConnFields, BlockListDceRpcFields, BlockListDnsFields, BlockListFtpFields,
-        BlockListHttp, BlockListHttpFields, BlockListKerberosFields, BlockListLdapFields,
-        BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields, BlockListRdpFields,
-        BlockListSmbFields, BlockListSmtpFields, BlockListSshFields, BlockListTlsFields,
-        DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
-        ExtraThreat, HttpThreat, NetworkThreat, RecordType, Store, TriageScore, WindowsThreat,
+        event::LOCKY_RANSOMWARE, types::EventCategory, BlockListBootp, BlockListBootpFields,
+        BlockListConnFields, BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields,
+        BlockListDnsFields, BlockListFtpFields, BlockListHttp, BlockListHttpFields,
+        BlockListKerberosFields, BlockListLdapFields, BlockListMqttFields, BlockListNfsFields,
+        BlockListNtlmFields, BlockListRdpFields, BlockListSmbFields, BlockListSmtpFields,
+        BlockListSshFields, BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields,
+        DnsEventFields, DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage,
+        ExternalDdos, ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpPlainTextFields,
+        HttpThreat, HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields,
+        MultiHostPortScanFields, NetworkThreat, NonBrowserFields, PortScanFields,
+        RdpBruteForceFields, RecordType, RepeatedHttpSessionsFields, Store, SuspiciousTlsTraffic,
+        TorConnectionFields, TriageScore, WindowsThreat,
     };
 
-    fn example_message(kind: EventKind) -> EventMessage {
+    fn example_message(kind: EventKind, category: EventCategory) -> EventMessage {
         let fields = DnsEventFields {
             source: "collector1".to_string(),
             session_end_time: Utc::now(),
@@ -2522,6 +2626,7 @@ mod tests {
             ra_flag: false,
             ttl: vec![1; 5],
             confidence: 0.8,
+            category,
         };
         EventMessage {
             time: Utc::now(),
@@ -2539,7 +2644,10 @@ mod tests {
         let db = store.events();
         assert!(db.iter_forward().next().is_none());
 
-        let msg = example_message(EventKind::DnsCovertChannel);
+        let msg = example_message(
+            EventKind::DnsCovertChannel,
+            EventCategory::CommandAndControl,
+        );
         db.put(&msg).unwrap();
         let mut iter = db.iter_forward();
         assert!(iter.next().is_some());
@@ -2559,7 +2667,7 @@ mod tests {
 
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
         let db = store.events();
-        let msg = example_message(EventKind::LockyRansomware);
+        let msg = example_message(EventKind::LockyRansomware, EventCategory::Impact);
         db.put(&msg).unwrap();
         let mut iter = db.iter_forward();
         let e = iter.next();
@@ -2639,6 +2747,7 @@ mod tests {
             post_body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 0.8,
+            category: EventCategory::CommandAndControl,
         };
         let msg = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
@@ -2679,7 +2788,10 @@ mod tests {
             let db = store.events();
             assert!(db.iter_forward().next().is_none());
 
-            let msg = example_message(EventKind::DnsCovertChannel);
+            let msg = example_message(
+                EventKind::DnsCovertChannel,
+                EventCategory::CommandAndControl,
+            );
 
             db.put(&msg).unwrap();
             {
@@ -2699,7 +2811,7 @@ mod tests {
         {
             let store = store.read().await;
             let db = store.events();
-            let msg = example_message(EventKind::LockyRansomware);
+            let msg = example_message(EventKind::LockyRansomware, EventCategory::Impact);
             db.put(&msg).unwrap();
             {
                 let mut iter = db.iter_forward();
@@ -2779,6 +2891,7 @@ mod tests {
             matched_to: "match".to_string(),
             attack_kind: "attack".to_string(),
             confidence: 0.8,
+            category: EventCategory::Reconnaissance,
         };
         let msg = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
@@ -2831,6 +2944,7 @@ mod tests {
             resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
             post_body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
+            category: EventCategory::CommandAndControl,
         };
 
         let message = EventMessage {
@@ -2886,6 +3000,7 @@ mod tests {
             resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
             post_body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -2933,6 +3048,7 @@ mod tests {
             ra_flag: false,
             ttl: vec![120; 5],
             confidence: 0.8,
+            category: EventCategory::Impact,
         };
 
         let message = EventMessage {
@@ -2968,6 +3084,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            category: EventCategory::Reconnaissance,
         };
 
         let message = EventMessage {
@@ -3005,6 +3122,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            category: EventCategory::Reconnaissance,
         };
 
         let message = EventMessage {
@@ -3041,6 +3159,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            category: EventCategory::Impact,
         };
 
         let message = EventMessage {
@@ -3081,6 +3200,9 @@ mod tests {
             orig_pkts: 1,
             resp_bytes: 100,
             resp_pkts: 1,
+            orig_l2_bytes: 122,
+            resp_l2_bytes: 122,
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3092,7 +3214,7 @@ mod tests {
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListConn" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListConn" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122""#
         );
 
         let block_list_conn = Event::BlockList(RecordType::Conn(crate::BlockListConn::new(
@@ -3102,7 +3224,7 @@ mod tests {
         .to_string();
         assert_eq!(
             &block_list_conn,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListConn" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListConn" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" triage_scores="""#
         );
     }
 
@@ -3120,6 +3242,7 @@ mod tests {
             named_pipe: "svcctl".to_string(),
             endpoint: "epmapper".to_string(),
             operation: "bind".to_string(),
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3168,6 +3291,7 @@ mod tests {
             ra_flag: true,
             ttl: vec![120; 5],
             confidence: 0.9,
+            category: EventCategory::CommandAndControl,
         };
 
         let message = EventMessage {
@@ -3222,6 +3346,7 @@ mod tests {
             ra_flag: true,
             ttl: vec![120; 5],
             coins: vec!["bitcoin".to_string(), "monero".to_string()],
+            category: EventCategory::CommandAndControl,
         };
 
         let message = EventMessage {
@@ -3270,6 +3395,7 @@ mod tests {
             rd_flag: false,
             ra_flag: true,
             ttl: vec![120; 5],
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3305,6 +3431,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             is_internal: true,
+            category: EventCategory::CredentialAccess,
         };
 
         let message = EventMessage {
@@ -3353,6 +3480,7 @@ mod tests {
             file: "/etc/passwd".to_string(),
             file_size: 5000,
             file_id: "123".to_string(),
+            category: EventCategory::LateralMovement,
         };
 
         let message = EventMessage {
@@ -3400,6 +3528,7 @@ mod tests {
             file: "/etc/passwd".to_string(),
             file_size: 5000,
             file_id: "123".to_string(),
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3435,6 +3564,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
+            category: EventCategory::Exfiltration,
         };
 
         let message = EventMessage {
@@ -3478,6 +3608,7 @@ mod tests {
             realm: "EXAMPLE.COM".to_string(),
             sname_type: 1,
             service_name: vec!["krbtgt/EXAMPLE.COM".to_string()],
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3518,6 +3649,7 @@ mod tests {
             ],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            category: EventCategory::CredentialAccess,
         };
 
         let message = EventMessage {
@@ -3561,6 +3693,7 @@ mod tests {
             diagnostic_message: vec!["msg".to_string()],
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
+            category: EventCategory::LateralMovement,
         };
 
         let message = EventMessage {
@@ -3604,6 +3737,7 @@ mod tests {
             diagnostic_message: vec!["msg".to_string()],
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3643,6 +3777,7 @@ mod tests {
             cluster_id: 1,
             attack_kind: "attack_kind".to_string(),
             confidence: 0.9,
+            category: EventCategory::Reconnaissance,
             triage_scores: None,
         };
 
@@ -3675,6 +3810,7 @@ mod tests {
             connack_reason: 0,
             subscribe: vec!["topic".to_string()],
             suback_reason: "error".to_string().into_bytes(),
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3721,6 +3857,7 @@ mod tests {
             attack_kind: "attack_kind".to_string(),
             confidence: 0.9,
             triage_scores: None,
+            category: EventCategory::Reconnaissance,
         };
 
         let message = EventMessage {
@@ -3748,6 +3885,7 @@ mod tests {
             last_time: 100,
             read_files: vec!["/etc/passwd".to_string()],
             write_files: vec!["/etc/shadow".to_string()],
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3789,6 +3927,7 @@ mod tests {
             hostname: "host1".to_string(),
             domainname: "domain1".to_string(),
             success: "true".to_string(),
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3826,6 +3965,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
             proto: 6,
+            category: EventCategory::Discovery,
         };
 
         let message = EventMessage {
@@ -3863,6 +4003,7 @@ mod tests {
             proto: 6,
             last_time: 100,
             cookie: "cookie".to_string(),
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3910,6 +4051,7 @@ mod tests {
             access_time: 200,
             write_time: 300,
             change_time: 400,
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -3953,6 +4095,7 @@ mod tests {
             subject: "subject".to_string(),
             agent: "agent".to_string(),
             state: "state".to_string(),
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -4002,6 +4145,7 @@ mod tests {
             hassh_server: "hassh_server".to_string(),
             client_shka: "client_shka".to_string(),
             server_shka: "server_shka".to_string(),
+            category: EventCategory::InitialAccess,
         };
 
         let message = EventMessage {
@@ -4048,6 +4192,7 @@ mod tests {
             attack_kind: "Ransomware_Alcatraz".to_string(),
             confidence: 0.9,
             triage_scores: None,
+            category: EventCategory::Impact,
         };
 
         let message = EventMessage {
@@ -4103,6 +4248,7 @@ mod tests {
             issuer_org_name: "org".to_string(),
             issuer_org_unit_name: "unit".to_string(),
             issuer_common_name: "common".to_string(),
+            category: EventCategory::InitialAccess,
             last_alert: 1,
         };
 
@@ -4156,6 +4302,13 @@ mod tests {
             content_encoding: "content_encoding".to_string(),
             content_type: "content_type".to_string(),
             cache_control: "cache_control".to_string(),
+            orig_filenames: vec!["filename".to_string()],
+            orig_mime_types: vec!["mime_type".to_string()],
+            resp_filenames: vec!["filename".to_string()],
+            resp_mime_types: vec!["mime_type".to_string()],
+            post_body: "post_body".as_bytes().to_vec(),
+            state: "state".to_string(),
+            category: EventCategory::CommandAndControl,
         };
 
         let message = EventMessage {
@@ -4167,7 +4320,7 @@ mod tests {
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state""#
         );
 
         let tor_connection = Event::TorConnection(crate::TorConnection::new(
@@ -4178,7 +4331,168 @@ mod tests {
 
         assert_eq!(
             &tor_connection,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_bootp() {
+        let fields = BlockListBootpFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 68,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 67,
+            proto: 17,
+            last_time: 100,
+            op: 1,
+            htype: 2,
+            hops: 1,
+            xid: 1,
+            ciaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 5)),
+            yiaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 6)),
+            siaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 7)),
+            giaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 8)),
+            chaddr: vec![1, 2, 3, 4, 5, 6],
+            sname: "server_name".to_string(),
+            file: "boot_file_name".to_string(),
+            category: EventCategory::InitialAccess,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListBootp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListBootp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name""#,
+        );
+
+        let block_list_bootp = Event::BlockList(RecordType::Bootp(BlockListBootp::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_bootp,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListBootp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_dhcp() {
+        let fields = BlockListDhcpFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::from_str("127.0.0.1").unwrap(),
+            src_port: 68,
+            dst_addr: IpAddr::from_str("127.0.0.2").unwrap(),
+            dst_port: 67,
+            proto: 17,
+            last_time: 100,
+            msg_type: 1,
+            ciaddr: IpAddr::from_str("127.0.0.5").unwrap(),
+            yiaddr: IpAddr::from_str("127.0.0.6").unwrap(),
+            siaddr: IpAddr::from_str("127.0.0.7").unwrap(),
+            giaddr: IpAddr::from_str("127.0.0.8").unwrap(),
+            subnet_mask: IpAddr::from_str("255.255.255.0").unwrap(),
+            router: vec![IpAddr::from_str("127.0.0.1").unwrap()],
+            domain_name_server: vec![IpAddr::from_str("127.0.0.1").unwrap()],
+            req_ip_addr: IpAddr::from_str("127.0.0.100").unwrap(),
+            lease_time: 100,
+            server_id: IpAddr::from_str("127.0.0.1").unwrap(),
+            param_req_list: vec![1, 2, 3],
+            message: "message".to_string(),
+            renewal_time: 100,
+            rebinding_time: 200,
+            class_id: vec![4, 5, 6],
+            client_id_type: 1,
+            client_id: vec![7, 8, 9],
+            category: EventCategory::InitialAccess,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListDhcp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDhcp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09""#,
+        );
+
+        let block_list_dhcp = Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &block_list_dhcp,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDhcp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_suspicious_tls_traffic() {
+        let fields = BlockListTlsFields {
+            source: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 443,
+            proto: 6,
+            last_time: 100,
+            server_name: "server".to_string(),
+            alpn_protocol: "alpn".to_string(),
+            ja3: "ja3".to_string(),
+            version: "version".to_string(),
+            client_cipher_suites: vec![1, 2, 3],
+            client_extensions: vec![4, 5, 6],
+            cipher: 1,
+            extensions: vec![7, 8, 9],
+            ja3s: "ja3s".to_string(),
+            serial: "serial".to_string(),
+            subject_country: "country".to_string(),
+            subject_org_name: "org".to_string(),
+            subject_common_name: "common".to_string(),
+            validity_not_before: 100,
+            validity_not_after: 200,
+            subject_alt_name: "alt".to_string(),
+            issuer_country: "country".to_string(),
+            issuer_org_name: "org".to_string(),
+            issuer_org_unit_name: "unit".to_string(),
+            issuer_common_name: "common".to_string(),
+            category: EventCategory::Unknown,
+            last_alert: 1,
+        };
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::SuspiciousTlsTraffic,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let syslog_message = message.to_string();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1""#
+        );
+
+        let block_list_tls = Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        ))
+        .to_string();
+
+        assert_eq!(
+            &block_list_tls,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" triage_scores="""#
         );
     }
 }

@@ -160,6 +160,9 @@ pub(super) trait Match {
             }
         }
 
+        // TODO:
+        //  - EventCategory::HttpThreat is obsoleted and replaced by EventCategory::Reconnaissance
+        //  - Is it ok to remove the http specific code?
         if let Some(learning_methods) = &filter.learning_methods {
             let category = self.category();
             if learning_methods.iter().all(|learning_method| {
@@ -266,4 +269,12 @@ pub fn vector_to_string<T: ToString>(v: &[T]) -> String {
             .collect::<Vec<_>>()
             .join(",")
     }
+}
+
+pub fn to_hardware_address(chaddr: &[u8]) -> String {
+    chaddr
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join(":")
 }

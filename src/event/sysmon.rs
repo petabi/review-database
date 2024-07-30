@@ -30,6 +30,7 @@ pub struct WindowsThreat {
     pub cluster_id: usize,
     pub attack_kind: String,
     pub confidence: f32,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -58,6 +59,7 @@ impl fmt::Display for WindowsThreat {
         )
     }
 }
+
 // TODO: Make new Match trait for Windows threat events
 impl Match for WindowsThreat {
     fn source(&self) -> &str {
@@ -84,9 +86,8 @@ impl Match for WindowsThreat {
         0
     }
 
-    // TODO: choose event category with service and attack_kind value
     fn category(&self) -> EventCategory {
-        EventCategory::Impact
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -102,7 +103,6 @@ impl Match for WindowsThreat {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

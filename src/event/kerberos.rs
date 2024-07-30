@@ -24,6 +24,7 @@ pub struct BlockListKerberosFields {
     pub realm: String,
     pub sname_type: u8,
     pub service_name: Vec<String>,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for BlockListKerberosFields {
@@ -70,6 +71,7 @@ pub struct BlockListKerberos {
     pub realm: String,
     pub sname_type: u8,
     pub service_name: Vec<String>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -119,6 +121,7 @@ impl BlockListKerberos {
             realm: fields.realm,
             sname_type: fields.sname_type,
             service_name: fields.service_name,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -146,7 +149,7 @@ impl Match for BlockListKerberos {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -166,7 +169,6 @@ impl Match for BlockListKerberos {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

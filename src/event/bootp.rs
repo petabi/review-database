@@ -4,10 +4,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use crate::event::common::{to_hardware_address, triage_scores_to_string};
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListNtlmFields {
+pub struct BlockListBootpFields {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -15,18 +15,24 @@ pub struct BlockListNtlmFields {
     pub dst_port: u16,
     pub proto: u8,
     pub last_time: i64,
-    pub protocol: String,
-    pub username: String,
-    pub hostname: String,
-    pub domainname: String,
-    pub success: String,
+    pub op: u8,
+    pub htype: u8,
+    pub hops: u8,
+    pub xid: u32,
+    pub ciaddr: IpAddr,
+    pub yiaddr: IpAddr,
+    pub siaddr: IpAddr,
+    pub giaddr: IpAddr,
+    pub chaddr: Vec<u8>,
+    pub sname: String,
+    pub file: String,
     pub category: EventCategory,
 }
-impl fmt::Display for BlockListNtlmFields {
+impl fmt::Display for BlockListBootpFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?}",
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} op={:?} htype={:?} hops={:?} xid={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} chaddr={:?} sname={:?} file={:?}",
             self.source,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -34,16 +40,23 @@ impl fmt::Display for BlockListNtlmFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.last_time.to_string(),
-            self.protocol,
-            self.username,
-            self.hostname,
-            self.domainname,
-            self.success
+            self.op.to_string(),
+            self.htype.to_string(),
+            self.hops.to_string(),
+            self.xid.to_string(),
+            self.ciaddr.to_string(),
+            self.yiaddr.to_string(),
+            self.siaddr.to_string(),
+            self.giaddr.to_string(),
+            to_hardware_address(&self.chaddr),
+            self.sname.to_string(),
+            self.file.to_string(),
         )
     }
 }
+
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListNtlm {
+pub struct BlockListBootp {
     pub time: DateTime<Utc>,
     pub source: String,
     pub src_addr: IpAddr,
@@ -52,19 +65,25 @@ pub struct BlockListNtlm {
     pub dst_port: u16,
     pub proto: u8,
     pub last_time: i64,
-    pub protocol: String,
-    pub username: String,
-    pub hostname: String,
-    pub domainname: String,
-    pub success: String,
+    pub op: u8,
+    pub htype: u8,
+    pub hops: u8,
+    pub xid: u32,
+    pub ciaddr: IpAddr,
+    pub yiaddr: IpAddr,
+    pub siaddr: IpAddr,
+    pub giaddr: IpAddr,
+    pub chaddr: Vec<u8>,
+    pub sname: String,
+    pub file: String,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-impl fmt::Display for BlockListNtlm {
+impl fmt::Display for BlockListBootp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} triage_scores={:?}",
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} op={:?} htype={:?} hops={:?} xid={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} chaddr={:?} sname={:?} file={:?} triage_scores={:?}",
             self.source,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -72,17 +91,24 @@ impl fmt::Display for BlockListNtlm {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.last_time.to_string(),
-            self.protocol,
-            self.username,
-            self.hostname,
-            self.domainname,
-            self.success,
+            self.op.to_string(),
+            self.htype.to_string(),
+            self.hops.to_string(),
+            self.xid.to_string(),
+            self.ciaddr.to_string(),
+            self.yiaddr.to_string(),
+            self.siaddr.to_string(),
+            self.giaddr.to_string(),
+            to_hardware_address(&self.chaddr),
+            self.sname.to_string(),
+            self.file.to_string(),
             triage_scores_to_string(&self.triage_scores)
         )
     }
 }
-impl BlockListNtlm {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListNtlmFields) -> Self {
+
+impl BlockListBootp {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlockListBootpFields) -> Self {
         Self {
             time,
             source: fields.source,
@@ -92,18 +118,24 @@ impl BlockListNtlm {
             dst_port: fields.dst_port,
             proto: fields.proto,
             last_time: fields.last_time,
-            protocol: fields.protocol,
-            username: fields.username,
-            hostname: fields.hostname,
-            domainname: fields.domainname,
-            success: fields.success,
+            op: fields.op,
+            htype: fields.htype,
+            hops: fields.hops,
+            xid: fields.xid,
+            ciaddr: fields.ciaddr,
+            yiaddr: fields.yiaddr,
+            siaddr: fields.siaddr,
+            giaddr: fields.giaddr,
+            chaddr: fields.chaddr,
+            sname: fields.sname,
+            file: fields.file,
             category: fields.category,
             triage_scores: None,
         }
     }
 }
 
-impl Match for BlockListNtlm {
+impl Match for BlockListBootp {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -133,7 +165,7 @@ impl Match for BlockListNtlm {
     }
 
     fn kind(&self) -> &str {
-        "block list ntlm"
+        "block list bootp"
     }
 
     fn source(&self) -> &str {

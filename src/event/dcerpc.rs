@@ -19,6 +19,7 @@ pub struct BlockListDceRpcFields {
     pub named_pipe: String,
     pub endpoint: String,
     pub operation: String,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for BlockListDceRpcFields {
@@ -54,6 +55,7 @@ pub struct BlockListDceRpc {
     pub named_pipe: String,
     pub endpoint: String,
     pub operation: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -93,6 +95,7 @@ impl BlockListDceRpc {
             named_pipe: fields.named_pipe,
             endpoint: fields.endpoint,
             operation: fields.operation,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -120,7 +123,7 @@ impl Match for BlockListDceRpc {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -140,7 +143,6 @@ impl Match for BlockListDceRpc {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

@@ -8,13 +8,14 @@ use super::{common::Match, EventCategory, EventFilter, TriagePolicy, TriageScore
 use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
-pub(super) struct RepeatedHttpSessionsFields {
+pub struct RepeatedHttpSessionsFields {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for RepeatedHttpSessionsFields {
@@ -40,6 +41,7 @@ pub struct RepeatedHttpSessions {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -69,6 +71,7 @@ impl RepeatedHttpSessions {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -96,7 +99,7 @@ impl Match for RepeatedHttpSessions {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Exfiltration
+        self.category
     }
 
     fn level(&self) -> std::num::NonZeroU8 {
@@ -161,6 +164,7 @@ pub struct HttpThreatFields {
     pub cluster_id: usize,
     pub attack_kind: String,
     pub confidence: f32,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for HttpThreatFields {
@@ -209,7 +213,7 @@ impl fmt::Display for HttpThreatFields {
 
 // HTTP Request body has Vec<u8> type, and it's too large to print.
 const MAX_POST_BODY_LEN: usize = 10;
-fn get_post_body(post_body: &[u8]) -> String {
+pub fn get_post_body(post_body: &[u8]) -> String {
     let post_body = String::from_utf8_lossy(post_body);
     if post_body.len() > MAX_POST_BODY_LEN {
         let mut trimmed = post_body
@@ -262,6 +266,7 @@ pub struct HttpThreat {
     pub cluster_id: usize,
     pub attack_kind: String,
     pub confidence: f32,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -349,6 +354,7 @@ impl HttpThreat {
             cluster_id: fields.cluster_id,
             attack_kind: fields.attack_kind,
             confidence: fields.confidence,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -376,7 +382,7 @@ impl Match for HttpThreat {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Reconnaissance
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -396,7 +402,6 @@ impl Match for HttpThreat {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 
@@ -456,6 +461,7 @@ pub struct DgaFields {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for DgaFields {
@@ -531,6 +537,7 @@ pub struct DomainGenerationAlgorithm {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -608,6 +615,7 @@ impl DomainGenerationAlgorithm {
             post_body: fields.post_body,
             state: fields.state,
             confidence: fields.confidence,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -635,7 +643,7 @@ impl Match for DomainGenerationAlgorithm {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::CommandAndControl
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -655,11 +663,11 @@ impl Match for DomainGenerationAlgorithm {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
 
+// TODO: Merge BlockListHttpFields, TorConnectionFields
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct NonBrowserFields {
@@ -693,6 +701,7 @@ pub struct NonBrowserFields {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for NonBrowserFields {
@@ -765,6 +774,7 @@ pub struct NonBrowser {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -840,6 +850,7 @@ impl NonBrowser {
             resp_mime_types: fields.resp_mime_types.clone(),
             post_body: fields.post_body.clone(),
             state: fields.state.clone(),
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -867,7 +878,7 @@ impl Match for NonBrowser {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::CommandAndControl
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -887,7 +898,6 @@ impl Match for NonBrowser {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -923,6 +933,7 @@ pub struct BlockListHttpFields {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for BlockListHttpFields {
@@ -996,6 +1007,7 @@ pub struct BlockListHttp {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -1071,6 +1083,7 @@ impl BlockListHttp {
             resp_mime_types: fields.resp_mime_types.clone(),
             post_body: fields.post_body.clone(),
             state: fields.state.clone(),
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -1098,7 +1111,7 @@ impl Match for BlockListHttp {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -1118,7 +1131,6 @@ impl Match for BlockListHttp {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

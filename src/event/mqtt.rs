@@ -21,6 +21,7 @@ pub struct BlockListMqttFields {
     pub connack_reason: u8,
     pub subscribe: Vec<String>,
     pub suback_reason: Vec<u8>,
+    pub category: EventCategory,
 }
 impl fmt::Display for BlockListMqttFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -60,6 +61,7 @@ pub struct BlockListMqtt {
     pub connack_reason: u8,
     pub subscribe: Vec<String>,
     pub suback_reason: Vec<u8>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -103,6 +105,7 @@ impl BlockListMqtt {
             connack_reason: fields.connack_reason,
             subscribe: fields.subscribe,
             suback_reason: fields.suback_reason,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -130,7 +133,7 @@ impl Match for BlockListMqtt {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -150,7 +153,6 @@ impl Match for BlockListMqtt {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

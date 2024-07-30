@@ -22,7 +22,9 @@ pub struct RdpBruteForceFields {
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
     pub proto: u8,
+    pub category: EventCategory,
 }
+
 impl fmt::Display for RdpBruteForceFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -36,6 +38,7 @@ impl fmt::Display for RdpBruteForceFields {
         )
     }
 }
+
 pub struct RdpBruteForce {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -43,6 +46,7 @@ pub struct RdpBruteForce {
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
     pub proto: u8,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -70,6 +74,7 @@ impl RdpBruteForce {
             start_time: fields.start_time,
             last_time: fields.last_time,
             proto: fields.proto,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -97,7 +102,7 @@ impl Match for RdpBruteForce {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::Discovery
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -117,7 +122,6 @@ impl Match for RdpBruteForce {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -132,7 +136,9 @@ pub struct BlockListRdpFields {
     pub proto: u8,
     pub last_time: i64,
     pub cookie: String,
+    pub category: EventCategory,
 }
+
 impl fmt::Display for BlockListRdpFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -159,6 +165,7 @@ pub struct BlockListRdp {
     pub proto: u8,
     pub last_time: i64,
     pub cookie: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlockListRdp {
@@ -191,6 +198,7 @@ impl BlockListRdp {
             proto: fields.proto,
             last_time: fields.last_time,
             cookie: fields.cookie,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -218,7 +226,7 @@ impl Match for BlockListRdp {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -238,7 +246,6 @@ impl Match for BlockListRdp {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

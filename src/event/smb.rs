@@ -26,6 +26,7 @@ pub struct BlockListSmbFields {
     pub access_time: i64,
     pub write_time: i64,
     pub change_time: i64,
+    pub category: EventCategory,
 }
 impl fmt::Display for BlockListSmbFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -75,6 +76,7 @@ pub struct BlockListSmb {
     pub access_time: i64,
     pub write_time: i64,
     pub change_time: i64,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlockListSmb {
@@ -126,6 +128,7 @@ impl BlockListSmb {
             access_time: fields.access_time,
             write_time: fields.write_time,
             change_time: fields.change_time,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -153,7 +156,7 @@ impl Match for BlockListSmb {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -173,7 +176,6 @@ impl Match for BlockListSmb {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

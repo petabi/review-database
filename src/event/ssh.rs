@@ -28,6 +28,7 @@ pub struct BlockListSshFields {
     pub hassh_server: String,
     pub client_shka: String,
     pub server_shka: String,
+    pub category: EventCategory,
 }
 impl fmt::Display for BlockListSshFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -81,6 +82,7 @@ pub struct BlockListSsh {
     pub hassh_server: String,
     pub client_shka: String,
     pub server_shka: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlockListSsh {
@@ -137,6 +139,7 @@ impl BlockListSsh {
             hassh_server: fields.hassh_server,
             client_shka: fields.client_shka,
             server_shka: fields.server_shka,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -164,7 +167,7 @@ impl Match for BlockListSsh {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -184,7 +187,6 @@ impl Match for BlockListSsh {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

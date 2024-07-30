@@ -8,9 +8,13 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    event::{DgaFields, HttpThreatFields, NonBrowserFields},
-    BlockListConnFields, BlockListHttpFields, BlockListNtlmFields, BlockListSmtpFields,
-    BlockListSshFields, BlockListTlsFields,
+    BlockListConnFields, BlockListDnsFields, BlockListFtpFields, BlockListHttpFields,
+    BlockListKerberosFields, BlockListLdapFields, BlockListNtlmFields, BlockListRdpFields,
+    BlockListSmtpFields, BlockListSshFields, BlockListTlsFields, CryptocurrencyMiningPoolFields,
+    DgaFields, DnsEventFields, EventCategory, ExternalDdosFields, FtpBruteForceFields,
+    FtpPlainTextFields, HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields,
+    MultiHostPortScanFields, NetworkThreat, NonBrowserFields, PortScanFields, RdpBruteForceFields,
+    RepeatedHttpSessionsFields, TorConnectionFields, TriageScore, WindowsThreat,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -45,6 +49,9 @@ impl From<BlockListConnBeforeV29> for BlockListConnFields {
             resp_bytes: input.resp_bytes,
             orig_pkts: input.orig_pkts,
             resp_pkts: input.resp_pkts,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
+            category: EventCategory::InitialAccess,
         }
     }
 }
@@ -124,6 +131,7 @@ impl From<HttpThreatBeforeV29> for HttpThreatFields {
             cluster_id: input.cluster_id,
             attack_kind: input.attack_kind,
             confidence: input.confidence,
+            category: EventCategory::Reconnaissance,
         }
     }
 }
@@ -189,6 +197,7 @@ impl From<DgaBeforeV29> for DgaFields {
             post_body: Vec::new(),
             state: String::new(),
             confidence: input.confidence,
+            category: EventCategory::CommandAndControl,
         }
     }
 }
@@ -254,11 +263,113 @@ impl From<NonBrowserBeforeV29> for NonBrowserFields {
             resp_mime_types: Vec::new(),
             post_body: Vec::new(),
             state: String::new(),
+            category: EventCategory::CommandAndControl,
         }
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct BlockListDnsBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub last_time: i64,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+}
+
+impl From<BlockListDnsBeforeV29> for BlockListDnsFields {
+    fn from(input: BlockListDnsBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            last_time: input.last_time,
+            query: input.query,
+            answer: input.answer,
+            trans_id: input.trans_id,
+            rtt: input.rtt,
+            qclass: input.qclass,
+            qtype: input.qtype,
+            rcode: input.rcode,
+            aa_flag: input.aa_flag,
+            tc_flag: input.tc_flag,
+            rd_flag: input.rd_flag,
+            ra_flag: input.ra_flag,
+            ttl: input.ttl,
+            category: EventCategory::InitialAccess,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct BlockListFtpBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub last_time: i64,
+    pub user: String,
+    pub password: String,
+    pub command: String,
+    pub reply_code: String,
+    pub reply_msg: String,
+    pub data_passive: bool,
+    pub data_orig_addr: IpAddr,
+    pub data_resp_addr: IpAddr,
+    pub data_resp_port: u16,
+    pub file: String,
+    pub file_size: u64,
+    pub file_id: String,
+}
+
+impl From<BlockListFtpBeforeV29> for BlockListFtpFields {
+    fn from(input: BlockListFtpBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            last_time: input.last_time,
+            user: input.user,
+            password: input.password,
+            command: input.command,
+            reply_code: input.reply_code,
+            reply_msg: input.reply_msg,
+            data_passive: input.data_passive,
+            data_orig_addr: input.data_orig_addr,
+            data_resp_addr: input.data_resp_addr,
+            data_resp_port: input.data_resp_port,
+            file: input.file,
+            file_size: input.file_size,
+            file_id: input.file_id,
+            category: EventCategory::InitialAccess,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct BlockListHttpBeforeV29 {
     pub source: String,
     pub src_addr: IpAddr,
@@ -321,6 +432,91 @@ impl From<BlockListHttpBeforeV29> for BlockListHttpFields {
             resp_mime_types: Vec::new(),
             post_body: Vec::new(),
             state: String::new(),
+            category: EventCategory::InitialAccess,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BlockListKerberosBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub last_time: i64,
+    pub client_time: i64,
+    pub server_time: i64,
+    pub error_code: u32,
+    pub client_realm: String,
+    pub cname_type: u8,
+    pub client_name: Vec<String>,
+    pub realm: String,
+    pub sname_type: u8,
+    pub service_name: Vec<String>,
+}
+
+impl From<BlockListKerberosBeforeV29> for BlockListKerberosFields {
+    fn from(input: BlockListKerberosBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            last_time: input.last_time,
+            client_time: input.client_time,
+            server_time: input.server_time,
+            error_code: input.error_code,
+            client_realm: input.client_realm,
+            cname_type: input.cname_type,
+            client_name: input.client_name,
+            realm: input.realm,
+            sname_type: input.sname_type,
+            service_name: input.service_name,
+            category: EventCategory::InitialAccess,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct BlockListLdapBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub last_time: i64,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
+}
+
+impl From<BlockListLdapBeforeV29> for BlockListLdapFields {
+    fn from(input: BlockListLdapBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            last_time: input.last_time,
+            message_id: input.message_id,
+            version: input.version,
+            opcode: input.opcode,
+            result: input.result,
+            diagnostic_message: input.diagnostic_message,
+            object: input.object,
+            argument: input.argument,
+            category: EventCategory::InitialAccess,
         }
     }
 }
@@ -358,6 +554,35 @@ impl From<BlockListNtlmBeforeV29> for BlockListNtlmFields {
             hostname: input.hostname,
             domainname: input.domainname,
             success: input.success,
+            category: EventCategory::InitialAccess,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BlockListRdpBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub last_time: i64,
+    pub cookie: String,
+}
+
+impl From<BlockListRdpBeforeV29> for BlockListRdpFields {
+    fn from(input: BlockListRdpBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            last_time: input.last_time,
+            cookie: input.cookie,
+            category: EventCategory::InitialAccess,
         }
     }
 }
@@ -396,6 +621,7 @@ impl From<BlockListSmtpBeforeV29> for BlockListSmtpFields {
             subject: input.subject,
             agent: input.agent,
             state: String::new(),
+            category: EventCategory::InitialAccess,
         }
     }
 }
@@ -446,6 +672,7 @@ impl From<BlockListSshBeforeV29> for BlockListSshFields {
             hassh_server: String::new(),
             client_shka: String::new(),
             server_shka: String::new(),
+            category: EventCategory::InitialAccess,
         }
     }
 }
@@ -510,6 +737,534 @@ impl From<BlockListTlsBeforeV29> for BlockListTlsFields {
             issuer_org_unit_name: input.issuer_org_unit_name,
             issuer_common_name: input.issuer_common_name,
             last_alert: input.last_alert,
+            category: EventCategory::InitialAccess,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct CryptocurrencyMiningPoolBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub session_end_time: DateTime<Utc>,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub coins: Vec<String>,
+}
+
+impl From<CryptocurrencyMiningPoolBeforeV29> for CryptocurrencyMiningPoolFields {
+    fn from(input: CryptocurrencyMiningPoolBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            session_end_time: input.session_end_time,
+            query: input.query,
+            answer: input.answer,
+            trans_id: input.trans_id,
+            rtt: input.rtt,
+            qclass: input.qclass,
+            qtype: input.qtype,
+            rcode: input.rcode,
+            aa_flag: input.aa_flag,
+            tc_flag: input.tc_flag,
+            rd_flag: input.rd_flag,
+            ra_flag: input.ra_flag,
+            ttl: input.ttl,
+            coins: input.coins,
+            category: EventCategory::CommandAndControl,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct DnsCovertChannelBeforeV29 {
+    pub source: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub session_end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub confidence: f32,
+}
+
+impl From<DnsCovertChannelBeforeV29> for DnsEventFields {
+    fn from(input: DnsCovertChannelBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            session_end_time: input.session_end_time,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            query: input.query,
+            answer: input.answer,
+            trans_id: input.trans_id,
+            rtt: input.rtt,
+            qclass: input.qclass,
+            qtype: input.qtype,
+            rcode: input.rcode,
+            aa_flag: input.aa_flag,
+            tc_flag: input.tc_flag,
+            rd_flag: input.rd_flag,
+            ra_flag: input.ra_flag,
+            ttl: input.ttl,
+            confidence: input.confidence,
+            category: EventCategory::CommandAndControl,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ExternalDdosBeforeV29 {
+    pub src_addrs: Vec<IpAddr>,
+    pub dst_addr: IpAddr,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub last_time: DateTime<Utc>,
+}
+
+impl From<ExternalDdosBeforeV29> for ExternalDdosFields {
+    fn from(input: ExternalDdosBeforeV29) -> Self {
+        Self {
+            src_addrs: input.src_addrs,
+            dst_addr: input.dst_addr,
+            proto: input.proto,
+            start_time: input.start_time,
+            last_time: input.last_time,
+            category: EventCategory::Impact,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FtpBruteForceBeforeV29 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_list: Vec<String>,
+    pub start_time: DateTime<Utc>,
+    pub last_time: DateTime<Utc>,
+    pub is_internal: bool,
+}
+
+impl From<FtpBruteForceBeforeV29> for FtpBruteForceFields {
+    fn from(input: FtpBruteForceBeforeV29) -> Self {
+        Self {
+            src_addr: input.src_addr,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            user_list: input.user_list,
+            start_time: input.start_time,
+            last_time: input.last_time,
+            is_internal: input.is_internal,
+            category: EventCategory::CredentialAccess,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FtpPlainTextBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub last_time: i64,
+    pub user: String,
+    pub password: String,
+    pub command: String,
+    pub reply_code: String,
+    pub reply_msg: String,
+    pub data_passive: bool,
+    pub data_orig_addr: IpAddr,
+    pub data_resp_addr: IpAddr,
+    pub data_resp_port: u16,
+    pub file: String,
+    pub file_size: u64,
+    pub file_id: String,
+}
+
+impl From<FtpPlainTextBeforeV29> for FtpPlainTextFields {
+    fn from(input: FtpPlainTextBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            last_time: input.last_time,
+            user: input.user,
+            password: input.password,
+            command: input.command,
+            reply_code: input.reply_code,
+            reply_msg: input.reply_msg,
+            data_passive: input.data_passive,
+            data_orig_addr: input.data_orig_addr,
+            data_resp_addr: input.data_resp_addr,
+            data_resp_port: input.data_resp_port,
+            file: input.file,
+            file_size: input.file_size,
+            file_id: input.file_id,
+            category: EventCategory::LateralMovement,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct LdapBruteForceBeforeV29 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_pw_list: Vec<(String, String)>,
+    pub start_time: DateTime<Utc>,
+    pub last_time: DateTime<Utc>,
+}
+
+impl From<LdapBruteForceBeforeV29> for LdapBruteForceFields {
+    fn from(input: LdapBruteForceBeforeV29) -> Self {
+        Self {
+            src_addr: input.src_addr,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            user_pw_list: input.user_pw_list,
+            start_time: input.start_time,
+            last_time: input.last_time,
+            category: EventCategory::CredentialAccess,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct LdapPlainTextBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub last_time: i64,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
+}
+
+impl From<LdapPlainTextBeforeV29> for LdapPlainTextFields {
+    fn from(input: LdapPlainTextBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            last_time: input.last_time,
+            message_id: input.message_id,
+            version: input.version,
+            opcode: input.opcode,
+            result: input.result,
+            diagnostic_message: input.diagnostic_message,
+            object: input.object,
+            argument: input.argument,
+            category: EventCategory::LateralMovement,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MultiHostPortScanBeforeV29 {
+    pub src_addr: IpAddr,
+    pub dst_port: u16,
+    pub dst_addrs: Vec<IpAddr>,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub last_time: DateTime<Utc>,
+}
+
+impl From<MultiHostPortScanBeforeV29> for MultiHostPortScanFields {
+    fn from(input: MultiHostPortScanBeforeV29) -> Self {
+        Self {
+            src_addr: input.src_addr,
+            dst_port: input.dst_port,
+            dst_addrs: input.dst_addrs,
+            proto: input.proto,
+            start_time: input.start_time,
+            last_time: input.last_time,
+            category: EventCategory::Reconnaissance,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NetworkThreatBeforeV29 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub source: String,
+    pub orig_addr: IpAddr,
+    pub orig_port: u16,
+    pub resp_addr: IpAddr,
+    pub resp_port: u16,
+    pub proto: u8,
+    pub service: String,
+    pub last_time: i64,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: usize,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<NetworkThreatBeforeV29> for NetworkThreat {
+    fn from(input: NetworkThreatBeforeV29) -> Self {
+        Self {
+            time: input.time,
+            source: input.source,
+            orig_addr: input.orig_addr,
+            orig_port: input.orig_port,
+            resp_addr: input.resp_addr,
+            resp_port: input.resp_port,
+            proto: input.proto,
+            service: input.service,
+            last_time: input.last_time,
+            content: input.content,
+            db_name: input.db_name,
+            rule_id: input.rule_id,
+            matched_to: input.matched_to,
+            cluster_id: input.cluster_id,
+            attack_kind: input.attack_kind,
+            confidence: input.confidence,
+            triage_scores: input.triage_scores,
+            category: EventCategory::Reconnaissance,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RdpBruteForceBeforeV29 {
+    pub src_addr: IpAddr,
+    pub dst_addrs: Vec<IpAddr>,
+    pub start_time: DateTime<Utc>,
+    pub last_time: DateTime<Utc>,
+    pub proto: u8,
+}
+
+impl From<RdpBruteForceBeforeV29> for RdpBruteForceFields {
+    fn from(input: RdpBruteForceBeforeV29) -> Self {
+        Self {
+            src_addr: input.src_addr,
+            dst_addrs: input.dst_addrs,
+            start_time: input.start_time,
+            last_time: input.last_time,
+            proto: input.proto,
+            category: EventCategory::Discovery,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RepeatedHttpSessionsBeforeV29 {
+    pub source: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+}
+
+impl From<RepeatedHttpSessionsBeforeV29> for RepeatedHttpSessionsFields {
+    fn from(input: RepeatedHttpSessionsBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            category: EventCategory::Exfiltration,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PortScanBeforeV29 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_ports: Vec<u16>,
+    pub start_time: DateTime<Utc>,
+    pub last_time: DateTime<Utc>,
+    pub proto: u8,
+}
+
+impl From<PortScanBeforeV29> for PortScanFields {
+    fn from(input: PortScanBeforeV29) -> Self {
+        Self {
+            src_addr: input.src_addr,
+            dst_addr: input.dst_addr,
+            dst_ports: input.dst_ports,
+            start_time: input.start_time,
+            last_time: input.last_time,
+            proto: input.proto,
+            category: EventCategory::Reconnaissance,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct TorConnectionBeforeV29 {
+    pub source: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub session_end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referrer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+}
+
+impl From<TorConnectionBeforeV29> for TorConnectionFields {
+    fn from(input: TorConnectionBeforeV29) -> Self {
+        Self {
+            source: input.source,
+            session_end_time: input.session_end_time,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            method: input.method,
+            host: input.host,
+            uri: input.uri,
+            referrer: input.referrer,
+            version: input.version,
+            user_agent: input.user_agent,
+            request_len: input.request_len,
+            response_len: input.response_len,
+            status_code: input.status_code,
+            status_msg: input.status_msg,
+            username: input.username,
+            password: input.password,
+            cookie: input.cookie,
+            content_encoding: input.content_encoding,
+            content_type: input.content_type,
+            cache_control: input.cache_control,
+            orig_filenames: Vec::new(),
+            orig_mime_types: Vec::new(),
+            resp_filenames: Vec::new(),
+            resp_mime_types: Vec::new(),
+            post_body: Vec::new(),
+            state: String::new(),
+            category: EventCategory::CommandAndControl,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct WindowsThreatBeforeV29 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub source: String,
+    pub service: String,
+    pub agent_name: String,
+    pub agent_id: String,
+    pub process_guid: String,
+    pub process_id: u32,
+    pub image: String,
+    pub user: String,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: usize,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<WindowsThreatBeforeV29> for WindowsThreat {
+    fn from(input: WindowsThreatBeforeV29) -> Self {
+        Self {
+            time: input.time,
+            source: input.source,
+            service: input.service,
+            agent_name: input.agent_name,
+            agent_id: input.agent_id,
+            process_guid: input.process_guid,
+            process_id: input.process_id,
+            image: input.image,
+            user: input.user,
+            content: input.content,
+            db_name: input.db_name,
+            rule_id: input.rule_id,
+            matched_to: input.matched_to,
+            cluster_id: input.cluster_id,
+            attack_kind: input.attack_kind,
+            confidence: input.confidence,
+            triage_scores: input.triage_scores,
+            category: EventCategory::Impact,
         }
     }
 }

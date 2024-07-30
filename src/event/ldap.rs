@@ -16,6 +16,7 @@ pub struct LdapBruteForceFields {
     pub user_pw_list: Vec<(String, String)>,
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for LdapBruteForceFields {
@@ -55,6 +56,7 @@ pub struct LdapBruteForce {
     pub user_pw_list: Vec<(String, String)>,
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -86,6 +88,7 @@ impl LdapBruteForce {
             user_pw_list: fields.user_pw_list.clone(),
             start_time: fields.start_time,
             last_time: fields.last_time,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -113,7 +116,7 @@ impl Match for LdapBruteForce {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::CredentialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -133,7 +136,6 @@ impl Match for LdapBruteForce {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -154,6 +156,7 @@ pub struct LdapPlainTextFields {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for LdapPlainTextFields {
@@ -196,6 +199,7 @@ pub struct LdapPlainText {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -241,6 +245,7 @@ impl LdapPlainText {
             diagnostic_message: fields.diagnostic_message,
             object: fields.object,
             argument: fields.argument,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -268,7 +273,7 @@ impl Match for LdapPlainText {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::LateralMovement
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -288,11 +293,11 @@ impl Match for LdapPlainText {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
 
+// TODO: Merge BlockListLdapFields and BlockListLdapFields
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BlockListLdapFields {
     pub source: String,
@@ -309,7 +314,9 @@ pub struct BlockListLdapFields {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
+    pub category: EventCategory,
 }
+
 impl fmt::Display for BlockListLdapFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -350,6 +357,7 @@ pub struct BlockListLdap {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -395,6 +403,7 @@ impl BlockListLdap {
             diagnostic_message: fields.diagnostic_message,
             object: fields.object,
             argument: fields.argument,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -422,7 +431,7 @@ impl Match for BlockListLdap {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -442,7 +451,6 @@ impl Match for BlockListLdap {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }

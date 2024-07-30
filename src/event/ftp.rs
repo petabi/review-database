@@ -17,6 +17,7 @@ pub struct FtpBruteForceFields {
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
     pub is_internal: bool,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for FtpBruteForceFields {
@@ -46,6 +47,7 @@ pub struct FtpBruteForce {
     pub start_time: DateTime<Utc>,
     pub last_time: DateTime<Utc>,
     pub is_internal: bool,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -79,6 +81,7 @@ impl FtpBruteForce {
             start_time: fields.start_time,
             last_time: fields.last_time,
             is_internal: fields.is_internal,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -106,7 +109,7 @@ impl Match for FtpBruteForce {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::CredentialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -126,7 +129,6 @@ impl Match for FtpBruteForce {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
@@ -152,6 +154,7 @@ pub struct FtpPlainTextFields {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for FtpPlainTextFields {
@@ -204,6 +207,7 @@ pub struct FtpPlainText {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -259,6 +263,7 @@ impl FtpPlainText {
             file: fields.file,
             file_size: fields.file_size,
             file_id: fields.file_id,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -286,7 +291,7 @@ impl Match for FtpPlainText {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::LateralMovement
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -306,11 +311,11 @@ impl Match for FtpPlainText {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
 
+// TODO: Merge FtpPlainTextFields, BlockListFtpFields
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BlockListFtpFields {
     pub source: String,
@@ -332,6 +337,7 @@ pub struct BlockListFtpFields {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
+    pub category: EventCategory,
 }
 
 impl fmt::Display for BlockListFtpFields {
@@ -384,6 +390,7 @@ pub struct BlockListFtp {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
+    pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -439,6 +446,7 @@ impl BlockListFtp {
             file: fields.file,
             file_size: fields.file_size,
             file_id: fields.file_id,
+            category: fields.category,
             triage_scores: None,
         }
     }
@@ -466,7 +474,7 @@ impl Match for BlockListFtp {
     }
 
     fn category(&self) -> EventCategory {
-        EventCategory::InitialAccess
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -486,7 +494,6 @@ impl Match for BlockListFtp {
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
         0.0
     }
 }
