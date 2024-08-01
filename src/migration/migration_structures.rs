@@ -9,12 +9,12 @@ use strum_macros::{Display, EnumString};
 
 use crate::{
     BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
-    BlockListLdapFields, BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields,
-    BlockListSshFields, BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields,
-    DnsEventFields, EventCategory, ExternalDdosFields, FtpBruteForceFields, FtpEventFields,
-    HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields, MultiHostPortScanFields,
-    NetworkThreat, NonBrowserFields, PortScanFields, RdpBruteForceFields,
-    RepeatedHttpSessionsFields, TorConnectionFields, TriageScore, WindowsThreat,
+    BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
+    BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
+    ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpThreatFields,
+    LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat,
+    NonBrowserFields, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields,
+    TorConnectionFields, TriageScore, WindowsThreat,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -499,7 +499,7 @@ pub struct BlockListLdapBeforeV29 {
     pub argument: Vec<String>,
 }
 
-impl From<BlockListLdapBeforeV29> for BlockListLdapFields {
+impl From<BlockListLdapBeforeV29> for LdapEventFields {
     fn from(input: BlockListLdapBeforeV29) -> Self {
         Self {
             source: input.source,
@@ -994,7 +994,7 @@ pub struct LdapPlainTextBeforeV29 {
     pub argument: Vec<String>,
 }
 
-impl From<LdapPlainTextBeforeV29> for LdapPlainTextFields {
+impl From<LdapPlainTextBeforeV29> for LdapEventFields {
     fn from(input: LdapPlainTextBeforeV29) -> Self {
         Self {
             source: input.source,

@@ -140,8 +140,8 @@ impl Match for LdapBruteForce {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LdapPlainTextFields {
+#[derive(Deserialize, Serialize)]
+pub struct LdapEventFields {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -159,7 +159,7 @@ pub struct LdapPlainTextFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for LdapPlainTextFields {
+impl fmt::Display for LdapEventFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -228,7 +228,7 @@ impl fmt::Display for LdapPlainText {
 }
 
 impl LdapPlainText {
-    pub(super) fn new(time: DateTime<Utc>, fields: LdapPlainTextFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: LdapEventFields) -> Self {
         Self {
             time,
             source: fields.source,
@@ -297,49 +297,6 @@ impl Match for LdapPlainText {
     }
 }
 
-// TODO: Merge BlockListLdapFields and BlockListLdapFields
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BlockListLdapFields {
-    pub source: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub last_time: i64,
-    pub message_id: u32,
-    pub version: u8,
-    pub opcode: Vec<String>,
-    pub result: Vec<String>,
-    pub diagnostic_message: Vec<String>,
-    pub object: Vec<String>,
-    pub argument: Vec<String>,
-    pub category: EventCategory,
-}
-
-impl fmt::Display for BlockListLdapFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
-            self.source,
-            self.src_addr.to_string(),
-            self.src_port.to_string(),
-            self.dst_addr.to_string(),
-            self.dst_port.to_string(),
-            self.proto.to_string(),
-            self.last_time.to_string(),
-            self.message_id.to_string(),
-            self.version.to_string(),
-            self.opcode.join(","),
-            self.result.join(","),
-            self.diagnostic_message.join(","),
-            self.object.join(","),
-            self.argument.join(",")
-        )
-    }
-}
-
 #[derive(Deserialize, Serialize)]
 pub struct BlockListLdap {
     pub time: DateTime<Utc>,
@@ -386,7 +343,7 @@ impl fmt::Display for BlockListLdap {
 }
 
 impl BlockListLdap {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListLdapFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: LdapEventFields) -> Self {
         Self {
             time,
             source: fields.source,
