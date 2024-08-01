@@ -311,14 +311,13 @@ fn migrate_event_struct(store: &super::Store) -> Result<()> {
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        BlockListConnFields, BlockListDnsFields, BlockListFtpFields, BlockListHttpFields,
-        BlockListKerberosFields, BlockListLdapFields, BlockListNtlmFields, BlockListRdpFields,
-        BlockListSmtpFields, BlockListSshFields, BlockListTlsFields,
-        CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventKind, ExternalDdosFields,
-        FtpBruteForceFields, FtpPlainTextFields, HttpThreatFields, LdapBruteForceFields,
-        LdapPlainTextFields, MultiHostPortScanFields, NetworkThreat, NonBrowserFields,
-        PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, TorConnectionFields,
-        WindowsThreat,
+        BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
+        BlockListLdapFields, BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields,
+        BlockListSshFields, BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields,
+        DnsEventFields, EventKind, ExternalDdosFields, FtpBruteForceFields, FtpEventFields,
+        HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields, MultiHostPortScanFields,
+        NetworkThreat, NonBrowserFields, PortScanFields, RdpBruteForceFields,
+        RepeatedHttpSessionsFields, TorConnectionFields, WindowsThreat,
     };
 
     let event_db = store.events();
@@ -361,7 +360,7 @@ fn migrate_event_struct(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::BlockListFtp => {
-                update_event_db_with_new_event::<BlockListFtpBeforeV29, BlockListFtpFields>(
+                update_event_db_with_new_event::<BlockListFtpBeforeV29, FtpEventFields>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -428,7 +427,7 @@ fn migrate_event_struct(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::FtpPlainText => {
-                update_event_db_with_new_event::<FtpPlainTextBeforeV29, FtpPlainTextFields>(
+                update_event_db_with_new_event::<FtpPlainTextBeforeV29, FtpEventFields>(
                     &k, &v, &event_db,
                 )?;
             }
