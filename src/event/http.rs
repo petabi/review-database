@@ -667,10 +667,9 @@ impl Match for DomainGenerationAlgorithm {
     }
 }
 
-// TODO: Merge BlockListHttpFields, TorConnectionFields
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
-pub struct NonBrowserFields {
+pub struct HttpEventFields {
     pub source: String,
     #[serde(with = "ts_nanoseconds")]
     pub session_end_time: DateTime<Utc>,
@@ -704,7 +703,7 @@ pub struct NonBrowserFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for NonBrowserFields {
+impl fmt::Display for HttpEventFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -818,7 +817,7 @@ impl fmt::Display for NonBrowser {
 }
 
 impl NonBrowser {
-    pub(super) fn new(time: DateTime<Utc>, fields: &NonBrowserFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: &HttpEventFields) -> Self {
         NonBrowser {
             time,
             source: fields.source.clone(),
