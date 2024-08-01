@@ -133,58 +133,6 @@ impl Match for FtpBruteForce {
     }
 }
 
-// #[derive(Debug, Deserialize, Serialize)]
-// pub struct FtpPlainTextFields {
-//     pub source: String,
-//     pub src_addr: IpAddr,
-//     pub src_port: u16,
-//     pub dst_addr: IpAddr,
-//     pub dst_port: u16,
-//     pub proto: u8,
-//     pub last_time: i64,
-//     pub user: String,
-//     pub password: String,
-//     pub command: String,
-//     pub reply_code: String,
-//     pub reply_msg: String,
-//     pub data_passive: bool,
-//     pub data_orig_addr: IpAddr,
-//     pub data_resp_addr: IpAddr,
-//     pub data_resp_port: u16,
-//     pub file: String,
-//     pub file_size: u64,
-//     pub file_id: String,
-//     pub category: EventCategory,
-// }
-
-// impl fmt::Display for FtpPlainTextFields {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         write!(
-//             f,
-//             "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?}",
-//             self.source,
-//             self.src_addr.to_string(),
-//             self.src_port.to_string(),
-//             self.dst_addr.to_string(),
-//             self.dst_port.to_string(),
-//             self.proto.to_string(),
-//             self.last_time.to_string(),
-//             self.user,
-//             self.password,
-//             self.command,
-//             self.reply_code,
-//             self.reply_msg,
-//             self.data_passive.to_string(),
-//             self.data_orig_addr.to_string(),
-//             self.data_resp_addr.to_string(),
-//             self.data_resp_port.to_string(),
-//             self.file,
-//             self.file_size.to_string(),
-//             self.file_id,
-//         )
-//     }
-// }
-
 #[derive(Deserialize, Serialize)]
 pub struct FtpPlainText {
     pub time: DateTime<Utc>,

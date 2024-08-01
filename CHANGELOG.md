@@ -18,10 +18,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `category` field to TI db and TI rules and all the detected event structures.
   And modify all the detected events to use it's own category field value
   instead of statically assigned category values.
-- Added fields to some detected event structures
+- Added new fields to the detected event structures.
   - `BlockListConn`: `orig_l2_bytes`, `resp_l2_bytes`
   - `TorConnection`: `orig_filenames`, `orig_mime_types`, `resp_filenames`,
     `resp_mime_types`, `post_body`, `state`
+- Combine some detected event structures that share the same fields.
+  - `FtpPlainTextFields`, `BlockListFtpFields` -> `FtpEventFields`
+  - `LdapPlainTextFields`, `BlockListLdapFields` -> `LdapEventFields`
+  - `TorConnectionFields`, `NonBrowserFields` -> `HttpEventFields`
 
 ## [0.29.1] - 2024-08-05
 
