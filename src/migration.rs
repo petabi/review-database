@@ -127,8 +127,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_26_to_0_28,
         ),
         (
-            VersionReq::parse(">=0.28.0,<0.29.0-alpha.1")?,
-            Version::parse("0.29.0-alpha.1")?,
+            VersionReq::parse(">=0.28.0,<0.29.1")?,
+            Version::parse("0.29.1")?,
             migrate_0_28_to_0_29_0,
         ),
     ];
