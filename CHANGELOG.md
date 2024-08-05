@@ -5,6 +5,13 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.1] - 2024-08-05
+
+### Fixed
+
+- Corrected the database migration version number to ensure accurate tracking of
+  schema changes and upgrades.
+
 ## [0.29.0] - 2024-07-25
 
 ### Added
@@ -604,6 +611,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[0.29.1]: https://github.com/petabi/review-database/compare/0.29.0...0.29.1
 [0.29.0]: https://github.com/petabi/review-database/compare/0.28.0...0.29.0
 [0.28.0]: https://github.com/petabi/review-database/compare/0.27.1...0.28.0
 [0.27.1]: https://github.com/petabi/review-database/compare/0.27.0...0.27.1
