@@ -9,8 +9,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Modified codes related to the user's language settings to the account update
-  function
+- Extended the `Table<'d, Account>::update` method signature to include the
+  `language` parameter, enabling language updates alongside existing fields.
 
 ## [0.29.1] - 2024-08-05
 
