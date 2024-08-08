@@ -2583,17 +2583,18 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use crate::{
-        event::LOCKY_RANSOMWARE, types::EventCategory, BlockListBootp, BlockListBootpFields,
-        BlockListConnFields, BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields,
-        BlockListDnsFields, BlockListHttp, BlockListHttpFields, BlockListKerberosFields,
-        BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields, BlockListRdpFields,
-        BlockListSmbFields, BlockListSmtpFields, BlockListSshFields, BlockListTlsFields,
-        CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, DomainGenerationAlgorithm,
-        Event, EventFilter, EventKind, EventMessage, ExternalDdos, ExternalDdosFields, ExtraThreat,
-        FtpBruteForceFields, FtpEventFields, HttpEventFields, HttpThreat, HttpThreatFields,
-        LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat,
-        PortScanFields, RdpBruteForceFields, RecordType, RepeatedHttpSessionsFields, Store,
-        SuspiciousTlsTraffic, TriageScore, WindowsThreat,
+        event::{LOCKY_RANSOMWARE, SUSPICIOUS_TLS_TRAFFIC},
+        types::EventCategory,
+        BlockListBootp, BlockListBootpFields, BlockListConnFields, BlockListDceRpcFields,
+        BlockListDhcp, BlockListDhcpFields, BlockListDnsFields, BlockListHttp, BlockListHttpFields,
+        BlockListKerberosFields, BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields,
+        BlockListRdpFields, BlockListSmbFields, BlockListSmtpFields, BlockListSshFields,
+        BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields,
+        DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
+        ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
+        HttpThreat, HttpThreatFields, LdapBruteForceFields, LdapEventFields,
+        MultiHostPortScanFields, NetworkThreat, PortScanFields, RdpBruteForceFields, RecordType,
+        RepeatedHttpSessionsFields, Store, SuspiciousTlsTraffic, TriageScore, WindowsThreat,
     };
 
     fn example_message(kind: EventKind, category: EventCategory) -> EventMessage {
@@ -4430,8 +4431,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_suspicious_tls_traffic() {
+    fn example_message_suspicious_tls_traffic() -> (EventMessage, BlockListTlsFields) {
         let fields = BlockListTlsFields {
             source: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
@@ -4464,12 +4464,19 @@ mod tests {
             last_alert: 1,
         };
 
-        let message = EventMessage {
-            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::SuspiciousTlsTraffic,
-            fields: bincode::serialize(&fields).expect("serializable"),
-        };
+        (
+            EventMessage {
+                time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+                kind: EventKind::SuspiciousTlsTraffic,
+                fields: bincode::serialize(&fields).expect("serializable"),
+            },
+            fields,
+        )
+    }
 
+    #[tokio::test]
+    async fn syslog_for_suspicious_tls_traffic() {
+        let (message, fields) = example_message_suspicious_tls_traffic();
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
@@ -4485,6 +4492,63 @@ mod tests {
         assert_eq!(
             &block_list_tls,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn event_filter_for_suspicious_tls_traffic() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        let (message, _fields) = example_message_suspicious_tls_traffic();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: None,
+            kinds: Some(vec!["suspicious tls traffic".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: Some(0.5),
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.kind(None, &filter).unwrap(),
+            Some(SUSPICIOUS_TLS_TRAFFIC)
+        );
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(SUSPICIOUS_TLS_TRAFFIC), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::Unknown), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
         );
     }
 }
