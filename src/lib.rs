@@ -13,7 +13,6 @@ mod csv_indicator;
 pub mod event;
 mod migration;
 mod model;
-mod outlier;
 mod schema;
 mod scores;
 mod tables;
@@ -63,7 +62,6 @@ pub use self::event::{
 };
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
-pub use self::outlier::*;
 use self::tables::StateDb;
 pub use self::tables::{
     AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
