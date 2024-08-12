@@ -48,6 +48,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - Giganto-related settings from `Node::settings` are removed; those in
     `Node::settings_draft` are stored in `Node::giganto::draft` as
     TOML-formatted strings.
+- The outlier table has been removed from the PostgreSQL database.
 
 ### Fixed
 
