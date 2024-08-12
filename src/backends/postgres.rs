@@ -234,27 +234,6 @@ impl<'a> Connection<'a> {
             Err(Error::InvalidInput(format!("no row with id = {id}")))
         }
     }
-
-    /// Executes a function.
-    pub async fn execute_function(
-        &self,
-        function: &str,
-        arguments: &[database::Type],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<(), Error> {
-        let query = query_select_function(function, arguments);
-        let result = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.execute(query.as_str(), values).await?,
-            ConnectionType::Tls(conn) => conn.execute(query.as_str(), values).await?,
-        };
-        if result == 1 {
-            Ok(())
-        } else {
-            Err(Error::InvalidInput(format!(
-                "failed to execute PostgreSQL function: {function}"
-            )))
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -617,25 +596,6 @@ fn query_select_one(
 
     query.push_str(" LIMIT 1");
 
-    query
-}
-
-// Builds a SELECT statement to execute a function.
-fn query_select_function(function: &str, arguments: &[database::Type]) -> String {
-    let mut query = "SELECT ".to_string();
-    query.push_str(function);
-    query.push('(');
-    if !arguments.is_empty() {
-        query.push_str("$1::");
-        query.push_str(&arguments[0].to_string());
-        for (i, arg) in arguments.iter().enumerate().skip(1) {
-            query.push_str(", $");
-            query.push_str(&(i + 1).to_string());
-            query.push_str("::");
-            query.push_str(&arg.to_string());
-        }
-    }
-    query.push(')');
     query
 }
 
