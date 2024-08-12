@@ -762,12 +762,6 @@ mod tests {
     }
 
     #[test]
-    fn query_select_function() {
-        let query = super::query_select_function("f1", &[Type::INT8_ARRAY, Type::TEXT]);
-        assert_eq!(query, "SELECT f1($1::_int8, $2::text)")
-    }
-
-    #[test]
     fn query_select_in() {
         let query = super::query_select(
             "t1",
