@@ -151,17 +151,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    outlier (id) {
-        id -> Int4,
-        raw_event -> Bytea,
-        model_id -> Int4,
-        event_ids -> Array<Nullable<Int8>>,
-        size -> Int8,
-        event_sources -> Array<Nullable<Text>>,
-    }
-}
-
-diesel::table! {
     time_series (id) {
         id -> Int4,
         cluster_id -> Int4,
@@ -251,7 +240,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     description_ipaddr,
     description_text,
     model,
-    outlier,
     time_series,
     top_n_binary,
     top_n_datetime,
