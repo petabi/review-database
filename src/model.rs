@@ -1,9 +1,11 @@
 use anyhow::Result;
 use bincode::Options;
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
+use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use super::{Database, Error, Type};
+use super::{Database, Error, Type, schema::model::dsl};
 
 #[derive(Deserialize, Queryable)]
 pub struct Digest {
@@ -254,29 +256,19 @@ impl Database {
     ///
     /// Returns an error if the model already exists or if a database operation fails.
     pub async fn add_model(&self, model: &SqlModel) -> Result<i32, Error> {
-        let conn = self.pool.get().await?;
-        let n = conn
-            .insert_into(
-                "model",
-                &[
-                    ("name", Type::TEXT),
-                    ("version", Type::INT4),
-                    ("kind", Type::TEXT),
-                    ("classifier", Type::BYTEA),
-                    ("max_event_id_num", Type::INT4),
-                    ("data_source_id", Type::INT4),
-                    ("classification_id", Type::INT8),
-                ],
-                &[
-                    &model.name,
-                    &model.version,
-                    &model.kind,
-                    &model.classifier,
-                    &model.max_event_id_num,
-                    &model.data_source_id,
-                    &model.classification_id,
-                ],
-            )
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let n = diesel::insert_into(dsl::model)
+            .values((
+                dsl::name.eq(&model.name),
+                dsl::version.eq(model.version),
+                dsl::kind.eq(&model.kind),
+                dsl::classifier.eq(&model.classifier),
+                dsl::max_event_id_num.eq(model.max_event_id_num),
+                dsl::data_source_id.eq(model.data_source_id),
+                dsl::classification_id.eq(model.classification_id),
+            ))
+            .returning(dsl::id)
+            .get_result(&mut conn)
             .await
             .map_err(|_| Error::InvalidInput(format!("model \"{}\" already exists", model.name)))?;
         if n == 0 {
@@ -481,11 +473,6 @@ impl Database {
         is_first: bool,
         limit: usize,
     ) -> Result<Vec<Digest>, Error> {
-        use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
-        use diesel_async::RunQueryDsl;
-
-        use super::schema::model::dsl;
-
         let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
         let mut query = dsl::model
             .select((
