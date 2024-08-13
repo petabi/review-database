@@ -13,6 +13,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `language` parameter, enabling language updates alongside existing fields.
 - Added `category` field to TI db and TI rules.
 
+### Removed
+
+- The outlier table has been removed from the PostgreSQL database.
+
 ## [0.29.1] - 2024-08-05
 
 ### Fixed
@@ -63,7 +67,6 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - Giganto-related settings from `Node::settings` are removed; those in
     `Node::settings_draft` are stored in `Node::giganto::draft` as
     TOML-formatted strings.
-- The outlier table has been removed from the PostgreSQL database.
 
 ### Fixed
 
