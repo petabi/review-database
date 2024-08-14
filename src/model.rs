@@ -240,17 +240,6 @@ pub struct SqlModel {
 }
 
 impl Database {
-    // const CSV_COLUMN_TYPES: &'static [&'static str] = &[
-    //     "binary", "datetime", "enum", "float", "int", "ipaddr", "text",
-    // ];
-
-    // fn type_tables(prefix: &str) -> Vec<String> {
-    //     Self::CSV_COLUMN_TYPES
-    //         .iter()
-    //         .map(|t| format!("{prefix}_{t}"))
-    //         .collect()
-    // }
-
     /// Adds a new model to the database.
     ///
     /// # Errors
