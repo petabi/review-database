@@ -2,11 +2,10 @@ use anyhow::Result;
 use bincode::Options;
 use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
-
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use super::{schema::model::dsl, Database, Error, Type};
+use super::{schema::model::dsl, Database, Error};
 
 #[derive(Deserialize, Queryable)]
 pub struct Digest {
@@ -419,8 +418,8 @@ impl Database {
     ///
     /// Returns an error if a database operation fails.
     pub async fn count_models(&self) -> Result<i64, Error> {
-        let conn = self.pool.get().await?;
-        conn.count("model", &[], &[], &[]).await
+        let mut conn = self.pool.get_diesel_conn().await?;
+        Ok(dsl::model.count().get_result(&mut conn).await?)
     }
 
     /// Returns the maximum number of outliers of the model with the given name.
@@ -429,14 +428,12 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn get_max_event_id_num(&self, model_name: &str) -> Result<i32, Error> {
-        let conn = self.pool.get().await?;
-        conn.select_one_from(
-            "model",
-            &["max_event_id_num"],
-            &[("name", Type::TEXT)],
-            &[&model_name],
-        )
-        .await
+        let mut conn = self.pool.get_diesel_conn().await?;
+        Ok(dsl::model
+            .select(dsl::max_event_id_num)
+            .filter(dsl::name.eq(model_name))
+            .get_result(&mut conn)
+            .await?)
     }
 
     /// Returns the model with the given ID.
@@ -445,20 +442,18 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn load_model(&self, id: i32) -> Result<Digest, Error> {
-        let conn = self.pool.get().await?;
-        conn.select_one_from::<Digest>(
-            "model",
-            &[
-                "id",
-                "name",
-                "version",
-                "data_source_id",
-                "classification_id",
-            ],
-            &[("id", super::Type::INT4)],
-            &[&id],
-        )
-        .await
+        let mut conn = self.pool.get_diesel_conn().await?;
+        Ok(dsl::model
+            .select((
+                dsl::id,
+                dsl::name,
+                dsl::version,
+                dsl::data_source_id,
+                dsl::classification_id,
+            ))
+            .filter(dsl::id.eq(id))
+            .get_result(&mut conn)
+            .await?)
     }
 
     /// Returns the model with the given name.
@@ -552,34 +547,24 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn update_model<'a>(&self, model: &SqlModel) -> Result<i32, Error> {
-        let conn = self.pool.get().await?;
+        let mut conn = self.pool.get_diesel_conn().await?;
 
-        conn.update(
-            "model",
-            model.id,
-            &[
-                ("name", Type::TEXT),
-                ("version", Type::INT4),
-                ("kind", super::Type::TEXT),
-                ("classifier", Type::BYTEA),
-                ("max_event_id_num", Type::INT4),
-                ("data_source_id", Type::INT4),
-                ("classification_id", Type::INT8),
-            ],
-            &[
-                &model.name,
-                &model.version,
-                &model.kind,
-                &model.classifier,
-                &model.max_event_id_num,
-                &model.data_source_id,
-                &model.classification_id,
-            ],
-        )
-        .await
-        .map_err(|e| {
-            Error::InvalidInput(format!("failed to update model \"{}\": {e}", model.name))
-        })?;
+        diesel::update(dsl::model.filter(dsl::id.eq(model.id)))
+            .set((
+                dsl::name.eq(&model.name),
+                dsl::version.eq(model.version),
+                dsl::kind.eq(&model.kind),
+                dsl::classifier.eq(&model.classifier),
+                dsl::max_event_id_num.eq(model.max_event_id_num),
+                dsl::data_source_id.eq(model.data_source_id),
+                dsl::classification_id.eq(model.classification_id),
+            ))
+            .execute(&mut conn)
+            .await
+            .map_err(|e| {
+                Error::InvalidInput(format!("failed to update model \"{}\": {e}", model.name))
+            })?;
+
         Ok(model.id)
     }
 }
