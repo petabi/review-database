@@ -78,59 +78,6 @@ impl<'a> Connection<'a> {
         Ok(row.get(0))
     }
 
-    /// Deletes rows from a table.
-    ///
-    /// # Examples
-    ///
-    /// The following code deletes from the table "user" all the rows with name
-    /// "john" and age 32.
-    ///
-    /// ```ignore
-    /// conn.delete_from("user", &[("name", Type::TEXT), ("age", Type::INT4)], &[&"john", &32_i32]);
-    /// ```
-    pub async fn delete_from(
-        &self,
-        table: &str,
-        variables: &[(&str, database::Type)],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<u64, Error> {
-        let query = query_delete_from(table, variables);
-        let n = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.execute(query.as_str(), values).await?,
-            ConnectionType::Tls(conn) => conn.execute(query.as_str(), values).await?,
-        };
-        Ok(n)
-    }
-
-    /// Deletes rows from a table.
-    ///
-    /// # Examples
-    ///
-    /// The following code deletes from the table "user" all the rows with name
-    /// "john" and age 32 and id listed in [2, 4].
-    ///
-    /// ```ignore
-    /// conn.delete_in("user", &[("name", Type::TEXT), ("age", Type::INT4)], &[("id", Type::INT4_ARRAY)], &[&"john", &32_i32, &[2_i32, 4_i32]]);
-    /// ```
-    pub async fn delete_in(
-        &self,
-        table: &str,
-        variables: &[(&str, database::Type)],
-        any_variables: &[(&str, database::Type)],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<u64, Error> {
-        if variables.is_empty() && any_variables.is_empty() {
-            return Ok(0);
-        }
-
-        let query = query_delete_in(table, variables, any_variables);
-        let n = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.execute(query.as_str(), values).await?,
-            ConnectionType::Tls(conn) => conn.execute(query.as_str(), values).await?,
-        };
-        Ok(n)
-    }
-
     /// Inserts a row into a table.
     ///
     /// # Panics
@@ -150,29 +97,6 @@ impl<'a> Connection<'a> {
         Ok(row.get(0))
     }
 
-    /// Selects columns according to the `IN` condition.
-    pub async fn select_in<D: DeserializeOwned>(
-        &self,
-        table: &str,
-        columns: &[&str],
-        variables: &[(&str, database::Type)],
-        in_variables: &[(&str, database::Type)],
-        array_variables: &[(&str, database::Type, Option<&str>)],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<Vec<D>, Error> {
-        let query = query_select(table, columns, variables, in_variables, array_variables);
-        let rows = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.query(query.as_str(), values).await?,
-            ConnectionType::Tls(conn) => conn.query(query.as_str(), values).await?,
-        };
-        let mut result = Vec::with_capacity(rows.len());
-        for row in &rows {
-            let data = de::from_row(row).map_err(|e| Error::InvalidInput(e.to_string()))?;
-            result.push(data);
-        }
-        Ok(result)
-    }
-
     /// Selects a single row from a table.
     pub async fn select_one_from<D: DeserializeOwned>(
         &self,
@@ -187,28 +111,6 @@ impl<'a> Connection<'a> {
             ConnectionType::Tls(conn) => conn.query_one(query.as_str(), values).await?,
         };
         de::from_row(&row).map_err(|e| Error::InvalidInput(e.to_string()))
-    }
-
-    /// Selects a single or zero row from a table.
-    pub async fn select_one_opt_from<D: DeserializeOwned>(
-        &self,
-        table: &str,
-        columns: &[&str],
-        variables: &[(&str, database::Type)],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<Option<D>, Error> {
-        let query = query_select_one(table, columns, variables, &[], &[]);
-        let query_result = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.query_opt(query.as_str(), values).await,
-            ConnectionType::Tls(conn) => conn.query_opt(query.as_str(), values).await,
-        }
-        .map_err(|e| Error::InvalidInput(e.to_string()))?;
-
-        if let Some(row) = query_result {
-            de::from_row(&row).map_err(|e| Error::InvalidInput(e.to_string()))
-        } else {
-            Ok(None)
-        }
     }
 
     /// Updates the given fields of a row in a table.
@@ -456,36 +358,6 @@ where
     }
 }
 
-/// Builds a DELETE statement.
-fn query_delete_from(table: &str, variables: &[(&str, database::Type)]) -> String {
-    let mut query = "DELETE FROM ".to_string();
-    query.push_str(table);
-    query.push_str(" WHERE ");
-    query_equality(&mut query, variables);
-    query
-}
-
-fn query_delete_in(
-    table: &str,
-    variables: &[(&str, database::Type)],
-    any_variables: &[(&str, database::Type)],
-) -> String {
-    if variables.is_empty() && any_variables.is_empty() {
-        return String::new();
-    }
-
-    let mut query = "DELETE FROM ".to_string();
-    query.push_str(table);
-    query.push_str(" WHERE ");
-
-    query_equality(&mut query, variables);
-    if !variables.is_empty() && !any_variables.is_empty() {
-        query.push_str(" AND ");
-    }
-    query_any(&mut query, variables.len() + 1, any_variables);
-    query
-}
-
 /// Builds an INSERT statement.
 ///
 /// # Panics
@@ -509,48 +381,6 @@ fn query_insert_into(table: &str, columns: &[(&str, database::Type)]) -> String 
                 q
             });
     write!(query, ") VALUES ({col_query}) RETURNING id").expect("in-memory operation");
-    query
-}
-
-/// Builds a SELECT statement.
-///
-/// # Panics
-///
-/// Panics if `columns` is empty.
-fn query_select(
-    table: &str,
-    columns: &[&str],
-    variables: &[(&str, database::Type)],
-    any_variables: &[(&str, database::Type)],
-    array_variables: &[(&str, database::Type, Option<&str>)],
-) -> String {
-    let mut query = "SELECT ".to_string();
-    query.push_str(columns[0]);
-    for &col in columns.iter().skip(1) {
-        query.push_str(", ");
-        query.push_str(col);
-    }
-    query.push_str(" FROM ");
-    query.push_str(table);
-    if variables.is_empty() && any_variables.is_empty() && array_variables.is_empty() {
-        return query;
-    }
-
-    query.push_str(" WHERE ");
-    query_equality(&mut query, variables);
-    if !variables.is_empty() && !any_variables.is_empty() {
-        query.push_str(" AND ");
-    }
-    query_any(&mut query, variables.len() + 1, any_variables);
-
-    if (!variables.is_empty() || !any_variables.is_empty()) && !array_variables.is_empty() {
-        query.push_str(" AND ");
-    }
-    query_array(
-        &mut query,
-        variables.len() + any_variables.len() + 1,
-        array_variables,
-    );
     query
 }
 
@@ -710,34 +540,6 @@ mod tests {
     use bb8_postgres::tokio_postgres::types::Type;
 
     #[test]
-    fn query_delete_from() {
-        let query = super::query_delete_from("t1", &[("f2", Type::INT4), ("f5", Type::TEXT)]);
-        assert_eq!(
-            query,
-            "DELETE FROM t1 WHERE f2 = $1::int4 AND f5 = $2::text"
-        );
-    }
-
-    #[test]
-    fn query_delete_in_empty() {
-        let query = super::query_delete_in("t1", &[], &[]);
-        assert_eq!(query, "");
-    }
-
-    #[test]
-    fn query_delete_in() {
-        let query = super::query_delete_in(
-            "t1",
-            &[("f2", Type::INT4), ("f5", Type::TEXT)],
-            &[("f8", Type::INT4_ARRAY)],
-        );
-        assert_eq!(
-            query,
-            "DELETE FROM t1 WHERE f2 = $1::int4 AND f5 = $2::text AND f8 = ANY($3::_int4)"
-        );
-    }
-
-    #[test]
     fn query_insert_into() {
         let query = super::query_insert_into("t1", &[("f1", Type::INT4), ("f2", Type::TEXT)]);
         assert_eq!(
@@ -759,32 +561,6 @@ mod tests {
             query,
             "SELECT f1, f2 FROM t1 WHERE f1 = $1::int4 AND f2 = $2::text LIMIT 1"
         );
-    }
-
-    #[test]
-    fn query_select_in() {
-        let query = super::query_select(
-            "t1",
-            &["f3"],
-            &[("f2", Type::TEXT), ("f5", Type::TEXT)],
-            &[("f1", Type::INT4_ARRAY), ("f4", Type::INT8_ARRAY)],
-            &[
-                ("f6", Type::INT4_ARRAY, None),
-                ("f7", Type::INT8_ARRAY, None),
-            ],
-        );
-        assert_eq!(
-            query,
-            "SELECT f3 FROM t1 WHERE f2 = $1::text AND f5 = $2::text AND \
-             f1 = ANY($3::_int4) AND f4 = ANY($4::_int8) AND \
-             f6 @> $5::_int4 AND f7 @> $6::_int8"
-        );
-    }
-
-    #[test]
-    fn query_select_in_array() {
-        let query = super::query_select("t1", &["f3"], &[], &[], &[("f6", Type::INT4_ARRAY, None)]);
-        assert_eq!(query, "SELECT f3 FROM t1 WHERE f6 @> $1::_int4");
     }
 
     #[test]
