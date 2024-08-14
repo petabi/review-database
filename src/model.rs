@@ -1,11 +1,12 @@
 use anyhow::Result;
 use bincode::Options;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
-use diesel_async::RunQueryDsl;
+use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl};
+use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use super::{Database, Error, Type, schema::model::dsl};
+use super::{schema::model::dsl, Database, Error, Type};
 
 #[derive(Deserialize, Queryable)]
 pub struct Digest {
@@ -239,16 +240,16 @@ pub struct SqlModel {
 }
 
 impl Database {
-    const CSV_COLUMN_TYPES: &'static [&'static str] = &[
-        "binary", "datetime", "enum", "float", "int", "ipaddr", "text",
-    ];
+    // const CSV_COLUMN_TYPES: &'static [&'static str] = &[
+    //     "binary", "datetime", "enum", "float", "int", "ipaddr", "text",
+    // ];
 
-    fn type_tables(prefix: &str) -> Vec<String> {
-        Self::CSV_COLUMN_TYPES
-            .iter()
-            .map(|t| format!("{prefix}_{t}"))
-            .collect()
-    }
+    // fn type_tables(prefix: &str) -> Vec<String> {
+    //     Self::CSV_COLUMN_TYPES
+    //         .iter()
+    //         .map(|t| format!("{prefix}_{t}"))
+    //         .collect()
+    // }
 
     /// Adds a new model to the database.
     ///
@@ -284,103 +285,141 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn delete_model(&self, name: &str) -> Result<i32, Error> {
-        let conn = self.pool.get().await?;
-        let query_result = conn
-            .select_one_opt_from::<i32>("model", &["id"], &[("name", Type::TEXT)], &[&name])
-            .await?;
-        let Some(id) = query_result else {
+        use super::schema::{
+            csv_column_extra::dsl as extra, csv_column_list::dsl as list,
+            csv_indicator::dsl as indicator, csv_whitelist::dsl as whitelist,
+        };
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let id = dsl::model
+            .select(dsl::id)
+            .filter(dsl::name.eq(name))
+            .get_result::<i32>(&mut conn)
+            .await
+            .optional()?;
+        let Some(id) = id else {
             return Err(Error::InvalidInput(format!("The model {name} not found")));
         };
-        conn.delete_from("model", &[("id", Type::INT4)], &[&id])
-            .await?;
-        conn.delete_from("csv_column_list", &[("model_id", Type::INT4)], &[&id])
-            .await?;
-        conn.delete_from("csv_column_extra", &[("model_id", Type::INT4)], &[&id])
+
+        diesel::delete(dsl::model)
+            .filter(dsl::id.eq(id))
+            .execute(&mut conn)
             .await?;
 
-        self.delete_csv_entries_under_model_name(name).await?;
+        diesel::delete(list::csv_column_list)
+            .filter(list::model_id.eq(id))
+            .execute(&mut conn)
+            .await?;
 
-        self.delete_stats(id).await?;
+        diesel::delete(extra::csv_column_extra)
+            .filter(extra::model_id.eq(id))
+            .execute(&mut conn)
+            .await?;
+
+        diesel::delete(indicator::csv_indicator)
+            .filter(indicator::name.eq(&name))
+            .execute(&mut conn)
+            .await?;
+
+        diesel::delete(whitelist::csv_whitelist)
+            .filter(whitelist::name.eq(&name))
+            .execute(&mut conn)
+            .await?;
+
+        self.delete_stats(id, &mut conn).await?;
 
         Ok(id)
     }
 
-    async fn delete_csv_entries_under_model_name(&self, model_name: &str) -> Result<(), Error> {
-        let conn = self.pool.get().await?;
+    async fn delete_stats(&self, id: i32, conn: &mut AsyncPgConnection) -> Result<(), Error> {
+        use super::schema::{
+            cluster::dsl as cluster, column_description::dsl as column_description,
+            description_binary::dsl as d_binary, description_datetime::dsl as d_datetime,
+            description_enum::dsl as d_enum, description_float::dsl as d_float,
+            description_int::dsl as d_int, description_ipaddr::dsl as d_ipaddr,
+            description_text::dsl as d_text, time_series::dsl as time_series,
+            top_n_binary::dsl as t_binary, top_n_datetime::dsl as t_datetime,
+            top_n_enum::dsl as t_enum, top_n_float::dsl as t_float, top_n_int::dsl as t_int,
+            top_n_ipaddr::dsl as t_ipaddr, top_n_text::dsl as t_text,
+        };
 
-        let tables_and_key: &[(&str, &str)] =
-            &[("csv_indicator", "name"), ("csv_whitelist", "name")];
-
-        for (t, k) in tables_and_key {
-            conn.delete_from(t, &[(k, Type::TEXT)], &[&model_name])
-                .await?;
-        }
-
-        Ok(())
-    }
-
-    async fn delete_stats(&self, id: i32) -> Result<(), Error> {
-        let conn = self.pool.get().await?;
-
-        conn.delete_from("outlier", &[("model_id", Type::INT4)], &[&id])
-            .await?;
-
-        let cluster_ids: Vec<i32> = conn
-            .select_in(
-                "cluster",
-                &["id"],
-                &[("model_id", Type::INT4)],
-                &[],
-                &[],
-                &[&id],
-            )
+        let cluster_ids: Vec<i32> = diesel::delete(cluster::cluster)
+            .filter(cluster::model_id.eq(id))
+            .returning(cluster::id)
+            .get_results(conn)
             .await?;
         if cluster_ids.is_empty() {
             return Ok(());
         }
 
-        conn.delete_from("cluster", &[("model_id", Type::INT4)], &[&id])
+        diesel::delete(time_series::time_series)
+            .filter(time_series::cluster_id.eq_any(&cluster_ids))
+            .execute(conn)
             .await?;
 
-        conn.delete_in(
-            "time_series",
-            &[],
-            &[("cluster_id", Type::INT4_ARRAY)],
-            &[&cluster_ids],
-        )
-        .await?;
-
-        let column_description_ids: Vec<i32> = conn
-            .select_in(
-                "column_description",
-                &["id"],
-                &[],
-                &[("cluster_id", Type::INT4_ARRAY)],
-                &[],
-                &[&cluster_ids],
-            )
+        let description_ids: Vec<i32> = diesel::delete(column_description::column_description)
+            .filter(column_description::cluster_id.eq_any(&cluster_ids))
+            .returning(column_description::id)
+            .get_results(conn)
             .await?;
-        conn.delete_in(
-            "column_description",
-            &[],
-            &[("id", Type::INT4_ARRAY)],
-            &[&column_description_ids],
-        )
-        .await?;
 
-        let prefixes = &["top_n", "description"];
-        for p in prefixes {
-            let tables = Self::type_tables(p);
-            for t in tables {
-                conn.delete_in(
-                    &t,
-                    &[],
-                    &[("description_id", Type::INT4_ARRAY)],
-                    &[&column_description_ids],
-                )
-                .await?;
-            }
-        }
+        diesel::delete(d_binary::description_binary)
+            .filter(d_binary::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(d_datetime::description_datetime)
+            .filter(d_datetime::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(d_enum::description_enum)
+            .filter(d_enum::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(d_float::description_float)
+            .filter(d_float::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(d_int::description_int)
+            .filter(d_int::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(d_ipaddr::description_ipaddr)
+            .filter(d_ipaddr::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(d_text::description_text)
+            .filter(d_text::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+
+        diesel::delete(t_binary::top_n_binary)
+            .filter(t_binary::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(t_datetime::top_n_datetime)
+            .filter(t_datetime::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(t_enum::top_n_enum)
+            .filter(t_enum::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(t_float::top_n_float)
+            .filter(t_float::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(t_int::top_n_int)
+            .filter(t_int::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(t_ipaddr::top_n_ipaddr)
+            .filter(t_ipaddr::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
+        diesel::delete(t_text::top_n_text)
+            .filter(t_text::description_id.eq_any(&description_ids))
+            .execute(conn)
+            .await?;
 
         Ok(())
     }
