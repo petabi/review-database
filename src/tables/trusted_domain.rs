@@ -4,11 +4,12 @@ use std::borrow::Cow;
 
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
+use serde::{Deserialize, Serialize};
 
 use super::Value;
 use crate::{types::FromKeyValue, Map, Table, UniqueKey};
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct TrustedDomain {
     pub name: String,
     pub remarks: String,
@@ -44,7 +45,18 @@ impl<'d> Table<'d, TrustedDomain> {
         Map::open(db, super::TRUSTED_DNS_SERVERS).map(Table::new)
     }
 
-    /// Removes a `trusted_domain` with the given name.
+    /// Updates the `TrustedDomain` in the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the serialization fails or the database operation fails.
+    pub fn update(&self, old: &TrustedDomain, new: &TrustedDomain) -> Result<()> {
+        let (ok, ov) = (old.unique_key(), old.value());
+        let (nk, nv) = (new.unique_key(), new.value());
+        self.map.update((&ok, &ov), (&nk, &nv))
+    }
+
+    /// Removes a `TrustedDomain` with the given name.
     ///
     /// # Errors
     ///
@@ -60,6 +72,7 @@ mod test {
 
     use rocksdb::Direction;
 
+    use crate::types::FromKeyValue;
     use crate::{Iterable, Store, TrustedDomain};
 
     #[test]
@@ -77,6 +90,29 @@ mod test {
         assert!(table.remove(b.name.as_str()).is_ok());
         assert!(table.remove(a.name.as_str()).is_ok());
         assert_eq!(table.iter(Direction::Forward, None).count(), 0);
+    }
+
+    #[test]
+    fn update_test() {
+        let store = setup_store();
+        let table = store.trusted_domain_map();
+        let origin = create_entry("origin");
+        assert!(table.put(&origin).is_ok());
+
+        let updated = TrustedDomain {
+            name: "updated".to_string(),
+            remarks: "updated remarks".to_string(),
+        };
+        assert!(table.update(&origin, &updated).is_ok());
+
+        let key = b"origin";
+        let value = table.map.get(key).unwrap();
+        assert!(value.is_none());
+
+        let key = b"updated";
+        let value = table.map.get(key).unwrap().unwrap();
+        let update_in_table = TrustedDomain::from_key_value(key, value.as_ref()).unwrap();
+        assert_eq!(updated, update_in_table);
     }
 
     fn setup_store() -> Arc<Store> {
