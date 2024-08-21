@@ -279,20 +279,15 @@ impl Database {
         };
 
         let mut conn = self.pool.get_diesel_conn().await?;
-        let id = dsl::model
-            .select(dsl::id)
+        let id = diesel::delete(dsl::model)
             .filter(dsl::name.eq(name))
-            .get_result::<i32>(&mut conn)
+            .returning(dsl::id)
+            .get_result(&mut conn)
             .await
             .optional()?;
         let Some(id) = id else {
             return Err(Error::InvalidInput(format!("The model {name} not found")));
         };
-
-        diesel::delete(dsl::model)
-            .filter(dsl::id.eq(id))
-            .execute(&mut conn)
-            .await?;
 
         diesel::delete(list::csv_column_list)
             .filter(list::model_id.eq(id))
@@ -462,11 +457,6 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn load_model_by_name(&self, name: &str) -> Result<SqlModel, Error> {
-        use diesel::{ExpressionMethods, QueryDsl};
-        use diesel_async::RunQueryDsl;
-
-        use super::schema::model::dsl;
-
         let query = dsl::model
             .select((
                 dsl::id,
