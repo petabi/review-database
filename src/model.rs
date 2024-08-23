@@ -417,20 +417,6 @@ impl Database {
         Ok(dsl::model.count().get_result(&mut conn).await?)
     }
 
-    /// Returns the maximum number of outliers of the model with the given name.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn get_max_event_id_num(&self, model_name: &str) -> Result<i32, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
-        Ok(dsl::model
-            .select(dsl::max_event_id_num)
-            .filter(dsl::name.eq(model_name))
-            .get_result(&mut conn)
-            .await?)
-    }
-
     /// Returns the model with the given ID.
     ///
     /// # Errors
