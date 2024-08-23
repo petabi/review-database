@@ -18,6 +18,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The outlier table has been removed from the PostgreSQL database.
 
+### Security
+
+- Updated `diesel-async` to version 0.5. This change allows the use of newer
+  versions of Diesel beyond 2.2.2, addressing a reported security vulnerability
+  in the previous version.
+
 ## [0.29.1] - 2024-08-05
 
 ### Fixed

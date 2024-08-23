@@ -17,7 +17,7 @@ chrono = { version = ">=0.4.35", default-features = false, features = [
 ] }
 data-encoding = "2"
 diesel = { version = "2", features = ["chrono", "postgres", "serde_json"] }
-diesel-async = { version = "0.4", features = ["bb8", "postgres"] }
+diesel-async = { version = "0.5", features = ["bb8", "postgres"] }
 diesel_derives = "2.0"
 diesel_migrations = "2"
 fallible-iterator = "0.2" # should be the same version as what postgres-protocol depends on
