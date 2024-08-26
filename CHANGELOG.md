@@ -18,6 +18,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The outlier table has been removed from the PostgreSQL database.
 
+### Fixed
+
+- Resolved an issue in the `NodeTable::update` method, where changes to
+  `NodeUpdate::agents` were not being correctly reflected in the database. This
+  fix ensures that any updates to agents are now accurately stored and retrieved,
+  maintaining consistency between in-memory data structures and persistent storage.
+
 ### Security
 
 - Updated `diesel-async` to version 0.5. This change allows the use of newer
