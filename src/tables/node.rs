@@ -238,7 +238,7 @@ impl<'d> Table<'d> {
         for (old, new) in old_agents
             .into_iter()
             .zip(new_agents)
-            .filter(|(o, n)| **o == **n)
+            .filter(|(o, n)| **o != **n)
         {
             let mut old = (*old).clone();
             old.node = id;
@@ -691,5 +691,72 @@ mod test {
         node.giganto = Some(Giganto::default());
 
         assert_eq!(updated, node);
+    }
+
+    #[test]
+    fn update_agents_drafts_only() {
+        let store: Arc<Store> = setup_store();
+        let kinds = vec![AgentKind::Reconverge, AgentKind::Hog];
+        let configs1: Vec<_> = create_configs(&kinds);
+        let configs2 = vec![None, None, None];
+
+        let profile = Profile::default();
+
+        let agents = create_agents(123, &kinds, &configs1, &configs2);
+
+        let mut node = create_node(
+            456,
+            "test",
+            None,
+            None,
+            Some(profile.clone()),
+            agents.clone(),
+        );
+
+        let mut node_table = store.node_map();
+
+        let res = node_table.put(node.clone());
+        assert!(res.is_ok());
+
+        // update node id to the actual id in database.
+        node.id = res.unwrap();
+        node.agents.iter_mut().for_each(|a| a.node = node.id);
+
+        let id = node.id;
+
+        let old = node.clone().into();
+        let mut update = node.clone();
+        let mut update_agents: Vec<_> = update
+            .agents
+            .into_iter()
+            .skip(1) // remove Reconverge
+            .map(|mut a| {
+                // update draft of Hog
+                a.draft = Some("my_key=10".to_string().try_into().unwrap());
+                a
+            })
+            .collect();
+        update_agents.extend(create_agents(
+            id,
+            &[AgentKind::Piglet],
+            &[Some(
+                toml::to_string(&Piglet::default())
+                    .unwrap()
+                    .try_into()
+                    .unwrap(),
+            )],
+            &[Some("my_key=10".to_string().try_into().unwrap())],
+        )); // Add Piglet
+        update.agents = update_agents;
+
+        let update = update.into();
+        assert!(node_table.update(id, &old, &update).is_ok());
+
+        let updated = node_table.get_by_id(id).unwrap();
+        assert!(updated.is_some());
+        let (updated, invalid) = updated.unwrap();
+        assert!(invalid.is_empty());
+
+        assert_eq!(updated.agents, update.agents);
     }
 }
