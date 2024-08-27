@@ -1,21 +1,19 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use cluster::dsl as c_d;
 use diesel::{
     dsl::{max, min},
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
 };
 use diesel_async::RunQueryDsl;
-use futures::future::join_all;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
-use time_series::dsl as t_d;
+use tracing::error;
 
 use super::{
-    schema::{cluster, time_series},
-    Database, Error, Type,
+    schema::{cluster::dsl as c_d, time_series::dsl as t_d},
+    Database, Error,
 };
 
 const MAX_CSV_COLUMNS: usize = 200;
@@ -112,48 +110,77 @@ impl Database {
     pub async fn add_time_series(
         &self,
         time_series: Vec<TimeSeriesUpdate>,
-        model: i32,
+        model_id: i32,
         batch_ts: NaiveDateTime,
     ) -> Result<()> {
-        let tasks = time_series.into_iter().map(|ts| async move {
-            let cluster_id = self.cluster_id(&ts.cluster_id, model).await?;
-
-            let tasks = ts.time_series.into_iter().map(move |s| {
-                let count_index = s.count_index;
-                let tasks = s.series.into_iter().map(move |tc| async move {
-                    let conn = self.pool.get().await?;
-                    conn.insert_into(
-                        "time_series",
-                        &[
-                            ("cluster_id", Type::INT4),
-                            ("time", Type::TIMESTAMP),
-                            ("count_index", Type::INT4),
-                            ("value", Type::TIMESTAMP),
-                            ("count", Type::INT8),
-                        ],
-                        &[
-                            &cluster_id,
-                            &batch_ts,
-                            &count_index.map(|c| {
-                                std::cmp::min(c, MAX_CSV_COLUMNS)
-                                    .to_i32()
-                                    .expect("less than i32::MAX")
-                            }),
-                            &tc.time,
-                            &i64::from_usize(tc.count).unwrap_or(i64::MAX),
-                        ],
-                    )
-                    .await
-                });
-                join_all(tasks)
-            });
-            Ok(join_all(tasks).await) as Result<_, Error>
-        });
-        if join_all(tasks).await.into_iter().all(|r| r.is_ok()) {
-            Ok(())
-        } else {
-            Err(anyhow!("failed to insert the entire time series"))
+        // Execute 100 insertion per transaction since each TimeSeries requires
+        // the insertion of multiple TimeCount.
+        let mut chunks: Vec<Vec<TimeSeriesUpdate>> =
+            Vec::with_capacity(time_series.len() / 100 + 1);
+        let mut peekable = time_series.into_iter().peekable();
+        while peekable.peek().is_some() {
+            chunks.push(peekable.by_ref().take(100).collect::<Vec<_>>());
         }
+
+        let mut tasks = tokio::task::JoinSet::new();
+
+        for chunk in chunks {
+            let pool = self.pool.clone();
+            tasks.spawn(async move {
+                let mut conn = pool.get_diesel_conn().await?;
+                conn.build_transaction()
+                    .run(move |conn| {
+                        Box::pin(async move {
+                            for ts in chunk {
+                                let cluster_id: i32 = c_d::cluster
+                                    .select(c_d::id)
+                                    .filter(
+                                        c_d::cluster_id
+                                            .eq(&ts.cluster_id)
+                                            .and(c_d::model_id.eq(model_id)),
+                                    )
+                                    .get_result(conn)
+                                    .await?;
+                                for s in ts.time_series {
+                                    let count_index = s.count_index.map(|c| {
+                                        std::cmp::min(c, MAX_CSV_COLUMNS)
+                                            .to_i32()
+                                            .expect("less than i32::MAX")
+                                    });
+                                    for tc in s.series {
+                                        diesel::insert_into(t_d::time_series)
+                                            .values((
+                                                t_d::cluster_id.eq(&cluster_id),
+                                                t_d::time.eq(&batch_ts),
+                                                t_d::count_index.eq(&count_index),
+                                                t_d::value.eq(&tc.time),
+                                                t_d::count
+                                                    .eq(&i64::from_usize(tc.count)
+                                                        .unwrap_or(i64::MAX)),
+                                            ))
+                                            .execute(conn)
+                                            .await?;
+                                    }
+                                }
+                            }
+                            Ok::<_, Error>(())
+                        })
+                    })
+                    .await?;
+                anyhow::Ok(())
+            });
+        }
+        while let Some(res) = tasks.join_next().await {
+            match res {
+                Ok(Err(e)) => {
+                    error!("An error occurred while inserting time_series: {e:#}");
+                }
+                Err(e) => error!("Failed to execute insertion of time_series: {e:#}"),
+                _ => {}
+            }
+        }
+
+        Ok(())
     }
 
     /// Returns the time range of time series for the given model.
