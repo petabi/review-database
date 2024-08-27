@@ -1,10 +1,7 @@
-mod de;
-mod error;
 mod transaction;
 
 use std::{
     cmp::min,
-    fmt::Write,
     fs, io,
     path::Path,
     sync::Arc,
@@ -25,7 +22,6 @@ use diesel_async::AsyncPgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use rustls::{CertificateError, ClientConfig, RootCertStore};
 use rustls_pki_types::CertificateDer;
-use serde::de::DeserializeOwned;
 use tokio_postgres_rustls::MakeRustlsConnect;
 pub use transaction::Transaction;
 
@@ -76,41 +72,6 @@ impl<'a> Connection<'a> {
             ConnectionType::Tls(conn) => conn.query_one(query.as_str(), values).await?,
         };
         Ok(row.get(0))
-    }
-
-    /// Inserts a row into a table.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `columns` is empty.
-    pub async fn insert_into(
-        &self,
-        table: &str,
-        columns: &[(&str, database::Type)],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<i32, Error> {
-        let query = query_insert_into(table, columns);
-        let row = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.query_one(query.as_str(), values).await?,
-            ConnectionType::Tls(conn) => conn.query_one(query.as_str(), values).await?,
-        };
-        Ok(row.get(0))
-    }
-
-    /// Selects a single row from a table.
-    pub async fn select_one_from<D: DeserializeOwned>(
-        &self,
-        table: &str,
-        columns: &[&str],
-        variables: &[(&str, database::Type)],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<D, Error> {
-        let query = query_select_one(table, columns, variables, &[], &[]);
-        let row = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.query_one(query.as_str(), values).await?,
-            ConnectionType::Tls(conn) => conn.query_one(query.as_str(), values).await?,
-        };
-        de::from_row(&row).map_err(|e| Error::InvalidInput(e.to_string()))
     }
 
     /// Updates the given fields of a row in a table.
@@ -357,77 +318,6 @@ where
     }
 }
 
-/// Builds an INSERT statement.
-///
-/// # Panics
-///
-/// Panics if `columns` is empty.
-fn query_insert_into(table: &str, columns: &[(&str, database::Type)]) -> String {
-    let mut query = "INSERT INTO ".to_string();
-    query.push_str(table);
-    query.push_str(" (");
-    query.push_str(columns[0].0);
-    let col_query = format!("$1::{}", &columns[0].1);
-    let (mut query, col_query) =
-        columns
-            .iter()
-            .enumerate()
-            .skip(1)
-            .fold((query, col_query), |mut q, (i, c)| {
-                q.0.push_str(", ");
-                q.0.push_str(c.0);
-                write!(q.1, ", ${}::{}", i + 1, c.1).expect("in-memory operation");
-                q
-            });
-    write!(query, ") VALUES ({col_query}) RETURNING id").expect("in-memory operation");
-    query
-}
-
-/// Builds a SELECT statement which returns a single row.
-///
-/// # Panics
-///
-/// Panics if `columns` is empty.
-fn query_select_one(
-    table: &str,
-    columns: &[&str],
-    variables: &[(&str, database::Type)],
-    any_variables: &[(&str, database::Type)],
-    array_variables: &[(&str, database::Type, Option<&str>)],
-) -> String {
-    let mut query = "SELECT ".to_string();
-    query.push_str(columns[0]);
-    for &col in columns.iter().skip(1) {
-        query.push_str(", ");
-        query.push_str(col);
-    }
-    query.push_str(" FROM ");
-    query.push_str(table);
-    if variables.is_empty() && any_variables.is_empty() && array_variables.is_empty() {
-        return query;
-    }
-
-    query.push_str(" WHERE ");
-    query_equality(&mut query, variables);
-    if !variables.is_empty() && !any_variables.is_empty() {
-        query.push_str(" AND ");
-    }
-    query_any(&mut query, variables.len() + 1, any_variables);
-
-    if (!variables.is_empty() || !any_variables.is_empty()) && !array_variables.is_empty() {
-        query.push_str(" AND ");
-    }
-    query_array(
-        &mut query,
-        variables.len() + any_variables.len() + 1,
-        array_variables,
-    );
-
-    query.push_str(" LIMIT 1");
-
-    query
-}
-
 /// Builds an UPDATE statement.
 ///
 /// # Panics
@@ -497,70 +387,9 @@ fn query_any(query: &mut String, index: usize, variables: &[(&str, database::Typ
     }
 }
 
-/// Builds a query fragment for provided conditions,
-/// `@>` if None is provided.
-fn query_array(
-    query: &mut String,
-    index: usize,
-    variables: &[(&str, database::Type, Option<&str>)],
-) {
-    if variables.is_empty() {
-        return;
-    }
-
-    if !variables.is_empty() {
-        query.push_str(variables[0].0);
-        if let Some(comparator) = variables[0].2 {
-            query.push_str(&format!(" {comparator} $"));
-        } else {
-            query.push_str(" @> $");
-        }
-
-        query.push_str(&index.to_string());
-        query.push_str("::");
-        query.push_str(&variables[0].1.to_string());
-        for (i, var) in variables.iter().enumerate().skip(1) {
-            query.push_str(" AND ");
-            query.push_str(var.0);
-            if let Some(comparator) = var.2 {
-                query.push_str(&format!(" {comparator} $"));
-            } else {
-                query.push_str(" @> $");
-            }
-            query.push_str(&(index + i).to_string());
-            query.push_str("::");
-            query.push_str(&var.1.to_string());
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use bb8_postgres::tokio_postgres::types::Type;
-
-    #[test]
-    fn query_insert_into() {
-        let query = super::query_insert_into("t1", &[("f1", Type::INT4), ("f2", Type::TEXT)]);
-        assert_eq!(
-            query,
-            "INSERT INTO t1 (f1, f2) VALUES ($1::int4, $2::text) RETURNING id"
-        );
-    }
-
-    #[test]
-    fn query_select_one() {
-        let query = super::query_select_one(
-            "t1",
-            &["f1", "f2"],
-            &[("f1", Type::INT4), ("f2", Type::TEXT)],
-            &[],
-            &[],
-        );
-        assert_eq!(
-            query,
-            "SELECT f1, f2 FROM t1 WHERE f1 = $1::int4 AND f2 = $2::text LIMIT 1"
-        );
-    }
 
     #[test]
     fn query_update() {
