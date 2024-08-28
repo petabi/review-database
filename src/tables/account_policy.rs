@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Map, Table};
 
 pub(crate) const ACCOUNT_POLICY_KEY: &[u8] = b"account policy key";
-
+pub(crate) const PASSWORD_EXPIRATION_PERIOD_KEY: &[u8] = b"password expiration period";
 #[derive(Serialize, Deserialize)]
 pub struct AccountPolicy {
     pub(crate) expiry_period_in_secs: u32,
@@ -73,6 +73,69 @@ impl<'d> Table<'d, AccountPolicy> {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct PasswordPolicy {
+    pub(crate) expiry_password_period_in_days: u32,
+}
+
+impl<'d> Table<'d, PasswordPolicy> {
+    /// Opens the  `account_policy` map in the database.
+    ///
+    /// Returns `None` if the map does not exist.
+    pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
+        Map::open(db, super::ACCOUNT_POLICY).map(Table::new)
+    }
+
+    /// Initializes the expiry period.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if it has already been initialized or
+    /// if database operation fails.
+    pub fn init_password_expiry_period(&self, days: u32) -> Result<()> {
+        let init = PasswordPolicy {
+            expiry_password_period_in_days: days,
+        };
+        self.map
+            .insert(PASSWORD_EXPIRATION_PERIOD_KEY, &super::serialize(&init)?)
+    }
+
+    /// Updates or initializes the password expiry period.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if database operation fails.
+    pub fn update_password_expiry_period(&self, days: u32) -> Result<()> {
+        if let Some(old) = self.map.get(PASSWORD_EXPIRATION_PERIOD_KEY)? {
+            let update = super::serialize(&PasswordPolicy {
+                expiry_password_period_in_days: days,
+            })?;
+            self.map.update(
+                (PASSWORD_EXPIRATION_PERIOD_KEY, old.as_ref()),
+                (PASSWORD_EXPIRATION_PERIOD_KEY, &update),
+            )
+        } else {
+            self.init_password_expiry_period(days)
+        }
+    }
+
+    /// Returns the current password expiry period,
+    /// or `None` if it hasn't been initialized.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if database operation fails.
+    pub fn current_password_expiry_period(&self) -> Result<Option<u32>> {
+        self.map
+            .get(PASSWORD_EXPIRATION_PERIOD_KEY)?
+            .map(|p| {
+                super::deserialize(p.as_ref())
+                    .map(|p: PasswordPolicy| p.expiry_password_period_in_days)
+            })
+            .transpose()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -90,5 +153,18 @@ mod tests {
         assert_eq!(table.current_expiry_period().unwrap(), Some(10));
         assert!(table.update_expiry_period(20).is_ok());
         assert_eq!(table.current_expiry_period().unwrap(), Some(20));
+    }
+
+    #[test]
+    fn password_policy_operations() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.password_policy_map();
+
+        assert!(table.update_password_expiry_period(90).is_ok());
+        assert_eq!(table.current_password_expiry_period().unwrap(), Some(90));
+        assert!(table.update_password_expiry_period(180).is_ok());
+        assert_eq!(table.current_password_expiry_period().unwrap(), Some(180));
     }
 }

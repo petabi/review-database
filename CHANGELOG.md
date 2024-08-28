@@ -7,6 +7,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added `PasswordPolicy` for managing password expiry period data.
+
 ### Changed
 
 - Extended the `Table<'d, Account>::update` method signature to include the
@@ -113,7 +117,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Changed return type of `Store::outlier_map` to `Table<OutlierInfo>`.
 - Moved `OutlierInfo` from `crate::outlier` to `crate`.
 - Included `model_id`, `timestamp`, and `is_saved` fields in `OutlierInfo`.
-- Changed return type of `Store::account_policy_map` to `Table<AccountPlicy>`.
+- Changed return type of `Store::account_policy_map` to `Table<AccountPolicy>`.
 - Removed redundant log messages in the backup module.
 
 ### Removed

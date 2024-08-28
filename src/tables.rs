@@ -36,7 +36,7 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
-pub use self::account_policy::AccountPolicy;
+pub use self::account_policy::{AccountPolicy, PasswordPolicy};
 pub use self::agent::{Agent, Config as AgentConfig, Kind as AgentKind, Status as AgentStatus};
 pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
@@ -178,6 +178,12 @@ impl StateDb {
     pub(crate) fn account_policy(&self) -> Table<AccountPolicy> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<AccountPolicy>::open(inner).expect("{ACCOUNT_POLICY} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn password_policy(&self) -> Table<PasswordPolicy> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<PasswordPolicy>::open(inner).expect("{PASSWORD_POLICY} table must be present")
     }
 
     #[must_use]

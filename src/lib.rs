@@ -69,10 +69,10 @@ pub use self::tables::{
     CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
     DataSourceUpdate, DataType, Filter, Giganto, IndexedTable, Iterable, ModelIndicator, Network,
     NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey,
-    OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval,
-    SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
-    StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
-    TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
+    OutlierInfoValue, PacketAttr, PasswordPolicy, ProtocolPorts, Response, ResponseKind,
+    SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate,
+    Structured, StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind,
+    TidbRule, TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
     TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
     UnstructuredClusteringAlgorithm, ValueKind,
 };
@@ -155,6 +155,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn account_policy_map(&self) -> Table<AccountPolicy> {
         self.states.account_policy()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn password_policy_map(&self) -> Table<PasswordPolicy> {
+        self.states.password_policy()
     }
 
     #[must_use]
