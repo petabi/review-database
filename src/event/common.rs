@@ -36,7 +36,7 @@ pub(super) trait Match {
     /// Note: This method is currently unused. All implementations return 0.0.
     /// It's retained for future use as planned by @syncpark.
     /// For more details, see:
-    /// https://github.com/petabi/review-database/pull/321#discussion_r1721392271
+    /// <https://github.com/petabi/review-database/pull/321#discussion_r1721392271>
     fn score_by_packet_attr(&self, triage: &TriagePolicy) -> f64;
 
     /// Returns whether the event matches the filter and the triage scores. The triage scores are
