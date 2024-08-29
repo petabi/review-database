@@ -24,6 +24,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `TorConnection`: `orig_filenames`, `orig_mime_types`, `resp_filenames`,
     `resp_mime_types`, `post_body`, `state`
 - Added `update` method in `TrustedDomain`.
+- Improved platform certificate loading process to skip individual certificates
+  that fail to load, allowing the rest of the certificates to be loaded
+  successfully. Previously, the entire platform certificate loading process
+  would fail if any certificate failed to load.
 
 ### Removed
 

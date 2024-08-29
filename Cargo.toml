@@ -36,7 +36,7 @@ rustls = { version = "0.23", default-features = false, features = [
   "ring",
   "std",
 ] } # should be the same version as what tokio-postgres-rustls depends on
-rustls-native-certs = "0.7"
+rustls-native-certs = "0.8"
 rustls-pemfile = "2"
 rustls-pki-types = "1"
 semver = "1"
