@@ -275,10 +275,37 @@ pub fn vector_to_string<T: ToString>(v: &[T]) -> String {
     }
 }
 
+/// Converts a hardware address to a colon-separated string.
 pub fn to_hardware_address(chaddr: &[u8]) -> String {
-    chaddr
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<Vec<_>>()
-        .join(":")
+    let mut iter = chaddr.iter();
+    let Some(first) = iter.next() else {
+        return String::new();
+    };
+    iter.fold(
+        {
+            let mut addr = String::with_capacity(chaddr.len() * 3 - 1);
+            addr.push_str(&format!("{first:02x}"));
+            addr
+        },
+        |mut addr, byte| {
+            addr.push(':');
+            addr.push_str(&format!("{byte:02x}"));
+            addr
+        },
+    )
+}
+
+mod tests {
+    #[test]
+    fn empty_byte_slice_to_colon_separated_string() {
+        assert_eq!(super::to_hardware_address(&[]), "");
+    }
+
+    #[test]
+    fn non_empty_byte_slice_to_colon_separated_string() {
+        assert_eq!(
+            super::to_hardware_address(&[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc]),
+            "12:34:56:78:9a:bc"
+        );
+    }
 }
