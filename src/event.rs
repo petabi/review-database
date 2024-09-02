@@ -58,8 +58,7 @@ pub use self::{
     ftp::{BlockListFtp, FtpBruteForce, FtpBruteForceFields, FtpEventFields, FtpPlainText},
     http::{
         BlockListHttp, BlockListHttpFields, DgaFields, DomainGenerationAlgorithm, HttpThreat,
-        HttpThreatFields, NonBrowser, NonBrowserFields, RepeatedHttpSessions,
-        RepeatedHttpSessionsFields,
+        HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
     },
     kerberos::{BlockListKerberos, BlockListKerberosFields},
     ldap::{BlockListLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
@@ -74,7 +73,7 @@ pub use self::{
     ssh::{BlockListSsh, BlockListSshFields},
     sysmon::WindowsThreat,
     tls::{BlockListTls, BlockListTlsFields, SuspiciousTlsTraffic},
-    tor::{TorConnection, TorConnectionFields},
+    tor::{HttpEventFields, TorConnection},
 };
 use super::{
     types::{Endpoint, HostNetworkGroup},
@@ -1946,7 +1945,7 @@ impl fmt::Display for EventMessage {
                 bincode::deserialize::<RepeatedHttpSessionsFields>(&self.fields)
                     .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
-            EventKind::TorConnection => bincode::deserialize::<TorConnectionFields>(&self.fields)
+            EventKind::TorConnection => bincode::deserialize::<HttpEventFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::DomainGenerationAlgorithm => bincode::deserialize::<DgaFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
@@ -1960,7 +1959,7 @@ impl fmt::Display for EventMessage {
                 bincode::deserialize::<MultiHostPortScanFields>(&self.fields)
                     .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
-            EventKind::NonBrowser => bincode::deserialize::<NonBrowserFields>(&self.fields)
+            EventKind::NonBrowser => bincode::deserialize::<HttpEventFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::LdapBruteForce => bincode::deserialize::<LdapBruteForceFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
@@ -2213,7 +2212,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::TorConnection => {
-                let Ok(fields) = bincode::deserialize::<TorConnectionFields>(v.as_ref()) else {
+                let Ok(fields) = bincode::deserialize::<HttpEventFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -2264,7 +2263,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::NonBrowser => {
-                let Ok(fields) = bincode::deserialize::<NonBrowserFields>(v.as_ref()) else {
+                let Ok(fields) = bincode::deserialize::<HttpEventFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((key, Event::NonBrowser(NonBrowser::new(time, &fields)))))
@@ -2591,10 +2590,10 @@ mod tests {
         BlockListSmbFields, BlockListSmtpFields, BlockListSshFields, BlockListTlsFields,
         CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, DomainGenerationAlgorithm,
         Event, EventFilter, EventKind, EventMessage, ExternalDdos, ExternalDdosFields, ExtraThreat,
-        FtpBruteForceFields, FtpEventFields, HttpThreat, HttpThreatFields, LdapBruteForceFields,
-        LdapEventFields, MultiHostPortScanFields, NetworkThreat, NonBrowserFields, PortScanFields,
-        RdpBruteForceFields, RecordType, RepeatedHttpSessionsFields, Store, SuspiciousTlsTraffic,
-        TorConnectionFields, TriageScore, WindowsThreat,
+        FtpBruteForceFields, FtpEventFields, HttpEventFields, HttpThreat, HttpThreatFields,
+        LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat,
+        PortScanFields, RdpBruteForceFields, RecordType, RepeatedHttpSessionsFields, Store,
+        SuspiciousTlsTraffic, TriageScore, WindowsThreat,
     };
 
     fn example_message(kind: EventKind, category: EventCategory) -> EventMessage {
@@ -2907,7 +2906,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_nonbrowser() {
-        let fields = NonBrowserFields {
+        let fields = HttpEventFields {
             source: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4516,7 +4515,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_torconnection() {
-        let fields = TorConnectionFields {
+        let fields = HttpEventFields {
             source: "collector1".to_string(),
             session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
@@ -4558,7 +4557,7 @@ mod tests {
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" session_end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state""#
         );
 
         let tor_connection = Event::TorConnection(crate::TorConnection::new(
@@ -4569,7 +4568,7 @@ mod tests {
 
         assert_eq!(
             &tor_connection,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" session_end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" triage_scores="""#
         );
     }
 

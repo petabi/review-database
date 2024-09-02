@@ -11,10 +11,9 @@ use crate::{
     BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
     BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
     BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
-    ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpThreatFields,
-    LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat,
-    NonBrowserFields, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields,
-    TorConnectionFields, TriageScore, WindowsThreat,
+    ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpEventFields, HttpThreatFields,
+    LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat, PortScanFields,
+    RdpBruteForceFields, RepeatedHttpSessionsFields, TriageScore, WindowsThreat,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -499,7 +498,7 @@ pub struct NonBrowserBeforeV30 {
     pub state: String,
 }
 
-impl From<NonBrowserBeforeV30> for NonBrowserFields {
+impl From<NonBrowserBeforeV30> for HttpEventFields {
     fn from(input: NonBrowserBeforeV30) -> Self {
         Self {
             source: input.source,
@@ -1714,7 +1713,7 @@ pub struct TorConnectionBeforeV30 {
     pub cache_control: String,
 }
 
-impl From<TorConnectionBeforeV30> for TorConnectionFields {
+impl From<TorConnectionBeforeV30> for HttpEventFields {
     fn from(input: TorConnectionBeforeV30) -> Self {
         Self {
             source: input.source,

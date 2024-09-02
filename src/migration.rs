@@ -309,10 +309,9 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
         BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
         BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
         BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventKind,
-        ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpThreatFields,
+        ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpEventFields, HttpThreatFields,
         LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat,
-        NonBrowserFields, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields,
-        TorConnectionFields, WindowsThreat,
+        PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, WindowsThreat,
     };
 
     let event_db = store.events();
@@ -340,7 +339,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                 update_event_db_with_new_event::<DgaBeforeV30, DgaFields>(&k, &v, &event_db)?;
             }
             EventKind::NonBrowser => {
-                update_event_db_with_new_event::<NonBrowserBeforeV30, NonBrowserFields>(
+                update_event_db_with_new_event::<NonBrowserBeforeV30, HttpEventFields>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -464,7 +463,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::TorConnection => {
-                update_event_db_with_new_event::<TorConnectionBeforeV30, TorConnectionFields>(
+                update_event_db_with_new_event::<TorConnectionBeforeV30, HttpEventFields>(
                     &k, &v, &event_db,
                 )?;
             }

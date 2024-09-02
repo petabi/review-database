@@ -8,7 +8,7 @@ use crate::event::{common::triage_scores_to_string, http::get_post_body};
 
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
-pub struct TorConnectionFields {
+pub struct HttpEventFields {
     pub source: String,
     #[serde(with = "ts_nanoseconds")]
     pub session_end_time: DateTime<Utc>,
@@ -42,18 +42,18 @@ pub struct TorConnectionFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for TorConnectionFields {
+impl fmt::Display for HttpEventFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?}",
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?}",
             self.source,
-            self.session_end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.session_end_time.to_rfc3339(),
             self.method,
             self.host,
             self.uri,
@@ -120,14 +120,14 @@ impl fmt::Display for TorConnection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
+            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
             self.source,
-            self.session_end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.session_end_time.to_rfc3339(),
             self.method,
             self.host,
             self.uri,
@@ -156,7 +156,7 @@ impl fmt::Display for TorConnection {
 }
 
 impl TorConnection {
-    pub(super) fn new(time: DateTime<Utc>, fields: &TorConnectionFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: &HttpEventFields) -> Self {
         TorConnection {
             time,
             source: fields.source.clone(),
