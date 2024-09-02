@@ -57,12 +57,12 @@ pub use self::event::{
     CryptocurrencyMiningPoolFields, DgaFields, Direction, DnsCovertChannel, DnsEventFields,
     DomainGenerationAlgorithm, Event, EventDb, EventFilter, EventIterator, EventMessage,
     ExternalDdos, ExternalDdosFields, ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce,
-    FtpBruteForceFields, FtpEventFields, FtpPlainText, HttpThreat, HttpThreatFields,
-    LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText, LearningMethod,
-    LockyRansomware, MultiHostPortScan, MultiHostPortScanFields, NetworkThreat, NetworkType,
-    NonBrowser, NonBrowserFields, PortScan, PortScanFields, RdpBruteForce, RdpBruteForceFields,
+    FtpBruteForceFields, FtpEventFields, FtpPlainText, HttpEventFields, HttpThreat,
+    HttpThreatFields, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText,
+    LearningMethod, LockyRansomware, MultiHostPortScan, MultiHostPortScanFields, NetworkThreat,
+    NetworkType, NonBrowser, PortScan, PortScanFields, RdpBruteForce, RdpBruteForceFields,
     RecordType, RepeatedHttpSessions, RepeatedHttpSessionsFields, SuspiciousTlsTraffic,
-    TorConnection, TorConnectionFields, TrafficDirection, TriageScore, WindowsThreat,
+    TorConnection, TrafficDirection, TriageScore, WindowsThreat,
 };
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};

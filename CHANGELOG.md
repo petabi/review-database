@@ -31,6 +31,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Combine the detected event structures that share the same fields.
   - `FtpPlainTextFields`, `BlockListFtpFields` -> `FtpEventFields`
   - `LdapPlainTextFields`, `BlockListLdapFields` -> `LdapEventFields`
+  - `TorConnectionFields`, `NonBrowserFields` -> `HttpEventFields`
 
 ### Removed
 

@@ -4,7 +4,10 @@ use aho_corasick::AhoCorasickBuilder;
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, EventFilter, TriagePolicy, TriageScore, LOW, MEDIUM};
+use super::{
+    common::Match, EventCategory, EventFilter, HttpEventFields, TriagePolicy, TriageScore, LOW,
+    MEDIUM,
+};
 use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
@@ -667,81 +670,6 @@ impl Match for DomainGenerationAlgorithm {
     }
 }
 
-// TODO: Merge BlockListHttpFields, TorConnectionFields
-#[derive(Deserialize, Serialize)]
-#[allow(clippy::module_name_repetitions)]
-pub struct NonBrowserFields {
-    pub source: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub session_end_time: DateTime<Utc>,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub method: String,
-    pub host: String,
-    pub uri: String,
-    pub referrer: String,
-    pub version: String,
-    pub user_agent: String,
-    pub request_len: usize,
-    pub response_len: usize,
-    pub status_code: u16,
-    pub status_msg: String,
-    pub username: String,
-    pub password: String,
-    pub cookie: String,
-    pub content_encoding: String,
-    pub content_type: String,
-    pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
-    pub state: String,
-    pub category: EventCategory,
-}
-
-impl fmt::Display for NonBrowserFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referrer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?}",
-            self.source,
-            self.src_addr.to_string(),
-            self.src_port.to_string(),
-            self.dst_addr.to_string(),
-            self.dst_port.to_string(),
-            self.proto.to_string(),
-            self.session_end_time.to_rfc3339(),
-            self.method,
-            self.host,
-            self.uri,
-            self.referrer,
-            self.version,
-            self.user_agent,
-            self.request_len.to_string(),
-            self.response_len.to_string(),
-            self.status_code.to_string(),
-            self.status_msg,
-            self.username,
-            self.password,
-            self.cookie,
-            self.content_encoding,
-            self.content_type,
-            self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
-            self.state,
-        )
-    }
-}
-
 #[allow(clippy::module_name_repetitions)]
 pub struct NonBrowser {
     pub time: DateTime<Utc>,
@@ -818,7 +746,7 @@ impl fmt::Display for NonBrowser {
 }
 
 impl NonBrowser {
-    pub(super) fn new(time: DateTime<Utc>, fields: &NonBrowserFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: &HttpEventFields) -> Self {
         NonBrowser {
             time,
             source: fields.source.clone(),
