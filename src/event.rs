@@ -3743,9 +3743,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_ftp() {
-        let fields = FtpEventFields {
+    fn ftpeventfields() -> FtpEventFields {
+        FtpEventFields {
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -3766,7 +3765,12 @@ mod tests {
             file_size: 5000,
             file_id: "123".to_string(),
             category: EventCategory::InitialAccess,
-        };
+        }
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_ftp() {
+        let fields = ftpeventfields();
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -3789,6 +3793,74 @@ mod tests {
         assert_eq!(
             &block_list_ftp,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListFtp" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn event_blocklist_ftp() {
+        use super::{BLOCK_LIST, MEDIUM};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let fields = ftpeventfields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListFtp,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: Some(vec![MEDIUM]),
+            kinds: Some(vec!["block list ftp".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: Some(0.5),
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.address_pair(None, &filter).unwrap(),
+            (
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
+            )
+        );
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCK_LIST));
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(BLOCK_LIST), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::InitialAccess), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
         );
     }
 
@@ -3957,9 +4029,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_ldap() {
-        let fields = LdapEventFields {
+    fn ldapeventfields() -> LdapEventFields {
+        LdapEventFields {
             source: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -3975,7 +4046,12 @@ mod tests {
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
             category: EventCategory::InitialAccess,
-        };
+        }
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_ldap() {
+        let fields = ldapeventfields();
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -3998,6 +4074,74 @@ mod tests {
         assert_eq!(
             &block_list_ldap,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListLdap" category="InitialAccess" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn event_blocklist_ldap() {
+        use super::{BLOCK_LIST, MEDIUM};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let fields = ldapeventfields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlockListLdap,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: Some(vec![MEDIUM]),
+            kinds: Some(vec!["block list ldap".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: Some(0.5),
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.address_pair(None, &filter).unwrap(),
+            (
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
+            )
+        );
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCK_LIST));
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(BLOCK_LIST), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::InitialAccess), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
         );
     }
 
@@ -4513,9 +4657,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_torconnection() {
-        let fields = HttpEventFields {
+    fn httpeventfields() -> HttpEventFields {
+        HttpEventFields {
             source: "collector1".to_string(),
             session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
@@ -4546,7 +4689,12 @@ mod tests {
             post_body: "post_body".as_bytes().to_vec(),
             state: "state".to_string(),
             category: EventCategory::CommandAndControl,
-        };
+        }
+    }
+
+    #[tokio::test]
+    async fn syslog_for_torconnection() {
+        let fields = httpeventfields();
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -4569,6 +4717,74 @@ mod tests {
         assert_eq!(
             &tor_connection,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" session_end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referrer="referrer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn event_torconnection() {
+        use super::{MEDIUM, TOR_CONNECTION};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let fields = httpeventfields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::TorConnection,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: Some(vec![MEDIUM]),
+            kinds: Some(vec!["tor exit nodes".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: Some(0.5),
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.address_pair(None, &filter).unwrap(),
+            (
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
+            )
+        );
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(TOR_CONNECTION));
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(TOR_CONNECTION), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::CommandAndControl), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
         );
     }
 
