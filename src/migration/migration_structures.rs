@@ -8,12 +8,12 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    BlockListConnFields, BlockListDnsFields, BlockListFtpFields, BlockListHttpFields,
-    BlockListKerberosFields, BlockListLdapFields, BlockListNtlmFields, BlockListRdpFields,
-    BlockListSmtpFields, BlockListSshFields, BlockListTlsFields, CryptocurrencyMiningPoolFields,
-    DgaFields, DnsEventFields, EventCategory, ExternalDdosFields, FtpBruteForceFields,
-    FtpPlainTextFields, HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields,
-    MultiHostPortScanFields, NetworkThreat, NonBrowserFields, PortScanFields, RdpBruteForceFields,
+    BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
+    BlockListLdapFields, BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields,
+    BlockListSshFields, BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields,
+    DnsEventFields, EventCategory, ExternalDdosFields, FtpBruteForceFields, FtpEventFields,
+    HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields, MultiHostPortScanFields,
+    NetworkThreat, NonBrowserFields, PortScanFields, RdpBruteForceFields,
     RepeatedHttpSessionsFields, TorConnectionFields, TriageScore, WindowsThreat,
 };
 
@@ -610,7 +610,7 @@ pub struct BlockListFtpBeforeV30 {
     pub file_id: String,
 }
 
-impl From<BlockListFtpBeforeV30> for BlockListFtpFields {
+impl From<BlockListFtpBeforeV30> for FtpEventFields {
     fn from(input: BlockListFtpBeforeV30) -> Self {
         Self {
             source: input.source,
@@ -1452,7 +1452,7 @@ pub struct FtpPlainTextBeforeV30 {
     pub file_id: String,
 }
 
-impl From<FtpPlainTextBeforeV30> for FtpPlainTextFields {
+impl From<FtpPlainTextBeforeV30> for FtpEventFields {
     fn from(input: FtpPlainTextBeforeV30) -> Self {
         Self {
             source: input.source,

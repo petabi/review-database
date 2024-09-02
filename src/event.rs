@@ -55,10 +55,7 @@ pub use self::{
         BlockListDns, BlockListDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
         DnsCovertChannel, DnsEventFields, LockyRansomware,
     },
-    ftp::{
-        BlockListFtp, BlockListFtpFields, FtpBruteForce, FtpBruteForceFields, FtpPlainText,
-        FtpPlainTextFields,
-    },
+    ftp::{BlockListFtp, FtpBruteForce, FtpBruteForceFields, FtpEventFields, FtpPlainText},
     http::{
         BlockListHttp, BlockListHttpFields, DgaFields, DomainGenerationAlgorithm, HttpThreat,
         HttpThreatFields, NonBrowser, NonBrowserFields, RepeatedHttpSessions,
@@ -1958,7 +1955,7 @@ impl fmt::Display for EventMessage {
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::FtpBruteForce => bincode::deserialize::<FtpBruteForceFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::FtpPlainText => bincode::deserialize::<FtpPlainTextFields>(&self.fields)
+            EventKind::FtpPlainText => bincode::deserialize::<FtpEventFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::PortScan => bincode::deserialize::<PortScanFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
@@ -1990,7 +1987,7 @@ impl fmt::Display for EventMessage {
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListDns => bincode::deserialize::<BlockListDnsFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListFtp => bincode::deserialize::<BlockListFtpFields>(&self.fields)
+            EventKind::BlockListFtp => bincode::deserialize::<FtpEventFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::BlockListHttp => bincode::deserialize::<BlockListHttpFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
@@ -2246,7 +2243,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::FtpPlainText => {
-                let Ok(fields) = bincode::deserialize::<FtpPlainTextFields>(v.as_ref()) else {
+                let Ok(fields) = bincode::deserialize::<FtpEventFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -2358,7 +2355,7 @@ impl<'i> Iterator for EventIterator<'i> {
                 )))
             }
             EventKind::BlockListFtp => {
-                let Ok(fields) = bincode::deserialize::<BlockListFtpFields>(v.as_ref()) else {
+                let Ok(fields) = bincode::deserialize::<FtpEventFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -2592,16 +2589,16 @@ mod tests {
     use crate::{
         event::LOCKY_RANSOMWARE, types::EventCategory, BlockListBootp, BlockListBootpFields,
         BlockListConnFields, BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields,
-        BlockListDnsFields, BlockListFtpFields, BlockListHttp, BlockListHttpFields,
-        BlockListKerberosFields, BlockListLdapFields, BlockListMqttFields, BlockListNfsFields,
-        BlockListNtlmFields, BlockListRdpFields, BlockListSmbFields, BlockListSmtpFields,
-        BlockListSshFields, BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields,
-        DnsEventFields, DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage,
-        ExternalDdos, ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpPlainTextFields,
-        HttpThreat, HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields,
-        MultiHostPortScanFields, NetworkThreat, NonBrowserFields, PortScanFields,
-        RdpBruteForceFields, RecordType, RepeatedHttpSessionsFields, Store, SuspiciousTlsTraffic,
-        TorConnectionFields, TriageScore, WindowsThreat,
+        BlockListDnsFields, BlockListHttp, BlockListHttpFields, BlockListKerberosFields,
+        BlockListLdapFields, BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields,
+        BlockListRdpFields, BlockListSmbFields, BlockListSmtpFields, BlockListSshFields,
+        BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields,
+        DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
+        ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpThreat,
+        HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields, MultiHostPortScanFields,
+        NetworkThreat, NonBrowserFields, PortScanFields, RdpBruteForceFields, RecordType,
+        RepeatedHttpSessionsFields, Store, SuspiciousTlsTraffic, TorConnectionFields, TriageScore,
+        WindowsThreat,
     };
 
     fn example_message(kind: EventKind, category: EventCategory) -> EventMessage {
@@ -3705,7 +3702,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_ftpplaintext() {
-        let fields = FtpPlainTextFields {
+        let fields = FtpEventFields {
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -3753,7 +3750,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_ftp() {
-        let fields = BlockListFtpFields {
+        let fields = FtpEventFields {
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),

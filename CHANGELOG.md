@@ -28,6 +28,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   that fail to load, allowing the rest of the certificates to be loaded
   successfully. Previously, the entire platform certificate loading process
   would fail if any certificate failed to load.
+- Combine the detected event structures that share the same fields.
+  - `FtpPlainTextFields`, `BlockListFtpFields` -> `FtpEventFields`
 
 ### Removed
 
