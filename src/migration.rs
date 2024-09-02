@@ -307,12 +307,12 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
 
     use crate::event::{
         BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
-        BlockListLdapFields, BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields,
-        BlockListSshFields, BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields,
-        DnsEventFields, EventKind, ExternalDdosFields, FtpBruteForceFields, FtpEventFields,
-        HttpThreatFields, LdapBruteForceFields, LdapPlainTextFields, MultiHostPortScanFields,
-        NetworkThreat, NonBrowserFields, PortScanFields, RdpBruteForceFields,
-        RepeatedHttpSessionsFields, TorConnectionFields, WindowsThreat,
+        BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
+        BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventKind,
+        ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpThreatFields,
+        LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat,
+        NonBrowserFields, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields,
+        TorConnectionFields, WindowsThreat,
     };
 
     let event_db = store.events();
@@ -371,7 +371,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                 >(&k, &v, &event_db)?;
             }
             EventKind::BlockListLdap => {
-                update_event_db_with_new_event::<BlockListLdapBeforeV30, BlockListLdapFields>(
+                update_event_db_with_new_event::<BlockListLdapBeforeV30, LdapEventFields>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -432,7 +432,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::LdapPlainText => {
-                update_event_db_with_new_event::<LdapPlainTextBeforeV30, LdapPlainTextFields>(
+                update_event_db_with_new_event::<LdapPlainTextBeforeV30, LdapEventFields>(
                     &k, &v, &event_db,
                 )?;
             }
