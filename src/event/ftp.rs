@@ -134,7 +134,7 @@ impl Match for FtpBruteForce {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct FtpPlainTextFields {
+pub struct FtpEventFields {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -157,7 +157,7 @@ pub struct FtpPlainTextFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for FtpPlainTextFields {
+impl fmt::Display for FtpEventFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -241,7 +241,7 @@ impl fmt::Display for FtpPlainText {
 }
 
 impl FtpPlainText {
-    pub(super) fn new(time: DateTime<Utc>, fields: FtpPlainTextFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: FtpEventFields) -> Self {
         Self {
             time,
             source: fields.source,
@@ -315,59 +315,6 @@ impl Match for FtpPlainText {
     }
 }
 
-// TODO: Merge FtpPlainTextFields, BlockListFtpFields
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BlockListFtpFields {
-    pub source: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub last_time: i64,
-    pub user: String,
-    pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
-    pub category: EventCategory,
-}
-
-impl fmt::Display for BlockListFtpFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?}",
-            self.source,
-            self.src_addr.to_string(),
-            self.src_port.to_string(),
-            self.dst_addr.to_string(),
-            self.dst_port.to_string(),
-            self.proto.to_string(),
-            self.last_time.to_string(),
-            self.user,
-            self.password,
-            self.command,
-            self.reply_code,
-            self.reply_msg,
-            self.data_passive.to_string(),
-            self.data_orig_addr.to_string(),
-            self.data_resp_addr.to_string(),
-            self.data_resp_port.to_string(),
-            self.file,
-            self.file_size.to_string(),
-            self.file_id,
-        )
-    }
-}
-
 #[derive(Deserialize, Serialize)]
 pub struct BlockListFtp {
     pub time: DateTime<Utc>,
@@ -424,7 +371,7 @@ impl fmt::Display for BlockListFtp {
 }
 
 impl BlockListFtp {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListFtpFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: FtpEventFields) -> Self {
         Self {
             time,
             source: fields.source,
