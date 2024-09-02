@@ -30,6 +30,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   would fail if any certificate failed to load.
 - Combine the detected event structures that share the same fields.
   - `FtpPlainTextFields`, `BlockListFtpFields` -> `FtpEventFields`
+  - `LdapPlainTextFields`, `BlockListLdapFields` -> `LdapEventFields`
 
 ### Removed
 
