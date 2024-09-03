@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">0.29.1,<=0.30.0-alpha.1";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.30.0,<0.31.0-alpha";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -132,8 +132,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_28_to_0_29_0,
         ),
         (
-            VersionReq::parse(">=0.29.1,<0.30.0-alpha.1")?,
-            Version::parse("0.30.0-alpha.1")?,
+            VersionReq::parse(">=0.29.0,<0.30.0")?,
+            Version::parse("0.30.0")?,
             migrate_0_29_to_0_30_0,
         ),
     ];
