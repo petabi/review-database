@@ -69,7 +69,7 @@ impl Database {
         cluster: i32,
         time: Vec<NaiveDateTime>,
     ) -> Result<Vec<Statistics>, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
 
         let mut query = cd_d::column_description
             .select((cd_d::id, cd_d::type_id))
@@ -88,7 +88,7 @@ impl Database {
         }
 
         let mut results = join_all(columns.iter().map(|(type_id, description_ids)| async move {
-            let conn = self.pool.get_diesel_conn().await?;
+            let conn = self.pool.get().await?;
             let statistics = match type_id {
                 1 => int::get_int_statistics(conn, description_ids).await,
                 2 => r#enum::get_enum_statistics(conn, description_ids).await,

@@ -245,7 +245,7 @@ impl Database {
     ///
     /// Returns an error if the model already exists or if a database operation fails.
     pub async fn add_model(&self, model: &SqlModel) -> Result<i32, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let n = diesel::insert_into(dsl::model)
             .values((
                 dsl::name.eq(&model.name),
@@ -278,7 +278,7 @@ impl Database {
             csv_indicator::dsl as indicator, csv_whitelist::dsl as whitelist,
         };
 
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let id = diesel::delete(dsl::model)
             .filter(dsl::name.eq(name))
             .returning(dsl::id)
@@ -413,7 +413,7 @@ impl Database {
     ///
     /// Returns an error if a database operation fails.
     pub async fn count_models(&self) -> Result<i64, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         Ok(dsl::model.count().get_result(&mut conn).await?)
     }
 
@@ -423,7 +423,7 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn load_model(&self, id: i32) -> Result<Digest, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         Ok(dsl::model
             .select((
                 dsl::id,
@@ -456,7 +456,7 @@ impl Database {
             ))
             .filter(dsl::name.eq(name));
 
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         Ok(query.get_result::<SqlModel>(&mut conn).await?)
     }
 
@@ -508,7 +508,7 @@ impl Database {
                 .then_order_by(dsl::id.desc());
         }
 
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let rows = query.get_results::<Digest>(&mut conn).await?;
         if is_first {
             Ok(rows)
@@ -523,7 +523,7 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn update_model<'a>(&self, model: &SqlModel) -> Result<i32, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
 
         diesel::update(dsl::model.filter(dsl::id.eq(model.id)))
             .set((

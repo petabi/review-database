@@ -162,7 +162,7 @@ impl ConnectionPool {
         Ok(Self { inner: pool_type })
     }
 
-    pub async fn get_diesel_conn(&self) -> Result<AsyncPgConnection, Error> {
+    pub async fn get(&self) -> Result<AsyncPgConnection, Error> {
         let conn = match &self.inner {
             ConnectionPoolType::Tls(pool) => pool.dedicated_connection().await?,
             ConnectionPoolType::NoTls(pool) => pool.dedicated_connection().await?,

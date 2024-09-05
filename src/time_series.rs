@@ -128,7 +128,7 @@ impl Database {
         for chunk in chunks {
             let pool = self.pool.clone();
             tasks.spawn(async move {
-                let mut conn = pool.get_diesel_conn().await?;
+                let mut conn = pool.get().await?;
                 conn.build_transaction()
                     .run(move |conn| {
                         Box::pin(async move {
@@ -193,7 +193,7 @@ impl Database {
         &self,
         model_id: i32,
     ) -> Result<(Option<NaiveDateTime>, Option<NaiveDateTime>), Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         Ok(c_d::cluster
             .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
             .select((min(t_d::value), max(t_d::value)))
@@ -218,7 +218,7 @@ impl Database {
         start: Option<i64>,
         end: Option<i64>,
     ) -> Result<TimeSeriesResult, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let (earliest, latest) = c_d::cluster
             .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
             .select((min(t_d::value), max(t_d::value)))

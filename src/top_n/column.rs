@@ -156,7 +156,7 @@ impl Database {
         portion_of_clusters: Option<f64>,
         portion_of_top_n: Option<f64>,
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let columns_for_top_n = get_columns_for_top_n(&mut conn, model_id).await?;
         let mut column_types = self.get_column_types_of_model(model_id).await?;
         column_types.retain(|c| columns_for_top_n.contains(&c.column_index));

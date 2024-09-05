@@ -362,7 +362,7 @@ impl Database {
         time: Option<NaiveDateTime>,
         column_types: Vec<StructuredColumnType>,
     ) -> Result<Vec<TopMultimaps>, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let column_types: HashMap<usize, String> = column_types
             .into_iter()
             .map(|c| (c.column_index.to_usize().expect("safe"), c.data_type))

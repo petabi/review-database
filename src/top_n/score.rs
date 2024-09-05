@@ -119,7 +119,7 @@ impl Database {
             })
             .collect();
 
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let indicators: HashMap<usize, String> =
             get_csv_indicators(&mut conn, model_id, &columns_indices).await?;
         let mut indicator_indices: Vec<usize> = indicators.keys().copied().collect();

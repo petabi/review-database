@@ -91,7 +91,7 @@ impl Database {
             query = query.filter(dsl::status_id.eq_any(statuses));
         }
 
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         Ok(query.count().get_result(&mut conn).await?)
     }
 
@@ -171,7 +171,7 @@ impl Database {
             query = query.order_by(dsl::size.asc()).then_order_by(dsl::id.asc());
         }
 
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let rows = query.get_results::<ClusterDbSchema>(&mut conn).await?;
         if is_first {
             Ok(rows.into_iter().map(Into::into).collect())
@@ -196,7 +196,7 @@ impl Database {
             return Err(Error::InvalidInput("no column to update".to_string()));
         }
 
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let (category_id, qualifier_id, status_id) = dsl::cluster
             .select((dsl::category_id, dsl::qualifier_id, dsl::status_id))
             .filter(dsl::id.eq(id))
@@ -239,7 +239,7 @@ impl Database {
         for chunk in chunks {
             let pool = self.pool.clone();
             tasks.spawn(async move {
-                let mut conn = pool.get_diesel_conn().await?;
+                let mut conn = pool.get().await?;
                 conn.build_transaction()
                     .run(move |conn| {
                         Box::pin(async move {

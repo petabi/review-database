@@ -127,7 +127,7 @@ impl Database {
             cluster::dsl as cluster_d, column_description::dsl as cd_d, model::dsl as m_d,
         };
 
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let cluster_ids = cluster_d::cluster
             .select(cluster_d::id)
             .filter(cluster_d::model_id.eq(model_id))

@@ -75,7 +75,7 @@ impl Database {
         model_id: i32,
         batch_ts: NaiveDateTime,
     ) -> Result<()> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
 
         let column_types = check_column_types(&statistics);
         if column_types.is_empty() {

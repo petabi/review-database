@@ -67,7 +67,7 @@ impl Database {
         start: Option<i64>,
         end: Option<i64>,
     ) -> Result<Vec<TopTrendsByColumn>, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let values = get_time_series_of_clusters(&mut conn, model_id, time, start, end).await?;
 
         let mut series: HashMap<usize, HashMap<String, HashMap<NaiveDateTime, i64>>> =

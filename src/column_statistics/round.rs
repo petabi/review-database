@@ -15,7 +15,7 @@ impl Database {
     /// Returns an error if the database query fails.
     pub async fn count_rounds_by_cluster(&self, cluster_id: i32) -> Result<i64, Error> {
         use diesel::dsl::count_distinct;
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         Ok(cd_d::column_description
             .select(count_distinct(cd_d::batch_ts))
             .filter(cd_d::cluster_id.eq(cluster_id))
@@ -36,7 +36,7 @@ impl Database {
         is_first: bool,
         limit: usize,
     ) -> Result<(i32, Vec<NaiveDateTime>), Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
         let model_id = c_d::cluster
             .select(c_d::model_id)

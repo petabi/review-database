@@ -70,7 +70,7 @@ impl Database {
         cluster_id: &str,
         size: usize,
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let values = c_d::cluster
             .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
             .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
@@ -131,7 +131,7 @@ impl Database {
         portion_of_clusters: Option<f64>,
         portion_of_top_n: Option<f64>,
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
-        let mut conn = self.pool.get_diesel_conn().await?;
+        let mut conn = self.pool.get().await?;
         let cluster_sizes = get_cluster_sizes(&mut conn, model_id).await?;
         let cluster_ids = get_limited_cluster_ids(
             &cluster_sizes,
