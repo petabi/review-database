@@ -4,8 +4,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-use super::schema::cluster::dsl;
-use crate::{types::Cluster, Database, Error, Type, Value};
+use crate::{schema::cluster::dsl, types::Cluster, Database, Error};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UpdateClusterRequest {
@@ -78,33 +77,22 @@ impl Database {
         qualifiers: Option<&[i32]>,
         statuses: Option<&[i32]>,
     ) -> Result<i64, Error> {
-        let conn = self.pool.get().await?;
-        let mut any_variables = Vec::new();
-        let mut values = Vec::<&Value>::new();
-        values.push(&model);
-        if categories.is_some() {
-            any_variables.push(("category_id", Type::INT4_ARRAY));
-            values.push(&categories);
+        let mut query = dsl::cluster.filter(dsl::model_id.eq(&model)).into_boxed();
+        if let Some(categories) = categories {
+            query = query.filter(dsl::category_id.eq_any(categories));
         }
-        if detectors.is_some() {
-            any_variables.push(("detector_id", Type::INT4_ARRAY));
-            values.push(&detectors);
+        if let Some(detectors) = detectors {
+            query = query.filter(dsl::detector_id.eq_any(detectors));
         }
-        if qualifiers.is_some() {
-            any_variables.push(("qualifier_id", Type::INT4_ARRAY));
-            values.push(&qualifiers);
+        if let Some(qualifiers) = qualifiers {
+            query = query.filter(dsl::qualifier_id.eq_any(qualifiers));
         }
-        if statuses.is_some() {
-            any_variables.push(("status_id", Type::INT4_ARRAY));
-            values.push(&statuses);
+        if let Some(statuses) = statuses {
+            query = query.filter(dsl::status_id.eq_any(statuses));
         }
-        conn.count(
-            "cluster",
-            &[("model_id", Type::INT4)],
-            &any_variables,
-            &values,
-        )
-        .await
+
+        let mut conn = self.pool.get_diesel_conn().await?;
+        Ok(query.count().get_result(&mut conn).await?)
     }
 
     /// Returns the clusters that satisfy the given conditions.
@@ -204,28 +192,28 @@ impl Database {
         qualifier: Option<i32>,
         status: Option<i32>,
     ) -> Result<(), Error> {
-        let mut columns = Vec::new();
-        let mut values = Vec::<&Value>::new();
-        if category.is_some() {
-            columns.push(("category_id", Type::INT4));
-            values.push(&category);
-        }
-        if qualifier.is_some() {
-            columns.push(("qualifier_id", Type::INT4));
-            values.push(&qualifier);
-        }
-        if status.is_some() {
-            columns.push(("status_id", Type::INT4));
-            values.push(&status);
+        if category.is_none() && qualifier.is_none() && status.is_none() {
+            return Err(Error::InvalidInput("no column to update".to_string()));
         }
 
-        if columns.is_empty() {
-            Err(Error::InvalidInput("no column to update".to_string()))
-        } else {
-            let conn = self.pool.get().await?;
-            conn.update("cluster", id, &columns, &values).await?;
-            Ok(())
-        }
+        let mut conn = self.pool.get_diesel_conn().await?;
+        let (category_id, qualifier_id, status_id) = dsl::cluster
+            .select((dsl::category_id, dsl::qualifier_id, dsl::status_id))
+            .filter(dsl::id.eq(id))
+            .get_result(&mut conn)
+            .await?;
+        let category_id = category.unwrap_or(category_id);
+        let qualifier_id = qualifier.unwrap_or(qualifier_id);
+        let status_id = status.unwrap_or(status_id);
+        diesel::update(dsl::cluster.filter(dsl::id.eq(id)))
+            .set((
+                dsl::category_id.eq(category_id),
+                dsl::qualifier_id.eq(qualifier_id),
+                dsl::status_id.eq(status_id),
+            ))
+            .execute(&mut conn)
+            .await?;
+        Ok(())
     }
 
     /// Updates the clusters with the given cluster IDs.

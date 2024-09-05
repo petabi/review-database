@@ -11,7 +11,6 @@ use bb8_postgres::{
     tokio_postgres::{
         self,
         tls::{MakeTlsConnect, TlsConnect},
-        types::ToSql,
         NoTls, Socket,
     },
     PostgresConnectionManager,
@@ -22,71 +21,9 @@ use rustls::{CertificateError, ClientConfig, RootCertStore};
 use rustls_pki_types::CertificateDer;
 use tokio_postgres_rustls::MakeRustlsConnect;
 
-use crate::{self as database, Error};
+use crate::Error;
 
-pub type Value = dyn ToSql + Sync;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./src/backends/postgres/migrations/");
-
-pub(super) enum ConnectionType<'a> {
-    Tls(bb8::PooledConnection<'a, PostgresConnectionManager<MakeRustlsConnect>>),
-    NoTls(bb8::PooledConnection<'a, PostgresConnectionManager<NoTls>>),
-}
-
-pub struct Connection<'a> {
-    inner: ConnectionType<'a>,
-}
-
-impl<'a> Connection<'a> {
-    /// Returns the number of rows in a table.
-    pub async fn count(
-        &self,
-        table: &str,
-        variables: &[(&str, database::Type)],
-        any_variables: &[(&str, database::Type)],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<i64, Error> {
-        let mut query = "SELECT COUNT(*) FROM ".to_string();
-        query.push_str(table);
-        if !values.is_empty() {
-            query.push_str(" WHERE ");
-            query_equality(&mut query, variables);
-            if !variables.is_empty() && !any_variables.is_empty() {
-                query.push_str(" AND ");
-            }
-            query_any(&mut query, variables.len() + 1, any_variables);
-        }
-
-        let row = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.query_one(query.as_str(), values).await?,
-            ConnectionType::Tls(conn) => conn.query_one(query.as_str(), values).await?,
-        };
-        Ok(row.get(0))
-    }
-
-    /// Updates the given fields of a row in a table.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `columns` is empty.
-    pub async fn update(
-        &self,
-        table: &str,
-        id: i32,
-        columns: &[(&str, database::Type)],
-        values: &[&(dyn ToSql + Sync)],
-    ) -> Result<(), Error> {
-        let query = query_update(table, id, columns);
-        let n = match &self.inner {
-            ConnectionType::NoTls(conn) => conn.execute(query.as_str(), values).await?,
-            ConnectionType::Tls(conn) => conn.execute(query.as_str(), values).await?,
-        };
-        if n == 1 {
-            Ok(())
-        } else {
-            Err(Error::InvalidInput(format!("no row with id = {id}")))
-        }
-    }
-}
 
 #[derive(Clone)]
 enum ConnectionPoolType {
@@ -225,21 +162,6 @@ impl ConnectionPool {
         Ok(Self { inner: pool_type })
     }
 
-    pub async fn get(&self) -> Result<Connection<'_>, Error> {
-        match &self.inner {
-            ConnectionPoolType::Tls(pool) => {
-                let inner = get_connection(pool).await?;
-                let inner = ConnectionType::Tls(inner);
-                Ok(Connection { inner })
-            }
-            ConnectionPoolType::NoTls(pool) => {
-                let inner = get_connection(pool).await?;
-                let inner = ConnectionType::NoTls(inner);
-                Ok(Connection { inner })
-            }
-        }
-    }
-
     pub async fn get_diesel_conn(&self) -> Result<AsyncPgConnection, Error> {
         let conn = match &self.inner {
             ConnectionPoolType::Tls(pool) => pool.dedicated_connection().await?,
@@ -247,34 +169,6 @@ impl ConnectionPool {
         };
         let conn = AsyncPgConnection::try_from(conn).await?;
         Ok(conn)
-    }
-}
-
-async fn get_connection<Tls>(
-    pool: &bb8::Pool<PostgresConnectionManager<Tls>>,
-) -> Result<bb8::PooledConnection<'_, bb8_postgres::PostgresConnectionManager<Tls>>, Error>
-where
-    Tls: MakeTlsConnect<Socket> + Clone + Send + Sync + 'static,
-    <Tls as MakeTlsConnect<Socket>>::Stream: Send + Sync,
-    <Tls as MakeTlsConnect<Socket>>::TlsConnect: Send,
-    <<Tls as MakeTlsConnect<Socket>>::TlsConnect as TlsConnect<Socket>>::Future: Send,
-{
-    let timeout = Duration::from_secs(30);
-    let mut delay = Duration::from_millis(100);
-    let start = Instant::now();
-
-    loop {
-        match pool.get().await {
-            Ok(conn) => return Ok(conn),
-            Err(e) => {
-                tracing::debug!("Failed to get a database connection: {:#}", e);
-                if start.elapsed() > timeout {
-                    return Err(Error::PgConnection(e));
-                }
-                delay = min(timeout / 2, delay * 2);
-                tokio::time::sleep(delay).await;
-            }
-        }
     }
 }
 
@@ -304,88 +198,5 @@ where
                 tokio::time::sleep(delay).await;
             }
         }
-    }
-}
-
-/// Builds an UPDATE statement.
-///
-/// # Panics
-///
-/// Panics if `columns` is empty.
-fn query_update(table: &str, id: i32, columns: &[(&str, database::Type)]) -> String {
-    let mut query = "UPDATE ".to_string();
-    query.push_str(table);
-    query.push_str(" SET ");
-    query.push_str(columns[0].0);
-    query.push_str(" = $1::");
-    query.push_str(&columns[0].1.to_string());
-    for (i, col) in columns.iter().enumerate().skip(1) {
-        query.push_str(", ");
-        query.push_str(col.0);
-        query.push_str(" = $");
-        query.push_str(&(i + 1).to_string());
-        query.push_str("::");
-        query.push_str(&col.1.to_string());
-    }
-    query.push_str(" WHERE id = ");
-    query.push_str(&id.to_string());
-    query
-}
-
-/// Builds a query fragment for equality conditions.
-fn query_equality(query: &mut String, variables: &[(&str, database::Type)]) {
-    if variables.is_empty() {
-        return;
-    }
-
-    query.push_str(variables[0].0);
-    query.push_str(" = $1::");
-    query.push_str(&variables[0].1.to_string());
-    for (i, var) in variables.iter().enumerate().skip(1) {
-        query.push_str(" AND ");
-        query.push_str(var.0);
-        query.push_str(" = $");
-        query.push_str(&(i + 1).to_string());
-        query.push_str("::");
-        query.push_str(&var.1.to_string());
-    }
-}
-
-/// Builds a query fragment for `IN` conditions.
-fn query_any(query: &mut String, index: usize, variables: &[(&str, database::Type)]) {
-    if variables.is_empty() {
-        return;
-    }
-
-    if !variables.is_empty() {
-        query.push_str(variables[0].0);
-        query.push_str(" = ANY($");
-        query.push_str(&index.to_string());
-        query.push_str("::");
-        query.push_str(&variables[0].1.to_string());
-        query.push(')');
-        for (i, var) in variables.iter().enumerate().skip(1) {
-            query.push_str(" AND ");
-            query.push_str(var.0);
-            query.push_str(" = ANY($");
-            query.push_str(&(index + i).to_string());
-            query.push_str("::");
-            query.push_str(&var.1.to_string());
-            query.push(')');
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use bb8_postgres::tokio_postgres::types::Type;
-
-    #[test]
-    fn query_update() {
-        let query = super::query_update("t1", 10, &[("f1", Type::INT4), ("f2", Type::TEXT)]);
-        assert_eq!(
-            query,
-            "UPDATE t1 SET f1 = $1::int4, f2 = $2::text WHERE id = 10"
-        );
     }
 }

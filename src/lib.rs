@@ -27,11 +27,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
-use backends::Value;
-use bb8_postgres::{
-    bb8,
-    tokio_postgres::{self, types::Type},
-};
+use bb8_postgres::{bb8, tokio_postgres};
 pub use rocksdb::backup::BackupEngineInfo;
 pub use tags::TagSet;
 use tags::{EventTagId, NetworkTagId, WorkflowTagId};
