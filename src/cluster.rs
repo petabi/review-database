@@ -1,9 +1,11 @@
 use chrono::NaiveDateTime;
-use futures::future::join_all;
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-use crate::{tokio_postgres::types::ToSql, types::Cluster, Database, Error, Type, Value};
+use super::schema::cluster::dsl;
+use crate::{types::Cluster, Database, Error, Type, Value};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UpdateClusterRequest {
@@ -123,11 +125,6 @@ impl Database {
         is_first: bool,
         limit: usize,
     ) -> Result<Vec<Cluster>, Error> {
-        use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
-        use diesel_async::RunQueryDsl;
-
-        use super::schema::cluster::dsl;
-
         let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
         let mut query = dsl::cluster
             .select((
@@ -241,11 +238,7 @@ impl Database {
         cluster_update: Vec<UpdateClusterRequest>,
         model_id: i32,
     ) -> Result<(), Error> {
-        let query = "SELECT attempt_cluster_upsert(
-            $1::text, $2::int4, $3::int8[], $4::text[], $5::int4, $6::text, $7::int8, $8::int4, $9::text[], $10::float8)";
-
-        // Split `cluster_update` into Vector of 1,000 each to create database
-        // transactions with 1,000 queries
+        // Execute 1,000 UPSERT operations per transaction
         let mut chunks: Vec<Vec<UpdateClusterRequest>> =
             Vec::with_capacity(cluster_update.len() / 1_000 + 1);
         let mut peekable = cluster_update.into_iter().peekable();
@@ -253,54 +246,70 @@ impl Database {
             chunks.push(peekable.by_ref().take(1_000).collect::<Vec<_>>());
         }
 
-        join_all(
-            chunks
-                .into_iter()
-                .map(|chunk| {
-                    let pool = self.pool.clone();
-                    tokio::spawn(async move {
-                        let mut conn = pool.get().await?;
-                        let txn = conn.build_transaction().await?;
-                        for c in chunk {
-                            let (timestamps, sources) = c.event_ids.iter().fold(
-                                (Vec::new(), Vec::new()),
-                                |(mut ts, mut src), id| {
-                                    ts.push(&id.0);
-                                    src.push(&id.1);
-                                    (ts, src)
-                                },
-                            );
-                            let params: Vec<&(dyn ToSql + Sync)> = vec![
-                                &c.cluster_id,
-                                &c.detector_id,
-                                &timestamps,
-                                &sources,
-                                &model_id,
-                                &c.signature,
-                                &c.size,
-                                &c.status_id,
-                                &c.labels,
-                                &c.score,
-                            ];
+        let mut tasks = tokio::task::JoinSet::new();
 
-                            txn.execute(query, params.as_slice()).await?;
-                        }
-                        txn.commit().await?;
-                        anyhow::Ok(())
+        for chunk in chunks {
+            let pool = self.pool.clone();
+            tasks.spawn(async move {
+                let mut conn = pool.get_diesel_conn().await?;
+                conn.build_transaction()
+                    .run(move |conn| {
+                        Box::pin(async move {
+                            for c in chunk {
+                                upsert(conn, c, model_id).await?;
+                            }
+                            Ok::<_, Error>(())
+                        })
                     })
-                })
-                .map(|task| async move {
-                    match task.await {
-                        Ok(Err(e)) => {
-                            error!("An error occurred while updating clusters: {:#}", e);
-                        }
-                        Err(e) => error!("Failed to execute cluster update: {:#}", e),
-                        _ => {}
-                    }
-                }),
-        )
-        .await;
+                    .await?;
+                anyhow::Ok(())
+            });
+        }
+
+        while let Some(res) = tasks.join_next().await {
+            match res {
+                Ok(Err(e)) => {
+                    error!("An error occurred while updating clusters: {e:#}");
+                }
+                Err(e) => error!("Failed to execute cluster update: {e:#}"),
+                _ => {}
+            }
+        }
 
         Ok(())
     }
+}
+
+async fn upsert(
+    conn: &mut AsyncPgConnection,
+    cluster: UpdateClusterRequest,
+    model_id: i32,
+) -> Result<usize, Error> {
+    use diesel::sql_types::{Array, BigInt, Double, Integer, Nullable, Text};
+
+    let query = "SELECT attempt_cluster_upsert(
+        $1::text, $2::int4, $3::int8[], $4::text[], $5::int4, $6::text, $7::int8, $8::int4, $9::text[], $10::float8)";
+    let (timestamps, sources) =
+        cluster
+            .event_ids
+            .iter()
+            .fold((Vec::new(), Vec::new()), |(mut ts, mut src), id| {
+                ts.push(&id.0);
+                src.push(&id.1);
+                (ts, src)
+            });
+
+    Ok(diesel::sql_query(query)
+        .bind::<Text, _>(&cluster.cluster_id)
+        .bind::<Integer, _>(&cluster.detector_id)
+        .bind::<Array<BigInt>, _>(&timestamps)
+        .bind::<Array<Text>, _>(&sources)
+        .bind::<Integer, _>(&model_id)
+        .bind::<Text, _>(&cluster.signature)
+        .bind::<BigInt, _>(&cluster.size)
+        .bind::<Integer, _>(&cluster.status_id)
+        .bind::<Nullable<Array<Text>>, _>(&cluster.labels)
+        .bind::<Nullable<Double>, _>(&cluster.score)
+        .execute(conn)
+        .await?)
 }

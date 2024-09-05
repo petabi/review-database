@@ -1,5 +1,3 @@
-mod transaction;
-
 use std::{
     cmp::min,
     fs, io,
@@ -23,7 +21,6 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use rustls::{CertificateError, ClientConfig, RootCertStore};
 use rustls_pki_types::CertificateDer;
 use tokio_postgres_rustls::MakeRustlsConnect;
-pub use transaction::Transaction;
 
 use crate::{self as database, Error};
 
@@ -40,14 +37,6 @@ pub struct Connection<'a> {
 }
 
 impl<'a> Connection<'a> {
-    /// Build a database transaction
-    pub async fn build_transaction(&mut self) -> Result<Transaction<'_>, Error> {
-        match &mut self.inner {
-            ConnectionType::NoTls(conn) => Transaction::build(conn).await,
-            ConnectionType::Tls(conn) => Transaction::build(conn).await,
-        }
-    }
-
     /// Returns the number of rows in a table.
     pub async fn count(
         &self,
