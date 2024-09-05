@@ -113,8 +113,9 @@ impl Database {
         model_id: i32,
         batch_ts: NaiveDateTime,
     ) -> Result<()> {
-        // Execute 100 insertion per transaction since each TimeSeries requires
-        // the insertion of multiple TimeCount.
+        // Insert 100 `TimeSeriesUpdate` per transaction. Since each
+        // `TimeSeriesUpdate` has multiple `TimeSeries` and `TimeCount`, the
+        // actual number of insertions per transaction exceeds 100.
         let mut chunks: Vec<Vec<TimeSeriesUpdate>> =
             Vec::with_capacity(time_series.len() / 100 + 1);
         let mut peekable = time_series.into_iter().peekable();
