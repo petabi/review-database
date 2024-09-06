@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.30.0,<0.31.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.31.0-alpha.1,<=0.31.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -136,6 +136,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.30.0")?,
             migrate_0_29_to_0_30_0,
         ),
+        (
+            VersionReq::parse(">=0.30.0,<0.31.0")?,
+            Version::parse("0.31.0")?,
+            migrate_0_30_to_0_31,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -209,6 +214,35 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_30_to_0_31(store: &super::Store) -> Result<()> {
+    migrate_rocksdb_to_native_db(store)
+}
+
+fn migrate_rocksdb_to_native_db(store: &super::Store) -> Result<()> {
+    use crate::Iterable;
+
+    impl From<crate::tables::TrustedDomain> for crate::data::TrustedDomain {
+        fn from(input: crate::tables::TrustedDomain) -> Self {
+            Self {
+                name: input.name,
+                remarks: input.remarks,
+            }
+        }
+    }
+
+    let table = store.trusted_domain_map();
+    let db = &store.states;
+    let rw = db.rw_transaction()?;
+    for rec in table.iter(rocksdb::Direction::Forward, None) {
+        let old = rec?;
+        rw.insert(crate::data::TrustedDomain::from(old))?;
+    }
+    rw.commit()?;
+
+    // TODO: Remove the entire RocksDB database after the migration is done.
+    Ok(())
 }
 
 fn migrate_0_29_to_0_30_0(store: &super::Store) -> Result<()> {
@@ -3613,5 +3647,51 @@ mod tests {
         new.patterns.iter().for_each(|rule| {
             assert_eq!(rule.category, EventCategory::Reconnaissance);
         });
+    }
+
+    #[test]
+    fn migrate_rocksdb_to_native_db() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Store::new(db_dir.path(), backup_dir.path()).unwrap();
+
+        let table = store.legacy_states.trusted_domains();
+        table
+            .insert(&crate::tables::TrustedDomain {
+                name: "domain1".to_string(),
+                remarks: "example 1".to_string(),
+            })
+            .unwrap();
+        table
+            .insert(&crate::tables::TrustedDomain {
+                name: "domain2".to_string(),
+                remarks: "example 2".to_string(),
+            })
+            .unwrap();
+        table
+            .insert(&crate::tables::TrustedDomain {
+                name: "domain3".to_string(),
+                remarks: "example 3".to_string(),
+            })
+            .unwrap();
+
+        assert!(super::migrate_rocksdb_to_native_db(&store).is_ok());
+
+        let tx = store.states.r_transaction().unwrap();
+        assert_eq!(tx.len().primary::<crate::data::TrustedDomain>().unwrap(), 3);
+        let scan = tx.scan().primary::<crate::data::TrustedDomain>().unwrap();
+        let mut iter = scan.all();
+
+        let rec = iter.next().unwrap().unwrap();
+        assert_eq!(rec.name, "domain1");
+        assert_eq!(rec.remarks, "example 1");
+
+        let rec = iter.next().unwrap().unwrap();
+        assert_eq!(rec.name, "domain2");
+        assert_eq!(rec.remarks, "example 2");
+
+        let rec = iter.next().unwrap().unwrap();
+        assert_eq!(rec.name, "domain3");
+        assert_eq!(rec.remarks, "example 3");
     }
 }
