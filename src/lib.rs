@@ -10,6 +10,7 @@ mod cluster;
 mod collections;
 mod column_statistics;
 mod csv_indicator;
+mod data;
 pub mod event;
 mod migration;
 mod model;
@@ -107,12 +108,14 @@ impl Database {
     }
 }
 
-const DEFAULT_STATES: &str = "states.db";
+const DEFAULT_STATES: &str = "states.ndb";
+const LEGACY_STATES: &str = "states.db"; // in RocksDB format
 const EXCLUSIVE: bool = true;
 
-/// A key-value store.
+/// A local storage.
 pub struct Store {
-    states: StateDb,
+    states: native_db::Database<'static>,
+    legacy_states: StateDb,
     pretrained: PathBuf,
 }
 
@@ -125,88 +128,94 @@ impl Store {
     /// Returns an error if the key-value store or its backup cannot be opened.
     pub fn new(path: &Path, backup: &Path) -> Result<Self, anyhow::Error> {
         let db_path = path.join(DEFAULT_STATES);
-        let backup_path = backup.join(DEFAULT_STATES);
-        let states = StateDb::open(&db_path, backup_path)?;
+        let legacy_db_path = path.join(LEGACY_STATES);
+        let backup_path = backup.join(LEGACY_STATES);
+        let states = native_db::Builder::new().create(&data::MODELS, db_path)?;
+        let legacy_states = StateDb::open(&legacy_db_path, backup_path)?;
         let pretrained = path.join(Self::DEFAULT_PRETRAINED);
         if let Err(e) = std::fs::create_dir_all(&pretrained) {
             if e.kind() != io::ErrorKind::AlreadyExists {
                 return Err(anyhow::anyhow!("{e}"));
             }
         }
-        let store = Self { states, pretrained };
+        let store = Self {
+            states,
+            legacy_states,
+            pretrained,
+        };
         Ok(store)
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn events(&self) -> EventDb {
-        self.states.events()
+        self.legacy_states.events()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn access_token_map(&self) -> Table<AccessToken> {
-        self.states.access_tokens()
+        self.legacy_states.access_tokens()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn account_map(&self) -> Table<types::Account> {
-        self.states.accounts()
+        self.legacy_states.accounts()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn account_policy_map(&self) -> Table<AccountPolicy> {
-        self.states.account_policy()
+        self.legacy_states.account_policy()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn agents_map(&self) -> Table<Agent> {
-        self.states.agents()
+        self.legacy_states.agents()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn allow_network_map(&self) -> IndexedTable<AllowNetwork> {
-        self.states.allow_networks()
+        self.legacy_states.allow_networks()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn batch_info_map(&self) -> Table<batch_info::BatchInfo> {
-        self.states.batch_info()
+        self.legacy_states.batch_info()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn block_network_map(&self) -> IndexedTable<BlockNetwork> {
-        self.states.block_networks()
+        self.legacy_states.block_networks()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn category_map(&self) -> IndexedTable<category::Category> {
-        self.states.categories()
+        self.legacy_states.categories()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn csv_column_extra_map(&self) -> IndexedTable<CsvColumnExtraConfig> {
-        self.states.csv_column_extras()
+        self.legacy_states.csv_column_extras()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn customer_map(&self) -> IndexedTable<Customer> {
-        self.states.customers()
+        self.legacy_states.customers()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn data_source_map(&self) -> IndexedTable<DataSource> {
-        self.states.data_sources()
+        self.legacy_states.data_sources()
     }
 
     /// Returns the tag set for event.
@@ -217,7 +226,7 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn event_tag_set(&self) -> Result<TagSet<EventTagId>> {
         let set = self
-            .states
+            .legacy_states
             .indexed_set(tables::EVENT_TAGS)
             .expect("always available");
         TagSet::new(set)
@@ -226,19 +235,19 @@ impl Store {
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn filter_map(&self) -> Table<Filter> {
-        self.states.filters()
+        self.legacy_states.filters()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn model_indicator_map(&self) -> Table<ModelIndicator> {
-        self.states.model_indicators()
+        self.legacy_states.model_indicators()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn network_map(&self) -> IndexedTable<Network> {
-        self.states.networks()
+        self.legacy_states.networks()
     }
 
     /// Returns the tag set for network.
@@ -249,7 +258,7 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn network_tag_set(&self) -> Result<TagSet<NetworkTagId>> {
         let set = self
-            .states
+            .legacy_states
             .indexed_set(tables::NETWORK_TAGS)
             .expect("always available");
         TagSet::new(set)
@@ -258,85 +267,85 @@ impl Store {
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn node_map(&self) -> NodeTable {
-        self.states.nodes()
+        self.legacy_states.nodes()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn outlier_map(&self) -> Table<OutlierInfo> {
-        self.states.outlier_infos()
+        self.legacy_states.outlier_infos()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn sampling_policy_map(&self) -> IndexedTable<SamplingPolicy> {
-        self.states.sampling_policies()
+        self.legacy_states.sampling_policies()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn qualifier_map(&self) -> IndexedTable<types::Qualifier> {
-        self.states.qualifiers()
+        self.legacy_states.qualifiers()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn scores_map(&self) -> Table<scores::Scores> {
-        self.states.scores()
+        self.legacy_states.scores()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn status_map(&self) -> IndexedTable<types::Status> {
-        self.states.statuses()
+        self.legacy_states.statuses()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn template_map(&self) -> Table<Template> {
-        self.states.templates()
+        self.legacy_states.templates()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn tidb_map(&self) -> Table<Tidb> {
-        self.states.tidbs()
+        self.legacy_states.tidbs()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn tor_exit_node_map(&self) -> Table<TorExitNode> {
-        self.states.tor_exit_nodes()
+        self.legacy_states.tor_exit_nodes()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn triage_policy_map(&self) -> IndexedTable<TriagePolicy> {
-        self.states.triage_policies()
+        self.legacy_states.triage_policies()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn triage_response_map(&self) -> IndexedTable<TriageResponse> {
-        self.states.triage_responses()
+        self.legacy_states.triage_responses()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn trusted_domain_map(&self) -> Table<TrustedDomain> {
-        self.states.trusted_domains()
+        self.legacy_states.trusted_domains()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn trusted_user_agent_map(&self) -> Table<TrustedUserAgent> {
-        self.states.trusted_user_agents()
+        self.legacy_states.trusted_user_agents()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn traffic_filter_map(&self) -> Table<TrafficFilter> {
-        self.states.traffic_filters()
+        self.legacy_states.traffic_filters()
     }
 
     /// Returns the tag set for workflow.
@@ -347,7 +356,7 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn workflow_tag_set(&self) -> Result<TagSet<WorkflowTagId>> {
         let set = self
-            .states
+            .legacy_states
             .indexed_set(tables::WORKFLOW_TAGS)
             .expect("always available");
         TagSet::new(set)
@@ -375,7 +384,7 @@ impl Store {
     ///
     /// Returns an error when backup engine fails.
     pub(crate) fn backup(&mut self, flush: bool, num_of_backups_to_keep: u32) -> Result<()> {
-        self.states
+        self.legacy_states
             .create_new_backup_flush(flush, num_of_backups_to_keep)
     }
 
@@ -385,7 +394,7 @@ impl Store {
     ///
     /// Returns an error when backup engine fails.
     pub fn get_backup_info(&self) -> Result<Vec<BackupEngineInfo>> {
-        self.states.get_backup_info()
+        self.legacy_states.get_backup_info()
     }
 
     /// Restore from the backup with `backup_id` on file
@@ -394,7 +403,7 @@ impl Store {
     ///
     /// Returns an error when backup engine fails or restoration fails.
     pub fn restore_from_backup(&mut self, backup_id: u32) -> Result<()> {
-        self.states.restore_from_backup(backup_id)
+        self.legacy_states.restore_from_backup(backup_id)
     }
 
     /// Restore from the latest backup on file
@@ -403,7 +412,7 @@ impl Store {
     ///
     /// Returns an error when backup engine fails or restoration fails.
     pub fn restore_from_latest_backup(&mut self) -> Result<()> {
-        self.states.restore_from_latest_backup()
+        self.legacy_states.restore_from_latest_backup()
     }
 
     /// Purge old backups and only keep `num_backups_to_keep` backups on file
@@ -412,7 +421,7 @@ impl Store {
     ///
     /// Returns an error when backup engine fails.
     pub fn purge_old_backups(&mut self, num_backups_to_keep: u32) -> Result<()> {
-        self.states.purge_old_backups(num_backups_to_keep)?;
+        self.legacy_states.purge_old_backups(num_backups_to_keep)?;
         Ok(())
     }
 }

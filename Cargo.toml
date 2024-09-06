@@ -1,6 +1,6 @@
 [package]
 name = "review-database"
-version = "0.30.0"
+version = "0.31.0-alpha.1"
 edition = "2021"
 
 [dependencies]
@@ -26,6 +26,8 @@ futures = "0.3"
 humantime-serde = "1"
 ip2location = "0.5"
 ipnet = { version = "2", features = ["serde"] }
+native_db = "0.7"
+native_model = "0.4"
 num-derive = "0.4"
 num-traits = "0.2"
 postgres-protocol = "0.6"
