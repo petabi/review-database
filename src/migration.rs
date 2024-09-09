@@ -223,21 +223,11 @@ fn migrate_0_30_to_0_31(store: &super::Store) -> Result<()> {
 fn migrate_rocksdb_to_native_db(store: &super::Store) -> Result<()> {
     use crate::Iterable;
 
-    impl From<crate::tables::TrustedDomain> for crate::data::TrustedDomain {
-        fn from(input: crate::tables::TrustedDomain) -> Self {
-            Self {
-                name: input.name,
-                remarks: input.remarks,
-            }
-        }
-    }
-
     let table = store.trusted_domain_map();
     let db = &store.states;
     let rw = db.rw_transaction()?;
     for rec in table.iter(rocksdb::Direction::Forward, None) {
-        let old = rec?;
-        rw.insert(crate::data::TrustedDomain::from(old))?;
+        rw.insert(rec?)?;
     }
     rw.commit()?;
 

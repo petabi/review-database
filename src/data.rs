@@ -19,7 +19,7 @@ pub(crate) mod v1 {
     use native_model::{native_model, Model};
     use serde::{Deserialize, Serialize};
 
-    #[derive(Debug, Deserialize, Serialize)]
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[native_model(id = 1, version = 1)]
     #[native_db]
     pub struct TrustedDomain {
