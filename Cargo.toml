@@ -27,7 +27,7 @@ futures = "0.3"
 humantime-serde = "1"
 ip2location = "0.5"
 ipnet = { version = "2", features = ["serde"] }
-native_db = "0.7"
+native_db = { version = "0.7", default-features = false }
 native_model = "0.4"
 num-derive = "0.4"
 num-traits = "0.2"
