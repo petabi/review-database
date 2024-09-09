@@ -4,16 +4,10 @@ use std::borrow::Cow;
 
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
-use serde::{Deserialize, Serialize};
 
 use super::Value;
+use crate::data::TrustedDomain;
 use crate::{types::FromKeyValue, Map, Table, UniqueKey};
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
-pub struct TrustedDomain {
-    pub name: String,
-    pub remarks: String,
-}
 
 impl FromKeyValue for TrustedDomain {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self, anyhow::Error> {
@@ -72,8 +66,9 @@ mod test {
 
     use rocksdb::Direction;
 
+    use super::TrustedDomain;
     use crate::types::FromKeyValue;
-    use crate::{Iterable, Store, TrustedDomain};
+    use crate::{Iterable, Store};
 
     #[test]
     fn operations() {

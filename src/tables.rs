@@ -66,9 +66,9 @@ pub use self::triage_policy::{
     Update as TriagePolicyUpdate, ValueKind,
 };
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
-pub use self::trusted_domain::TrustedDomain;
 pub use self::trusted_user_agent::TrustedUserAgent;
 use super::{event, Indexed, IndexedMap, Map};
+pub use crate::data::TrustedDomain;
 use crate::{
     batch_info::BatchInfo,
     category::Category,
