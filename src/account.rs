@@ -6,6 +6,7 @@ use argon2::{
     Argon2,
 };
 use chrono::{DateTime, Utc};
+#[cfg(feature = "password")]
 use ring::{
     digest, pbkdf2,
     rand::{self, SecureRandom},
@@ -171,7 +172,14 @@ impl SaltedPassword {
         hash_algorithm: &PasswordHashAlgorithm,
     ) -> Result<Self> {
         match hash_algorithm {
-            PasswordHashAlgorithm::Pbkdf2HmacSha512 => Self::with_pbkdf2(password),
+            PasswordHashAlgorithm::Pbkdf2HmacSha512 => {
+                #[cfg(feature = "password")]
+                let res = Self::with_pbkdf2(password);
+                #[cfg(not(feature = "password"))]
+                let res = Err(anyhow::anyhow!("not supported"));
+
+                res
+            }
             PasswordHashAlgorithm::Argon2id => Self::with_argon2id(password),
         }
     }
@@ -181,6 +189,7 @@ impl SaltedPassword {
     /// # Errors
     ///
     /// Returns an error if the salt cannot be generated.
+    #[cfg(feature = "password")]
     fn with_pbkdf2(password: &str) -> Result<Self> {
         // The recommended iteration count for PBKDF2-HMAC-SHA512 is 210,000
         // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
@@ -235,14 +244,22 @@ impl SaltedPassword {
     #[must_use]
     fn is_match(&self, password: &str) -> bool {
         match self.algorithm {
-            HashAlgorithm::Sha512 => pbkdf2::verify(
+            HashAlgorithm::Sha512 => {
+
+            #[cfg(feature = "password")]
+                let verified = pbkdf2::verify(
                 pbkdf2::PBKDF2_HMAC_SHA512,
                 self.iterations,
                 &self.salt,
                 password.as_bytes(),
                 &self.hash,
             )
-            .is_ok(),
+            .is_ok();
+            #[cfg(not(feature = "password"))]
+            let verified = false;
+
+            verified
+        },
             HashAlgorithm::Argon2id => {
                 let hash = String::from_utf8_lossy(&self.hash);
                 match PasswordHash::new(&hash) {

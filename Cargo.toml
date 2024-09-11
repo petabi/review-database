@@ -30,7 +30,7 @@ num-derive = "0.4"
 num-traits = "0.2"
 postgres-protocol = "0.6"
 rand = "0.8"
-ring = { version = "0.17", features = ["std"] }
+ring = { version = "0.17", features = ["std"], optional = true }
 rocksdb = "0.22"
 rustls = { version = "0.23", default-features = false, features = [
   "ring",
@@ -54,3 +54,7 @@ tracing = "0.1"
 
 [dev-dependencies]
 tempfile = "3"
+
+[features]
+default = []
+password = ["ring"]
