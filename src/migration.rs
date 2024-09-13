@@ -81,12 +81,11 @@ async fn transfer_csv_column_extras(db: &super::Database, store: &super::Store) 
         return Ok(0);
     }
 
-    let mut next_mid = data
-        .iter()
-        .max_by_key(|e| e.model_id)
-        .expect("invalid model id")
-        .model_id
-        + 1;
+    let mut next_mid = if let Some(entry) = data.iter().max_by_key(|e| e.model_id) {
+        entry.model_id + 1
+    } else {
+        return Ok(0);
+    };
 
     let mut cur = 0;
     let mut to_remove = vec![];
