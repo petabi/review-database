@@ -13,6 +13,7 @@ bb8-postgres = { version = "0.8", features = [
 ] }
 bincode = "1"
 chrono = { version = "0.4.31", default-features = false, features = ["serde"] }
+config = { version = "0.14.0", optional = true }
 data-encoding = "2"
 diesel = { version = "2", features = ["chrono", "postgres", "serde_json"] }
 diesel-async = { version = "0.4", features = ["bb8", "postgres"] }
@@ -47,3 +48,12 @@ tracing = "0.1"
 
 [dev-dependencies]
 tempfile = "3"
+
+[features]
+default = []
+migrate = ["config", "tokio/rt-multi-thread"]
+
+[[bin]]
+name = "review-migrate"
+required-features = ["migrate"]
+path = "src/migrate.rs"
