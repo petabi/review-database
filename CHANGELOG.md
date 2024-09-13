@@ -5,6 +5,14 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.1] - 2024-09-13
+
+### Fixed
+
+- Resolved an issue where it would panic when the source CsvColumnExtra table
+  was empty during migration. This fix ensures that migrations handle empty
+  tables gracefully, preventing runtime crashes and improving stability.
+
 ## [0.25.0] - 2024-03-05
 
 ### Added
@@ -771,6 +779,7 @@ leading to a more streamlined system.
 
 - An initial version.
 
+[0.25.1]: https://github.com/petabi/review-database/compare/0.25.0...0.25.1
 [0.25.0]: https://github.com/petabi/review-database/compare/0.24.0...0.25.0
 [0.24.0]: https://github.com/petabi/review-database/compare/0.23.0...0.24.0
 [0.23.0]: https://github.com/petabi/review-database/compare/0.22.1...0.23.0
