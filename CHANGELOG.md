@@ -5,6 +5,27 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Introduced a new tool, review-migrate, for managing database migrations. The
+  tool can be configured using either environment variables or a TOML file. This
+  release introduces greater flexibility for managing REview's database migrations,
+  allowing users to leverage both environment variables and TOML configuration files.
+  - Users can provide a TOML configuration file to define the following settings:
+    - `data_dir`: Path for REview's database backup storage. Default is
+      the backup directory in the current directory.
+    - `backup_dir`: Path for REview's local storage. Default is the data
+      directory in the current directory.
+    - `database_url`: PostgreSQL connection URI. Default is
+      "postgres://review@localhost/review".
+    - `ca_certs`: A list of CA certificate files to validate the PostgreSQL
+      server's certificate.
+  - Seamless Compatibility with REview Configurations. Users can reuse the same
+    configuration settings from existing REview deployments to migrate databases
+    using review-migrate.
+
 ## [0.30.0] - 2024-09-03
 
 ### Added
@@ -656,6 +677,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.30.0...main
 [0.30.0]: https://github.com/petabi/review-database/compare/0.29.1...0.30.0
 [0.29.1]: https://github.com/petabi/review-database/compare/0.29.0...0.29.1
 [0.29.0]: https://github.com/petabi/review-database/compare/0.28.0...0.29.0

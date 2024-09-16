@@ -34,9 +34,9 @@ jobs:
       if: runner.os == 'macOS'
       run: echo "PQ_LIB_DIR=$(brew --prefix libpq)/lib" >> $GITHUB_ENV
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --all-features --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --all-features --verbose
 
   coverage:
     runs-on: ubuntu-latest
