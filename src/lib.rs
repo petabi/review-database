@@ -115,6 +115,7 @@ const EXCLUSIVE: bool = true;
 /// A local storage.
 pub struct Store {
     states: native_db::Database<'static>,
+    backup_path: PathBuf,
     legacy_states: StateDb,
     pretrained: PathBuf,
 }
@@ -128,10 +129,11 @@ impl Store {
     /// Returns an error if the key-value store or its backup cannot be opened.
     pub fn new(path: &Path, backup: &Path) -> Result<Self, anyhow::Error> {
         let db_path = path.join(DEFAULT_STATES);
+        let backup_path = backup.join(DEFAULT_STATES);
         let legacy_db_path = path.join(LEGACY_STATES);
-        let backup_path = backup.join(LEGACY_STATES);
+        let legacy_backup_path = backup.join(LEGACY_STATES);
         let states = native_db::Builder::new().create(&data::MODELS, db_path)?;
-        let legacy_states = StateDb::open(&legacy_db_path, backup_path)?;
+        let legacy_states = StateDb::open(&legacy_db_path, legacy_backup_path)?;
         let pretrained = path.join(Self::DEFAULT_PRETRAINED);
         if let Err(e) = std::fs::create_dir_all(&pretrained) {
             if e.kind() != io::ErrorKind::AlreadyExists {
@@ -140,6 +142,7 @@ impl Store {
         }
         let store = Self {
             states,
+            backup_path,
             legacy_states,
             pretrained,
         };
@@ -376,53 +379,6 @@ impl Store {
         file.read_to_end(&mut buf)?;
 
         Ok(types::PretrainedModel(buf))
-    }
-
-    /// Backup current database and keep most recent `num_backups_to_keep` backups
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when backup engine fails.
-    pub(crate) fn backup(&mut self, flush: bool, num_of_backups_to_keep: u32) -> Result<()> {
-        self.legacy_states
-            .create_new_backup_flush(flush, num_of_backups_to_keep)
-    }
-
-    /// Get the backup information for backups on file.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when backup engine fails.
-    pub fn get_backup_info(&self) -> Result<Vec<BackupEngineInfo>> {
-        self.legacy_states.get_backup_info()
-    }
-
-    /// Restore from the backup with `backup_id` on file
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when backup engine fails or restoration fails.
-    pub fn restore_from_backup(&mut self, backup_id: u32) -> Result<()> {
-        self.legacy_states.restore_from_backup(backup_id)
-    }
-
-    /// Restore from the latest backup on file
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when backup engine fails or restoration fails.
-    pub fn restore_from_latest_backup(&mut self) -> Result<()> {
-        self.legacy_states.restore_from_latest_backup()
-    }
-
-    /// Purge old backups and only keep `num_backups_to_keep` backups on file
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when backup engine fails.
-    pub fn purge_old_backups(&mut self, num_backups_to_keep: u32) -> Result<()> {
-        self.legacy_states.purge_old_backups(num_backups_to_keep)?;
-        Ok(())
     }
 }
 

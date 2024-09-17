@@ -1,13 +1,13 @@
 //! Database backup utilities.
 
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
 use rocksdb::backup::BackupEngineInfo;
 use tokio::sync::RwLock;
 
-use crate::Store;
+use crate::{data::MODELS, Store};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BackupInfo {
@@ -65,6 +65,102 @@ pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Resu
     match &backup_id {
         Some(id) => store.restore_from_backup(*id),
         None => store.restore_from_latest_backup(),
+    }
+}
+
+impl Store {
+    /// Backs up the current database and keeps the most recent
+    /// `num_backups_to_keep` backups.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails.
+    pub(crate) fn backup(&mut self, flush: bool, num_of_backups_to_keep: u32) -> Result<()> {
+        use std::{
+            fs,
+            time::{SystemTime, UNIX_EPOCH},
+        };
+
+        fs::create_dir_all(&self.backup_path)?;
+
+        let start = SystemTime::now();
+        let mut timestamp = start.duration_since(UNIX_EPOCH)?.as_secs();
+
+        // List all existing backup files and find the greatest timestamp
+        let mut backup_files = vec![];
+        let mut greatest_timestamp = 0;
+        for entry in fs::read_dir(&self.backup_path)? {
+            let entry = entry?;
+            if let Some(file_name) = entry.file_name().to_str() {
+                if let Some(suffix) = file_name.strip_prefix("backup-") {
+                    if let Ok(existing_timestamp) = suffix.parse::<u64>() {
+                        backup_files.push((existing_timestamp, entry.path()));
+                        if existing_timestamp > greatest_timestamp {
+                            greatest_timestamp = existing_timestamp;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ensure the new timestamp is greater than the greatest existing timestamp
+        if timestamp <= greatest_timestamp {
+            timestamp = greatest_timestamp + 1;
+        }
+
+        let new_backup_file = format!("backup-{timestamp}");
+        let new_backup_path = Path::new(&self.backup_path).join(new_backup_file);
+        self.states.snapshot(&MODELS, &new_backup_path)?;
+
+        // Sort backup files by timestamp in decreasing order
+        backup_files.sort_by_key(|k| std::cmp::Reverse(k.0));
+
+        // Delete old backups if the number of backups exceeds num_of_backups_to_keep
+        while backup_files.len() > num_of_backups_to_keep as usize {
+            if let Some((_, path)) = backup_files.pop() {
+                fs::remove_file(path)?;
+            }
+        }
+
+        self.legacy_states
+            .create_new_backup_flush(flush, num_of_backups_to_keep)
+    }
+
+    /// Get the backup information for backups on file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails.
+    pub fn get_backup_info(&self) -> Result<Vec<BackupEngineInfo>> {
+        self.legacy_states.get_backup_info()
+    }
+
+    /// Restore from the backup with `backup_id` on file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails or restoration fails.
+    pub fn restore_from_backup(&mut self, backup_id: u32) -> Result<()> {
+        self.legacy_states.restore_from_backup(backup_id)
+    }
+
+    /// Restore from the latest backup on file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails or restoration fails.
+    pub fn restore_from_latest_backup(&mut self) -> Result<()> {
+        self.legacy_states.restore_from_latest_backup()
+    }
+
+    /// Purge old backups and only keep `num_backups_to_keep` backups on file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when backup engine fails.
+    pub fn purge_old_backups(&mut self, num_backups_to_keep: u32) -> Result<()> {
+        self.legacy_states.purge_old_backups(num_backups_to_keep)?;
+        Ok(())
     }
 }
 
