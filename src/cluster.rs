@@ -68,7 +68,6 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if a database operation fails.
-    #[allow(clippy::vec_init_then_push)] // `vec![..]` requires static lifetime.
     pub async fn count_clusters(
         &self,
         model: i32,
@@ -272,7 +271,7 @@ async fn upsert(
     conn: &mut AsyncPgConnection,
     cluster: UpdateClusterRequest,
     model_id: i32,
-) -> Result<usize, Error> {
+) -> Result<usize, diesel::result::Error> {
     use diesel::sql_types::{Array, BigInt, Double, Integer, Nullable, Text};
 
     let query = "SELECT attempt_cluster_upsert(
@@ -287,7 +286,7 @@ async fn upsert(
                 (ts, src)
             });
 
-    Ok(diesel::sql_query(query)
+    diesel::sql_query(query)
         .bind::<Text, _>(&cluster.cluster_id)
         .bind::<Integer, _>(&cluster.detector_id)
         .bind::<Array<BigInt>, _>(&timestamps)
@@ -299,5 +298,5 @@ async fn upsert(
         .bind::<Nullable<Array<Text>>, _>(&cluster.labels)
         .bind::<Nullable<Double>, _>(&cluster.score)
         .execute(conn)
-        .await?)
+        .await
 }
