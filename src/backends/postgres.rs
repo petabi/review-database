@@ -23,7 +23,7 @@ use tokio_postgres_rustls::MakeRustlsConnect;
 
 use crate::Error;
 
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./src/backends/postgres/migrations/");
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./src/backends/migrations/");
 
 #[derive(Clone)]
 enum ConnectionPoolType {
