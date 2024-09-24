@@ -19,7 +19,7 @@ impl FromKeyValue for BatchInfo {
     }
 }
 
-impl<'d> Table<'d, crate::batch_info::BatchInfo> {
+impl<'n, 'd> Table<'n, 'd, crate::batch_info::BatchInfo> {
     /// Opens the batch info table in the database.
     ///
     /// Returns `None` if the table does not exist.

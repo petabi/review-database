@@ -75,7 +75,7 @@ impl FromKeyValue for ModelIndicator {
 }
 
 /// Functions for the `model_indicator` map.
-impl<'d> Table<'d, ModelIndicator> {
+impl<'n, 'd> Table<'n, 'd, ModelIndicator> {
     /// Opens the  `model_indicator` map in the database.
     ///
     /// Returns `None` if the map does not exist.

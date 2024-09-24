@@ -131,7 +131,7 @@ pub struct Value {
 }
 
 /// Functions for the `outlier_info` map.
-impl<'d> Table<'d, OutlierInfo> {
+impl<'n, 'd> Table<'n, 'd, OutlierInfo> {
     /// Opens the  `outlier_info` map in the database.
     ///
     /// Returns `None` if the map does not exist.

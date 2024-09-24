@@ -62,11 +62,11 @@ impl From<Node> for Update {
     }
 }
 
-impl<'i, 'j, 'k> Iterable<'i, TableIter<'j>> for Table<'k>
+impl<'i, 'n, 'j, 'k> Iterable<'i, TableIter<'n, 'j>> for Table<'n, 'k>
 where
     'i: 'j,
 {
-    fn iter(&'i self, direction: Direction, from: Option<&[u8]>) -> TableIter<'j> {
+    fn iter(&'i self, direction: Direction, from: Option<&[u8]>) -> TableIter<'n, 'j> {
         TableIter {
             node: self.node.iter(direction, from),
             agent: self.agent.clone(),
@@ -78,7 +78,7 @@ where
         direction: Direction,
         from: Option<&[u8]>,
         prefix: &[u8],
-    ) -> TableIter<'j> {
+    ) -> TableIter<'n, 'j> {
         let iter = self.node.prefix_iter(direction, from, prefix);
         TableIter {
             node: iter,
@@ -87,12 +87,12 @@ where
     }
 }
 
-pub struct Table<'d> {
+pub struct Table<'n, 'd> {
     node: IndexedTable<'d, Inner>,
-    agent: CrateTable<'d, Agent>,
+    agent: CrateTable<'n, 'd, Agent>,
 }
 
-impl<'d> Table<'d> {
+impl<'n, 'd> Table<'n, 'd> {
     /// Opens the node table in the database.
     ///
     /// Returns `None` if the table does not exist.
@@ -198,7 +198,7 @@ impl<'d> Table<'d> {
     }
 
     #[must_use]
-    pub fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'_> {
+    pub fn iter(&'d self, direction: Direction, from: Option<&[u8]>) -> TableIter<'n, 'd> {
         TableIter {
             node: self.node.iter(direction, from),
             agent: self.agent.clone(),
@@ -271,12 +271,12 @@ impl<'d> Table<'d> {
     }
 }
 
-pub struct TableIter<'d> {
+pub struct TableIter<'n, 'd> {
     node: TI<'d, Inner>,
-    agent: CrateTable<'d, Agent>,
+    agent: CrateTable<'n, 'd, Agent>,
 }
 
-impl<'d> Iterator for TableIter<'d> {
+impl<'n, 'd> Iterator for TableIter<'n, 'd> {
     type Item = Result<Node, anyhow::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {

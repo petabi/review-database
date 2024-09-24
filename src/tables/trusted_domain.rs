@@ -38,7 +38,7 @@ impl Value for TrustedDomain {
 }
 
 /// Functions for the `trusted_domain` map.
-impl<'d> Table<'d, TrustedDomain> {
+impl<'n, 'd> Table<'n, 'd, TrustedDomain> {
     /// Opens the  `trusted_domain` map in the database.
     ///
     /// Returns `None` if the map does not exist.

@@ -495,21 +495,29 @@ where
 
 /// A database table storing records of type `R`.
 #[derive(Clone)]
-pub struct Table<'d, R> {
+pub struct Table<'n, 'd, R, K = (), V = ()>
+where
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
+{
+    // This has both redb and RocksDB table information. `map` will be removed
+    // once all the tables are migrated to redb.
+    _def: redb::TableDefinition<'n, K, V>,
     map: Map<'d>,
     _phantom: std::marker::PhantomData<R>,
 }
 
-impl<'d, R> Table<'d, R> {
+impl<'n, 'd, R> Table<'n, 'd, R> {
     fn new(map: Map<'d>) -> Self {
         Self {
+            _def: redb::TableDefinition::new("dummy"), // a placeholder
             map,
             _phantom: std::marker::PhantomData,
         }
     }
 }
 
-impl<'d, R: UniqueKey + Value> Table<'d, R> {
+impl<'n, 'd, R: UniqueKey + Value> Table<'n, 'd, R> {
     /// Stores a record into the database.
     ///
     /// # Errors
@@ -532,7 +540,7 @@ impl<'d, R: UniqueKey + Value> Table<'d, R> {
     }
 }
 
-impl<'i, 'j, 'k, R> Iterable<'i, TableIter<'k, R>> for Table<'j, R>
+impl<'i, 'n, 'j, 'k, R> Iterable<'i, TableIter<'k, R>> for Table<'n, 'j, R>
 where
     'j: 'k,
     'i: 'k,

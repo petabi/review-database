@@ -173,7 +173,7 @@ struct Value {
 }
 
 /// Functions for the agents table.
-impl<'d> Table<'d, Agent> {
+impl<'n, 'd> Table<'n, 'd, Agent> {
     /// Opens the agents table in the database.
     ///
     /// Returns `None` if the table does not exist.
