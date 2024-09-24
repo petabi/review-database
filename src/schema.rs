@@ -44,35 +44,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    csv_column_list (id) {
-        id -> Int4,
-        model_id -> Int4,
-        column_indicator -> Nullable<Array<Nullable<Text>>>,
-        column_whitelist -> Nullable<Array<Nullable<Text>>>,
-    }
-}
-
-diesel::table! {
-    csv_indicator (id) {
-        id -> Int4,
-        name -> Text,
-        description -> Nullable<Text>,
-        list -> Text,
-        last_modification_time -> Nullable<Timestamp>,
-    }
-}
-
-diesel::table! {
-    csv_whitelist (id) {
-        id -> Int4,
-        name -> Text,
-        description -> Nullable<Text>,
-        list -> Text,
-        last_modification_time -> Nullable<Timestamp>,
-    }
-}
-
-diesel::table! {
     description_binary (id) {
         id -> Int4,
         description_id -> Int4,
@@ -229,9 +200,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     cluster,
     column_description,
     csv_column_extra,
-    csv_column_list,
-    csv_indicator,
-    csv_whitelist,
     description_binary,
     description_datetime,
     description_enum,
