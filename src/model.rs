@@ -273,10 +273,7 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn delete_model(&self, name: &str) -> Result<i32, Error> {
-        use super::schema::{
-            csv_column_extra::dsl as extra, csv_column_list::dsl as list,
-            csv_indicator::dsl as indicator, csv_whitelist::dsl as whitelist,
-        };
+        use super::schema::csv_column_extra::dsl as extra;
 
         let mut conn = self.pool.get().await?;
         let id = diesel::delete(dsl::model)
@@ -289,23 +286,8 @@ impl Database {
             return Err(Error::InvalidInput(format!("The model {name} not found")));
         };
 
-        diesel::delete(list::csv_column_list)
-            .filter(list::model_id.eq(id))
-            .execute(&mut conn)
-            .await?;
-
         diesel::delete(extra::csv_column_extra)
             .filter(extra::model_id.eq(id))
-            .execute(&mut conn)
-            .await?;
-
-        diesel::delete(indicator::csv_indicator)
-            .filter(indicator::name.eq(&name))
-            .execute(&mut conn)
-            .await?;
-
-        diesel::delete(whitelist::csv_whitelist)
-            .filter(whitelist::name.eq(&name))
             .execute(&mut conn)
             .await?;
 
