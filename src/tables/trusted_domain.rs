@@ -38,7 +38,7 @@ impl Value for TrustedDomain {
 }
 
 /// Functions for the `trusted_domain` map.
-impl<'n, 'd> Table<'n, 'd, TrustedDomain> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, TrustedDomain, &str, &str> {
     /// Opens the  `trusted_domain` map in the database.
     ///
     /// Returns `None` if the map does not exist.
@@ -92,6 +92,7 @@ mod test {
         assert!(table.remove(b.name.as_str()).is_ok());
         assert!(table.remove(a.name.as_str()).is_ok());
         assert_eq!(table.iter(Direction::Forward, None).count(), 0);
+        drop(table);
     }
 
     #[test]

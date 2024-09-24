@@ -138,7 +138,7 @@ impl ProtocolPorts {
 }
 
 /// Functions for the `traffic_filter` map.
-impl<'n, 'd> Table<'n, 'd, TrafficFilter> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, TrafficFilter> {
     /// Opens the  `traffic_filter` map in the database.
     ///
     /// Returns `None` if the map does not exist.

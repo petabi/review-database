@@ -45,7 +45,7 @@ impl Value for TrustedUserAgent {
 }
 
 /// Functions for the `trusted_user_agent` map.
-impl<'n, 'd> Table<'n, 'd, TrustedUserAgent> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, TrustedUserAgent> {
     /// Opens the  `trusted_user_agent` map in the database.
     ///
     /// Returns `None` if the map does not exist.

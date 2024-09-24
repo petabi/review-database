@@ -14,7 +14,7 @@ pub struct AccountPolicy {
 }
 
 /// Functions for the `account_policy` map.
-impl<'n, 'd> Table<'n, 'd, AccountPolicy> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, AccountPolicy> {
     /// Opens the  `account_policy` map in the database.
     ///
     /// Returns `None` if the map does not exist.

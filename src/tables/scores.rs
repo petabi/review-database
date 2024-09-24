@@ -5,7 +5,7 @@ use rocksdb::OptimisticTransactionDB;
 
 use crate::{scores::Scores, Map, Table};
 
-impl<'n, 'd> Table<'n, 'd, Scores> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, Scores> {
     /// Opens the scores table in the database.
     ///
     /// Returns `None` if the table does not exist.
