@@ -102,7 +102,7 @@ impl FromKeyValue for Tidb {
 }
 
 /// Functions for the `tidb` map.
-impl<'d> Table<'d, Tidb> {
+impl<'n, 'd> Table<'n, 'd, Tidb> {
     /// Opens the  `tidb` map in the database.
     ///
     /// Returns `None` if the map does not exist.

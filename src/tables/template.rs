@@ -73,7 +73,7 @@ pub struct Unstructured {
 }
 
 /// Functions for the `template` map.
-impl<'d> Table<'d, Template> {
+impl<'n, 'd> Table<'n, 'd, Template> {
     /// Opens the  `template` map in the database.
     ///
     /// Returns `None` if the map does not exist.
