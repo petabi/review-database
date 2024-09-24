@@ -26,6 +26,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     configuration settings from existing REview deployments to migrate databases
     using review-migrate.
 
+### Removed
+
+- `Database::get_top_clusters_by_score` only returned an empty set. This method
+  has been removed from the codebase as it did not provide any meaningful
+  functionality.
+
 ## [0.30.0] - 2024-09-03
 
 ### Added

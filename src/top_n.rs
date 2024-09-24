@@ -1,7 +1,6 @@
 mod column;
 mod ipaddr;
 mod one_to_n;
-mod score;
 mod time_series;
 
 use std::cmp::Reverse;
@@ -14,7 +13,6 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
 pub use self::one_to_n::{TopColumnsOfCluster, TopMultimaps};
-pub use self::score::{ClusterScore, ClusterScoreSet};
 pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByColumn};
 use super::{Database, Error};
 
@@ -68,6 +66,17 @@ impl From<(i32, i32)> for StructuredColumnType {
             data_type: data_type.to_string(),
         }
     }
+}
+
+pub struct ClusterScore {
+    pub cluster_id: i32,
+    pub cluster_name: String,
+    pub score: f64,
+}
+
+pub struct ClusterScoreSet {
+    pub top_n_sum: Vec<ClusterScore>,
+    pub top_n_rate: Vec<ClusterScore>,
 }
 
 #[derive(Clone, Deserialize)]
