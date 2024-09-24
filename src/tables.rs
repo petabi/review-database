@@ -27,7 +27,10 @@ mod triage_response;
 mod trusted_domain;
 mod trusted_user_agent;
 
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::LazyLock,
+};
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -146,6 +149,12 @@ const MAP_NAMES: [&str; 29] = [
 pub(super) const EVENT_TAGS: &[u8] = b"event tags";
 pub(super) const NETWORK_TAGS: &[u8] = b"network tags";
 pub(super) const WORKFLOW_TAGS: &[u8] = b"workflow tags";
+
+static DUMMY_DB: LazyLock<redb::Database> = LazyLock::new(|| {
+    redb::Builder::new()
+        .create_with_backend(redb::backends::InMemoryBackend::new())
+        .expect("infallible in memory")
+});
 
 #[allow(clippy::module_name_repetitions)]
 pub(crate) struct StateDb {
@@ -310,9 +319,10 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn trusted_domains(&self) -> Table<TrustedDomain> {
+    pub(crate) fn trusted_domains(&self) -> Table<TrustedDomain, &'static str, &'static str> {
         let inner = self.inner.as_ref().expect("database must be open");
-        Table::<TrustedDomain>::open(inner).expect("{TRUSTED_DNS_SERVERS} table must be present")
+        Table::<TrustedDomain, &'static str, &'static str>::open(inner)
+            .expect("{TRUSTED_DNS_SERVERS} table must be present")
     }
 
     pub(crate) fn trusted_user_agents(&self) -> Table<TrustedUserAgent> {
@@ -494,29 +504,49 @@ where
 
 /// A database table storing records of type `R`.
 #[derive(Clone)]
-pub struct Table<'n, 'd, R, K = (), V = ()>
+pub struct Table<'db, 'n, 'd, R, K = (), V = ()>
 where
     K: redb::Key + 'static,
     V: redb::Value + 'static,
 {
     // This has both redb and RocksDB table information. `map` will be removed
     // once all the tables are migrated to redb.
-    _def: redb::TableDefinition<'n, K, V>,
+    db: &'db redb::Database,
+    def: redb::TableDefinition<'n, K, V>,
     map: Map<'d>,
     _phantom: std::marker::PhantomData<R>,
 }
 
-impl<'n, 'd, R> Table<'n, 'd, R> {
+impl<'db, 'n, 'd, R, K, V> Table<'db, 'n, 'd, R, K, V>
+where
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
+{
     fn new(map: Map<'d>) -> Self {
         Self {
-            _def: redb::TableDefinition::new("dummy"), // a placeholder
+            db: &DUMMY_DB,
+            def: redb::TableDefinition::new("dummy"), // a placeholder
             map,
             _phantom: std::marker::PhantomData,
         }
     }
+
+    pub(crate) fn database(&mut self, db: &'db redb::Database) -> &mut Self {
+        self.db = db;
+        self
+    }
+
+    pub(crate) fn name(&mut self, name: &'n str) -> &mut Self {
+        self.def = redb::TableDefinition::new(name);
+        self
+    }
 }
 
-impl<'n, 'd, R: UniqueKey + Value> Table<'n, 'd, R> {
+impl<'db, 'n, 'd, R: UniqueKey + Value, K, V> Table<'db, 'n, 'd, R, K, V>
+where
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
+{
     /// Stores a record into the database.
     ///
     /// # Errors
@@ -539,11 +569,13 @@ impl<'n, 'd, R: UniqueKey + Value> Table<'n, 'd, R> {
     }
 }
 
-impl<'i, 'n, 'j, 'k, R> Iterable<'i, TableIter<'k, R>> for Table<'n, 'j, R>
+impl<'db, 'n, 'i, 'j, 'k, R, K, V> Iterable<'i, TableIter<'k, R>> for Table<'db, 'n, 'j, R, K, V>
 where
     'j: 'k,
     'i: 'k,
     R: FromKeyValue,
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
 {
     fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'k, R> {
         use rocksdb::IteratorMode;

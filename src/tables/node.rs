@@ -62,11 +62,11 @@ impl From<Node> for Update {
     }
 }
 
-impl<'i, 'n, 'j, 'k> Iterable<'i, TableIter<'n, 'j>> for Table<'n, 'k>
+impl<'db, 'i, 'n, 'j, 'k> Iterable<'i, TableIter<'db, 'n, 'j>> for Table<'db, 'n, 'k>
 where
     'i: 'j,
 {
-    fn iter(&'i self, direction: Direction, from: Option<&[u8]>) -> TableIter<'n, 'j> {
+    fn iter(&'i self, direction: Direction, from: Option<&[u8]>) -> TableIter<'db, 'n, 'j> {
         TableIter {
             node: self.node.iter(direction, from),
             agent: self.agent.clone(),
@@ -78,7 +78,7 @@ where
         direction: Direction,
         from: Option<&[u8]>,
         prefix: &[u8],
-    ) -> TableIter<'n, 'j> {
+    ) -> TableIter<'db, 'n, 'j> {
         let iter = self.node.prefix_iter(direction, from, prefix);
         TableIter {
             node: iter,
@@ -87,12 +87,12 @@ where
     }
 }
 
-pub struct Table<'n, 'd> {
+pub struct Table<'db, 'n, 'd> {
     node: IndexedTable<'d, Inner>,
-    agent: CrateTable<'n, 'd, Agent>,
+    agent: CrateTable<'db, 'n, 'd, Agent>,
 }
 
-impl<'n, 'd> Table<'n, 'd> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd> {
     /// Opens the node table in the database.
     ///
     /// Returns `None` if the table does not exist.
@@ -198,7 +198,7 @@ impl<'n, 'd> Table<'n, 'd> {
     }
 
     #[must_use]
-    pub fn iter(&'d self, direction: Direction, from: Option<&[u8]>) -> TableIter<'n, 'd> {
+    pub fn iter(&'d self, direction: Direction, from: Option<&[u8]>) -> TableIter<'db, 'n, 'd> {
         TableIter {
             node: self.node.iter(direction, from),
             agent: self.agent.clone(),
@@ -271,12 +271,12 @@ impl<'n, 'd> Table<'n, 'd> {
     }
 }
 
-pub struct TableIter<'n, 'd> {
+pub struct TableIter<'db, 'n, 'd> {
     node: TI<'d, Inner>,
-    agent: CrateTable<'n, 'd, Agent>,
+    agent: CrateTable<'db, 'n, 'd, Agent>,
 }
 
-impl<'n, 'd> Iterator for TableIter<'n, 'd> {
+impl<'db, 'n, 'd> Iterator for TableIter<'db, 'n, 'd> {
     type Item = Result<Node, anyhow::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {

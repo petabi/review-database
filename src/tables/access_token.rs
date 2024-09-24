@@ -36,7 +36,7 @@ impl FromKeyValue for AccessToken {
 }
 
 /// Functions for the `access_token` map.
-impl<'n, 'd> Table<'n, 'd, AccessToken> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, AccessToken> {
     /// Opens the  `access_token` map in the database.
     ///
     /// Returns `None` if the map does not exist.

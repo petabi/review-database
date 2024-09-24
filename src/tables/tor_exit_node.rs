@@ -44,7 +44,7 @@ impl FromKeyValue for TorExitNode {
 }
 
 /// Functions for the `tor_exit_node` map.
-impl<'n, 'd> Table<'n, 'd, TorExitNode> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, TorExitNode> {
     /// Opens the  `tor_exit_node` map in the database.
     ///
     /// Returns `None` if the map does not exist.

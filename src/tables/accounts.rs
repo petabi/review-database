@@ -18,7 +18,7 @@ impl FromKeyValue for Account {
 }
 
 /// Functions for the accounts table.
-impl<'n, 'd> Table<'n, 'd, Account> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, Account> {
     /// Opens the accounts table in the database.
     ///
     /// Returns `None` if the table does not exist.

@@ -124,7 +124,7 @@ impl FromKeyValue for Filter {
 }
 
 /// Functions for the `filter` map.
-impl<'n, 'd> Table<'n, 'd, Filter> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, Filter> {
     /// Opens the  `filter` map in the database.
     ///
     /// Returns `None` if the map does not exist.
