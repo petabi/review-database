@@ -4,7 +4,7 @@ mod one_to_n;
 mod time_series;
 
 use std::cmp::Reverse;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
@@ -275,29 +275,18 @@ fn limited_top_n_of_clusters(
     top_n_total
 }
 
-fn filter_by_whitelists(
+fn to_element_counts(
     top_n_total: HashMap<usize, HashMap<String, i64>>,
-    whitelists: &HashMap<usize, String>,
     number_of_top_n: usize,
 ) -> Vec<TopElementCountsByColumn> {
     let mut top_n: Vec<TopElementCountsByColumn> = top_n_total
         .into_iter()
         .map(|(column_index, map)| {
-            let whitelist = whitelists
-                .get(&column_index)
-                .and_then(|w| serde_json::from_str::<HashSet<String>>(w).ok());
             let mut top_n: Vec<ElementCount> = map
                 .into_iter()
-                .filter_map(|(dsc, size)| {
-                    if let Some(list) = &whitelist {
-                        if list.get(&dsc).is_some() {
-                            return None;
-                        }
-                    }
-                    Some(ElementCount {
-                        value: dsc,
-                        count: size,
-                    })
+                .map(|(dsc, size)| ElementCount {
+                    value: dsc,
+                    count: size,
                 })
                 .collect();
             top_n
