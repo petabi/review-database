@@ -9,7 +9,6 @@ mod category;
 mod cluster;
 mod collections;
 mod column_statistics;
-mod csv_indicator;
 pub mod event;
 mod migration;
 mod model;

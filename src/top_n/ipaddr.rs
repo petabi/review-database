@@ -9,13 +9,12 @@ use num_traits::ToPrimitive;
 use top_n_ipaddr::dsl as top_d;
 
 use super::{
-    filter_by_whitelists, get_cluster_sizes, get_limited_cluster_ids, limited_top_n_of_clusters,
+    get_cluster_sizes, get_limited_cluster_ids, limited_top_n_of_clusters, to_element_counts,
     total_of_top_n, ElementCount, TopElementCountsByColumn, TopNOfCluster, TopNOfMultipleCluster,
     DEFAULT_NUMBER_OF_CLUSTER, DEFAULT_PORTION_OF_CLUSTER, DEFAULT_PORTION_OF_TOP_N,
 };
 use crate::{
     self as database,
-    csv_indicator::get_whitelists,
     schema::{cluster, column_description, top_n_ipaddr},
     Database, Error,
 };
@@ -143,8 +142,6 @@ impl Database {
         let top_n = total_of_top_n(top_n);
         let top_n =
             limited_top_n_of_clusters(top_n, portion_of_top_n.unwrap_or(DEFAULT_PORTION_OF_TOP_N));
-        let column_indices: Vec<usize> = top_n.keys().copied().collect();
-        let whitelists = get_whitelists(&mut conn, model_id, &column_indices).await?;
-        Ok(filter_by_whitelists(top_n, &whitelists, size))
+        Ok(to_element_counts(top_n, size))
     }
 }

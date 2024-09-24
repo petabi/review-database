@@ -9,12 +9,11 @@ use num_traits::ToPrimitive;
 use structured::{Element, FloatRange};
 
 use super::{
-    filter_by_whitelists, get_limited_cluster_ids, limited_top_n_of_clusters, total_of_top_n,
+    get_limited_cluster_ids, limited_top_n_of_clusters, to_element_counts, total_of_top_n,
     TopElementCountsByColumn, TopNOfMultipleCluster, ValueType, DEFAULT_NUMBER_OF_CLUSTER,
     DEFAULT_PORTION_OF_CLUSTER, DEFAULT_PORTION_OF_TOP_N,
 };
 use crate::{
-    csv_indicator::get_whitelists,
     schema::{
         cluster, column_description, csv_column_extra, top_n_binary, top_n_datetime, top_n_enum,
         top_n_float, top_n_int, top_n_ipaddr, top_n_text,
@@ -279,8 +278,6 @@ impl Database {
         let top_n = total_of_top_n(top_n_of_cluster);
         let top_n =
             limited_top_n_of_clusters(top_n, portion_of_top_n.unwrap_or(DEFAULT_PORTION_OF_TOP_N));
-        let column_indices: Vec<usize> = top_n.keys().copied().collect();
-        let whitelists = get_whitelists(&mut conn, model_id, &column_indices).await?;
-        Ok(filter_by_whitelists(top_n, &whitelists, number_of_top_n))
+        Ok(to_element_counts(top_n, number_of_top_n))
     }
 }
