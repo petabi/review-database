@@ -28,6 +28,8 @@ mod trusted_domain;
 mod trusted_user_agent;
 
 use std::{
+    borrow::Borrow,
+    ops::RangeBounds,
     path::{Path, PathBuf},
     sync::LazyLock,
 };
@@ -543,8 +545,9 @@ where
     }
 }
 
-impl<'db, 'n, 'd, R: UniqueKey + Value, K, V> Table<'db, 'n, 'd, R, K, V>
+impl<'db, 'n, 'd, R, K, V> Table<'db, 'n, 'd, R, K, V>
 where
+    R: UniqueKey + Value,
     K: redb::Key + 'static,
     V: redb::Value + 'static,
 {
@@ -567,6 +570,81 @@ where
     pub fn insert(&self, record: &R) -> Result<()> {
         self.map
             .insert(record.unique_key().as_ref(), record.value().as_ref())
+    }
+}
+
+impl<'db, 'n, 'd, R, K, V> Table<'db, 'n, 'd, R, K, V>
+where
+    R: KeyValue<K, V>,
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
+{
+    /// Stores a record into the database.
+    ///
+    /// If the table has a record with the same key, it will be replaced.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn upsert(&self, record: &R) -> Result<()> {
+        let txn = self.db.begin_write()?;
+        let mut tbl = txn.open_table::<K, V>(self.def)?;
+        tbl.insert(record.db_key(), record.db_value())?;
+        drop(tbl);
+        txn.commit()?;
+        Ok(())
+    }
+
+    /// Constructs a double-ended iterator over a sub-range of elements in the table.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if database operations fail.
+    pub fn range<'a, KR>(&self, range: impl RangeBounds<KR> + 'a) -> Result<Range<'_, R, K, V>>
+    where
+        KR: Borrow<K::SelfType<'a>> + 'a,
+    {
+        let txn = self.db.begin_read()?;
+        let tbl = txn.open_table::<K, V>(self.def)?;
+        Ok(tbl.range(range)?.into())
+    }
+}
+
+pub struct Range<'a, R, K, V>
+where
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
+{
+    inner: redb::Range<'a, K, V>,
+    _phantom: std::marker::PhantomData<R>,
+}
+
+impl<'a, R, K, V> From<redb::Range<'a, K, V>> for Range<'a, R, K, V>
+where
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
+{
+    fn from(inner: redb::Range<'a, K, V>) -> Self {
+        Self {
+            inner,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<R, K, V> Iterator for Range<'_, R, K, V>
+where
+    R: KeyValue<K, V>,
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
+{
+    type Item = Result<R>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|r| {
+            r.map(|(k, v)| R::from_key_value(k.value(), v.value()))
+                .map_err(Into::into)
+        })
     }
 }
 
@@ -842,4 +920,14 @@ fn open_rocksdb_backup_engine(
     let opts = rocksdb::backup::BackupEngineOptions::new(path)?;
     let db_env = rocksdb::Env::new()?;
     rocksdb::backup::BackupEngine::open(&opts, &db_env)
+}
+
+pub trait KeyValue<K, V>
+where
+    K: redb::Key,
+    V: redb::Value,
+{
+    fn db_key(&self) -> K::SelfType<'_>;
+    fn db_value(&self) -> V::SelfType<'_>;
+    fn from_key_value(key: K::SelfType<'_>, value: V::SelfType<'_>) -> Self;
 }

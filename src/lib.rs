@@ -325,7 +325,6 @@ impl Store {
     }
 
     #[must_use]
-    #[allow(clippy::missing_panics_doc)]
     pub fn trusted_domain_map(&self) -> Table<TrustedDomain, &'static str, &'static str> {
         let mut table = self.legacy_states.trusted_domains();
         table
