@@ -1,11 +1,12 @@
 //! The `trusted_domain` table.
 
-use anyhow::Result;
+use anyhow::{bail, Result};
+use redb::ReadableTable;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use super::Value;
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use super::{KeyValue, UniqueKey};
+use crate::{types::FromKeyValue, Map, Table};
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct TrustedDomain {
@@ -26,7 +27,7 @@ impl UniqueKey for TrustedDomain {
     type AsBytes<'a> = &'a [u8];
 
     fn unique_key(&self) -> &[u8] {
-        self.name.as_bytes()
+        self.db_key().as_ref()
     }
 }
 
@@ -35,6 +36,23 @@ impl Value for TrustedDomain {
 
     fn value(&self) -> &[u8] {
         self.remarks.as_bytes()
+    }
+}
+
+impl KeyValue<&str, &str> for TrustedDomain {
+    fn db_key(&self) -> &str {
+        &self.name
+    }
+
+    fn db_value(&self) -> &str {
+        &self.remarks
+    }
+
+    fn from_key_value(key: &str, value: &str) -> Self {
+        TrustedDomain {
+            name: key.to_owned(),
+            remarks: value.to_owned(),
+        }
     }
 }
 
@@ -53,10 +71,31 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, TrustedDomain, &str, &str> {
     ///
     /// Returns an error if the serialization fails or the database operation fails.
     pub fn update(&self, old: &TrustedDomain, new: &TrustedDomain) -> Result<()> {
+<<<<<<< HEAD
         self.map.update(
             (old.unique_key(), old.value()),
             (new.unique_key(), new.value()),
         )
+||||||| parent of 65d6bb8 (Use redb for trusted domain names)
+        let (ok, ov) = (old.unique_key(), old.value());
+        let (nk, nv) = (new.unique_key(), new.value());
+        self.map.update((ok, &ov), (nk, &nv))
+=======
+        let txn = self.db.begin_write()?;
+        let mut tbl = txn.open_table::<&str, &str>(self.def)?;
+        let Some(val) = tbl.get(old.db_key())? else {
+            bail!("no such entry");
+        };
+        if val.value() != old.db_value() {
+            bail!("entry has been modified");
+        }
+        drop(val);
+        tbl.remove(old.db_key())?;
+        tbl.insert(new.db_key(), new.db_value())?;
+        drop(tbl);
+        txn.commit()?;
+        Ok(())
+>>>>>>> 65d6bb8 (Use redb for trusted domain names)
     }
 
     /// Removes a `TrustedDomain` with the given name.
@@ -65,7 +104,17 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, TrustedDomain, &str, &str> {
     ///
     /// Returns an error if the database operation fails.
     pub fn remove(&self, name: &str) -> Result<()> {
-        self.map.delete(name.as_bytes())
+        let txn = self.db.begin_write()?;
+        let mut tbl = txn.open_table::<&str, &str>(self.def)?;
+        tbl.remove(name)?;
+        drop(tbl);
+        txn.commit()?;
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
     }
 }
 
@@ -73,10 +122,7 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, TrustedDomain, &str, &str> {
 mod test {
     use std::sync::Arc;
 
-    use rocksdb::Direction;
-
-    use crate::types::FromKeyValue;
-    use crate::{Iterable, Store, TrustedDomain};
+    use crate::{Store, TrustedDomain};
 
     #[test]
     fn operations() {
@@ -84,15 +130,15 @@ mod test {
         let table = store.trusted_domain_map();
 
         let a = create_entry("a");
-        assert!(table.put(&a).is_ok());
+        assert!(table.upsert(&a).is_ok());
 
         let b = create_entry("b");
-        assert!(table.insert(&b).is_ok());
+        assert!(table.upsert(&b).is_ok());
 
-        assert_eq!(table.iter(Direction::Forward, None).count(), 2);
+        assert_eq!(table.range::<&str>(..).unwrap().count(), 2);
         assert!(table.remove(b.name.as_str()).is_ok());
         assert!(table.remove(a.name.as_str()).is_ok());
-        assert_eq!(table.iter(Direction::Forward, None).count(), 0);
+        assert_eq!(table.range::<&str>(..).unwrap().count(), 0);
         drop(table);
     }
 
@@ -101,7 +147,7 @@ mod test {
         let store = setup_store();
         let table = store.trusted_domain_map();
         let origin = create_entry("origin");
-        assert!(table.put(&origin).is_ok());
+        assert!(table.upsert(&origin).is_ok());
 
         let updated = TrustedDomain {
             name: "updated".to_string(),
@@ -109,14 +155,13 @@ mod test {
         };
         assert!(table.update(&origin, &updated).is_ok());
 
+        let mut iter = table.range::<&str>(..).unwrap();
+        let entry = iter.next().unwrap().unwrap();
+        assert_eq!(entry, updated);
+        assert!(iter.next().is_none());
         let key = b"origin";
         let value = table.map.get(key).unwrap();
         assert!(value.is_none());
-
-        let key = b"updated";
-        let value = table.map.get(key).unwrap().unwrap();
-        let update_in_table = TrustedDomain::from_key_value(key, value.as_ref()).unwrap();
-        assert_eq!(updated, update_in_table);
     }
 
     fn setup_store() -> Arc<Store> {

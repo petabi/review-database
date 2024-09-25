@@ -3653,24 +3653,10 @@ mod tests {
         let store = Store::new(db_dir.path(), backup_dir.path()).unwrap();
 
         let table = store.legacy_states.trusted_domains();
-        table
-            .insert(&crate::tables::TrustedDomain {
-                name: "domain1".to_string(),
-                remarks: "example 1".to_string(),
-            })
-            .unwrap();
-        table
-            .insert(&crate::tables::TrustedDomain {
-                name: "domain2".to_string(),
-                remarks: "example 2".to_string(),
-            })
-            .unwrap();
-        table
-            .insert(&crate::tables::TrustedDomain {
-                name: "domain3".to_string(),
-                remarks: "example 3".to_string(),
-            })
-            .unwrap();
+        let map = table.raw();
+        map.put(b"domain1", b"example 1").unwrap();
+        map.put(b"domain2", b"example 2").unwrap();
+        map.put(b"domain3", b"example 3").unwrap();
 
         assert!(super::migrate_rocksdb_to_redb(&store).is_ok());
 
