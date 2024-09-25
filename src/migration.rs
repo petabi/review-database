@@ -1769,7 +1769,7 @@ mod tests {
         let value = bincode::DefaultOptions::new()
             .serialize(&(distance, is_saved))
             .unwrap();
-        assert!(outlier_db.insert(&key, &value).is_ok());
+        assert!(outlier_db.put(&key, &value).is_ok());
 
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
@@ -1810,8 +1810,8 @@ mod tests {
                 expiration_time: i64::try_from(time).unwrap(),
             })
             .unwrap();
-        assert!(ap_db.insert(key, &value).is_ok());
-        assert!(ap_db.insert(b"error key", &value).is_ok());
+        assert!(ap_db.put(key, &value).is_ok());
+        assert!(ap_db.put(b"error key", &value).is_ok());
 
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
@@ -3518,7 +3518,7 @@ mod tests {
             .serialize(&old)
             .expect("serializable");
 
-        assert!(raw.insert(old.username.as_bytes(), &value).is_ok());
+        assert!(raw.put(old.username.as_bytes(), &value).is_ok());
 
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
@@ -3595,7 +3595,7 @@ mod tests {
             .serialize(&old)
             .expect("serializable");
 
-        assert!(raw.insert(tidb_name.as_bytes(), &value).is_ok());
+        assert!(raw.put(tidb_name.as_bytes(), &value).is_ok());
 
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
