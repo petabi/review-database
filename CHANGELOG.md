@@ -28,9 +28,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- `Database::get_top_clusters_by_score` only returned an empty set. This method
-  has been removed from the codebase as it did not provide any meaningful
-  functionality.
+- `Database::cluster_id`: This method was previously used to convert a cluster
+  name to a numerical ID when migrating from a name-based key to a numerical
+  key. It is no longer needed as we now use numerical keys for clusters.
+- `Database::get_top_clusters_by_score`: This method only returned an empty set
+  and did not provide any meaningful functionality.
 
 ## [0.30.0] - 2024-09-03
 
