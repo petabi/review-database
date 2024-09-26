@@ -26,6 +26,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     configuration settings from existing REview deployments to migrate databases
     using review-migrate.
 
+### Changed
+
+- Refactored the `UniqueKey` trait to remove the use of `Cow<[u8]>` as the
+  return type for `unique_key`. The return type is now specified by an
+  associated type `AsBytes<'a>`, allowing for more flexibliity in the
+  implementation of `unique_key`.
+
 ### Removed
 
 - `Database::cluster_id`: This method was previously used to convert a cluster

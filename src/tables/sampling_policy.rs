@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
+use super::UniqueKey;
 use crate::{types::FromKeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -28,6 +29,14 @@ pub struct SamplingPolicy {
 impl FromKeyValue for SamplingPolicy {
     fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
         super::deserialize(value)
+    }
+}
+
+impl UniqueKey for SamplingPolicy {
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.name.as_bytes()
     }
 }
 

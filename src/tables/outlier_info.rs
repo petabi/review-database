@@ -39,14 +39,16 @@ impl FromKeyValue for OutlierInfo {
 }
 
 impl UniqueKey for OutlierInfo {
-    fn unique_key(&self) -> Cow<[u8]> {
+    type AsBytes<'a> = Vec<u8>;
+
+    fn unique_key(&self) -> Vec<u8> {
         let mut buf = vec![];
         buf.extend(self.model_id.to_be_bytes());
         buf.extend(self.timestamp.to_be_bytes());
         buf.extend(self.rank.to_be_bytes());
         buf.extend(self.id.to_be_bytes());
         buf.extend(self.source.as_bytes());
-        Cow::Owned(buf)
+        buf
     }
 }
 
@@ -201,7 +203,7 @@ mod tests {
         let res = super::Key::from_be_bytes(&key);
         assert!(res.is_ok());
         let serialized_key = res.unwrap().to_bytes();
-        assert_eq!(&serialized_key, key.as_ref());
+        assert_eq!(serialized_key, key);
 
         let value = entry.value();
         let reassembled = OutlierInfo::from_key_value(&key, &value);

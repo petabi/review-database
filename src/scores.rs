@@ -21,12 +21,14 @@ impl Scores {
 }
 
 impl UniqueKey for Scores {
-    fn unique_key(&self) -> Cow<[u8]> {
+    type AsBytes<'a> = Vec<u8>;
+
+    fn unique_key(&self) -> Vec<u8> {
         use bincode::Options;
         let Ok(key) = bincode::DefaultOptions::new().serialize(&self.model) else {
             unreachable!("serialization into memory should never fail")
         };
-        Cow::Owned(key)
+        key
     }
 }
 

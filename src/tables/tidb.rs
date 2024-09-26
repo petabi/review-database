@@ -83,8 +83,10 @@ pub enum Kind {
 }
 
 impl UniqueKey for Tidb {
-    fn unique_key(&self) -> std::borrow::Cow<[u8]> {
-        std::borrow::Cow::Borrowed(self.name.as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.name.as_bytes()
     }
 }
 

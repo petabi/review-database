@@ -2,6 +2,7 @@
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
+use super::UniqueKey;
 use crate::{category::Category, types::FromKeyValue, Indexed, IndexedMap, IndexedTable};
 
 const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irrelevant Alert")];
@@ -9,6 +10,14 @@ const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irre
 impl FromKeyValue for Category {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
+    }
+}
+
+impl UniqueKey for Category {
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.name.as_bytes()
     }
 }
 

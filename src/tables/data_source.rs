@@ -6,6 +6,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
+use super::UniqueKey;
 use crate::{types::FromKeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -26,6 +27,14 @@ pub struct DataSource {
 impl FromKeyValue for DataSource {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
+    }
+}
+
+impl UniqueKey for DataSource {
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.name.as_bytes()
     }
 }
 

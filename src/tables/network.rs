@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
+use super::UniqueKey;
 use crate::{
     types::FromKeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
     IndexedTable, Iterable,
@@ -84,6 +85,14 @@ impl FromKeyValue for Network {
             tag_ids: value.tag_ids,
             creation_time: value.creation_time,
         })
+    }
+}
+
+impl UniqueKey for Network {
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.name.as_bytes()
     }
 }
 

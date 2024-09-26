@@ -21,8 +21,10 @@ impl TorExitNode {
 }
 
 impl UniqueKey for TorExitNode {
-    fn unique_key(&self) -> std::borrow::Cow<[u8]> {
-        std::borrow::Cow::Borrowed(self.ip_address.as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.ip_address.as_bytes()
     }
 }
 

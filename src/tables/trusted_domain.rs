@@ -25,8 +25,10 @@ impl FromKeyValue for TrustedDomain {
 }
 
 impl UniqueKey for TrustedDomain {
-    fn unique_key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(self.name.as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.name.as_bytes()
     }
 }
 
@@ -53,7 +55,7 @@ impl<'d> Table<'d, TrustedDomain> {
     pub fn update(&self, old: &TrustedDomain, new: &TrustedDomain) -> Result<()> {
         let (ok, ov) = (old.unique_key(), old.value());
         let (nk, nv) = (new.unique_key(), new.value());
-        self.map.update((&ok, &ov), (&nk, &nv))
+        self.map.update((ok, &ov), (nk, &nv))
     }
 
     /// Removes a `TrustedDomain` with the given name.

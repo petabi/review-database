@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
+use super::UniqueKey;
 use crate::{
     types::FromKeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, Iterable,
 };
@@ -70,6 +71,14 @@ impl TriageResponse {
 impl FromKeyValue for TriageResponse {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
+    }
+}
+
+impl UniqueKey for TriageResponse {
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        &self.key
     }
 }
 

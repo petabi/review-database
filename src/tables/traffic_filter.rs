@@ -27,8 +27,10 @@ impl FromKeyValue for TrafficFilter {
 }
 
 impl UniqueKey for TrafficFilter {
-    fn unique_key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(self.agent.as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.agent.as_bytes()
     }
 }
 

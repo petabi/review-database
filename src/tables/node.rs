@@ -42,8 +42,10 @@ pub struct Update {
 }
 
 impl UniqueKey for Node {
-    fn unique_key(&self) -> Cow<[u8]> {
-        Cow::from(self.name.as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.name.as_bytes()
     }
 }
 

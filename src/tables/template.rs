@@ -1,7 +1,5 @@
 //! The `template` table.
 
-use std::borrow::Cow;
-
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
@@ -30,8 +28,10 @@ impl Template {
 }
 
 impl UniqueKey for Template {
-    fn unique_key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(self.name().as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.name().as_bytes()
     }
 }
 

@@ -31,8 +31,10 @@ impl FromKeyValue for TrustedUserAgent {
 }
 
 impl UniqueKey for TrustedUserAgent {
-    fn unique_key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(self.user_agent.as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.user_agent.as_bytes()
     }
 }
 
@@ -72,7 +74,7 @@ impl<'d> Table<'d, TrustedUserAgent> {
 
         self.map.update(
             (old.as_bytes(), value.as_ref()),
-            (&new.unique_key(), &new.value()),
+            (new.unique_key(), &new.value()),
         )
     }
 }

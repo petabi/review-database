@@ -514,7 +514,7 @@ impl<'d, R: UniqueKey + Value> Table<'d, R> {
     ///
     /// Returns an error if the database operation fails.
     pub fn put(&self, record: &R) -> Result<()> {
-        self.map.put(&record.unique_key(), &record.value())
+        self.map.put(record.unique_key().as_ref(), &record.value())
     }
 
     /// Adds a record into the database.
@@ -524,7 +524,8 @@ impl<'d, R: UniqueKey + Value> Table<'d, R> {
     /// Returns an error if the record with the same key exists, or the database
     /// operation fails.
     pub fn insert(&self, record: &R) -> Result<()> {
-        self.map.insert(&record.unique_key(), &record.value())
+        self.map
+            .insert(record.unique_key().as_ref(), &record.value())
     }
 }
 
@@ -724,7 +725,6 @@ where
 /// # Examples
 ///
 /// ```
-/// # use std::borrow::Cow;
 /// # use review_database::UniqueKey;
 /// struct User {
 ///     id: u32,
@@ -732,13 +732,19 @@ where
 /// }
 ///
 /// impl UniqueKey for User {
-///     fn unique_key(&self) -> Cow<[u8]> {
-///         Cow::Owned(self.id.to_be_bytes().to_vec())
+///     type AsBytes<'a> = [u8; 4];
+///
+///     fn unique_key(&self) -> [u8; 4] {
+///         self.id.to_be_bytes()
 ///     }
 /// }
 /// ```
 pub trait UniqueKey {
-    /// Returns a unique, opaque key for the instance as a `Cow<[u8]>`.
+    type AsBytes<'a>: AsRef<[u8]> + 'a
+    where
+        Self: 'a;
+
+    /// Returns a unique, opaque key for the instance.
     ///
     /// This method should return a byte slice that uniquely identifies the
     /// instance of the struct. The returned `Cow<[u8]>` allows the key to be
@@ -750,27 +756,25 @@ pub trait UniqueKey {
     /// trait-level documentation:
     ///
     /// ```
-    /// # use std::borrow::Cow;
-    /// # struct User { id: u32, username: String }
-    /// # impl User {
-    /// #     fn unique_key(&self) -> Cow<[u8]> {
-    ///         Cow::Owned(self.id.to_be_bytes().to_vec())
+    /// # use review_database::UniqueKey;
+    /// # struct User {
+    /// #     id: u32,
+    /// #     username: String,
+    /// # }
+    /// # impl UniqueKey for User {
+    /// #     type AsBytes<'a> = [u8; 4];
+    /// #     fn unique_key(&self) -> [u8; 4] {
+    /// #         self.id.to_be_bytes()
     /// #     }
     /// # }
     /// let user = User { id: 1, username: String::from("alice") };
-    /// assert_eq!(user.unique_key(), Cow::Borrowed(b"\x00\x00\x00\x01"));
+    /// assert_eq!(user.unique_key().as_ref(), b"\x00\x00\x00\x01");
     /// ```
     ///
     /// In this example, the `unique_key` method returns the user's `id` as a
     /// byte array, converted into a `Vec<u8>` and then into a `Cow::Owned`,
     /// providing a unique key for the user instance.
-    fn unique_key(&self) -> Cow<[u8]>;
-}
-
-impl<R: Indexable> UniqueKey for R {
-    fn unique_key(&self) -> Cow<[u8]> {
-        self.indexed_key()
-    }
+    fn unique_key(&self) -> Self::AsBytes<'_>;
 }
 
 pub trait Value {

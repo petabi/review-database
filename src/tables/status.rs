@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
+use super::UniqueKey;
 use crate::{
     types::{FromKeyValue, Status},
     Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
@@ -15,6 +16,14 @@ const DEFAULT_ENTRIES: [(u32, &str); 3] = [(1, "reviewed"), (2, "pending review"
 impl FromKeyValue for Status {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
+    }
+}
+
+impl UniqueKey for Status {
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> &[u8] {
+        self.description.as_bytes()
     }
 }
 

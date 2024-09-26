@@ -141,10 +141,12 @@ impl FromKeyValue for Agent {
 }
 
 impl UniqueKey for Agent {
-    fn unique_key(&self) -> Cow<[u8]> {
+    type AsBytes<'a> = Vec<u8>;
+
+    fn unique_key(&self) -> Vec<u8> {
         let mut buf = self.node.to_be_bytes().to_vec();
         buf.extend(self.key.as_bytes());
-        Cow::Owned(buf)
+        buf
     }
 }
 

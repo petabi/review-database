@@ -122,8 +122,10 @@ impl Account {
 }
 
 impl UniqueKey for Account {
-    fn unique_key(&self) -> Cow<[u8]> {
-        Cow::Borrowed(self.username.as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn unique_key(&self) -> Self::AsBytes<'_> {
+        self.username.as_bytes()
     }
 }
 
