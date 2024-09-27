@@ -1,10 +1,55 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{DhcpAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
+use super::{
+    EventCategory, LearningMethod, MEDIUM, TriageScore,
+    common::{AttrValue, Match},
+};
 use crate::event::common::{to_hardware_address, triage_scores_to_string, vector_to_string};
+
+macro_rules! find_dhcp_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Dhcp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                DhcpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                DhcpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                DhcpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                DhcpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                DhcpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                DhcpAttr::MgsType => todo!(),
+                DhcpAttr::CiAddr => AttrValue::Addr($event.ciaddr),
+                DhcpAttr::YiAddr => AttrValue::Addr($event.yiaddr),
+                DhcpAttr::SiAddr => AttrValue::Addr($event.siaddr),
+                DhcpAttr::GiAddr => AttrValue::Addr($event.giaddr),
+                DhcpAttr::SubNetMask => AttrValue::Addr($event.subnet_mask),
+                DhcpAttr::Router => AttrValue::VecAddr(&$event.router),
+                DhcpAttr::DomainNameServer => AttrValue::VecAddr(&$event.domain_name_server),
+                DhcpAttr::ReqIpAddr => AttrValue::Addr($event.req_ip_addr),
+                DhcpAttr::LeaseTime => AttrValue::UInt($event.lease_time.into()),
+                DhcpAttr::ServerId => AttrValue::Addr($event.server_id),
+                DhcpAttr::ParamReqList => AttrValue::VecUInt(
+                    $event
+                        .param_req_list
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+                DhcpAttr::Message => AttrValue::String(&$event.message),
+                DhcpAttr::RenewalTime => AttrValue::UInt($event.renewal_time.into()),
+                DhcpAttr::RebindingTime => AttrValue::UInt($event.rebinding_time.into()),
+                DhcpAttr::ClassId => AttrValue::VecRaw(&$event.class_id),
+                DhcpAttr::ClientIdType => AttrValue::UInt($event.client_id_type.into()),
+                DhcpAttr::ClientId => AttrValue::VecRaw(&$event.client_id),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistDhcpFields {
@@ -69,7 +114,9 @@ impl BlocklistDhcpFields {
             self.message,
             self.renewal_time.to_string(),
             self.rebinding_time.to_string(),
-            to_hardware_address(&self.class_id),
+            std::str::from_utf8(&self.class_id)
+                .unwrap_or_default()
+                .to_string(),
             self.client_id_type.to_string(),
             to_hardware_address(&self.client_id),
         )
@@ -134,7 +181,9 @@ impl fmt::Display for BlocklistDhcp {
             self.message.to_string(),
             self.renewal_time.to_string(),
             self.rebinding_time.to_string(),
-            to_hardware_address(&self.class_id),
+            std::str::from_utf8(&self.class_id)
+                .unwrap_or_default()
+                .to_string(),
             self.client_id_type.to_string(),
             to_hardware_address(&self.client_id),
             triage_scores_to_string(self.triage_scores.as_ref())
@@ -222,7 +271,7 @@ impl Match for BlocklistDhcp {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_dhcp_attr_by_kind!(self, raw_event_attr)
     }
 }

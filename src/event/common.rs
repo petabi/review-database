@@ -5,13 +5,15 @@ use std::{
 };
 
 use anyhow::Result;
+use attrievent::attribute::RawEventAttrKind;
+use bincode::Options;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    EventCategory, EventFilter, FlowKind, LearningMethod, TrafficDirection, TriagePolicy,
-    eq_ip_country,
+    EventCategory, EventFilter, FlowKind, LearningMethod, TrafficDirection, eq_ip_country,
 };
+use crate::{AttrCmpKind, Confidence, PacketAttr, Ti, ValueKind};
 
 // TODO: Make new Match trait to support Windows Events
 
@@ -30,14 +32,27 @@ pub(super) trait Match {
     fn sensor(&self) -> &str;
     fn confidence(&self) -> Option<f32>;
     fn learning_method(&self) -> LearningMethod;
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue>;
+    fn score_by_attr(&self, attr_triage: &[PacketAttr]) -> f64 {
+        let total_score = attr_triage.iter().fold(0.0, |score_acc, item| {
+            let Ok(kind) =
+                RawEventAttrKind::from_kind_and_attr_name(&item.raw_event_kind, &item.attr_name)
+            else {
+                return score_acc;
+            };
 
-    /// Calculates a score based on packet attributes according to the triage policy.
-    ///
-    /// Note: This method is currently unused. All implementations return 0.0.
-    /// It's retained for future use as planned by @syncpark.
-    /// For more details, see:
-    /// <https://github.com/petabi/review-database/pull/321#discussion_r1721392271>
-    fn score_by_packet_attr(&self, triage: &TriagePolicy) -> f64;
+            let Some(value) = self.find_attr_by_kind(kind) else {
+                return score_acc;
+            };
+
+            if is_attr_matched(value, item) {
+                score_acc + item.weight.unwrap_or_default()
+            } else {
+                score_acc
+            }
+        });
+        (total_score * 100.0).trunc() / 100.0
+    }
 
     /// Returns whether the event matches the filter and the triage scores. The triage scores are
     /// only returned if the event matches the filter.
@@ -222,9 +237,9 @@ pub(super) trait Match {
                 let triage_scores = triage_policies
                     .iter()
                     .filter_map(|triage| {
-                        let score = self.score_by_ti_db(triage)
-                            + self.score_by_packet_attr(triage)
-                            + self.score_by_confidence(triage);
+                        let score = self.score_by_ti_db(&triage.ti_db)
+                            + self.score_by_attr(&triage.packet_attr)
+                            + self.score_by_confidence(&triage.confidence);
                         if triage.response.iter().any(|r| score >= r.minimum_score) {
                             Some(TriageScore {
                                 policy_id: triage.id,
@@ -245,13 +260,13 @@ pub(super) trait Match {
         Ok((true, None))
     }
 
-    fn score_by_ti_db(&self, _triage: &TriagePolicy) -> f64 {
+    fn score_by_ti_db(&self, _ti_db: &[Ti]) -> f64 {
         // TODO: implement
         0.0
     }
 
-    fn score_by_confidence(&self, triage: &TriagePolicy) -> f64 {
-        triage.confidence.iter().fold(0.0, |score, conf| {
+    fn score_by_confidence(&self, confidence: &[Confidence]) -> f64 {
+        confidence.iter().fold(0.0, |score, conf| {
             if conf.threat_category == self.category()
                 && conf.threat_kind.to_lowercase() == self.kind().to_lowercase()
                 && self
@@ -319,15 +334,218 @@ pub fn to_hardware_address(chaddr: &[u8]) -> String {
     )
 }
 
+pub enum AttrValue<'a> {
+    Addr(IpAddr),
+    Bool(bool),
+    #[allow(dead_code)]
+    Float(f64),
+    SInt(i64),
+    UInt(u64),
+    String(&'a str),
+    VecAddr(&'a [IpAddr]),
+    #[allow(dead_code)]
+    VecFloat(Vec<f64>),
+    VecSInt(Vec<i64>),
+    VecUInt(Vec<u64>),
+    VecString(&'a [String]),
+    VecRaw(&'a [u8]),
+}
+
+fn is_matching_list<'a, T, F>(attr_val: &'a [T], packet_attr: &'a PacketAttr, compare_fn: F) -> bool
+where
+    F: Fn(&'a T, &'a PacketAttr) -> bool,
+{
+    match packet_attr.cmp_kind {
+        AttrCmpKind::NotEqual | AttrCmpKind::NotContain => {
+            attr_val.iter().all(|x| compare_fn(x, packet_attr))
+        }
+        _ => attr_val.iter().any(|x| compare_fn(x, packet_attr)),
+    }
+}
+
+fn is_attr_matched(target_value: AttrValue, attr: &PacketAttr) -> bool {
+    match target_value {
+        AttrValue::Addr(ip_addr) => matches_addr_attr(&ip_addr, attr),
+        AttrValue::Bool(bool_val) => matches_bool_attr(bool_val, attr),
+        AttrValue::Float(float_val) => matches_number_attr::<_, f64>(&float_val, attr),
+        AttrValue::SInt(signed_int_val) => matches_number_attr::<_, i64>(&signed_int_val, attr),
+        AttrValue::UInt(unsigned_int_val) => matches_number_attr::<_, u64>(&unsigned_int_val, attr),
+        AttrValue::String(str_val) => matches_string_attr(str_val, attr),
+        AttrValue::VecAddr(vec_addr_val) => is_matching_list(vec_addr_val, attr, matches_addr_attr),
+        AttrValue::VecFloat(vec_float_val) => {
+            is_matching_list(&vec_float_val, attr, matches_number_attr::<_, f64>)
+        }
+        AttrValue::VecSInt(vec_sint_val) => {
+            is_matching_list(&vec_sint_val, attr, matches_number_attr::<_, i64>)
+        }
+        AttrValue::VecUInt(vec_uint_val) => {
+            is_matching_list(&vec_uint_val, attr, matches_number_attr::<_, u64>)
+        }
+        AttrValue::VecString(vec_str_val) => is_matching_list(vec_str_val, attr, |val, attr| {
+            matches_string_attr(val.as_str(), attr)
+        }),
+        AttrValue::VecRaw(vec_raw_val) => matches_vec_raw_attr(vec_raw_val, attr),
+    }
+}
+
+fn deserialize<'de, T>(value: &'de [u8]) -> Option<T>
+where
+    T: Deserialize<'de>,
+{
+    bincode::DefaultOptions::new().deserialize::<T>(value).ok()
+}
+
+fn check_second_value<'de, T, K>(kind: AttrCmpKind, value: Option<&'de Vec<u8>>) -> Option<T>
+where
+    T: TryFrom<K> + std::cmp::PartialOrd,
+    K: Deserialize<'de>,
+{
+    match kind {
+        AttrCmpKind::OpenRange
+        | AttrCmpKind::CloseRange
+        | AttrCmpKind::LeftOpenRange
+        | AttrCmpKind::RightOpenRange
+        | AttrCmpKind::NotOpenRange
+        | AttrCmpKind::NotCloseRange
+        | AttrCmpKind::NotLeftOpenRange
+        | AttrCmpKind::NotRightOpenRange => {
+            let value = value.as_ref()?;
+            let de_second_value: K = deserialize(value)?;
+            T::try_from(de_second_value).ok()
+        }
+        _ => None,
+    }
+}
+
+fn matches_attr<T>(
+    cmp_kind: AttrCmpKind,
+    attr_val: &T,
+    first_val: &T,
+    second_val: Option<T>,
+) -> bool
+where
+    T: PartialOrd,
+{
+    match (cmp_kind, second_val) {
+        (AttrCmpKind::Less, _) => attr_val < first_val,
+        (AttrCmpKind::LessOrEqual, _) => attr_val <= first_val,
+        (AttrCmpKind::Equal, _) => attr_val == first_val,
+        (AttrCmpKind::NotEqual, _) => attr_val != first_val,
+        (AttrCmpKind::Greater, _) => attr_val > first_val,
+        (AttrCmpKind::GreaterOrEqual, _) => attr_val >= first_val,
+        (AttrCmpKind::OpenRange, Some(second_val)) => {
+            (first_val < attr_val) && (second_val > *attr_val)
+        }
+        (AttrCmpKind::CloseRange, Some(second_val)) => {
+            (first_val <= attr_val) && (second_val >= *attr_val)
+        }
+        (AttrCmpKind::LeftOpenRange, Some(second_val)) => {
+            (first_val < attr_val) && (second_val >= *attr_val)
+        }
+        (AttrCmpKind::RightOpenRange, Some(second_val)) => {
+            (first_val <= attr_val) && (second_val > *attr_val)
+        }
+        (AttrCmpKind::NotOpenRange, Some(second_val)) => {
+            !((first_val < attr_val) && (second_val > *attr_val))
+        }
+        (AttrCmpKind::NotCloseRange, Some(second_val)) => {
+            !((first_val <= attr_val) && (second_val >= *attr_val))
+        }
+        (AttrCmpKind::NotLeftOpenRange, Some(second_val)) => {
+            !((first_val < attr_val) && (second_val >= *attr_val))
+        }
+        (AttrCmpKind::NotRightOpenRange, Some(second_val)) => {
+            !((first_val <= attr_val) && (second_val > *attr_val))
+        }
+        _ => false,
+    }
+}
+
+fn matches_bool_attr(attr_val: bool, packet_attr: &PacketAttr) -> bool {
+    deserialize::<bool>(&packet_attr.first_value).is_some_and(|compare_val| {
+        match packet_attr.cmp_kind {
+            AttrCmpKind::Equal => attr_val == compare_val,
+            AttrCmpKind::NotEqual => attr_val != compare_val,
+            _ => false,
+        }
+    })
+}
+
+fn matches_string_attr(attr_val: &str, packet_attr: &PacketAttr) -> bool {
+    deserialize::<String>(&packet_attr.first_value).is_some_and(|compare_val| {
+        let cmp_result = attr_val.contains(&compare_val);
+        match packet_attr.cmp_kind {
+            AttrCmpKind::Contain => cmp_result,
+            AttrCmpKind::NotContain => !cmp_result,
+            _ => false,
+        }
+    })
+}
+
+fn matches_addr_attr(attr_val: &IpAddr, packet_attr: &PacketAttr) -> bool {
+    if let Some(first_val) = deserialize::<IpAddr>(&packet_attr.first_value) {
+        let second_val = packet_attr
+            .second_value
+            .as_ref()
+            .and_then(|serde_val| deserialize::<IpAddr>(serde_val));
+        return matches_attr(packet_attr.cmp_kind, attr_val, &first_val, second_val);
+    }
+    false
+}
+
+fn matches_number_attr<'de, T, K>(attr_val: &T, packet_attr: &'de PacketAttr) -> bool
+where
+    T: TryFrom<K> + PartialOrd,
+    K: Deserialize<'de>,
+{
+    if let Some(first_val) = deserialize::<K>(&packet_attr.first_value) {
+        if let Ok(first_val) = T::try_from(first_val) {
+            let second_val =
+                check_second_value::<T, K>(packet_attr.cmp_kind, packet_attr.second_value.as_ref());
+            return matches_attr(packet_attr.cmp_kind, attr_val, &first_val, second_val);
+        }
+    }
+    false
+}
+
+fn matches_vec_raw_attr(attr_val: &[u8], packet_attr: &PacketAttr) -> bool {
+    match packet_attr.value_kind {
+        ValueKind::String => {
+            deserialize::<String>(&packet_attr.first_value).is_some_and(|compare_val| {
+                matches_byte_attr(packet_attr.cmp_kind, attr_val, compare_val.as_bytes())
+            })
+        }
+        ValueKind::Vector => {
+            matches_byte_attr(packet_attr.cmp_kind, attr_val, &packet_attr.first_value)
+        }
+        _ => false,
+    }
+}
+
+fn matches_byte_attr(cmp_kind: AttrCmpKind, target_val: &[u8], compare_val: &[u8]) -> bool {
+    let cmp_result = memchr::memmem::find(target_val, compare_val);
+    match cmp_kind {
+        AttrCmpKind::Contain => cmp_result.is_some(),
+        AttrCmpKind::NotContain => cmp_result.is_none(),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::{
+        cmp::Ordering,
+        net::{IpAddr, Ipv4Addr},
+    };
 
+    use attrievent::attribute::{DhcpAttr, DnsAttr, HttpAttr, RawEventKind};
+    use bincode::Options;
     use chrono::{TimeZone, Utc};
+    use serde::Serialize;
 
     use crate::{
-        BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields, BlocklistDceRpc,
-        BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields, BlocklistDns,
+        AttrCmpKind, BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields,
+        BlocklistDceRpc, BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields, BlocklistDns,
         BlocklistDnsFields, BlocklistFtp, BlocklistHttp, BlocklistHttpFields, BlocklistKerberos,
         BlocklistKerberosFields, BlocklistLdap, BlocklistMqtt, BlocklistMqttFields, BlocklistNfs,
         BlocklistNfsFields, BlocklistNtlm, BlocklistNtlmFields, BlocklistRdp, BlocklistRdpFields,
@@ -339,9 +557,10 @@ mod tests {
         FtpEventFields, FtpPlainText, HostNetworkGroup, HttpEventFields, HttpThreat,
         HttpThreatFields, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText,
         LearningMethod, LockyRansomware, MultiHostPortScan, MultiHostPortScanFields, NetworkThreat,
-        NetworkType, NonBrowser, PortScan, PortScanFields, RdpBruteForce, RdpBruteForceFields,
-        RecordType, RepeatedHttpSessions, RepeatedHttpSessionsFields, SuspiciousTlsTraffic,
-        TorConnection, WindowsThreat, types::Endpoint,
+        NetworkType, NonBrowser, PacketAttr, PortScan, PortScanFields, RdpBruteForce,
+        RdpBruteForceFields, RecordType, RepeatedHttpSessions, RepeatedHttpSessionsFields,
+        SuspiciousTlsTraffic, TorConnection, ValueKind, WindowsThreat, event::common::Match,
+        types::Endpoint,
     };
 
     #[test]
@@ -948,6 +1167,140 @@ mod tests {
         );
     }
 
+    #[test]
+    fn compare_attribute() {
+        let time = Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap();
+
+        // Compare `Addr`, `String`, `UInt`, `VecString` type
+        let http_event = DomainGenerationAlgorithm::new(time, dga_fields());
+        let success_packet_attr = vec![
+            PacketAttr {
+                raw_event_kind: RawEventKind::Http,
+                attr_name: HttpAttr::SrcAddr.to_string(),
+                value_kind: ValueKind::IpAddr,
+                cmp_kind: AttrCmpKind::CloseRange,
+                first_value: serialize(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))).unwrap(),
+                second_value: serialize(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+                weight: Some(0.1),
+            },
+            PacketAttr {
+                raw_event_kind: RawEventKind::Http,
+                attr_name: HttpAttr::Uri.to_string(),
+                value_kind: ValueKind::String,
+                cmp_kind: AttrCmpKind::Contain,
+                first_value: serialize(&"path").unwrap(),
+                second_value: None,
+                weight: Some(0.2),
+            },
+        ];
+        let score_result = http_event.score_by_attr(&success_packet_attr);
+        assert_eq!(score_result.partial_cmp(&0.3), Some(Ordering::Equal));
+
+        let fail_packet_attr = vec![
+            PacketAttr {
+                raw_event_kind: RawEventKind::Http,
+                attr_name: HttpAttr::DstPort.to_string(),
+                value_kind: ValueKind::UInteger,
+                cmp_kind: AttrCmpKind::OpenRange,
+                first_value: serialize(&80_u64).unwrap(),
+                second_value: serialize(&82_u64),
+                weight: Some(0.1),
+            },
+            PacketAttr {
+                raw_event_kind: RawEventKind::Http,
+                attr_name: HttpAttr::RespMimeTypes.to_string(),
+                value_kind: ValueKind::String,
+                cmp_kind: AttrCmpKind::NotContain,
+                first_value: serialize(&"b1").unwrap(),
+                second_value: None,
+                weight: Some(0.1),
+            },
+        ];
+        let score_result = http_event.score_by_attr(&fail_packet_attr);
+        assert_eq!(score_result.partial_cmp(&0.0), Some(Ordering::Equal));
+
+        // Compare `Bool`, `SInt`, `VecSInt` type
+        let dns_event = DnsCovertChannel::new(time, dns_event_fields());
+        let success_packet_attr = vec![
+            PacketAttr {
+                raw_event_kind: RawEventKind::Dns,
+                attr_name: DnsAttr::Rtt.to_string(),
+                value_kind: ValueKind::Integer,
+                cmp_kind: AttrCmpKind::Less,
+                first_value: serialize(&6_i64).unwrap(),
+                second_value: None,
+                weight: Some(0.3),
+            },
+            PacketAttr {
+                raw_event_kind: RawEventKind::Dns,
+                attr_name: DnsAttr::Ttl.to_string(),
+                value_kind: ValueKind::Integer,
+                cmp_kind: AttrCmpKind::NotEqual,
+                first_value: serialize(&9_i64).unwrap(),
+                second_value: None,
+                weight: Some(0.5),
+            },
+        ];
+        let score_result = dns_event.score_by_attr(&success_packet_attr);
+        assert_eq!(score_result.partial_cmp(&0.8), Some(Ordering::Equal));
+
+        let fail_packet_attr = vec![PacketAttr {
+            raw_event_kind: RawEventKind::Dns,
+            attr_name: DnsAttr::AA.to_string(),
+            value_kind: ValueKind::Bool,
+            cmp_kind: AttrCmpKind::Equal,
+            first_value: serialize(&true).unwrap(),
+            second_value: None,
+            weight: Some(0.2),
+        }];
+        let score_result = dns_event.score_by_attr(&fail_packet_attr);
+        assert_eq!(score_result.partial_cmp(&0.0), Some(Ordering::Equal));
+
+        // Compare `VecAddr`, `VecUInt`, `VecRaw` type
+        let dhcp_event = BlocklistDhcp::new(time, blocklist_dhcp_fields());
+        let success_packet_attr = vec![
+            PacketAttr {
+                raw_event_kind: RawEventKind::Dhcp,
+                attr_name: DhcpAttr::Router.to_string(),
+                value_kind: ValueKind::IpAddr,
+                cmp_kind: AttrCmpKind::LeftOpenRange,
+                first_value: serialize(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 0))).unwrap(),
+                second_value: serialize(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                weight: Some(0.15),
+            },
+            PacketAttr {
+                raw_event_kind: RawEventKind::Dhcp,
+                attr_name: DhcpAttr::ClientId.to_string(),
+                value_kind: ValueKind::Vector,
+                cmp_kind: AttrCmpKind::Contain,
+                first_value: vec![7, 8, 9],
+                second_value: None,
+                weight: Some(0.2),
+            },
+        ];
+        let score_result = dhcp_event.score_by_attr(&success_packet_attr);
+        assert_eq!(score_result.partial_cmp(&0.35), Some(Ordering::Equal));
+
+        let fail_packet_attr = vec![PacketAttr {
+            raw_event_kind: RawEventKind::Dhcp,
+            attr_name: DhcpAttr::ParamReqList.to_string(),
+            value_kind: ValueKind::UInteger,
+            cmp_kind: AttrCmpKind::RightOpenRange,
+            first_value: serialize(&0_u64).unwrap(),
+            second_value: serialize(&1_u64),
+            weight: Some(0.35),
+        }];
+        let score_result = dhcp_event.score_by_attr(&fail_packet_attr);
+        assert_eq!(score_result.partial_cmp(&0.0), Some(Ordering::Equal));
+    }
+
+    fn serialize<T>(v: &T) -> Option<Vec<u8>>
+    where
+        T: Serialize,
+    {
+        bincode::DefaultOptions::new().serialize(v).ok()
+    }
+
     fn create_directions(kind: FlowKind, addr: IpAddr) -> (Vec<FlowKind>, Vec<HostNetworkGroup>) {
         (vec![kind], vec![create_host_network_group(addr)])
     }
@@ -1086,7 +1439,7 @@ mod tests {
             message: "message".to_string(),
             renewal_time: 100,
             rebinding_time: 200,
-            class_id: vec![4, 5, 6],
+            class_id: "MSFT 5.0".as_bytes().to_vec(),
             client_id_type: 1,
             client_id: vec![7, 8, 9],
             category: EventCategory::InitialAccess,

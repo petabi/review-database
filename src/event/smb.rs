@@ -1,10 +1,39 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{RawEventAttrKind, SmbAttr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::triage_scores_to_string;
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string};
+
+macro_rules! find_smb_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Smb(attr) = $raw_event_attr {
+            let target_value = match attr {
+                SmbAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                SmbAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                SmbAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                SmbAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                SmbAttr::Proto => AttrValue::UInt($event.proto.into()),
+                SmbAttr::Command => AttrValue::UInt($event.command.into()),
+                SmbAttr::Path => AttrValue::String(&$event.path),
+                SmbAttr::Service => AttrValue::String(&$event.service),
+                SmbAttr::FileName => AttrValue::String(&$event.file_name),
+                SmbAttr::FileSize => AttrValue::UInt($event.file_size),
+                SmbAttr::ResourceType => AttrValue::UInt($event.resource_type.into()),
+                SmbAttr::Fid => AttrValue::UInt($event.fid.into()),
+                SmbAttr::CreateTime => AttrValue::SInt($event.create_time),
+                SmbAttr::AccessTime => AttrValue::SInt($event.access_time),
+                SmbAttr::WriteTime => AttrValue::SInt($event.write_time),
+                SmbAttr::ChangeTime => AttrValue::SInt($event.change_time),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistSmbFields {
@@ -181,7 +210,7 @@ impl Match for BlocklistSmb {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_smb_attr_by_kind!(self, raw_event_attr)
     }
 }

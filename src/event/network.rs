@@ -1,11 +1,32 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{NetworkAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::triage_scores_to_string;
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string};
+
+// TODO: We plan to implement the triage feature after detection events from other network
+// protocols are consolidated into `NetworkThreat` events.
+macro_rules! find_network_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {
+        if let RawEventAttrKind::Network(attr) = $raw_event_attr {
+            let target_value = match attr {
+                NetworkAttr::SrcAddr => AttrValue::Addr($event.orig_addr),
+                NetworkAttr::SrcPort => AttrValue::UInt($event.orig_port.into()),
+                NetworkAttr::DstAddr => AttrValue::Addr($event.resp_addr),
+                NetworkAttr::DstPort => AttrValue::UInt($event.resp_port.into()),
+                NetworkAttr::Proto => AttrValue::UInt($event.proto.into()),
+                NetworkAttr::Content => AttrValue::String(&$event.content),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    };
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct NetworkThreat {
@@ -126,7 +147,7 @@ impl Match for NetworkThreat {
         LearningMethod::Unsupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_network_attr_by_kind!(self, raw_event_attr)
     }
 }

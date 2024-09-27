@@ -1,10 +1,14 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{HttpAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::{common::triage_scores_to_string, http::get_post_body};
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::{
+    common::{AttrValue, triage_scores_to_string},
+    http::{find_http_attr_by_kind, get_post_body},
+};
 
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -240,7 +244,7 @@ impl Match for TorConnection {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_http_attr_by_kind!(self, raw_event_attr)
     }
 }
