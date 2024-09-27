@@ -3,9 +3,74 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! ftp_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            FtpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            FtpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            FtpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            FtpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            FtpAttr::Proto => AttrValue::UInt($event.proto.into()),
+            FtpAttr::User => AttrValue::String(&$event.user),
+            FtpAttr::Password => AttrValue::String(&$event.password),
+            FtpAttr::Command => AttrValue::String(&$event.command),
+            FtpAttr::ReplyCode => AttrValue::String(&$event.reply_code),
+            FtpAttr::ReplyMsg => AttrValue::String(&$event.reply_msg),
+            FtpAttr::DataPassive => AttrValue::Bool($event.data_passive),
+            FtpAttr::DataOrigAddr => AttrValue::Addr($event.data_orig_addr),
+            FtpAttr::DataRespAddr => AttrValue::Addr($event.data_resp_addr),
+            FtpAttr::DataRespPort => AttrValue::UInt($event.data_resp_port.into()),
+            FtpAttr::File => AttrValue::String(&$event.file),
+            FtpAttr::FileSize => AttrValue::UInt($event.file_size),
+            FtpAttr::FileId => AttrValue::String(&$event.file_id),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum FtpAttr {
+    #[strum(serialize = "ftp-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "ftp-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "ftp-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "ftp-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "ftp-proto")]
+    Proto,
+    #[strum(serialize = "ftp-user")]
+    User,
+    #[strum(serialize = "ftp-password")]
+    Password,
+    #[strum(serialize = "ftp-command")]
+    Command,
+    #[strum(serialize = "ftp-reply_code")]
+    ReplyCode,
+    #[strum(serialize = "ftp-reply_msg")]
+    ReplyMsg,
+    #[strum(serialize = "ftp-data_channel.passive")]
+    DataPassive,
+    #[strum(serialize = "ftp-data_channel.orig_h")]
+    DataOrigAddr,
+    #[strum(serialize = "ftp-data_channel.resp_h")]
+    DataRespAddr,
+    #[strum(serialize = "ftp-data_channel.resp_p")]
+    DataRespPort,
+    #[strum(serialize = "ftp-file")]
+    File,
+    #[strum(serialize = "ftp-file_size")]
+    FileSize,
+    #[strum(serialize = "ftp-file_id")]
+    FileId,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct FtpBruteForceFields {
@@ -87,7 +152,7 @@ impl FtpBruteForce {
     }
 }
 
-impl Match for FtpBruteForce {
+impl Match<FtpAttr> for FtpBruteForce {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -128,8 +193,15 @@ impl Match for FtpBruteForce {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: FtpAttr) -> Option<AttrValue> {
+        match proto_attr {
+            FtpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+            FtpAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+            FtpAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+            FtpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+            FtpAttr::User => Some(AttrValue::VecString(&self.user_list)),
+            _ => None,
+        }
     }
 }
 
@@ -269,7 +341,7 @@ impl FtpPlainText {
     }
 }
 
-impl Match for FtpPlainText {
+impl Match<FtpAttr> for FtpPlainText {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -310,8 +382,8 @@ impl Match for FtpPlainText {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: FtpAttr) -> Option<AttrValue> {
+        ftp_target_attr!(self, proto_attr)
     }
 }
 
@@ -399,7 +471,7 @@ impl BlockListFtp {
     }
 }
 
-impl Match for BlockListFtp {
+impl Match<FtpAttr> for BlockListFtp {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -440,7 +512,7 @@ impl Match for BlockListFtp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: FtpAttr) -> Option<AttrValue> {
+        ftp_target_attr!(self, proto_attr)
     }
 }

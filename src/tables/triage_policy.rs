@@ -68,8 +68,11 @@ pub enum TiCmpKind {
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
 pub enum ValueKind {
     String,
-    Integer,
+    SInteger,
+    UInteger,
     Float,
+    IpAddr,
+    Bool,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]

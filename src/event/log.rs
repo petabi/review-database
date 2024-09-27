@@ -7,9 +7,17 @@ use std::{
 
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, PartialEq, EnumString)]
+pub enum LogAttr {
+    #[strum(serialize = "log-content")]
+    Content,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct ExtraThreat {
@@ -46,7 +54,7 @@ impl fmt::Display for ExtraThreat {
     }
 }
 
-impl Match for ExtraThreat {
+impl Match<LogAttr> for ExtraThreat {
     fn src_addr(&self) -> IpAddr {
         IpAddr::V4(Ipv4Addr::UNSPECIFIED)
     }
@@ -87,7 +95,10 @@ impl Match for ExtraThreat {
         Some(self.confidence)
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: LogAttr) -> Option<AttrValue> {
+        if proto_attr == LogAttr::Content {
+            return Some(AttrValue::String(&self.content));
+        }
+        None
     }
 }

@@ -3,9 +3,19 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+// TODO: We plan to implement the triage feature after detection events from other network
+// protocols are consolidated into `NetworkThreat` events.
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, PartialEq, EnumString)]
+pub enum NetworkAttr {
+    #[strum(serialize = "network-content")]
+    Content,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct NetworkThreat {
@@ -55,7 +65,7 @@ impl fmt::Display for NetworkThreat {
     }
 }
 
-impl Match for NetworkThreat {
+impl Match<NetworkAttr> for NetworkThreat {
     fn src_addr(&self) -> IpAddr {
         self.orig_addr
     }
@@ -96,7 +106,10 @@ impl Match for NetworkThreat {
         Some(self.confidence)
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: NetworkAttr) -> Option<AttrValue> {
+        if proto_attr == NetworkAttr::Content {
+            return Some(AttrValue::String(&self.content));
+        }
+        None
     }
 }

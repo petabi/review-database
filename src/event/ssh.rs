@@ -2,9 +2,77 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! ssh_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            SshAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            SshAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            SshAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            SshAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            SshAttr::Proto => AttrValue::UInt($event.proto.into()),
+            SshAttr::Client => AttrValue::String(&$event.client),
+            SshAttr::Server => AttrValue::String(&$event.server),
+            SshAttr::CipherAlg => AttrValue::String(&$event.cipher_alg),
+            SshAttr::MacAlg => AttrValue::String(&$event.mac_alg),
+            SshAttr::CompressionAlg => AttrValue::String(&$event.compression_alg),
+            SshAttr::KexAlg => AttrValue::String(&$event.kex_alg),
+            SshAttr::HostKeyAlg => AttrValue::String(&$event.host_key_alg),
+            SshAttr::HasshAlgorithms => AttrValue::String(&$event.hassh_algorithms),
+            SshAttr::Hassh => AttrValue::String(&$event.hassh),
+            SshAttr::HasshServerAlgorithms => AttrValue::String(&$event.hassh_server_algorithms),
+            SshAttr::HasshServer => AttrValue::String(&$event.hassh_server),
+            SshAttr::ClientShka => AttrValue::String(&$event.client_shka),
+            SshAttr::ServerShka => AttrValue::String(&$event.server_shka),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum SshAttr {
+    #[strum(serialize = "ssh-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "ssh-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "ssh-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "ssh-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "ssh-proto")]
+    Proto,
+    #[strum(serialize = "ssh-client")]
+    Client,
+    #[strum(serialize = "ssh-server")]
+    Server,
+    #[strum(serialize = "ssh-cipher_alg")]
+    CipherAlg,
+    #[strum(serialize = "ssh-mac_alg")]
+    MacAlg,
+    #[strum(serialize = "ssh-compression_alg")]
+    CompressionAlg,
+    #[strum(serialize = "ssh-kex_alg")]
+    KexAlg,
+    #[strum(serialize = "ssh-host_key_alg")]
+    HostKeyAlg,
+    #[strum(serialize = "ssh-hassh_algorithms")]
+    HasshAlgorithms,
+    #[strum(serialize = "ssh-hassh")]
+    Hassh,
+    #[strum(serialize = "ssh-hassh_server_algorithms")]
+    HasshServerAlgorithms,
+    #[strum(serialize = "ssh-hassh_server")]
+    HasshServer,
+    #[strum(serialize = "ssh-client_shka")]
+    ClientShka,
+    #[strum(serialize = "ssh-server_shka")]
+    ServerShka,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListSshFields {
@@ -145,7 +213,7 @@ impl BlockListSsh {
     }
 }
 
-impl Match for BlockListSsh {
+impl Match<SshAttr> for BlockListSsh {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -186,7 +254,7 @@ impl Match for BlockListSsh {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: SshAttr) -> Option<AttrValue> {
+        ssh_target_attr!(self, proto_attr)
     }
 }

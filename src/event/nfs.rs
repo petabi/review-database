@@ -2,9 +2,44 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! nfs_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            NfsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            NfsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            NfsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            NfsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            NfsAttr::Proto => AttrValue::UInt($event.proto.into()),
+            NfsAttr::ReadFiles => AttrValue::VecString(&$event.read_files),
+            NfsAttr::WriteFiles => AttrValue::VecString(&$event.write_files),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum NfsAttr {
+    #[strum(serialize = "nfs-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "nfs-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "nfs-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "nfs-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "nfs-proto")]
+    Proto,
+    #[strum(serialize = "nfs-read_files")]
+    ReadFiles,
+    #[strum(serialize = "nfs-write_files")]
+    WriteFiles,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListNfsFields {
@@ -90,7 +125,7 @@ impl BlockListNfs {
     }
 }
 
-impl Match for BlockListNfs {
+impl Match<NfsAttr> for BlockListNfs {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -131,7 +166,7 @@ impl Match for BlockListNfs {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: NfsAttr) -> Option<AttrValue> {
+        nfs_target_attr!(self, proto_attr)
     }
 }

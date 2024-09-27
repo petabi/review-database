@@ -2,9 +2,71 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! smb_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            SmbAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            SmbAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            SmbAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            SmbAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            SmbAttr::Proto => AttrValue::UInt($event.proto.into()),
+            SmbAttr::Command => AttrValue::UInt($event.command.into()),
+            SmbAttr::Path => AttrValue::String(&$event.path),
+            SmbAttr::Service => AttrValue::String(&$event.service),
+            SmbAttr::FileName => AttrValue::String(&$event.file_name),
+            SmbAttr::FileSize => AttrValue::UInt($event.file_size),
+            SmbAttr::ResourceType => AttrValue::UInt($event.resource_type.into()),
+            SmbAttr::Fid => AttrValue::UInt($event.fid.into()),
+            SmbAttr::CreateTime => AttrValue::SInt($event.create_time),
+            SmbAttr::AccessTime => AttrValue::SInt($event.access_time),
+            SmbAttr::WriteTime => AttrValue::SInt($event.write_time),
+            SmbAttr::ChangeTime => AttrValue::SInt($event.change_time),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum SmbAttr {
+    #[strum(serialize = "smb-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "smb-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "smb-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "smb-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "smb-proto")]
+    Proto,
+    #[strum(serialize = "smb-command")]
+    Command,
+    #[strum(serialize = "smb-path")]
+    Path,
+    #[strum(serialize = "smb-service")]
+    Service,
+    #[strum(serialize = "smb-file_name")]
+    FileName,
+    #[strum(serialize = "smb-file_size")]
+    FileSize,
+    #[strum(serialize = "smb-resource_type")]
+    ResourceType,
+    #[strum(serialize = "smb-fid")]
+    Fid,
+    #[strum(serialize = "smb-create_time")]
+    CreateTime,
+    #[strum(serialize = "smb-access_time")]
+    AccessTime,
+    #[strum(serialize = "smb-write_time")]
+    WriteTime,
+    #[strum(serialize = "smb-change_time")]
+    ChangeTime,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListSmbFields {
@@ -134,7 +196,7 @@ impl BlockListSmb {
     }
 }
 
-impl Match for BlockListSmb {
+impl Match<SmbAttr> for BlockListSmb {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -175,7 +237,7 @@ impl Match for BlockListSmb {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: SmbAttr) -> Option<AttrValue> {
+        smb_target_attr!(self, proto_attr)
     }
 }

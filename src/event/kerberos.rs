@@ -2,9 +2,65 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! kerberos_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            KerberosAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            KerberosAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            KerberosAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            KerberosAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            KerberosAttr::Proto => AttrValue::UInt($event.proto.into()),
+            KerberosAttr::ClientTime => AttrValue::SInt($event.client_time),
+            KerberosAttr::ServerTime => AttrValue::SInt($event.server_time),
+            KerberosAttr::ErrorCode => AttrValue::UInt($event.error_code.into()),
+            KerberosAttr::ClientRealm => AttrValue::String(&$event.client_realm),
+            KerberosAttr::CnameType => AttrValue::UInt($event.cname_type.into()),
+            KerberosAttr::ClientName => AttrValue::VecString(&$event.client_name),
+            KerberosAttr::Realm => AttrValue::String(&$event.realm),
+            KerberosAttr::SnameType => AttrValue::UInt($event.sname_type.into()),
+            KerberosAttr::ServiceName => AttrValue::VecString(&$event.service_name),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum KerberosAttr {
+    #[strum(serialize = "kerberos-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "kerberos-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "kerberos-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "kerberos-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "kerberos-proto")]
+    Proto,
+    #[strum(serialize = "kerberos-client_time")]
+    ClientTime,
+    #[strum(serialize = "kerberos-server_time")]
+    ServerTime,
+    #[strum(serialize = "kerberos-error_code")]
+    ErrorCode,
+    #[strum(serialize = "kerberos-client_realm")]
+    ClientRealm,
+    #[strum(serialize = "kerberos-cname_type")]
+    CnameType,
+    #[strum(serialize = "kerberos-client_name")]
+    ClientName,
+    #[strum(serialize = "kerberos-realm")]
+    Realm,
+    #[strum(serialize = "kerberos-sname_type")]
+    SnameType,
+    #[strum(serialize = "kerberos-service_name")]
+    ServiceName,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListKerberosFields {
@@ -127,7 +183,7 @@ impl BlockListKerberos {
     }
 }
 
-impl Match for BlockListKerberos {
+impl Match<KerberosAttr> for BlockListKerberos {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -168,7 +224,7 @@ impl Match for BlockListKerberos {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: KerberosAttr) -> Option<AttrValue> {
+        kerberos_target_attr!(self, proto_attr)
     }
 }

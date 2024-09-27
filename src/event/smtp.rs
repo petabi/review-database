@@ -2,9 +2,59 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! smtp_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            SmtpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            SmtpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            SmtpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            SmtpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            SmtpAttr::Proto => AttrValue::UInt($event.proto.into()),
+            SmtpAttr::MailFrom => AttrValue::String(&$event.mailfrom),
+            SmtpAttr::Date => AttrValue::String(&$event.date),
+            SmtpAttr::From => AttrValue::String(&$event.from),
+            SmtpAttr::To => AttrValue::String(&$event.to),
+            SmtpAttr::Subject => AttrValue::String(&$event.subject),
+            SmtpAttr::Agent => AttrValue::String(&$event.agent),
+            SmtpAttr::State => AttrValue::String(&$event.state),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum SmtpAttr {
+    #[strum(serialize = "smtp-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "smtp-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "smtp-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "smtp-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "smtp-proto")]
+    Proto,
+    #[strum(serialize = "smtp-mailfrom")]
+    MailFrom,
+    #[strum(serialize = "smtp-date")]
+    Date,
+    #[strum(serialize = "smtp-from")]
+    From,
+    #[strum(serialize = "smtp-to")]
+    To,
+    #[strum(serialize = "smtp-subject")]
+    Subject,
+    #[strum(serialize = "smtp-agent")]
+    Agent,
+    #[strum(serialize = "smtp-state")]
+    State,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListSmtpFields {
@@ -116,7 +166,7 @@ impl BlockListSmtp {
     }
 }
 
-impl Match for BlockListSmtp {
+impl Match<SmtpAttr> for BlockListSmtp {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -157,7 +207,7 @@ impl Match for BlockListSmtp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: SmtpAttr) -> Option<AttrValue> {
+        smtp_target_attr!(self, proto_attr)
     }
 }
