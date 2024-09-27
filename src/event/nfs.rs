@@ -1,10 +1,30 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{NfsAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::triage_scores_to_string;
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string};
+
+macro_rules! find_nfs_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Nfs(attr) = $raw_event_attr {
+            let target_value = match attr {
+                NfsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                NfsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                NfsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                NfsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                NfsAttr::Proto => AttrValue::UInt($event.proto.into()),
+                NfsAttr::ReadFiles => AttrValue::VecString(&$event.read_files),
+                NfsAttr::WriteFiles => AttrValue::VecString(&$event.write_files),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistNfsFields {
@@ -137,7 +157,7 @@ impl Match for BlocklistNfs {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_nfs_attr_by_kind!(self, raw_event_attr)
     }
 }

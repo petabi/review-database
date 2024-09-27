@@ -2,15 +2,33 @@
 
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{RawEventAttrKind, RdpAttr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{
-    EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore,
+    EventCategory, LearningMethod, MEDIUM, TriageScore,
     common::{Match, vector_to_string},
 };
-use crate::event::common::triage_scores_to_string;
+use crate::event::common::{AttrValue, triage_scores_to_string};
 
+macro_rules! find_rdp_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Rdp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                RdpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                RdpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                RdpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                RdpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                RdpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                RdpAttr::Cookie => AttrValue::String(&$event.cookie),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 #[derive(Serialize, Deserialize)]
 pub struct RdpBruteForceFields {
     pub src_addr: IpAddr,
@@ -122,8 +140,17 @@ impl Match for RdpBruteForce {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        if let RawEventAttrKind::Rdp(attr) = raw_event_attr {
+            match attr {
+                RdpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                RdpAttr::DstAddr => Some(AttrValue::VecAddr(&self.dst_addrs)),
+                RdpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -252,7 +279,7 @@ impl Match for BlocklistRdp {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_rdp_attr_by_kind!(self, raw_event_attr)
     }
 }

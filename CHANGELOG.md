@@ -2,8 +2,8 @@
 
 This file documents recent notable changes to this project. The format of this
 file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
-this project adheres to [Semantic
-Versioning](https://semver.org/spec/v2.0.0.html).
+this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
@@ -12,14 +12,27 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `update_agent_status_by_hostname` public function to `Node` table. This
   function allows updating an agent’s status using the node’s hostname and the
   agent’s ID.
+- Added triage functionality for scoring with attributes of each raw event.
+  - Used the attrievent crate. The kinds of raw events and their attributes
+    change as our software evolves. The purpose of attrievent is to provide a
+    comprehensive list of attributes for both review and the UI simultaneously.
+  - Added a new enum type `AttrValue`. This type is used to convert the
+    attribute value of each raw event to its corresponding type to perform
+    comparison operations.
+  - Added the `find_attr_by_kind` to the `Match` trait to generate an
+    `AttrValue` from the field in all detection event.
+  - Implemented `score_by_attr` under `Match` trait.
 
 ### Changed
 
-- Renamed `BlockList` to `Blocklist` and `block_list` to `blocklist` in line with
-  the Rust API Guidelines for acronyms/compound words. Please note that this is
-  a breaking change if you were using identifiers affected by this change.
+- Renamed `BlockList` to `Blocklist` and `block_list` to `blocklist` in line
+  with the Rust API Guidelines for acronyms/compound words. Please note that
+  this is a breaking change if you were using identifiers affected by this
+  change.
 - Modify the syslog message generation procedure to use dedicated formatter
   instead of Display trait.
+- Modified the `ValueKind` enum to support different types of input for packet
+  attribute triage.
 
 ### Fixed
 
@@ -40,8 +53,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `RdpBruteForce` with multiple addresses are filtered correctly.
   - Changed the return types of `src_addr` and `dst_addr` in the `Match` trait
     from `IpAddr` to `&[IpAddr]` to support returning one or more IP addresses.
-  - Renamed the methods to `src_addrs` and `dst_addrs` to reflect the
-    updated functionality.
+  - Renamed the methods to `src_addrs` and `dst_addrs` to reflect the updated
+    functionality.
 
 ## [0.36.0] - 2025-03-18
 
@@ -156,7 +169,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   release introduces greater flexibility for managing REview's database
   migrations, allowing users to leverage both environment variables and TOML
   configuration files.
-  - Users can provide a TOML configuration file to define the following settings:
+  - Users can provide a TOML configuration file to define the following
+    settings:
     - `data_dir`: Path for REview's database backup storage. Default is the
       backup directory in the current directory.
     - `backup_dir`: Path for REview's local storage. Default is the data
@@ -203,8 +217,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `language` parameter, enabling language updates alongside existing fields.
 - Added `category` field to all the detected event structures.
 - Added `category` field to TI db and TI rules.
-- Modified all the detected events to use its own category field value
-  instead of statically assigned values.
+- Modified all the detected events to use its own category field value instead
+  of statically assigned values.
 - Added fields to some detected event structures
   - `BlockListConn`: `orig_l2_bytes`, `resp_l2_bytes`
   - `TorConnection`: `orig_filenames`, `orig_mime_types`, `resp_filenames`,
@@ -272,8 +286,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   generating `rustls::ClientConfig`.
 - Changed the display message format of `EventMessage` and `Event` to RFC 5424.
   Modified messages will be sent to syslog.
-- Used `FromPrimitive` and `ToPrimitive` for converting `EventCategory` instead of
-  manually implementing `TryFrom`.
+- Used `FromPrimitive` and `ToPrimitive` for converting `EventCategory` instead
+  of manually implementing `TryFrom`.
 - `EventCategory` definition is moved to `review-protocol`.
 
 ### Removed
@@ -297,8 +311,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Deprecated
 
 - `EventCategory::HttpThreat` is deprecated and replaced with `Reconnaissance`.
-  After the modification of all programs using `EventCategory::HttpThreat`
-  are completed, the `HttpThreat` category will be deleted.
+  After the modification of all programs using `EventCategory::HttpThreat` are
+  completed, the `HttpThreat` category will be deleted.
 
 ## [0.28.0] - 2024-05-16
 
@@ -379,8 +393,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Changed the return type of `Store::customer_map` to `IndexedTable<Customer>`
   to enhance security by preventing direct exposure of internal structure.
 - Moved `crate::types::Customer` and `crate::types::CustomerNetwork` to
-  `crate::Customer` and `crate::CustomerNetwork` respectively to align with other
-  type definitions.
+  `crate::Customer` and `crate::CustomerNetwork` respectively to align with
+  other type definitions.
 - Associated `Customer`, `CustomerNetwork`, with the customer data table in the
   database.
 - Moved `crate::types::DataSource` and `crate::types::DataType` to
@@ -392,10 +406,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `Ti`, `TiCmpKind`, `TriagePolicy`, `ValueKind` from `crate::types` to `crate`
   in order to align with other type definitions.
 - Associated `TriagePolicy` with the triage policy data table in the database.
-- Changed the return type of `Store::node_map` to `IndexedTable<Node>`
-  to enhance security by preventing direct exposure of internal structure.
-- Moved `Tidb`, `TidbKind` and `TidbRule` from `crate::types` to `crate` in order
-  to align with other type definitions.
+- Changed the return type of `Store::node_map` to `IndexedTable<Node>` to
+  enhance security by preventing direct exposure of internal structure.
+- Moved `Tidb`, `TidbKind` and `TidbRule` from `crate::types` to `crate` in
+  order to align with other type definitions.
 - Changed the return type of `Store::tidb_map` to `Table<Tidb>` to enhance
   security by preventing direct exposure of internal structure.
 - Modified `Tidb::new` method to require input string serialization using
@@ -438,10 +452,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `IndexedMap` as the replacement for `IndexedMultiMap` for database
   table types. This change allows for a more streamlined and efficient approach
   to managing entries in the table.
-- The customized indexed key implementation allows for more tailored and efficient
-  indexing strategies.
-- Changed the return type of `Store::network_map` to `IndexedTable<Network>`
-  to enhance security by preventing direct exposure of internal structure.
+- The customized indexed key implementation allows for more tailored and
+  efficient indexing strategies.
+- Changed the return type of `Store::network_map` to `IndexedTable<Network>` to
+  enhance security by preventing direct exposure of internal structure.
 - Replaced `IndexedMap::get_by_id` function with `Indexed::get_by_id`, providing
   a more structured and type-safe result.
   - Previously, the function returned a binary representation of the key-value
@@ -504,15 +518,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure template management.
 - Introduced `Structured`, `Unstructured`, `StructuredClusteringAlgorithm` and
-  `UnstructuredClusteringAlgorithm` to describe data stored in `Table<Template>`.
+  `UnstructuredClusteringAlgorithm` to describe data stored in
+  `Table<Template>`.
 - Introduced `TriageResponse` to describe data stored in
   `IndexedTable<TriageResponse>`.
 - Introduced `TriageResponseUpdate` to support `TriageResponse` record update.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure triage response management.
 - Introduced `TorExitNode` to describe data stored in `Table<TorExitNode>`.
-- Added new functions to facilitate replace and list operations, ensuring a
-  more controlled and secure tor exit node management.
+- Added new functions to facilitate replace and list operations, ensuring a more
+  controlled and secure tor exit node management.
 
 ### Changed
 
@@ -536,16 +551,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Changed the return type of `Store::access_token_map` to `Table<AccessToken>`
   to enhance security by preventing direct exposure of `Map`.
 - The `get_by_id` method in the `IndexedMap` struct has been updated to return a
-  key-value pair (`(Vec<u8>, Vec<u8>)`) instead of just the value (`impl
-AsRef<[u8]>`). This change accommodates scenarios where the information stored
-  in a key may not be present in the value for some Column Families. Previously,
-  if you called `get_by_id` with a specific ID, you would receive the
-  corresponding value as `Option<impl AsRef<[u8]>>`. Now, calling `get_by_id`
-  with an ID will return an `Option` containing a tuple of `Vec<u8>` for both
-  the key and the value, effectively giving you direct access to the stored key
-  along with its corresponding value.
-- Changed the return type of `Store::filter_map` to `Table<Filter>` to
-  enhance security by preventing direct exposure of `Map`.
+  key-value pair (`(Vec<u8>, Vec<u8>)`) instead of just the value
+  (`impl AsRef<[u8]>`). This change accommodates scenarios where the information
+  stored in a key may not be present in the value for some Column Families.
+  Previously, if you called `get_by_id` with a specific ID, you would receive
+  the corresponding value as `Option<impl AsRef<[u8]>>`. Now, calling
+  `get_by_id` with an ID will return an `Option` containing a tuple of `Vec<u8>`
+  for both the key and the value, effectively giving you direct access to the
+  stored key along with its corresponding value.
+- Changed the return type of `Store::filter_map` to `Table<Filter>` to enhance
+  security by preventing direct exposure of `Map`.
 - Modified `Filter` struct to include the `username` property, representing the
   associated username for the specific `Filter`.
 - Changed the return type of `Store::model_indicator_map` to
@@ -575,8 +590,8 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - Modify the kind value of the Blocklist/CryptocurrencyMiningPool/TorConnection
   event that implements the Match trait. This fix allows the kind filter in
   GraphQL queries that retrieve the event to work correctly.
-- Modified `Node` struct to include the `as_is` and `to_be` fields,
-  with existing field values migrated to the `to_be` field.
+- Modified `Node` struct to include the `as_is` and `to_be` fields, with
+  existing field values migrated to the `to_be` field.
 
 ### Deprecated
 
@@ -601,9 +616,10 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
   functions were designed to attempt recovery from the most recent backup until
   success. We recommend implementing backup recovery strategies at the
   application level to better suit specific needs.
-- The `FromKeyValue` implementation for `DeserializeOwned` has been removed. This
-  change was made to ensure that the `FromKeyValue` trait is only implemented for
-  types that are explicitly intended to be deserialized from key-value entries.
+- The `FromKeyValue` implementation for `DeserializeOwned` has been removed.
+  This change was made to ensure that the `FromKeyValue` trait is only
+  implemented for types that are explicitly intended to be deserialized from
+  key-value entries.
 
 ### Fixed
 
@@ -628,8 +644,8 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
   - A migration function has been provided to seamlessly transition data from
     the old PostgreSQL table to RocksDB.
 - Moved the status table from the PostgreSQL database to RocksDB.
-  - The status table data is now stored in RocksDB for improved performance
-    and scalability.
+  - The status table data is now stored in RocksDB for improved performance and
+    scalability.
   - A migration function has been provided to seamlessly transition data from
     the old PostgreSQL table to RocksDB.
 - Modified `Node` fields.
@@ -656,8 +672,8 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
   - `ExtraThreat`: This is a detection event for misc log events. This event
     replaces the place of `EventKind::Log` because it stores detections from
     unstructured Log data and composite data (network event/sysmon events).
-    Also, because `EventKind::Log` is still not in actual use today, there is
-    no migration processing for that change.
+    Also, because `EventKind::Log` is still not in actual use today, there is no
+    migration processing for that change.
 
 ### Changed
 
@@ -683,8 +699,8 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - The default implementation of `Indexed::update` has a code that it assumes the
   implementor is using key + id as the primary key in RocksDB. This is not true
   for `IndexedMap`, which uses only the key as the primary key. This version
-  fixes the issue by using `indexed_key`, which behaves differently depending
-  on the implementor.
+  fixes the issue by using `indexed_key`, which behaves differently depending on
+  the implementor.
 - The default implementation of `Indexed::update` doesn't allow duplicated keys
   which might not be true for `IndexedMultimap`. This version fixes the issue by
   guard it with a check.
@@ -718,10 +734,10 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 
 ### Added
 
-- Introduced the `batch_ts` attribute to the `Statistics` module, providing users
-  with the ability to retrieve the timestamp associated with the batch of column
-  statistics. This information is valuable for tracking changes over time and
-  aligning statistical insights with specific data batches.
+- Introduced the `batch_ts` attribute to the `Statistics` module, providing
+  users with the ability to retrieve the timestamp associated with the batch of
+  column statistics. This information is valuable for tracking changes over time
+  and aligning statistical insights with specific data batches.
 
 ### Changed
 
@@ -744,7 +760,8 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 
 ### Added
 
-- Added public accessors for the `model` field in the `BatchInfo` and `Scores` structs.
+- Added public accessors for the `model` field in the `BatchInfo` and `Scores`
+  structs.
 
 ### Changed
 
@@ -779,8 +796,8 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
   related to models stored in the PostgreSQL database.
 - Introduced the `ModelDigest` struct, designed to encapsulate all the
   information necessary for the web user interface.
-- Requires a 16 bytes long header for serializing or deserializing `Model`, encoded
-  with version, kind, format version information for `Model`.
+- Requires a 16 bytes long header for serializing or deserializing `Model`,
+  encoded with version, kind, format version information for `Model`.
 
 ### Changed
 
