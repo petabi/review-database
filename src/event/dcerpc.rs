@@ -1,10 +1,11 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::RawEventAttrKind;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListDceRpcFields {
@@ -142,7 +143,10 @@ impl Match for BlockListDceRpc {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    // Since `dcerpc` is not currently an event type collected by Feature Sensor, and as a result,
+    // the notation for each attribute of `dcerpc` has not been finalized. Therefore, we will
+    // proceed with this part after the collection and notation of dcerpc events is finalized.
+    fn to_attr_value(&self, _raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        None
     }
 }
