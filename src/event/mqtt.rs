@@ -1,10 +1,40 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{MqttAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::triage_scores_to_string;
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string};
+
+macro_rules! find_mqtt_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Mqtt(attr) = $raw_event_attr {
+            let target_value = match attr {
+                MqttAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                MqttAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                MqttAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                MqttAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                MqttAttr::Proto => AttrValue::UInt($event.proto.into()),
+                MqttAttr::Protocol => AttrValue::String(&$event.protocol),
+                MqttAttr::Version => AttrValue::UInt($event.version.into()),
+                MqttAttr::ClientId => AttrValue::String(&$event.client_id),
+                MqttAttr::ConnackReason => AttrValue::UInt($event.connack_reason.into()),
+                MqttAttr::Subscribe => AttrValue::VecString(&$event.subscribe),
+                MqttAttr::SubackReason => AttrValue::VecUInt(
+                    $event
+                        .suback_reason
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistMqttFields {
@@ -158,7 +188,7 @@ impl Match for BlocklistMqtt {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_mqtt_attr_by_kind!(self, raw_event_attr)
     }
 }

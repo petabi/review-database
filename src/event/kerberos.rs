@@ -1,10 +1,37 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{KerberosAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::triage_scores_to_string;
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string};
+
+macro_rules! find_kerberos_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Kerberos(attr) = $raw_event_attr {
+            let target_value = match attr {
+                KerberosAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                KerberosAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                KerberosAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                KerberosAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                KerberosAttr::Proto => AttrValue::UInt($event.proto.into()),
+                KerberosAttr::ClientTime => AttrValue::SInt($event.client_time),
+                KerberosAttr::ServerTime => AttrValue::SInt($event.server_time),
+                KerberosAttr::ErrorCode => AttrValue::UInt($event.error_code.into()),
+                KerberosAttr::ClientRealm => AttrValue::String(&$event.client_realm),
+                KerberosAttr::CnameType => AttrValue::UInt($event.cname_type.into()),
+                KerberosAttr::ClientName => AttrValue::VecString(&$event.client_name),
+                KerberosAttr::Realm => AttrValue::String(&$event.realm),
+                KerberosAttr::SnameType => AttrValue::UInt($event.sname_type.into()),
+                KerberosAttr::ServiceName => AttrValue::VecString(&$event.service_name),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistKerberosFields {
@@ -173,7 +200,7 @@ impl Match for BlocklistKerberos {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_kerberos_attr_by_kind!(self, raw_event_attr)
     }
 }

@@ -1,10 +1,43 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{RawEventAttrKind, SshAttr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::triage_scores_to_string;
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string};
+
+macro_rules! find_ssh_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Ssh(attr) = $raw_event_attr {
+            let target_value = match attr {
+                SshAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                SshAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                SshAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                SshAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                SshAttr::Proto => AttrValue::UInt($event.proto.into()),
+                SshAttr::Client => AttrValue::String(&$event.client),
+                SshAttr::Server => AttrValue::String(&$event.server),
+                SshAttr::CipherAlg => AttrValue::String(&$event.cipher_alg),
+                SshAttr::MacAlg => AttrValue::String(&$event.mac_alg),
+                SshAttr::CompressionAlg => AttrValue::String(&$event.compression_alg),
+                SshAttr::KexAlg => AttrValue::String(&$event.kex_alg),
+                SshAttr::HostKeyAlg => AttrValue::String(&$event.host_key_alg),
+                SshAttr::HasshAlgorithms => AttrValue::String(&$event.hassh_algorithms),
+                SshAttr::Hassh => AttrValue::String(&$event.hassh),
+                SshAttr::HasshServerAlgorithms => {
+                    AttrValue::String(&$event.hassh_server_algorithms)
+                }
+                SshAttr::HasshServer => AttrValue::String(&$event.hassh_server),
+                SshAttr::ClientShka => AttrValue::String(&$event.client_shka),
+                SshAttr::ServerShka => AttrValue::String(&$event.server_shka),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistSshFields {
@@ -192,7 +225,7 @@ impl Match for BlocklistSsh {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_ssh_attr_by_kind!(self, raw_event_attr)
     }
 }
