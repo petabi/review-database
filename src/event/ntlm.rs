@@ -1,10 +1,33 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{NtlmAttr, RawEventKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! ntlm_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventKind::Ntlm(attr) = $raw_event_attr {
+            let target_value = match attr {
+                NtlmAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                NtlmAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                NtlmAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                NtlmAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                NtlmAttr::Proto => AttrValue::UInt($event.proto.into()),
+                NtlmAttr::Protocol => AttrValue::String(&$event.protocol),
+                NtlmAttr::Username => AttrValue::String(&$event.username),
+                NtlmAttr::Hostname => AttrValue::String(&$event.hostname),
+                NtlmAttr::Domainname => AttrValue::String(&$event.domainname),
+                NtlmAttr::Success => AttrValue::String(&$event.success),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListNtlmFields {
@@ -144,7 +167,7 @@ impl Match for BlockListNtlm {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, raw_event_attr: RawEventKind) -> Option<AttrValue> {
+        ntlm_target_attr!(self, raw_event_attr)
     }
 }
