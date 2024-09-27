@@ -2,9 +2,35 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use super::{
+    common::{AttrValue, Match},
+    EventCategory, TriageScore, MEDIUM,
+};
 use crate::event::common::triage_scores_to_string;
+
+#[derive(Debug, EnumString)]
+enum DceRpcAttr {
+    #[strum(serialize = "dcerpc-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "dcerpc-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "dcerpc-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "dcerpc-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "dcerpc-proto")]
+    Proto,
+    #[strum(serialize = "dcerpc-rtt")]
+    Rtt,
+    #[strum(serialize = "dcerpc-named_pipe")]
+    NamedPipe,
+    #[strum(serialize = "dcerpc-endpoint")]
+    Endpoint,
+    #[strum(serialize = "dcerpc-operation")]
+    Operation,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListDceRpcFields {
@@ -101,7 +127,7 @@ impl BlockListDceRpc {
     }
 }
 
-impl Match for BlockListDceRpc {
+impl Match<DceRpcAttr> for BlockListDceRpc {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -142,7 +168,18 @@ impl Match for BlockListDceRpc {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: DceRpcAttr) -> Option<AttrValue> {
+        let target_value = match proto_attr {
+            DceRpcAttr::SrcAddr => AttrValue::Addr(self.src_addr),
+            DceRpcAttr::SrcPort => AttrValue::UInt(self.src_port.into()),
+            DceRpcAttr::DstAddr => AttrValue::Addr(self.dst_addr),
+            DceRpcAttr::DstPort => AttrValue::UInt(self.dst_port.into()),
+            DceRpcAttr::Proto => AttrValue::UInt(self.proto.into()),
+            DceRpcAttr::Rtt => AttrValue::SInt(self.rtt.into()),
+            DceRpcAttr::NamedPipe => AttrValue::String(self.named_pipe.clone()),
+            DceRpcAttr::Endpoint => AttrValue::String(self.endpoint.clone()),
+            DceRpcAttr::Operation => AttrValue::String(self.operation.clone()),
+        };
+        Some(target_value)
     }
 }

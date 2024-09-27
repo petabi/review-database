@@ -2,9 +2,46 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::{to_hardware_address, triage_scores_to_string};
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{to_hardware_address, triage_scores_to_string, AttrValue};
+
+#[derive(Debug, EnumString)]
+enum BootpAttr {
+    #[strum(serialize = "bootp-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "bootp-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "bootp-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "bootp-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "bootp-proto")]
+    Proto,
+    #[strum(serialize = "bootp-op")]
+    Op,
+    #[strum(serialize = "bootp-htype")]
+    Htype,
+    #[strum(serialize = "bootp-hops")]
+    Hops,
+    #[strum(serialize = "bootp-xid")]
+    Xid,
+    #[strum(serialize = "bootp-ciaddr")]
+    CiAddr,
+    #[strum(serialize = "bootp-yiaddr")]
+    YiAddr,
+    #[strum(serialize = "bootp-siaddr")]
+    SiAddr,
+    #[strum(serialize = "bootp-giaddr")]
+    GiAddr,
+    #[strum(serialize = "bootp-chaddr")]
+    ChAddr,
+    #[strum(serialize = "bootp-sname")]
+    SName,
+    #[strum(serialize = "bootp-file")]
+    File,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListBootpFields {
@@ -135,7 +172,7 @@ impl BlockListBootp {
     }
 }
 
-impl Match for BlockListBootp {
+impl Match<BootpAttr> for BlockListBootp {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -176,7 +213,27 @@ impl Match for BlockListBootp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: BootpAttr) -> Option<AttrValue> {
+        let target_val = match proto_attr {
+            BootpAttr::SrcAddr => AttrValue::Addr(self.src_addr),
+            BootpAttr::SrcPort => AttrValue::UInt(self.src_port.into()),
+            BootpAttr::DstAddr => AttrValue::Addr(self.dst_addr),
+            BootpAttr::DstPort => AttrValue::UInt(self.dst_port.into()),
+            BootpAttr::Proto => AttrValue::UInt(self.proto.into()),
+            BootpAttr::Op => AttrValue::UInt(self.op.into()),
+            BootpAttr::Htype => AttrValue::UInt(self.htype.into()),
+            BootpAttr::Hops => AttrValue::UInt(self.hops.into()),
+            BootpAttr::Xid => AttrValue::UInt(self.xid.into()),
+            BootpAttr::CiAddr => AttrValue::Addr(self.ciaddr),
+            BootpAttr::YiAddr => AttrValue::Addr(self.yiaddr),
+            BootpAttr::SiAddr => AttrValue::Addr(self.siaddr),
+            BootpAttr::GiAddr => AttrValue::Addr(self.giaddr),
+            BootpAttr::ChAddr => {
+                AttrValue::VecUInt(self.chaddr.iter().map(|s| u64::from(*s)).collect())
+            }
+            BootpAttr::SName => AttrValue::String(self.sname.clone()),
+            BootpAttr::File => AttrValue::String(self.file.clone()),
+        };
+        Some(target_val)
     }
 }

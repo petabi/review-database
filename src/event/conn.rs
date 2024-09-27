@@ -6,10 +6,42 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::{triage_scores_to_string, vector_to_string};
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, vector_to_string, AttrValue};
 
+#[derive(Debug, EnumString)]
+enum ConnAttr {
+    #[strum(serialize = "conn-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "conn-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "conn-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "conn-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "conn-proto")]
+    Proto,
+    #[strum(serialize = "conn-conn_state")]
+    ConnState,
+    #[strum(serialize = "conn-durantion")]
+    Duration,
+    #[strum(serialize = "conn-op")]
+    Service,
+    #[strum(serialize = "conn-orig_bytes")]
+    OrigBytes,
+    #[strum(serialize = "conn-resp_bytes")]
+    RespBytes,
+    #[strum(serialize = "conn-orig_pkts")]
+    OrigPkts,
+    #[strum(serialize = "conn-resp_pkts")]
+    RespPkts,
+    #[strum(serialize = "conn-orig_l2_bytes")]
+    OrigL2Bytes,
+    #[strum(serialize = "conn-resp_l2_bytes")]
+    RespL2Bytes,
+}
 #[derive(Serialize, Deserialize)]
 pub struct PortScanFields {
     pub src_addr: IpAddr,
@@ -81,7 +113,7 @@ impl PortScan {
     }
 }
 
-impl Match for PortScan {
+impl Match<ConnAttr> for PortScan {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -122,8 +154,16 @@ impl Match for PortScan {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: ConnAttr) -> Option<AttrValue> {
+        match proto_attr {
+            ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+            ConnAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+            ConnAttr::DstPort => Some(AttrValue::VecUInt(
+                self.dst_ports.iter().map(|val| u64::from(*val)).collect(),
+            )),
+            ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+            _ => None,
+        }
     }
 }
 
@@ -198,7 +238,7 @@ impl MultiHostPortScan {
     }
 }
 
-impl Match for MultiHostPortScan {
+impl Match<ConnAttr> for MultiHostPortScan {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -239,8 +279,14 @@ impl Match for MultiHostPortScan {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: ConnAttr) -> Option<AttrValue> {
+        match proto_attr {
+            ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+            ConnAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+            ConnAttr::DstAddr => Some(AttrValue::VecAddr(self.dst_addrs.clone())),
+            ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+            _ => None,
+        }
     }
 }
 
@@ -310,7 +356,7 @@ impl ExternalDdos {
     }
 }
 
-impl Match for ExternalDdos {
+impl Match<ConnAttr> for ExternalDdos {
     fn src_addr(&self) -> IpAddr {
         IpAddr::V4(Ipv4Addr::UNSPECIFIED)
     }
@@ -351,8 +397,13 @@ impl Match for ExternalDdos {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: ConnAttr) -> Option<AttrValue> {
+        match proto_attr {
+            ConnAttr::SrcAddr => Some(AttrValue::VecAddr(self.src_addrs.clone())),
+            ConnAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+            ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+            _ => None,
+        }
     }
 }
 
@@ -472,7 +523,7 @@ impl BlockListConn {
     }
 }
 
-impl Match for BlockListConn {
+impl Match<ConnAttr> for BlockListConn {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -513,7 +564,23 @@ impl Match for BlockListConn {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: ConnAttr) -> Option<AttrValue> {
+        let target_value = match proto_attr {
+            ConnAttr::SrcAddr => AttrValue::Addr(self.src_addr),
+            ConnAttr::SrcPort => AttrValue::UInt(self.src_port.into()),
+            ConnAttr::DstAddr => AttrValue::Addr(self.dst_addr),
+            ConnAttr::DstPort => AttrValue::UInt(self.dst_port.into()),
+            ConnAttr::Proto => AttrValue::UInt(self.proto.into()),
+            ConnAttr::ConnState => AttrValue::String(self.conn_state.clone()),
+            ConnAttr::Duration => AttrValue::SInt(self.duration.into()),
+            ConnAttr::Service => AttrValue::String(self.service.clone()),
+            ConnAttr::OrigBytes => AttrValue::UInt(self.orig_bytes.into()),
+            ConnAttr::RespBytes => AttrValue::UInt(self.resp_bytes.into()),
+            ConnAttr::OrigPkts => AttrValue::UInt(self.orig_pkts.into()),
+            ConnAttr::RespPkts => AttrValue::UInt(self.resp_pkts.into()),
+            ConnAttr::OrigL2Bytes => AttrValue::UInt(self.orig_l2_bytes.into()),
+            ConnAttr::RespL2Bytes => AttrValue::UInt(self.resp_l2_bytes.into()),
+        };
+        Some(target_value)
     }
 }
