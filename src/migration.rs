@@ -81,7 +81,11 @@ pub async fn migrate_backend<P: AsRef<Path>>(
 /// or if the data directory exists but is in the format incompatible with the
 /// current version.
 pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()> {
-    type Migration = (VersionReq, Version, fn(&crate::Store) -> anyhow::Result<()>);
+    type Migration = (
+        VersionReq,
+        Version,
+        fn(&mut crate::Store) -> anyhow::Result<()>,
+    );
 
     let data_dir = data_dir.as_ref();
     let backup_dir = backup_dir.as_ref();
@@ -151,7 +155,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         .find(|(req, _to, _m)| req.matches(&version))
     {
         info!("Migrating database to {to}");
-        m(&store)?;
+        m(&mut store)?;
         version = to.clone();
         if compatible.matches(&version) {
             create_version_file(&backup).context("failed to update VERSION")?;
@@ -216,11 +220,11 @@ fn read_version_file(path: &Path) -> Result<Version> {
     Version::parse(&ver).context("cannot parse VERSION")
 }
 
-fn migrate_0_30_to_0_31(store: &super::Store) -> Result<()> {
+fn migrate_0_30_to_0_31(store: &mut super::Store) -> Result<()> {
     migrate_rocksdb_to_redb(store)
 }
 
-fn migrate_rocksdb_to_redb(store: &super::Store) -> Result<()> {
+fn migrate_rocksdb_to_redb(store: &mut super::Store) -> Result<()> {
     use crate::Iterable;
 
     let table = store.trusted_domain_map();
@@ -236,11 +240,13 @@ fn migrate_rocksdb_to_redb(store: &super::Store) -> Result<()> {
     drop(tbl);
     write_txn.commit()?;
 
-    // TODO: Remove the entire RocksDB database after the migration is done.
+    store
+        .legacy_states
+        .clear_table(crate::tables::TRUSTED_DNS_SERVERS)?;
     Ok(())
 }
 
-fn migrate_0_29_to_0_30_0(store: &super::Store) -> Result<()> {
+fn migrate_0_29_to_0_30_0(store: &mut super::Store) -> Result<()> {
     migrate_0_30_tidb(store)?;
     migrate_0_30_event_struct(store)
 }
@@ -507,7 +513,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
     Ok(())
 }
 
-fn migrate_0_28_to_0_29_0(store: &super::Store) -> Result<()> {
+fn migrate_0_28_to_0_29_0(store: &mut super::Store) -> Result<()> {
     migrate_event_struct(store)?;
     migrate_0_29_node(store)?;
     migrate_0_29_account(store)
@@ -1112,7 +1118,7 @@ where
     Ok(())
 }
 
-fn migrate_0_26_to_0_28(store: &super::Store) -> Result<()> {
+fn migrate_0_26_to_0_28(store: &mut super::Store) -> Result<()> {
     migrate_outlier_info(store)?;
     migrate_account_policy(store)
 }
@@ -1169,7 +1175,7 @@ fn migrate_account_policy(store: &super::Store) -> Result<()> {
     Ok(())
 }
 
-fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
+fn migrate_0_25_to_0_26(store: &mut super::Store) -> Result<()> {
     use std::{borrow::Cow, collections::HashMap};
 
     use bincode::Options;
@@ -1751,8 +1757,8 @@ mod tests {
 
         assert!(node_db.insert(old_node.clone()).is_ok());
         let (db_dir, backup_dir) = settings.close();
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_25_to_0_26(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_25_to_0_26(&mut settings.store).is_ok());
 
         let map = settings.store.node_map();
         let node_db = map.raw();
@@ -1890,8 +1896,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -1914,8 +1920,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -1963,8 +1969,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     fn http_threat_before_v29() -> super::migration_structures::HttpThreatBeforeV29 {
@@ -2021,8 +2027,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2044,8 +2050,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     fn dga_before_v29() -> super::migration_structures::DgaBeforeV29 {
@@ -2097,8 +2103,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2119,8 +2125,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2168,8 +2174,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     fn non_browser_before_v29() -> super::migration_structures::NonBrowserBeforeV29 {
@@ -2220,8 +2226,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2244,8 +2250,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     fn block_list_http_before_v29() -> super::migration_structures::BlockListHttpBeforeV29 {
@@ -2300,8 +2306,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2324,8 +2330,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2371,8 +2377,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2416,8 +2422,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2455,8 +2461,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     fn block_list_ntlm_before_v29() -> super::migration_structures::BlockListNtlmBeforeV29 {
@@ -2498,8 +2504,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2522,8 +2528,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     fn block_list_smtp_before_v29() -> super::migration_structures::BlockListSmtpBeforeV29 {
@@ -2564,8 +2570,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2588,8 +2594,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     fn block_list_ssh_before_v29() -> super::migration_structures::BlockListSshBeforeV29 {
@@ -2636,8 +2642,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2660,8 +2666,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     fn block_list_tls_before_v29() -> super::migration_structures::BlockListTlsBeforeV29 {
@@ -2714,8 +2720,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_28_to_0_29_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_28_to_0_29_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2738,8 +2744,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2790,8 +2796,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2841,8 +2847,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2880,8 +2886,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2919,8 +2925,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -2969,8 +2975,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -3035,8 +3041,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -3128,8 +3134,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -3184,8 +3190,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -3277,8 +3283,8 @@ mod tests {
 
         let (db_dir, backup_dir) = settings.close();
 
-        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
-        assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
+        let mut settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_29_to_0_30_0(&mut settings.store).is_ok());
     }
 
     #[test]
@@ -3650,7 +3656,7 @@ mod tests {
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
-        let store = Store::new(db_dir.path(), backup_dir.path()).unwrap();
+        let mut store = Store::new(db_dir.path(), backup_dir.path()).unwrap();
 
         let table = store.legacy_states.trusted_domains();
         let map = table.raw();
@@ -3658,7 +3664,7 @@ mod tests {
         map.put(b"domain2", b"example 2").unwrap();
         map.put(b"domain3", b"example 3").unwrap();
 
-        assert!(super::migrate_rocksdb_to_redb(&store).is_ok());
+        assert!(&super::migrate_rocksdb_to_redb(&mut store).is_ok());
 
         let read_txn = store.states.begin_read().unwrap();
         let tbl = read_txn
