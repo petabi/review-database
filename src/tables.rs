@@ -442,6 +442,12 @@ impl StateDb {
             &opts, path, MAP_NAMES,
         )?)
     }
+
+    pub(crate) fn clear_table(&mut self, name: &str) -> Result<()> {
+        let inner = self.inner.as_mut().expect("database must be open");
+        inner.drop_cf(name)?;
+        Ok(())
+    }
 }
 
 /// Represents a table that can be iterated over.
