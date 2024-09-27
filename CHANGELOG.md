@@ -14,6 +14,17 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added kind keywords for detailed searching of `RepeatedHttpSessions`,
   `NonBrowser`,`ExternalDdos`, `CryptocurrencyMiningPool`, `BlockListDceRpc`
   detection events.
+- Added triage functionality for scoring with attributes of each raw event.
+  - Introduced a new crate attrievent. The kinds of raw events and their
+    attributes change as our software evolves. The purpose of attrievent is to
+    provide a comprehensive list of attributes for both review and the UI
+    simultaneously.
+  - Added a new enum type `AttrValue`. This type is used to convert the
+    attribute value of each raw event to its corresponding type to perform
+    comparison operations.
+  - Added the `to_attr_value` to the `Match` trait to generate an `AttrValue`
+    from the field in all detection event.
+  - Implemented `score_by_attr` under `Match` trait.
 
 ### Changed
 
@@ -26,6 +37,18 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   generated from raw data other than clusters.
 - Changed the type of `max_parallel_sessions` of `Account` from `Option<u32>` to
   `Option<u8>`, since the value is expected not to exceed the range of `u8`.
+- Removed the `tor` module file. The structures (`HttpEventFields`,
+  `TorConnection`) and implementations within that module have been moved to
+  `crate::event::http`.
+- Modified the `ValueKind` enum to support different types of input for packet
+  attribute triage.
+- Changed the type of fields in the detection event structure for some raw
+  event. This change allows users to see meaningful values directly without
+  having to do any special conversion for that field.
+  - `post_body` inside structs of `event::http`: `Vec<u8>` to `String`.
+  - `chaddr` inside structs of `event::bootp`: `Vec<u8>` to `String`.
+  - `class_id`, `client_id` inside structs of `event::dhcp`: `Vec<u8>` to
+    `String`.
 
 ## [0.33.1] - 2024-12-20
 

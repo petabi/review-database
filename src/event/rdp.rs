@@ -6,15 +6,33 @@ use std::{
     num::NonZeroU8,
 };
 
+use attrievent::attribute::{RawEventAttrKind, RdpAttr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{
     common::{vector_to_string, Match},
-    EventCategory, TriagePolicy, TriageScore, MEDIUM,
+    EventCategory, TriageScore, MEDIUM,
 };
-use crate::event::common::triage_scores_to_string;
+use crate::event::common::{triage_scores_to_string, AttrValue};
 
+macro_rules! rdp_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Rdp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                RdpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                RdpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                RdpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                RdpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                RdpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                RdpAttr::Cookie => AttrValue::String(&$event.cookie),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 #[derive(Serialize, Deserialize)]
 pub struct RdpBruteForceFields {
     pub src_addr: IpAddr,
@@ -121,8 +139,17 @@ impl Match for RdpBruteForce {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        if let RawEventAttrKind::Rdp(attr) = raw_event_attr {
+            match attr {
+                RdpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                RdpAttr::DstAddr => Some(AttrValue::VecAddr(&self.dst_addrs)),
+                RdpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -245,7 +272,7 @@ impl Match for BlockListRdp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        rdp_target_attr!(self, raw_event_attr)
     }
 }

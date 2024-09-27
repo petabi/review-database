@@ -1,11 +1,36 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{LdapAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! ldap_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Ldap(attr) = $raw_event_attr {
+            let target_value = match attr {
+                LdapAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                LdapAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                LdapAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                LdapAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                LdapAttr::Proto => AttrValue::UInt($event.proto.into()),
+                LdapAttr::MessageId => AttrValue::UInt($event.message_id.into()),
+                LdapAttr::Version => AttrValue::UInt($event.version.into()),
+                LdapAttr::Opcode => AttrValue::VecString(&$event.opcode),
+                LdapAttr::Result => AttrValue::VecString(&$event.result),
+                LdapAttr::DiagnosticMessage => AttrValue::VecString(&$event.diagnostic_message),
+                LdapAttr::Object => AttrValue::VecString(&$event.object),
+                LdapAttr::Argument => AttrValue::VecString(&$event.argument),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForceFields {
@@ -135,8 +160,18 @@ impl Match for LdapBruteForce {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        if let RawEventAttrKind::Ldap(attr) = raw_event_attr {
+            match attr {
+                LdapAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                LdapAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                LdapAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+                LdapAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -292,8 +327,8 @@ impl Match for LdapPlainText {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        ldap_target_attr!(self, raw_event_attr)
     }
 }
 
@@ -407,7 +442,7 @@ impl Match for BlockListLdap {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        ldap_target_attr!(self, raw_event_attr)
     }
 }
