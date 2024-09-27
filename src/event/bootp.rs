@@ -1,10 +1,39 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{BootpAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::{to_hardware_address, triage_scores_to_string};
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, to_hardware_address, triage_scores_to_string};
+
+macro_rules! find_bootp_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Bootp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                BootpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                BootpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                BootpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                BootpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                BootpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                BootpAttr::Op => AttrValue::UInt($event.op.into()),
+                BootpAttr::Htype => AttrValue::UInt($event.htype.into()),
+                BootpAttr::Hops => AttrValue::UInt($event.hops.into()),
+                BootpAttr::Xid => AttrValue::UInt($event.xid.into()),
+                BootpAttr::CiAddr => AttrValue::Addr($event.ciaddr),
+                BootpAttr::YiAddr => AttrValue::Addr($event.yiaddr),
+                BootpAttr::SiAddr => AttrValue::Addr($event.siaddr),
+                BootpAttr::GiAddr => AttrValue::Addr($event.giaddr),
+                BootpAttr::ChAddr => AttrValue::VecRaw(&$event.chaddr),
+                BootpAttr::SName => AttrValue::String(&$event.sname),
+                BootpAttr::File => AttrValue::String(&$event.file),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistBootpFields {
@@ -182,7 +211,7 @@ impl Match for BlocklistBootp {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_bootp_attr_by_kind!(self, raw_event_attr)
     }
 }

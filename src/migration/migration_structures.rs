@@ -3,18 +3,22 @@ use std::{
     time::Duration,
 };
 
+use attrievent::attribute::{
+    ConnAttr, DnsAttr, FtpAttr, HttpAttr, RawEventKind, RdpAttr, SmtpAttr, SshAttr,
+};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    BlocklistConnFields, BlocklistDnsFields, BlocklistHttpFields, BlocklistKerberosFields,
-    BlocklistNtlmFields, BlocklistRdpFields, BlocklistSmtpFields, BlocklistSshFields,
-    BlocklistTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
-    ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
-    HttpThreatFields, LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields,
-    NetworkThreat, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, Role,
-    TriageScore, WindowsThreat,
+    AttrCmpKind, BlocklistConnFields, BlocklistDnsFields, BlocklistHttpFields,
+    BlocklistKerberosFields, BlocklistNtlmFields, BlocklistRdpFields, BlocklistSmtpFields,
+    BlocklistSshFields, BlocklistTlsFields, Confidence, CryptocurrencyMiningPoolFields, DgaFields,
+    DnsEventFields, EventCategory, ExternalDdosFields, ExtraThreat, FtpBruteForceFields,
+    FtpEventFields, HttpEventFields, HttpThreatFields, LdapBruteForceFields, LdapEventFields,
+    MultiHostPortScanFields, NetworkThreat, PacketAttr, PortScanFields, RdpBruteForceFields,
+    RepeatedHttpSessionsFields, Response, Role, Ti, TriagePolicy, TriageScore, ValueKind,
+    WindowsThreat,
     account::{PasswordHashAlgorithm, SaltedPassword},
     types::Account,
 };
@@ -2233,5 +2237,270 @@ impl From<Account> for AccountBeforeV36 {
             password_hash_algorithm: input.password_hash_algorithm,
             password_last_modified_at: input.password_last_modified_at,
         }
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
+pub(super) enum ValueKindBeforeV38 {
+    String,
+    Integer,
+    Float,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub(super) struct TriagePolicyBeforeV38 {
+    pub(super) id: u32,
+    pub(super) name: String,
+    pub(super) ti_db: Vec<Ti>,
+    pub(super) packet_attr: Vec<PacketAttrBeforeV38>,
+    pub(super) confidence: Vec<Confidence>,
+    pub(super) response: Vec<Response>,
+    pub(super) creation_time: DateTime<Utc>,
+}
+
+use std::borrow::Cow;
+
+use bincode::Options;
+
+use crate::Indexable;
+
+impl Indexable for TriagePolicyBeforeV38 {
+    fn key(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.name.as_bytes())
+    }
+    fn index(&self) -> u32 {
+        self.id
+    }
+    fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
+        key
+    }
+    fn value(&self) -> Vec<u8> {
+        bincode::DefaultOptions::new()
+            .serialize(self)
+            .expect("serializable")
+    }
+
+    fn set_index(&mut self, index: u32) {
+        self.id = index;
+    }
+}
+
+#[derive(Clone, PartialEq, Deserialize, Serialize)]
+pub(super) struct PacketAttrBeforeV38 {
+    pub(super) attr_name: String,
+    pub(super) value_kind: ValueKindBeforeV38,
+    pub(super) cmp_kind: AttrCmpKind,
+    pub(super) first_value: Vec<u8>,
+    pub(super) second_value: Option<Vec<u8>>,
+    pub(super) weight: Option<f64>,
+}
+
+impl From<TriagePolicyBeforeV38> for TriagePolicy {
+    fn from(input: TriagePolicyBeforeV38) -> Self {
+        Self {
+            id: input.id,
+            name: input.name,
+            ti_db: input.ti_db,
+            packet_attr: input
+                .packet_attr
+                .into_iter()
+                .filter_map(|attr| TryFrom::try_from(attr).ok())
+                .collect(),
+            confidence: input.confidence,
+            response: input.response,
+            creation_time: input.creation_time,
+        }
+    }
+}
+
+impl TryFrom<PacketAttrBeforeV38> for PacketAttr {
+    type Error = &'static str;
+
+    fn try_from(input: PacketAttrBeforeV38) -> Result<Self, Self::Error> {
+        let raw_event_kind =
+            raw_event_kind_from_attr_name(&input.attr_name).ok_or("invalid attribute name")?;
+
+        let (attr_name, value_kind) = match input.attr_name.as_str() {
+            "conn-id.orig_h" => (ConnAttr::SrcAddr.to_string(), ValueKind::IpAddr),
+            "conn-id.orig_p" => (ConnAttr::SrcPort.to_string(), ValueKind::UInteger),
+            "conn-id.resp_h" => (ConnAttr::DstAddr.to_string(), ValueKind::IpAddr),
+            "conn-id.resp_p" => (ConnAttr::DstPort.to_string(), ValueKind::UInteger),
+            "conn-proto" => (ConnAttr::Proto.to_string(), ValueKind::UInteger),
+            "conn-service" => (ConnAttr::Service.to_string(), ValueKind::String),
+            "conn-duration" => (ConnAttr::Duration.to_string(), ValueKind::Integer),
+            "conn-orig_bytes" => (ConnAttr::OrigBytes.to_string(), ValueKind::UInteger),
+            "conn-resp_bytes" => (ConnAttr::RespBytes.to_string(), ValueKind::UInteger),
+            "conn-orig_pkts" => (ConnAttr::OrigPkts.to_string(), ValueKind::UInteger),
+            "conn-resp_pkts" => (ConnAttr::RespPkts.to_string(), ValueKind::UInteger),
+            "dns-id.orig_h" => (DnsAttr::SrcAddr.to_string(), ValueKind::IpAddr),
+            "dns-id.orig_p" => (DnsAttr::SrcPort.to_string(), ValueKind::UInteger),
+            "dns-id.resp_h" => (DnsAttr::DstAddr.to_string(), ValueKind::IpAddr),
+            "dns-id.resp_p" => (DnsAttr::DstPort.to_string(), ValueKind::UInteger),
+            "dns-proto" => (DnsAttr::Proto.to_string(), ValueKind::UInteger),
+            "dns-trans_id" => (DnsAttr::TransId.to_string(), ValueKind::UInteger),
+            "dns-rtt" => (DnsAttr::Rtt.to_string(), ValueKind::Integer),
+            "dns-query" => (DnsAttr::Query.to_string(), ValueKind::String),
+            "dns-qclass" => (DnsAttr::QClass.to_string(), ValueKind::UInteger),
+            "dns-qtype" => (DnsAttr::QType.to_string(), ValueKind::UInteger),
+            "dns-AA" => (DnsAttr::AA.to_string(), ValueKind::Bool),
+            "dns-TC" => (DnsAttr::TC.to_string(), ValueKind::Bool),
+            "dns-RD" => (DnsAttr::RD.to_string(), ValueKind::Bool),
+            "dns-RA" => (DnsAttr::RA.to_string(), ValueKind::Bool),
+            "dns-answers" => (DnsAttr::Answer.to_string(), ValueKind::String),
+            "dns-TTLs" => (DnsAttr::Ttl.to_string(), ValueKind::Integer),
+            "ftp-id.orig_h" => (FtpAttr::SrcAddr.to_string(), ValueKind::IpAddr),
+            "ftp-id.orig_p" => (FtpAttr::SrcPort.to_string(), ValueKind::UInteger),
+            "ftp-id.resp_h" => (FtpAttr::DstAddr.to_string(), ValueKind::IpAddr),
+            "ftp-id.resp_p" => (FtpAttr::DstPort.to_string(), ValueKind::UInteger),
+            "ftp-user" => (FtpAttr::User.to_string(), ValueKind::String),
+            "ftp-password" => (FtpAttr::Password.to_string(), ValueKind::String),
+            "ftp-command" => (FtpAttr::Command.to_string(), ValueKind::String),
+            "ftp-reply_code" => (FtpAttr::ReplyCode.to_string(), ValueKind::String),
+            "ftp-reply_msg" => (FtpAttr::ReplyMsg.to_string(), ValueKind::String),
+            "http-id.orig_h" => (HttpAttr::SrcAddr.to_string(), ValueKind::IpAddr),
+            "http-id.orig_p" => (HttpAttr::SrcPort.to_string(), ValueKind::UInteger),
+            "http-id.resp_h" => (HttpAttr::DstAddr.to_string(), ValueKind::IpAddr),
+            "http-id.resp_p" => (HttpAttr::DstPort.to_string(), ValueKind::UInteger),
+            "http-method" => (HttpAttr::Method.to_string(), ValueKind::String),
+            "http-host" => (HttpAttr::Host.to_string(), ValueKind::String),
+            "http-uri" => (HttpAttr::Uri.to_string(), ValueKind::String),
+            "http-version" => (HttpAttr::Version.to_string(), ValueKind::String),
+            "http-user_agent" => (HttpAttr::UserAgent.to_string(), ValueKind::String),
+            "http-request_body_len" => (HttpAttr::RequestLen.to_string(), ValueKind::UInteger),
+            "http-response_body_len" => (HttpAttr::ResponseLen.to_string(), ValueKind::UInteger),
+            "http-status_code" => (HttpAttr::StatusCode.to_string(), ValueKind::UInteger),
+            "http-status_msg" => (HttpAttr::StatusMsg.to_string(), ValueKind::String),
+            "http-resp_mime_types" => (HttpAttr::RespMimeTypes.to_string(), ValueKind::String),
+            "rdp-id.orig_h" => (RdpAttr::SrcAddr.to_string(), ValueKind::IpAddr),
+            "rdp-id.orig_p" => (RdpAttr::SrcPort.to_string(), ValueKind::UInteger),
+            "rdp-id.resp_h" => (RdpAttr::DstAddr.to_string(), ValueKind::IpAddr),
+            "rdp-id.resp_p" => (RdpAttr::DstPort.to_string(), ValueKind::UInteger),
+            "rdp-proto" => (RdpAttr::Proto.to_string(), ValueKind::UInteger),
+            "smtp-id.orig_h" => (SmtpAttr::SrcAddr.to_string(), ValueKind::IpAddr),
+            "smtp-id.orig_p" => (SmtpAttr::SrcPort.to_string(), ValueKind::UInteger),
+            "smtp-id.resp_h" => (SmtpAttr::DstAddr.to_string(), ValueKind::IpAddr),
+            "smtp-id.resp_p" => (SmtpAttr::DstPort.to_string(), ValueKind::UInteger),
+            "smtp-mailfrom" => (SmtpAttr::MailFrom.to_string(), ValueKind::String),
+            "smtp-date" => (SmtpAttr::Date.to_string(), ValueKind::String),
+            "smtp-subject" => (SmtpAttr::Subject.to_string(), ValueKind::String),
+            "ssh-id.orig_h" => (SshAttr::SrcAddr.to_string(), ValueKind::IpAddr),
+            "ssh-id.orig_p" => (SshAttr::SrcPort.to_string(), ValueKind::UInteger),
+            "ssh-id.resp_h" => (SshAttr::DstAddr.to_string(), ValueKind::IpAddr),
+            "ssh-id.resp_p" => (SshAttr::DstPort.to_string(), ValueKind::UInteger),
+            "ssh-client" => (SshAttr::Client.to_string(), ValueKind::String),
+            "ssh-server" => (SshAttr::Server.to_string(), ValueKind::String),
+            "ssh-cipher_alg" => (SshAttr::CipherAlg.to_string(), ValueKind::String),
+            "ssh-mac_alg" => (SshAttr::MacAlg.to_string(), ValueKind::String),
+            "ssh-compression_alg" => (SshAttr::CompressionAlg.to_string(), ValueKind::String),
+            "ssh-kex_alg" => (SshAttr::KexAlg.to_string(), ValueKind::String),
+            "ssh-host_key_alg" => (SshAttr::HostKeyAlg.to_string(), ValueKind::String),
+            "ssh-hasshAlgorithms" => (SshAttr::HasshAlgorithms.to_string(), ValueKind::String),
+            "ssh-hasshServerAlgorithms" => (
+                SshAttr::HasshServerAlgorithms.to_string(),
+                ValueKind::String,
+            ),
+            _ => return Err("unsupported attribute name"),
+        };
+
+        let (first_value, second_value) = convert_serialized_values_for_kind_change(
+            input.value_kind,
+            value_kind,
+            input.first_value,
+            input.second_value,
+        )
+        .ok_or("value conversion failed")?;
+
+        Ok(Self {
+            raw_event_kind,
+            attr_name,
+            value_kind,
+            cmp_kind: input.cmp_kind,
+            first_value,
+            second_value,
+            weight: input.weight,
+        })
+    }
+}
+
+fn raw_event_kind_from_attr_name(attr_name: &str) -> Option<RawEventKind> {
+    attr_name
+        .split_once('-')
+        .and_then(|(proto, _)| match proto {
+            "conn" => Some(RawEventKind::Conn),
+            "dns" => Some(RawEventKind::Dns),
+            "ftp" => Some(RawEventKind::Ftp),
+            "http" => Some(RawEventKind::Http),
+            "rdp" => Some(RawEventKind::Rdp),
+            "smtp" => Some(RawEventKind::Smtp),
+            "ssh" => Some(RawEventKind::Ssh),
+            _ => None,
+        })
+}
+
+fn deserialize<'de, T>(value: &'de [u8]) -> Option<T>
+where
+    T: Deserialize<'de>,
+{
+    use bincode::Options;
+    bincode::DefaultOptions::new().deserialize::<T>(value).ok()
+}
+
+fn convert_and_serialize<T, U>(bytes: &[u8], map_fn: impl FnOnce(T) -> Option<U>) -> Option<Vec<u8>>
+where
+    T: serde::de::DeserializeOwned,
+    U: serde::Serialize,
+{
+    use bincode::Options;
+    let value = deserialize::<T>(bytes)?;
+    let mapped = map_fn(value)?;
+    bincode::DefaultOptions::new().serialize(&mapped).ok()
+}
+
+fn convert_serialized_pair<T, U>(
+    first: &[u8],
+    second: Option<Vec<u8>>,
+    map_fn: impl Fn(T) -> Option<U> + Copy,
+) -> Option<(Vec<u8>, Option<Vec<u8>>)>
+where
+    T: serde::de::DeserializeOwned,
+    U: serde::Serialize,
+{
+    let first = convert_and_serialize::<T, U>(first, map_fn)?;
+    let second = second.and_then(|v| convert_and_serialize::<T, U>(&v, map_fn));
+    Some((first, second))
+}
+
+fn convert_serialized_values_for_kind_change(
+    old_kind: ValueKindBeforeV38,
+    new_kind: ValueKind,
+    first_value: Vec<u8>,
+    second_value: Option<Vec<u8>>,
+) -> Option<(Vec<u8>, Option<Vec<u8>>)> {
+    match (old_kind, new_kind) {
+        // If the kind is the same type, use the existing serialized value.
+        (ValueKindBeforeV38::String, ValueKind::String)
+        | (ValueKindBeforeV38::Integer, ValueKind::Integer) => Some((first_value, second_value)),
+
+        (ValueKindBeforeV38::Integer, ValueKind::UInteger) => {
+            convert_serialized_pair::<i64, u64>(&first_value, second_value, |v| {
+                u64::try_from(v).ok()
+            })
+        }
+
+        (ValueKindBeforeV38::String, ValueKind::IpAddr) => {
+            convert_serialized_pair::<String, std::net::IpAddr>(&first_value, second_value, |s| {
+                s.parse().ok()
+            })
+        }
+
+        (ValueKindBeforeV38::Integer, ValueKind::Bool) => {
+            convert_serialized_pair::<i64, bool>(&first_value, second_value, |v| match v {
+                0 => Some(false),
+                1 => Some(true),
+                _ => None,
+            })
+        }
+
+        _ => None,
     }
 }

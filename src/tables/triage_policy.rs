@@ -3,6 +3,7 @@
 use std::{borrow::Cow, cmp::Ordering};
 
 use anyhow::Result;
+use attrievent::attribute::RawEventKind;
 use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
@@ -65,11 +66,15 @@ pub enum TiCmpKind {
     Uri,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
 pub enum ValueKind {
     String,
-    Integer,
+    Integer,  // range: i64::MAX
+    UInteger, // range: u64::MAX
+    Vector,
     Float,
+    IpAddr,
+    Bool,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
@@ -135,6 +140,7 @@ impl Ord for Ti {
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
 pub struct PacketAttr {
+    pub raw_event_kind: RawEventKind,
     pub attr_name: String,
     pub value_kind: ValueKind,
     pub cmp_kind: AttrCmpKind,
@@ -263,6 +269,10 @@ impl<'d> IndexedTable<'d, TriagePolicy> {
     /// Returns an error if the `id` is invalid or the database operation fails.
     pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
         self.indexed_map.update(id, old, new)
+    }
+
+    pub(crate) fn raw(&self) -> &IndexedMap<'_> {
+        &self.indexed_map
     }
 }
 

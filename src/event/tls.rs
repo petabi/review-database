@@ -1,10 +1,67 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{RawEventAttrKind, TlsAttr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::{triage_scores_to_string, vector_to_string};
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string, vector_to_string};
+
+macro_rules! find_tls_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Tls(attr) = $raw_event_attr {
+            let target_value = match attr {
+                TlsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                TlsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                TlsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                TlsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                TlsAttr::Proto => AttrValue::UInt($event.proto.into()),
+                TlsAttr::ServerName => AttrValue::String(&$event.server_name),
+                TlsAttr::AlpnProtocol => AttrValue::String(&$event.server_name),
+                TlsAttr::Ja3 => AttrValue::String(&$event.ja3),
+                TlsAttr::Version => AttrValue::String(&$event.version),
+                TlsAttr::ClientCipherSuites => AttrValue::VecUInt(
+                    $event
+                        .client_cipher_suites
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+                TlsAttr::ClientExtensions => AttrValue::VecUInt(
+                    $event
+                        .client_extensions
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+                TlsAttr::Cipher => AttrValue::UInt($event.cipher.into()),
+                TlsAttr::Extensions => AttrValue::VecUInt(
+                    $event
+                        .extensions
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+                TlsAttr::Ja3s => AttrValue::String(&$event.ja3s),
+                TlsAttr::Serial => AttrValue::String(&$event.serial),
+                TlsAttr::SubjectCountry => AttrValue::String(&$event.subject_country),
+                TlsAttr::SubjectOrgName => AttrValue::String(&$event.subject_org_name),
+                TlsAttr::SubjectCommonName => AttrValue::String(&$event.subject_common_name),
+                TlsAttr::ValidityNotBefore => AttrValue::SInt($event.validity_not_before.into()),
+                TlsAttr::ValidityNotAfter => AttrValue::SInt($event.validity_not_after.into()),
+                TlsAttr::SubjectAltName => AttrValue::String(&$event.subject_alt_name),
+                TlsAttr::IssuerCountry => AttrValue::String(&$event.issuer_country),
+                TlsAttr::IssuerOrgName => AttrValue::String(&$event.issuer_org_name),
+                TlsAttr::IssuerOrgUnitName => AttrValue::String(&$event.issuer_org_unit_name),
+                TlsAttr::IssuerCommonName => AttrValue::String(&$event.issuer_common_name),
+                TlsAttr::LastAlert => AttrValue::UInt($event.last_alert.into()),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistTlsFields {
@@ -238,8 +295,8 @@ impl Match for BlocklistTls {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_tls_attr_by_kind!(self, raw_event_attr)
     }
 }
 
@@ -401,7 +458,7 @@ impl Match for SuspiciousTlsTraffic {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_tls_attr_by_kind!(self, raw_event_attr)
     }
 }

@@ -1,10 +1,37 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{ConnAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::{triage_scores_to_string, vector_to_string};
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string, vector_to_string};
+
+macro_rules! find_conn_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Conn(attr) = $raw_event_attr {
+            let target_value = match attr {
+                ConnAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                ConnAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                ConnAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                ConnAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                ConnAttr::Proto => AttrValue::UInt($event.proto.into()),
+                ConnAttr::ConnState => AttrValue::String(&$event.conn_state),
+                ConnAttr::Duration => AttrValue::SInt($event.duration),
+                ConnAttr::Service => AttrValue::String(&$event.service),
+                ConnAttr::OrigBytes => AttrValue::UInt($event.orig_bytes),
+                ConnAttr::RespBytes => AttrValue::UInt($event.resp_bytes),
+                ConnAttr::OrigPkts => AttrValue::UInt($event.orig_pkts),
+                ConnAttr::RespPkts => AttrValue::UInt($event.resp_pkts),
+                ConnAttr::OrigL2Bytes => AttrValue::UInt($event.orig_l2_bytes),
+                ConnAttr::RespL2Bytes => AttrValue::UInt($event.resp_l2_bytes),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct PortScanFields {
@@ -123,8 +150,20 @@ impl Match for PortScan {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        if let RawEventAttrKind::Conn(attr) = raw_event_attr {
+            match attr {
+                ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                ConnAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                ConnAttr::DstPort => Some(AttrValue::VecUInt(
+                    self.dst_ports.iter().map(|val| u64::from(*val)).collect(),
+                )),
+                ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -245,8 +284,18 @@ impl Match for MultiHostPortScan {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        if let RawEventAttrKind::Conn(attr) = raw_event_attr {
+            match attr {
+                ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                ConnAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+                ConnAttr::DstAddr => Some(AttrValue::VecAddr(&self.dst_addrs)),
+                ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -362,8 +411,17 @@ impl Match for ExternalDdos {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        if let RawEventAttrKind::Conn(attr) = raw_event_attr {
+            match attr {
+                ConnAttr::SrcAddr => Some(AttrValue::VecAddr(&self.src_addrs)),
+                ConnAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -529,7 +587,7 @@ impl Match for BlocklistConn {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_conn_attr_by_kind!(self, raw_event_attr)
     }
 }
