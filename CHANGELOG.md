@@ -37,7 +37,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `Database::cluster_id`: This method was previously used to convert a cluster
   name to a numerical ID when migrating from a name-based key to a numerical
-  key. It is no longer needed as we now use numerical keys for clusters.
+  key. It is no longer needed as we now use numerical keys for clusters. The
+  data types used by the method have also been removed.
 - `Database::get_top_clusters_by_score`: This method only returned an empty set
   and did not provide any meaningful functionality.
 

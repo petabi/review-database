@@ -78,10 +78,6 @@ pub use self::tables::{
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
 pub use self::top_n::*;
-pub use self::top_n::{
-    ClusterScore, ClusterScoreSet, ClusterTrend, ElementCount, LineSegment, Regression,
-    StructuredColumnType, TopColumnsOfCluster, TopMultimaps, TopTrendsByColumn,
-};
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 
 #[derive(Clone)]

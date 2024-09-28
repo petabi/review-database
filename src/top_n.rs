@@ -68,17 +68,6 @@ impl From<(i32, i32)> for StructuredColumnType {
     }
 }
 
-pub struct ClusterScore {
-    pub cluster_id: i32,
-    pub cluster_name: String,
-    pub score: f64,
-}
-
-pub struct ClusterScoreSet {
-    pub top_n_sum: Vec<ClusterScore>,
-    pub top_n_rate: Vec<ClusterScore>,
-}
-
 #[derive(Clone, Deserialize)]
 pub struct ElementCount {
     pub value: String,
