@@ -13,7 +13,7 @@ pub struct AccessToken {
 }
 
 impl AccessToken {
-    fn create_key_value(username: &str, token: &str) -> (Vec<u8>, Vec<u8>) {
+    pub(crate) fn create_key_value(username: &str, token: &str) -> (Vec<u8>, Vec<u8>) {
         let mut key = username.as_bytes().to_owned();
         key.push(0);
         key.extend(token.as_bytes());
@@ -83,6 +83,11 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, AccessToken> {
         let mut prefix = username.as_bytes().to_owned();
         prefix.push(0);
         self.prefix_iter(Direction::Forward, None, &prefix)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
     }
 }
 

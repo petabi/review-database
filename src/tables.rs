@@ -82,6 +82,7 @@ use crate::{
 };
 
 pub(crate) mod names {
+    pub(crate) const ACCESS_TOKENS: &str = "access_tokens 0.31.0";
     pub(crate) const TRUSTED_DOMAIN_NAMES: &str = "trusted_domain_names 0.31.0";
 }
 
