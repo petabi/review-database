@@ -227,9 +227,25 @@ fn migrate_0_30_to_0_31(store: &mut super::Store) -> Result<()> {
 fn migrate_rocksdb_to_redb(store: &mut super::Store) -> Result<()> {
     use crate::Iterable;
 
+    // access tokens
+    let table = store.access_token_map();
+    let write_txn = store.states.begin_write()?;
+    let mut tbl = write_txn.open_table(redb::TableDefinition::<(&str, &str), ()>::new(
+        crate::tables::names::ACCESS_TOKENS,
+    ))?;
+    for rec in table.iter(rocksdb::Direction::Forward, None) {
+        let old = rec?;
+        tbl.insert((old.username.as_str(), old.token.as_str()), ())?;
+    }
+    drop(tbl);
+    write_txn.commit()?;
+    store
+        .legacy_states
+        .clear_table(crate::tables::ACCESS_TOKENS)?;
+
+    // trusted domain names
     let table = store.trusted_domain_map();
-    let db = &store.states;
-    let write_txn = db.begin_write()?;
+    let write_txn = store.states.begin_write()?;
     let mut tbl = write_txn.open_table(redb::TableDefinition::<&str, &str>::new(
         crate::tables::names::TRUSTED_DOMAIN_NAMES,
     ))?;
@@ -239,10 +255,10 @@ fn migrate_rocksdb_to_redb(store: &mut super::Store) -> Result<()> {
     }
     drop(tbl);
     write_txn.commit()?;
-
     store
         .legacy_states
         .clear_table(crate::tables::TRUSTED_DNS_SERVERS)?;
+
     Ok(())
 }
 
@@ -1439,7 +1455,7 @@ mod tests {
     use semver::{Version, VersionReq};
 
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::Store;
+    use crate::{AccessToken, Store};
 
     #[allow(dead_code)]
     struct TestSchema {
@@ -3658,6 +3674,15 @@ mod tests {
         let backup_dir = tempfile::tempdir().unwrap();
         let mut store = Store::new(db_dir.path(), backup_dir.path()).unwrap();
 
+        let table = store.legacy_states.access_tokens();
+        let map = table.raw();
+        let (k, v) = AccessToken::create_key_value("user1", "token1");
+        map.put(&k, &v).unwrap();
+        let (k, v) = AccessToken::create_key_value("user11", "token11");
+        map.put(&k, &v).unwrap();
+        let (k, v) = AccessToken::create_key_value("user2", "token2");
+        map.put(&k, &v).unwrap();
+
         let table = store.legacy_states.trusted_domains();
         let map = table.raw();
         map.put(b"domain1", b"example 1").unwrap();
@@ -3667,6 +3692,24 @@ mod tests {
         assert!(&super::migrate_rocksdb_to_redb(&mut store).is_ok());
 
         let read_txn = store.states.begin_read().unwrap();
+
+        let tbl = read_txn
+            .open_table(redb::TableDefinition::<(&str, &str), ()>::new(
+                crate::tables::names::ACCESS_TOKENS,
+            ))
+            .unwrap();
+        assert_eq!(tbl.len().unwrap(), 3);
+        let mut iter = tbl.range::<(&str, &str)>(..).unwrap();
+        let (k, v) = iter.next().unwrap().unwrap();
+        assert_eq!(k.value(), ("user1", "token1"));
+        assert_eq!(v.value(), ());
+        let (k, v) = iter.next().unwrap().unwrap();
+        assert_eq!(k.value(), ("user11", "token11"));
+        assert_eq!(v.value(), ());
+        let (k, v) = iter.next().unwrap().unwrap();
+        assert_eq!(k.value(), ("user2", "token2"));
+        assert_eq!(v.value(), ());
+
         let tbl = read_txn
             .open_table(redb::TableDefinition::<&str, &str>::new(
                 crate::tables::names::TRUSTED_DOMAIN_NAMES,
@@ -3674,11 +3717,8 @@ mod tests {
             .unwrap();
         assert_eq!(tbl.len().unwrap(), 3);
         let mut iter = tbl.range::<&str>(..).unwrap();
-
-        let (kg, vg) = iter.next().unwrap().unwrap();
-        let k: &str = kg.value();
-        let v: &str = vg.value();
-        assert_eq!(k, "domain1");
-        assert_eq!(v, "example 1");
+        let (k, v) = iter.next().unwrap().unwrap();
+        assert_eq!(k.value(), "domain1");
+        assert_eq!(v.value(), "example 1");
     }
 }
