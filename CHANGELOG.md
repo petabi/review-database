@@ -41,6 +41,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - `Database::get_top_clusters_by_score`: This method only returned an empty set
   and did not provide any meaningful functionality.
 
+### Fixed
+
+- The values of the `min`, `max`, `mean`, and `s_deviation` columns in the
+  `description_int` table are not inserted.
+
 ## [0.30.0] - 2024-09-03
 
 ### Added
