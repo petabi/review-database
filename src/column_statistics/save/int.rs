@@ -13,6 +13,10 @@ use crate::{
 #[diesel(table_name = crate::schema::description_int)]
 struct DescriptionInt {
     description_id: i32,
+    min: Option<i64>,
+    max: Option<i64>,
+    mean: Option<f64>,
+    s_deviation: Option<f64>,
     mode: i64,
 }
 
@@ -30,8 +34,23 @@ pub(super) async fn insert_top_n(
     column_stats: &ColumnStatistics,
     mode: i64,
 ) -> Result<usize, Error> {
+    let min = if let Some(Element::Int(v)) = column_stats.description.min() {
+        Some(*v)
+    } else {
+        None
+    };
+    let max = if let Some(Element::Int(v)) = column_stats.description.max() {
+        Some(*v)
+    } else {
+        None
+    };
+
     let db = DescriptionInt {
         description_id,
+        min,
+        max,
+        mean: column_stats.description.mean(),
+        s_deviation: column_stats.description.std_deviation(),
         mode,
     };
     let _res = diesel::insert_into(desc_d::description_int)
