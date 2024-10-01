@@ -39,7 +39,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   name to a numerical ID when migrating from a name-based key to a numerical
   key. It is no longer needed as we now use numerical keys for clusters.
 - `Database::get_top_clusters_by_score`: This method only returned an empty set
-  and did not provide any meaningful functionality.
+  and did not provide any meaningful functionality. `ClusterScore` and
+  `ClusterScoreSet`, which were used by this method, have also been removed.
 
 ### Fixed
 
