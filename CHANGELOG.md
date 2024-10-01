@@ -43,8 +43,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- The values of the `min`, `max`, `mean`, and `s_deviation` columns in the
-  `description_int` table are not inserted.
+- Fixed an issue introduced in version 0.7.0 where the values of the `min`,
+  `max`, `mean`, and `s_deviation` columns in the `description_int` table were
+  not being inserted.
 
 ## [0.30.0] - 2024-09-03
 
