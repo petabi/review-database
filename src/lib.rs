@@ -27,6 +27,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use bb8_postgres::{bb8, tokio_postgres};
+pub use redb::{Key, Value};
 pub use rocksdb::backup::BackupEngineInfo;
 pub use tags::TagSet;
 use tags::{EventTagId, NetworkTagId, WorkflowTagId};
@@ -66,8 +67,8 @@ pub use self::tables::{
     AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
     AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Confidence,
     CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
-    DataSourceUpdate, DataType, Filter, Giganto, IndexedTable, Iterable, ModelIndicator, Network,
-    NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey,
+    DataSourceUpdate, DataType, Filter, Giganto, IndexedTable, Iterable, KeyValue, ModelIndicator,
+    Network, NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey,
     OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval,
     SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
     StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,

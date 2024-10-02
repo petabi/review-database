@@ -5,7 +5,7 @@ use redb::ReadableTable;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use super::{KeyValue, UniqueKey};
+use super::{KeyValue, UniqueKey, Value};
 use crate::{types::FromKeyValue, Map, Table};
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -71,16 +71,6 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, TrustedDomain, &str, &str> {
     ///
     /// Returns an error if the serialization fails or the database operation fails.
     pub fn update(&self, old: &TrustedDomain, new: &TrustedDomain) -> Result<()> {
-<<<<<<< HEAD
-        self.map.update(
-            (old.unique_key(), old.value()),
-            (new.unique_key(), new.value()),
-        )
-||||||| parent of 65d6bb8 (Use redb for trusted domain names)
-        let (ok, ov) = (old.unique_key(), old.value());
-        let (nk, nv) = (new.unique_key(), new.value());
-        self.map.update((ok, &ov), (nk, &nv))
-=======
         let txn = self.db.begin_write()?;
         let mut tbl = txn.open_table::<&str, &str>(self.def)?;
         let Some(val) = tbl.get(old.db_key())? else {
@@ -95,7 +85,6 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, TrustedDomain, &str, &str> {
         drop(tbl);
         txn.commit()?;
         Ok(())
->>>>>>> 65d6bb8 (Use redb for trusted domain names)
     }
 
     /// Removes a `TrustedDomain` with the given name.
