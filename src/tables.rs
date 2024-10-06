@@ -714,9 +714,8 @@ where
 ///
 /// The `UniqueKey` trait is designed to provide a standardized way to retrieve
 /// a unique, opaque key for instances of structs that implement this trait. The
-/// key is returned as a `Cow<[u8]>`, allowing for flexible ownership
-/// models—--either borrowing from an existing slice or owning the data
-/// outright.
+/// key is returned as a `AsRef<[u8]>`, allowing for flexible ownership
+/// models.
 ///
 /// Implementing this trait allows for unique identification of instances, which
 /// can be used for indexing, identification in collections, or any scenario
@@ -746,9 +745,8 @@ pub trait UniqueKey {
 
     /// Returns a unique, opaque key for the instance.
     ///
-    /// This method should return a byte slice that uniquely identifies the
-    /// instance of the struct. The returned `Cow<[u8]>` allows the key to be
-    /// either borrowed or owned, depending on the implementation's needs.
+    /// This method should return an object that implements `AsRef<[u8]>` and
+    /// uniquely identifies the instance of the struct.
     ///
     /// # Examples
     ///
@@ -772,8 +770,7 @@ pub trait UniqueKey {
     /// ```
     ///
     /// In this example, the `unique_key` method returns the user's `id` as a
-    /// byte array, converted into a `Vec<u8>` and then into a `Cow::Owned`,
-    /// providing a unique key for the user instance.
+    /// byte array, providing a unique key for the user instance.
     fn unique_key(&self) -> Self::AsBytes<'_>;
 }
 
