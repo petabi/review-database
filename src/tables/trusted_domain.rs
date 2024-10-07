@@ -1,7 +1,5 @@
 //! The `trusted_domain` table.
 
-use std::borrow::Cow;
-
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
@@ -33,8 +31,10 @@ impl UniqueKey for TrustedDomain {
 }
 
 impl Value for TrustedDomain {
-    fn value(&self) -> Cow<[u8]> {
-        Cow::Borrowed(self.remarks.as_bytes())
+    type AsBytes<'a> = &'a [u8];
+
+    fn value(&self) -> &[u8] {
+        self.remarks.as_bytes()
     }
 }
 
@@ -53,9 +53,10 @@ impl<'d> Table<'d, TrustedDomain> {
     ///
     /// Returns an error if the serialization fails or the database operation fails.
     pub fn update(&self, old: &TrustedDomain, new: &TrustedDomain) -> Result<()> {
-        let (ok, ov) = (old.unique_key(), old.value());
-        let (nk, nv) = (new.unique_key(), new.value());
-        self.map.update((ok, &ov), (nk, &nv))
+        self.map.update(
+            (old.unique_key(), old.value()),
+            (new.unique_key(), new.value()),
+        )
     }
 
     /// Removes a `TrustedDomain` with the given name.

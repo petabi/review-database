@@ -27,10 +27,7 @@ mod triage_response;
 mod trusted_domain;
 mod trusted_user_agent;
 
-use std::{
-    borrow::Cow,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -514,7 +511,8 @@ impl<'d, R: UniqueKey + Value> Table<'d, R> {
     ///
     /// Returns an error if the database operation fails.
     pub fn put(&self, record: &R) -> Result<()> {
-        self.map.put(record.unique_key().as_ref(), &record.value())
+        self.map
+            .put(record.unique_key().as_ref(), record.value().as_ref())
     }
 
     /// Adds a record into the database.
@@ -525,7 +523,7 @@ impl<'d, R: UniqueKey + Value> Table<'d, R> {
     /// operation fails.
     pub fn insert(&self, record: &R) -> Result<()> {
         self.map
-            .insert(record.unique_key().as_ref(), &record.value())
+            .insert(record.unique_key().as_ref(), record.value().as_ref())
     }
 }
 
@@ -775,7 +773,11 @@ pub trait UniqueKey {
 }
 
 pub trait Value {
-    fn value(&self) -> Cow<[u8]>;
+    type AsBytes<'a>: AsRef<[u8]> + 'a
+    where
+        Self: 'a;
+
+    fn value(&self) -> Self::AsBytes<'_>;
 }
 
 fn serialize<I: Serialize>(input: &I) -> anyhow::Result<Vec<u8>> {

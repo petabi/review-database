@@ -1,7 +1,5 @@
 //! The `trusted_user_agent` map.
 
-use std::borrow::Cow;
-
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
@@ -39,8 +37,10 @@ impl UniqueKey for TrustedUserAgent {
 }
 
 impl Value for TrustedUserAgent {
-    fn value(&self) -> Cow<[u8]> {
-        Cow::Owned(self.updated_at.to_string().into_bytes())
+    type AsBytes<'a> = Vec<u8>;
+
+    fn value(&self) -> Vec<u8> {
+        self.updated_at.to_string().into_bytes()
     }
 }
 

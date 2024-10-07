@@ -1,6 +1,6 @@
 //! The agent table.
 
-use std::{borrow::Cow, fmt::Display, mem::size_of};
+use std::{fmt::Display, mem::size_of};
 
 use anyhow::Result;
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -151,14 +151,16 @@ impl UniqueKey for Agent {
 }
 
 impl ValueTrait for Agent {
-    fn value(&self) -> Cow<[u8]> {
+    type AsBytes<'a> = Vec<u8>;
+
+    fn value(&self) -> Vec<u8> {
         let value = Value {
             kind: self.kind,
             status: self.status,
             config: self.config.clone(),
             draft: self.draft.clone(),
         };
-        Cow::Owned(super::serialize(&value).expect("serializable"))
+        super::serialize(&value).expect("serializable")
     }
 }
 

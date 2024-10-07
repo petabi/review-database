@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use serde::{Deserialize, Serialize};
 
 use crate::{tables::Value, UniqueKey};
@@ -33,11 +31,13 @@ impl UniqueKey for Scores {
 }
 
 impl Value for Scores {
-    fn value(&self) -> Cow<[u8]> {
+    type AsBytes<'a> = Vec<u8>;
+
+    fn value(&self) -> Vec<u8> {
         use bincode::Options;
         let Ok(value) = bincode::DefaultOptions::new().serialize(&self.inner) else {
             unreachable!("serialization into memory should never fail")
         };
-        Cow::Owned(value)
+        value
     }
 }

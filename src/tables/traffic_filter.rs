@@ -1,6 +1,6 @@
 //! The `traffic_filter` map.
 
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use anyhow::{bail, Result};
 use chrono::{DateTime, Utc};
@@ -35,8 +35,10 @@ impl UniqueKey for TrafficFilter {
 }
 
 impl Value for TrafficFilter {
-    fn value(&self) -> Cow<[u8]> {
-        Cow::Owned(super::serialize(self).expect("serializable"))
+    type AsBytes<'a> = Vec<u8>;
+
+    fn value(&self) -> Vec<u8> {
+        super::serialize(self).expect("serializable")
     }
 }
 

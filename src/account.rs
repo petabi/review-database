@@ -1,4 +1,4 @@
-use std::{borrow::Cow, net::IpAddr, num::NonZeroU32};
+use std::{net::IpAddr, num::NonZeroU32};
 
 use anyhow::Result;
 use argon2::{
@@ -130,12 +130,14 @@ impl UniqueKey for Account {
 }
 
 impl Value for Account {
-    fn value(&self) -> Cow<[u8]> {
+    type AsBytes<'a> = Vec<u8>;
+
+    fn value(&self) -> Vec<u8> {
         use bincode::Options;
         let Ok(value) = bincode::DefaultOptions::new().serialize(&self) else {
             unreachable!("serialization into memory should never fail")
         };
-        Cow::Owned(value)
+        value
     }
 }
 

@@ -1,6 +1,6 @@
 //! The `outlier_info` map.
 
-use std::{borrow::Cow, mem::size_of};
+use std::mem::size_of;
 
 use anyhow::{bail, Result};
 use rocksdb::{Direction, OptimisticTransactionDB};
@@ -53,14 +53,14 @@ impl UniqueKey for OutlierInfo {
 }
 
 impl ValueTrait for OutlierInfo {
-    fn value(&self) -> Cow<[u8]> {
-        Cow::Owned(
-            super::serialize(&Value {
-                distance: self.distance,
-                is_saved: self.is_saved,
-            })
-            .expect("serializable"),
-        )
+    type AsBytes<'a> = Vec<u8>;
+
+    fn value(&self) -> Vec<u8> {
+        super::serialize(&Value {
+            distance: self.distance,
+            is_saved: self.is_saved,
+        })
+        .expect("serializable")
     }
 }
 
