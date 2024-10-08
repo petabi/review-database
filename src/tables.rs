@@ -75,6 +75,10 @@ use crate::{
     Direction, Indexable,
 };
 
+pub(crate) mod names {
+    pub(crate) const TRUSTED_DOMAIN_NAMES: &str = "trusted_domain_names 0.31.0";
+}
+
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
 pub(super) const ACCOUNTS: &str = "accounts";
