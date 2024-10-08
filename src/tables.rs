@@ -654,6 +654,20 @@ where
     }
 }
 
+impl<R, K, V> DoubleEndedIterator for Range<'_, R, K, V>
+where
+    R: KeyValue<K, V>,
+    K: redb::Key + 'static,
+    V: redb::Value + 'static,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back().map(|r| {
+            r.map(|(k, v)| R::from_key_value(k.value(), v.value()))
+                .map_err(Into::into)
+        })
+    }
+}
+
 impl<'db, 'n, 'i, 'j, 'k, R, K, V> Iterable<'i, TableIter<'k, R>> for Table<'db, 'n, 'j, R, K, V>
 where
     'j: 'k,
