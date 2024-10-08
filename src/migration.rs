@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.30.0,<0.33.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.33.0-alpha.1,<=0.33.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -136,6 +136,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.30.0")?,
             migrate_0_29_to_0_30_0,
         ),
+        (
+            VersionReq::parse(">=0.30.0,<0.31.0")?,
+            Version::parse("0.31.0")?,
+            migrate_0_30_to_0_31,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -209,6 +214,30 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_30_to_0_31(store: &super::Store) -> Result<()> {
+    migrate_rocksdb_to_redb(store)
+}
+
+fn migrate_rocksdb_to_redb(store: &super::Store) -> Result<()> {
+    use crate::Iterable;
+
+    let table = store.trusted_domain_map();
+    let db = &store.states;
+    let write_txn = db.begin_write()?;
+    let mut tbl = write_txn.open_table(redb::TableDefinition::<&str, &str>::new(
+        crate::tables::names::TRUSTED_DOMAIN_NAMES,
+    ))?;
+    for rec in table.iter(rocksdb::Direction::Forward, None) {
+        let old = rec?;
+        tbl.insert(old.name.as_str(), old.remarks.as_str())?;
+    }
+    drop(tbl);
+    write_txn.commit()?;
+
+    // TODO: Remove the entire RocksDB database after the migration is done.
+    Ok(())
 }
 
 fn migrate_0_29_to_0_30_0(store: &super::Store) -> Result<()> {
@@ -3613,5 +3642,51 @@ mod tests {
         new.patterns.iter().for_each(|rule| {
             assert_eq!(rule.category, EventCategory::Reconnaissance);
         });
+    }
+
+    #[test]
+    fn migrate_rocksdb_to_redb() {
+        use redb::ReadableTableMetadata;
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Store::new(db_dir.path(), backup_dir.path()).unwrap();
+
+        let table = store.legacy_states.trusted_domains();
+        table
+            .insert(&crate::tables::TrustedDomain {
+                name: "domain1".to_string(),
+                remarks: "example 1".to_string(),
+            })
+            .unwrap();
+        table
+            .insert(&crate::tables::TrustedDomain {
+                name: "domain2".to_string(),
+                remarks: "example 2".to_string(),
+            })
+            .unwrap();
+        table
+            .insert(&crate::tables::TrustedDomain {
+                name: "domain3".to_string(),
+                remarks: "example 3".to_string(),
+            })
+            .unwrap();
+
+        assert!(super::migrate_rocksdb_to_redb(&store).is_ok());
+
+        let read_txn = store.states.begin_read().unwrap();
+        let tbl = read_txn
+            .open_table(redb::TableDefinition::<&str, &str>::new(
+                crate::tables::names::TRUSTED_DOMAIN_NAMES,
+            ))
+            .unwrap();
+        assert_eq!(tbl.len().unwrap(), 3);
+        let mut iter = tbl.range::<&str>(..).unwrap();
+
+        let (kg, vg) = iter.next().unwrap().unwrap();
+        let k: &str = kg.value();
+        let v: &str = vg.value();
+        assert_eq!(k, "domain1");
+        assert_eq!(v, "example 1");
     }
 }
