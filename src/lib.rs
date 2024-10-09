@@ -125,7 +125,32 @@ impl Store {
         let db_path = path.join(DEFAULT_STATES);
         let legacy_db_path = path.join(LEGACY_STATES);
         let backup_path = backup.join(LEGACY_STATES);
-        let states = redb::Database::create(db_path)?;
+        let states = {
+            if let Ok(db) = redb::Database::open(&db_path) {
+                db
+            } else {
+                let db = redb::Database::create(&db_path)?;
+                let txn = match db.begin_write() {
+                    Ok(txn) => txn,
+                    Err(e) => {
+                        drop(db);
+                        std::fs::remove_file(&db_path)?;
+                        return Err(e.into());
+                    }
+                };
+                let res = txn.open_table(redb::TableDefinition::<&str, &str>::new(
+                    crate::tables::names::TRUSTED_DOMAIN_NAMES,
+                ));
+                if let Err(e) = res {
+                    drop(db);
+                    std::fs::remove_file(&db_path)?;
+                    return Err(e.into());
+                }
+                drop(res);
+                txn.commit()?;
+                db
+            }
+        };
         let legacy_states = StateDb::open(&legacy_db_path, backup_path)?;
         let pretrained = path.join(Self::DEFAULT_PRETRAINED);
         if let Err(e) = std::fs::create_dir_all(&pretrained) {
