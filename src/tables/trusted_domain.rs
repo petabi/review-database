@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use redb::ReadableTable;
 use rocksdb::OptimisticTransactionDB;
 
-use super::{KeyValue, UniqueKey, Value};
+use super::KeyValue;
 use crate::{types::FromKeyValue, Map, Table};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,22 +19,6 @@ impl FromKeyValue for TrustedDomain {
             name: std::str::from_utf8(key)?.to_owned(),
             remarks: std::str::from_utf8(value)?.to_owned(),
         })
-    }
-}
-
-impl UniqueKey for TrustedDomain {
-    type AsBytes<'a> = &'a [u8];
-
-    fn unique_key(&self) -> &[u8] {
-        self.db_key().as_ref()
-    }
-}
-
-impl Value for TrustedDomain {
-    type AsBytes<'a> = &'a [u8];
-
-    fn value(&self) -> &[u8] {
-        self.remarks.as_bytes()
     }
 }
 
