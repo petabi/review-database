@@ -3,8 +3,8 @@
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use super::TableIter;
-use crate::{types::FromKeyValue, Iterable, Map, Table};
+use super::KeyValue;
+use crate::{types::FromKeyValue, Map, Table};
 
 #[derive(Debug, PartialEq)]
 pub struct AccessToken {
@@ -13,6 +13,7 @@ pub struct AccessToken {
 }
 
 impl AccessToken {
+    #[cfg(test)]
     pub(crate) fn create_key_value(username: &str, token: &str) -> (Vec<u8>, Vec<u8>) {
         let mut key = username.as_bytes().to_owned();
         key.push(0);
@@ -35,8 +36,23 @@ impl FromKeyValue for AccessToken {
     }
 }
 
+impl KeyValue<(&str, &str), ()> for AccessToken {
+    fn db_key(&self) -> (&str, &str) {
+        (&self.username, &self.token)
+    }
+
+    fn db_value(&self) {}
+
+    fn from_key_value(key: (&str, &str), _value: ()) -> Self {
+        AccessToken {
+            username: key.0.to_owned(),
+            token: key.1.to_owned(),
+        }
+    }
+}
+
 /// Functions for the `access_token` map.
-impl<'db, 'n, 'd> Table<'db, 'n, 'd, AccessToken> {
+impl<'db, 'n, 'd> Table<'db, 'n, 'd, AccessToken, (&str, &str), ()> {
     /// Opens the  `access_token` map in the database.
     ///
     /// Returns `None` if the map does not exist.
@@ -50,8 +66,12 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, AccessToken> {
     ///
     /// Returns an error if the database operation fails.
     pub fn insert(&self, username: &str, token: &str) -> Result<()> {
-        let (key, value) = AccessToken::create_key_value(username, token);
-        self.map.insert(&key, &value)
+        let txn = self.db.begin_write()?;
+        let mut tbl = txn.open_table::<(&str, &str), ()>(self.def)?;
+        tbl.insert((username, token), ())?;
+        drop(tbl);
+        txn.commit()?;
+        Ok(())
     }
 
     /// Removes `(username, token)` from map in the database.
@@ -60,9 +80,12 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, AccessToken> {
     ///
     /// Returns an error if the combo does not exist or the database operation fails.
     pub fn revoke(&self, username: &str, token: &str) -> Result<()> {
-        let (key, _value) = AccessToken::create_key_value(username, token);
-
-        self.map.delete(&key)
+        let txn = self.db.begin_write()?;
+        let mut tbl = txn.open_table::<(&str, &str), ()>(self.def)?;
+        tbl.remove((username, token))?;
+        drop(tbl);
+        txn.commit()?;
+        Ok(())
     }
 
     /// Finds whether `username` `token` exists in the database.
@@ -71,18 +94,22 @@ impl<'db, 'n, 'd> Table<'db, 'n, 'd, AccessToken> {
     ///
     /// Returns an error if the database operation fails.
     pub fn contains(&self, username: &str, token: &str) -> Result<bool> {
-        let (key, _value) = AccessToken::create_key_value(username, token);
-        self.map.get(&key).map(|v| v.is_some())
+        let txn = self.db.begin_read()?;
+        let tbl = txn.open_table::<(&str, &str), ()>(self.def)?;
+        Ok(tbl.get((username, token))?.is_some())
     }
 
     /// Finds all tokens for `username` in the database.
-    #[must_use]
-    pub fn tokens(&self, username: &str) -> TableIter<'_, AccessToken> {
-        use rocksdb::Direction;
-
-        let mut prefix = username.as_bytes().to_owned();
-        prefix.push(0);
-        self.prefix_iter(Direction::Forward, None, &prefix)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn tokens(
+        &self,
+        username: &str,
+    ) -> Result<super::Range<'_, AccessToken, (&'static str, &'static str), ()>> {
+        let upper_bound = username.to_string() + "\0";
+        self.range((username, "")..(&upper_bound, ""))
     }
 
     #[cfg(test)]
@@ -110,13 +137,15 @@ mod tests {
         }
 
         for (count, name) in names.iter().enumerate() {
-            assert_eq!(count + 1, table.tokens(name).count());
+            assert_eq!(count + 1, table.tokens(name).unwrap().count());
             for i in 0..count + 1 {
                 assert!(table.contains(name, &i.to_string()).unwrap());
             }
             assert!(table.revoke(name, &0.to_string()).is_ok());
             assert!(!table.contains(name, &0.to_string()).unwrap());
         }
+
+        drop(table)
     }
 
     fn setup_store() -> Arc<Store> {

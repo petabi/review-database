@@ -172,9 +172,12 @@ impl Store {
     }
 
     #[must_use]
-    #[allow(clippy::missing_panics_doc)]
-    pub fn access_token_map(&self) -> Table<AccessToken> {
-        self.legacy_states.access_tokens()
+    pub fn access_token_map(&self) -> Table<AccessToken, (&'static str, &'static str), ()> {
+        let mut table = self.legacy_states.access_tokens();
+        table
+            .database(&self.states)
+            .name(tables::names::ACCESS_TOKENS);
+        table
     }
 
     #[must_use]

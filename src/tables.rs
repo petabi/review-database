@@ -180,9 +180,10 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn access_tokens(&self) -> Table<AccessToken> {
+    pub(crate) fn access_tokens(&self) -> Table<AccessToken, (&'static str, &'static str), ()> {
         let inner = self.inner.as_ref().expect("database must be open");
-        Table::<AccessToken>::open(inner).expect("{ACCESS_TOKENS} table must be present")
+        Table::<AccessToken, (&str, &str), ()>::open(inner)
+            .expect("{ACCESS_TOKENS} table must be present")
     }
 
     #[must_use]
