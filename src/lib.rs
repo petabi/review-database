@@ -130,24 +130,11 @@ impl Store {
                 db
             } else {
                 let db = redb::Database::create(&db_path)?;
-                let txn = match db.begin_write() {
-                    Ok(txn) => txn,
-                    Err(e) => {
-                        drop(db);
-                        std::fs::remove_file(&db_path)?;
-                        return Err(e.into());
-                    }
-                };
-                let res = txn.open_table(redb::TableDefinition::<&str, &str>::new(
-                    crate::tables::names::TRUSTED_DOMAIN_NAMES,
-                ));
-                if let Err(e) = res {
+                if let Err(e) = tables::create_all(&db) {
                     drop(db);
                     std::fs::remove_file(&db_path)?;
-                    return Err(e.into());
+                    return Err(e);
                 }
-                drop(res);
-                txn.commit()?;
                 db
             }
         };
@@ -173,9 +160,12 @@ impl Store {
     }
 
     #[must_use]
-    #[allow(clippy::missing_panics_doc)]
-    pub fn access_token_map(&self) -> Table<AccessToken> {
-        self.legacy_states.access_tokens()
+    pub fn access_token_map(&self) -> Table<AccessToken, (&'static str, &'static str), ()> {
+        let mut table = self.legacy_states.access_tokens();
+        table
+            .database(&self.states)
+            .def(tables::defs::ACCESS_TOKENS);
+        table
     }
 
     #[must_use]
@@ -355,7 +345,7 @@ impl Store {
         let mut table = self.legacy_states.trusted_domains();
         table
             .database(&self.states)
-            .name(tables::names::TRUSTED_DOMAIN_NAMES);
+            .def(tables::defs::TRUSTED_DOMAIN_NAMES);
         table
     }
 
