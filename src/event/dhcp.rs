@@ -2,9 +2,63 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use super::{
+    common::{AttrValue, Match},
+    EventCategory, TriageScore, MEDIUM,
+};
 use crate::event::common::{to_hardware_address, triage_scores_to_string, vector_to_string};
+
+#[derive(Debug, EnumString)]
+enum DhcpAttr {
+    #[strum(serialize = "dhcp-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "dhcp-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "dhcp-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "dhcp-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "dhcp-proto")]
+    Proto,
+    #[strum(serialize = "dhcp-msg_type")]
+    MgsType,
+    #[strum(serialize = "dhcp-ciaddr")]
+    CiAddr,
+    #[strum(serialize = "dhcp-yiaddr")]
+    YiAddr,
+    #[strum(serialize = "dhcp-siaddr")]
+    SiAddr,
+    #[strum(serialize = "dhcp-giaddr")]
+    GiAddr,
+    #[strum(serialize = "dhcp-subnet_mask")]
+    SubNetMask,
+    #[strum(serialize = "dhcp-router")]
+    Router,
+    #[strum(serialize = "dhcp-domain_name_server")]
+    DomainNameServer,
+    #[strum(serialize = "dhcp-req_ip_addr")]
+    ReqIpAddr,
+    #[strum(serialize = "dhcp-lease_time")]
+    LeaseTime,
+    #[strum(serialize = "dhcp-server_id")]
+    ServerId,
+    #[strum(serialize = "dhcp-param_req_list")]
+    ParamReqList,
+    #[strum(serialize = "dhcp-message")]
+    Message,
+    #[strum(serialize = "dhcp-renewal_time")]
+    RenewalTime,
+    #[strum(serialize = "dhcp-rebinding_time")]
+    RebindingTime,
+    #[strum(serialize = "dhcp-class_id")]
+    ClassId,
+    #[strum(serialize = "dhcp-client_id_type")]
+    ClientIdType,
+    #[strum(serialize = "dhcp-client_id")]
+    ClientId,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListDhcpFields {
@@ -176,7 +230,7 @@ impl BlockListDhcp {
     }
 }
 
-impl Match for BlockListDhcp {
+impl Match<DhcpAttr> for BlockListDhcp {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -217,7 +271,41 @@ impl Match for BlockListDhcp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: DhcpAttr) -> Option<AttrValue> {
+        let target_value = match proto_attr {
+            DhcpAttr::SrcAddr => AttrValue::Addr(self.src_addr),
+            DhcpAttr::SrcPort => AttrValue::UInt(self.src_port.into()),
+            DhcpAttr::DstAddr => AttrValue::Addr(self.dst_addr),
+            DhcpAttr::DstPort => AttrValue::UInt(self.dst_port.into()),
+            DhcpAttr::Proto => AttrValue::UInt(self.proto.into()),
+            DhcpAttr::MgsType => todo!(),
+            DhcpAttr::CiAddr => AttrValue::Addr(self.ciaddr),
+            DhcpAttr::YiAddr => AttrValue::Addr(self.yiaddr),
+            DhcpAttr::SiAddr => AttrValue::Addr(self.siaddr),
+            DhcpAttr::GiAddr => AttrValue::Addr(self.giaddr),
+            DhcpAttr::SubNetMask => AttrValue::Addr(self.subnet_mask),
+            DhcpAttr::Router => AttrValue::VecAddr(self.router.clone()),
+            DhcpAttr::DomainNameServer => AttrValue::VecAddr(self.domain_name_server.clone()),
+            DhcpAttr::ReqIpAddr => AttrValue::Addr(self.req_ip_addr),
+            DhcpAttr::LeaseTime => AttrValue::UInt(self.lease_time.into()),
+            DhcpAttr::ServerId => AttrValue::Addr(self.server_id),
+            DhcpAttr::ParamReqList => AttrValue::VecUInt(
+                self.param_req_list
+                    .iter()
+                    .map(|val| u64::from(*val))
+                    .collect(),
+            ),
+            DhcpAttr::Message => AttrValue::String(self.message.clone()),
+            DhcpAttr::RenewalTime => AttrValue::UInt(self.renewal_time.into()),
+            DhcpAttr::RebindingTime => AttrValue::UInt(self.rebinding_time.into()),
+            DhcpAttr::ClassId => {
+                AttrValue::VecUInt(self.class_id.iter().map(|val| u64::from(*val)).collect())
+            }
+            DhcpAttr::ClientIdType => AttrValue::UInt(self.client_id_type.into()),
+            DhcpAttr::ClientId => {
+                AttrValue::VecUInt(self.client_id.iter().map(|val| u64::from(*val)).collect())
+            }
+        };
+        Some(target_value)
     }
 }
