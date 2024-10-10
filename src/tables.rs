@@ -35,7 +35,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use names::TRUSTED_DOMAIN_NAMES;
+use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
@@ -81,12 +81,23 @@ use crate::{
     Direction, Indexable,
 };
 
-pub(crate) mod names {
-    pub(crate) const ACCESS_TOKENS: &str = "access_tokens 0.31.0";
-    pub(crate) const TRUSTED_DOMAIN_NAMES: &str = "trusted_domain_names 0.31.0";
+pub(crate) mod defs {
+    use redb::TableDefinition;
+
+    pub(crate) const ACCESS_TOKENS: TableDefinition<(&str, &str), ()> =
+        TableDefinition::new("access_tokens 0.31.0");
+    pub(crate) const TRUSTED_DOMAIN_NAMES: TableDefinition<&str, &str> =
+        TableDefinition::new("trusted_domain_names 0.31.0");
 }
 
-pub(crate) const NAMES: [&str; 1] = [TRUSTED_DOMAIN_NAMES];
+/// Creates all the tables in the database.
+pub(crate) fn create_all(db: &redb::Database) -> Result<()> {
+    let txn = db.begin_write()?;
+    txn.open_table(defs::ACCESS_TOKENS)?;
+    txn.open_table(defs::TRUSTED_DOMAIN_NAMES)?;
+    txn.commit()?;
+    Ok(())
+}
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
@@ -549,8 +560,8 @@ where
         self
     }
 
-    pub(crate) fn name(&mut self, name: &'n str) -> &mut Self {
-        self.def = redb::TableDefinition::new(name);
+    pub(crate) fn def(&mut self, def: TableDefinition<'static, K, V>) -> &mut Self {
+        self.def = def;
         self
     }
 }

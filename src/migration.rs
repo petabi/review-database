@@ -230,9 +230,7 @@ fn migrate_rocksdb_to_redb(store: &mut super::Store) -> Result<()> {
     // access tokens
     let table = store.access_token_map();
     let write_txn = store.states.begin_write()?;
-    let mut tbl = write_txn.open_table(redb::TableDefinition::<(&str, &str), ()>::new(
-        crate::tables::names::ACCESS_TOKENS,
-    ))?;
+    let mut tbl = write_txn.open_table(crate::tables::defs::ACCESS_TOKENS)?;
     for rec in table.iter(rocksdb::Direction::Forward, None) {
         let old = rec?;
         tbl.insert((old.username.as_str(), old.token.as_str()), ())?;
@@ -246,9 +244,7 @@ fn migrate_rocksdb_to_redb(store: &mut super::Store) -> Result<()> {
     // trusted domain names
     let table = store.trusted_domain_map();
     let write_txn = store.states.begin_write()?;
-    let mut tbl = write_txn.open_table(redb::TableDefinition::<&str, &str>::new(
-        crate::tables::names::TRUSTED_DOMAIN_NAMES,
-    ))?;
+    let mut tbl = write_txn.open_table(crate::tables::defs::TRUSTED_DOMAIN_NAMES)?;
     for rec in table.iter(rocksdb::Direction::Forward, None) {
         let old = rec?;
         tbl.insert(old.name.as_str(), old.remarks.as_str())?;
@@ -3694,9 +3690,7 @@ mod tests {
         let read_txn = store.states.begin_read().unwrap();
 
         let tbl = read_txn
-            .open_table(redb::TableDefinition::<(&str, &str), ()>::new(
-                crate::tables::names::ACCESS_TOKENS,
-            ))
+            .open_table(crate::tables::defs::ACCESS_TOKENS)
             .unwrap();
         assert_eq!(tbl.len().unwrap(), 3);
         let mut iter = tbl.range::<(&str, &str)>(..).unwrap();
@@ -3711,9 +3705,7 @@ mod tests {
         assert_eq!(v.value(), ());
 
         let tbl = read_txn
-            .open_table(redb::TableDefinition::<&str, &str>::new(
-                crate::tables::names::TRUSTED_DOMAIN_NAMES,
-            ))
+            .open_table(crate::tables::defs::TRUSTED_DOMAIN_NAMES)
             .unwrap();
         assert_eq!(tbl.len().unwrap(), 3);
         let mut iter = tbl.range::<&str>(..).unwrap();
