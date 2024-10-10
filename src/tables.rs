@@ -35,6 +35,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use names::TRUSTED_DOMAIN_NAMES;
 use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
@@ -84,6 +85,8 @@ use crate::{
 pub(crate) mod names {
     pub(crate) const TRUSTED_DOMAIN_NAMES: &str = "trusted_domain_names 0.31.0";
 }
+
+pub(crate) const NAMES: [&str; 1] = [TRUSTED_DOMAIN_NAMES];
 
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";

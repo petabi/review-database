@@ -138,15 +138,14 @@ impl Store {
                         return Err(e.into());
                     }
                 };
-                let res = txn.open_table(redb::TableDefinition::<&str, &str>::new(
-                    crate::tables::names::TRUSTED_DOMAIN_NAMES,
-                ));
-                if let Err(e) = res {
-                    drop(db);
-                    std::fs::remove_file(&db_path)?;
-                    return Err(e.into());
+                for name in tables::NAMES {
+                    let res = txn.open_table(redb::TableDefinition::<&str, &str>::new(name));
+                    if let Err(e) = res {
+                        drop(db);
+                        std::fs::remove_file(&db_path)?;
+                        return Err(e.into());
+                    }
                 }
-                drop(res);
                 txn.commit()?;
                 db
             }
