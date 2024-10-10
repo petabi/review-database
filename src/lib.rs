@@ -130,23 +130,11 @@ impl Store {
                 db
             } else {
                 let db = redb::Database::create(&db_path)?;
-                let txn = match db.begin_write() {
-                    Ok(txn) => txn,
-                    Err(e) => {
-                        drop(db);
-                        std::fs::remove_file(&db_path)?;
-                        return Err(e.into());
-                    }
-                };
-                for name in tables::NAMES {
-                    let res = txn.open_table(redb::TableDefinition::<&str, &str>::new(name));
-                    if let Err(e) = res {
-                        drop(db);
-                        std::fs::remove_file(&db_path)?;
-                        return Err(e.into());
-                    }
+                if let Err(e) = tables::create_all(&db) {
+                    drop(db);
+                    std::fs::remove_file(&db_path)?;
+                    return Err(e);
                 }
-                txn.commit()?;
                 db
             }
         };
@@ -176,7 +164,7 @@ impl Store {
         let mut table = self.legacy_states.access_tokens();
         table
             .database(&self.states)
-            .name(tables::names::ACCESS_TOKENS);
+            .def(tables::defs::ACCESS_TOKENS);
         table
     }
 
@@ -357,7 +345,7 @@ impl Store {
         let mut table = self.legacy_states.trusted_domains();
         table
             .database(&self.states)
-            .name(tables::names::TRUSTED_DOMAIN_NAMES);
+            .def(tables::defs::TRUSTED_DOMAIN_NAMES);
         table
     }
 
