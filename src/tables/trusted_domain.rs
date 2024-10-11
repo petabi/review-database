@@ -2,12 +2,11 @@
 
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
-use serde::{Deserialize, Serialize};
 
 use super::Value;
 use crate::{types::FromKeyValue, Map, Table, UniqueKey};
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TrustedDomain {
     pub name: String,
     pub remarks: String,
