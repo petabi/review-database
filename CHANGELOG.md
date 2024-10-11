@@ -7,6 +7,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- `FromKeyValue` is sealed.
+
 ### Removed
 
 - `TrustedDomain` no longer implements `serde::Serialize` and

@@ -43,6 +43,7 @@ pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
+pub(crate) use self::node::Inner as InnerNode;
 pub use self::node::{
     Giganto, Node, Profile as NodeProfile, Table as NodeTable, Update as NodeUpdate,
 };

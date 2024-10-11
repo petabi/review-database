@@ -11,13 +11,46 @@ use strum_macros::Display;
 use super::TrafficDirection;
 pub use crate::account::{Account, Role};
 
-pub trait FromKeyValue: Sized {
+pub trait FromKeyValue: Sized + private::Sealed {
     /// Creates a new instance from the given key and value.
     ///
     /// # Errors
     ///
     /// Returns an error if the key or value cannot be deserialized.
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self>;
+}
+
+mod private {
+    use crate::{tables, types};
+
+    pub trait Sealed {}
+
+    impl Sealed for tables::AccessToken {}
+    impl Sealed for types::Account {}
+    impl Sealed for tables::Agent {}
+    impl Sealed for tables::AllowNetwork {}
+    impl Sealed for crate::BatchInfo {}
+    impl Sealed for tables::BlockNetwork {}
+    impl Sealed for crate::Category {}
+    impl Sealed for tables::CsvColumnExtra {}
+    impl Sealed for tables::Customer {}
+    impl Sealed for tables::DataSource {}
+    impl Sealed for tables::Filter {}
+    impl Sealed for tables::InnerNode {}
+    impl Sealed for tables::ModelIndicator {}
+    impl Sealed for tables::Network {}
+    impl Sealed for tables::OutlierInfo {}
+    impl Sealed for types::Qualifier {}
+    impl Sealed for tables::SamplingPolicy {}
+    impl Sealed for types::Status {}
+    impl Sealed for tables::Template {}
+    impl Sealed for tables::Tidb {}
+    impl Sealed for tables::TorExitNode {}
+    impl Sealed for tables::TrafficFilter {}
+    impl Sealed for tables::TriagePolicy {}
+    impl Sealed for tables::TriageResponse {}
+    impl Sealed for tables::TrustedDomain {}
+    impl Sealed for tables::TrustedUserAgent {}
 }
 
 pub(crate) type Timestamp = i64;

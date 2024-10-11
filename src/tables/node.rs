@@ -312,7 +312,7 @@ pub struct Profile {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-struct Inner {
+pub(crate) struct Inner {
     id: u32,
     name: String,
     name_draft: Option<String>,
@@ -363,7 +363,7 @@ impl<'d> IndexedTable<'d, Inner> {
     /// # Errors
     ///
     /// Returns an error if the `id` is invalid or the database operation fails.
-    pub fn update(&mut self, id: u32, old: &InnerUpdate, new: &InnerUpdate) -> Result<()> {
+    fn update(&mut self, id: u32, old: &InnerUpdate, new: &InnerUpdate) -> Result<()> {
         self.indexed_map.update(id, old, new)
     }
 }
