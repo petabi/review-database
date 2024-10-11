@@ -7,7 +7,7 @@ use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
 use super::TableIter;
-use crate::{tables::Value as ValueTrait, types::FromKeyValue, Iterable, Map, Table, UniqueKey};
+use crate::{tables::Value as ValueTrait, types::KeyValue, Iterable, Map, Table, UniqueKey};
 
 #[derive(Debug, PartialEq)]
 pub struct OutlierInfo {
@@ -20,7 +20,7 @@ pub struct OutlierInfo {
     pub is_saved: bool,
 }
 
-impl FromKeyValue for OutlierInfo {
+impl KeyValue for OutlierInfo {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let key = Key::from_be_bytes(key)?;
 
@@ -193,7 +193,7 @@ mod tests {
 
     use rocksdb::Direction;
 
-    use crate::{tables::Value, types::FromKeyValue, Iterable, OutlierInfo, Store, UniqueKey};
+    use crate::{tables::Value, types::KeyValue, Iterable, OutlierInfo, Store, UniqueKey};
 
     #[test]
     fn serde() {

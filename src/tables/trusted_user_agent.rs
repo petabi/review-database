@@ -5,14 +5,14 @@ use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 
 use super::Value;
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{types::KeyValue, Map, Table, UniqueKey};
 
 pub struct TrustedUserAgent {
     pub user_agent: String,
     pub updated_at: DateTime<Utc>,
 }
 
-impl FromKeyValue for TrustedUserAgent {
+impl KeyValue for TrustedUserAgent {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let user_agent = std::str::from_utf8(key)
             .context("invalid user-agent in database")?

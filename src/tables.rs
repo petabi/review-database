@@ -72,7 +72,7 @@ use crate::{
     category::Category,
     collections::IndexedSet,
     scores::Scores,
-    types::{Account, FromKeyValue, Qualifier, Status},
+    types::{Account, KeyValue, Qualifier, Status},
     Direction, Indexable,
 };
 
@@ -464,7 +464,7 @@ impl<'i, R> TableIter<'i, R> {
 
 impl<'i, R> Iterator for TableIter<'i, R>
 where
-    R: FromKeyValue,
+    R: KeyValue,
 {
     type Item = Result<R, anyhow::Error>;
 
@@ -532,7 +532,7 @@ impl<'i, 'j, 'k, R> Iterable<'i, TableIter<'k, R>> for Table<'j, R>
 where
     'j: 'k,
     'i: 'k,
-    R: FromKeyValue,
+    R: KeyValue,
 {
     fn iter(&self, direction: Direction, from: Option<&[u8]>) -> TableIter<'k, R> {
         use rocksdb::IteratorMode;
@@ -633,7 +633,7 @@ impl<'d, R> IndexedTable<'d, R> {
     /// Returns an error if the database operation fails.
     pub fn get_by_id(&self, id: u32) -> Result<Option<R>>
     where
-        R: Indexable + FromKeyValue,
+        R: Indexable + KeyValue,
     {
         self.indexed_map.get_by_id(id)
     }
@@ -652,7 +652,7 @@ impl<'i, 'j, 'k, R> Iterable<'i, TableIter<'k, R>> for IndexedTable<'j, R>
 where
     'j: 'k,
     'i: 'k,
-    R: FromKeyValue,
+    R: KeyValue,
 {
     fn iter(&'i self, direction: Direction, from: Option<&[u8]>) -> TableIter<'k, R> {
         use rocksdb::IteratorMode;

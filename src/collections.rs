@@ -10,7 +10,7 @@ use rocksdb::{Direction, IteratorMode};
 use serde::{Deserialize, Serialize};
 
 pub use self::{indexed_map::IndexedMap, indexed_set::IndexedSet, map::Map};
-use super::types::FromKeyValue;
+use super::types::KeyValue;
 use crate::EXCLUSIVE;
 
 pub trait IterableMap<'i, I: Iterator + 'i> {
@@ -320,7 +320,7 @@ pub trait Indexed {
     /// # Errors
     ///
     /// Returns an error if the index is invalid or cannot be read.
-    fn get_by_id<T: Indexable + FromKeyValue>(&self, id: u32) -> Result<Option<T>> {
+    fn get_by_id<T: Indexable + KeyValue>(&self, id: u32) -> Result<Option<T>> {
         let index = self.index()?;
         let Some(key) = index.get(id).context("invalid ID")? else {
             return Ok(None);
@@ -456,7 +456,7 @@ pub trait Indexed {
     fn update<O, V>(&self, id: u32, old: &O, new: &V) -> Result<()>
     where
         O: IndexedMapUpdate,
-        O::Entry: Indexable + FromKeyValue,
+        O::Entry: Indexable + KeyValue,
         V: IndexedMapUpdate,
         V::Entry: Indexable + From<O::Entry>,
     {

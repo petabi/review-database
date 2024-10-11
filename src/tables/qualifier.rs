@@ -6,7 +6,7 @@ use rocksdb::OptimisticTransactionDB;
 
 use super::UniqueKey;
 use crate::{
-    types::{FromKeyValue, Qualifier},
+    types::{KeyValue, Qualifier},
     Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
 };
 
@@ -18,7 +18,7 @@ const DEFAULT_ENTRIES: [(u32, &str); 4] = [
     (4, "mixed"),
 ];
 
-impl FromKeyValue for Qualifier {
+impl KeyValue for Qualifier {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
     }

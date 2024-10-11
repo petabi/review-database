@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{types::KeyValue, Map, Table, UniqueKey};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub enum Template {
@@ -35,7 +35,7 @@ impl UniqueKey for Template {
     }
 }
 
-impl FromKeyValue for Template {
+impl KeyValue for Template {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
     }

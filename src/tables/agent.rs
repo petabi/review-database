@@ -8,7 +8,7 @@ use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::{tables::Value as ValueTrait, types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{tables::Value as ValueTrait, types::KeyValue, Map, Table, UniqueKey};
 
 #[derive(
     Serialize,
@@ -119,7 +119,7 @@ impl Agent {
     }
 }
 
-impl FromKeyValue for Agent {
+impl KeyValue for Agent {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let value: Value = super::deserialize(value)?;
 

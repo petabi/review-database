@@ -8,7 +8,7 @@ use flate2::read::GzDecoder;
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, EventCategory, Iterable, Map, Table, UniqueKey};
+use crate::{types::KeyValue, EventCategory, Iterable, Map, Table, UniqueKey};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Tidb {
@@ -90,7 +90,7 @@ impl UniqueKey for Tidb {
     }
 }
 
-impl FromKeyValue for Tidb {
+impl KeyValue for Tidb {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let name = std::str::from_utf8(key)?.to_string();
         let value: Tidb = super::deserialize(value)?;

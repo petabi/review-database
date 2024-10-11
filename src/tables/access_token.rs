@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
 use super::TableIter;
-use crate::{types::FromKeyValue, Iterable, Map, Table};
+use crate::{types::KeyValue, Iterable, Map, Table};
 
 #[derive(Debug, PartialEq)]
 pub struct AccessToken {
@@ -21,7 +21,10 @@ impl AccessToken {
     }
 }
 
-impl FromKeyValue for AccessToken {
+impl KeyValue for AccessToken {
+    type Key<'a> = (&'a str, &'a str);
+    type Value<'a> = ();
+
     fn from_key_value(key: &[u8], _value: &[u8]) -> Result<Self> {
         use anyhow::anyhow;
 
@@ -32,6 +35,14 @@ impl FromKeyValue for AccessToken {
         let username = String::from_utf8_lossy(&key[..sep]).into_owned();
         let token = String::from_utf8_lossy(&key[sep + 1..]).into_owned();
         Ok(AccessToken { username, token })
+    }
+
+    fn key(&self) -> Self::Key<'_> {
+        (&self.username, &self.token)
+    }
+
+    fn value(&self) -> Self::Value<'_> {
+        ()
     }
 }
 

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    types::FromKeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
+    types::KeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
     IndexedTable, Iterable,
 };
 
@@ -68,7 +68,7 @@ impl Network {
     }
 }
 
-impl FromKeyValue for Network {
+impl KeyValue for Network {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let value: Value = super::deserialize(value)?;
         let (name, id) = key.split_at(key.len() - size_of::<u32>());

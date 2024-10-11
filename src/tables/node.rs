@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::TableIter as TI;
 use crate::{
-    types::FromKeyValue, Agent, AgentConfig, AgentStatus, Indexable, Indexed, IndexedMap,
+    types::KeyValue, Agent, AgentConfig, AgentStatus, Indexable, Indexed, IndexedMap,
     IndexedMapUpdate, IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey,
 };
 
@@ -324,7 +324,7 @@ pub(crate) struct Inner {
     giganto: Option<Giganto>,
 }
 
-impl FromKeyValue for Inner {
+impl KeyValue for Inner {
     fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
         super::deserialize(value)
     }

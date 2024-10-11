@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, FilterEndpoint, FlowKind, Iterable, LearningMethod, Map, Table};
+use crate::{types::KeyValue, FilterEndpoint, FlowKind, Iterable, LearningMethod, Map, Table};
 
 #[derive(Default)]
 pub struct Filter {
@@ -87,7 +87,7 @@ pub(crate) struct Value {
     confidence: Option<f32>,
 }
 
-impl FromKeyValue for Filter {
+impl KeyValue for Filter {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         use anyhow::anyhow;
 

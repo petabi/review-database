@@ -5,9 +5,9 @@ use std::mem::size_of;
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{batch_info::BatchInfo, types::FromKeyValue, Iterable, Map, Table, UniqueKey};
+use crate::{batch_info::BatchInfo, types::KeyValue, Iterable, Map, Table, UniqueKey};
 
-impl FromKeyValue for BatchInfo {
+impl KeyValue for BatchInfo {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let mut model = [0; size_of::<i32>()];
         model.copy_from_slice(&key[..size_of::<i32>()]);

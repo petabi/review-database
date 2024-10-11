@@ -9,7 +9,7 @@ use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
 use super::Value;
-use crate::{types::FromKeyValue, Iterable, Map, Table, UniqueKey};
+use crate::{types::KeyValue, Iterable, Map, Table, UniqueKey};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct TrafficFilter {
@@ -20,7 +20,7 @@ pub struct TrafficFilter {
     pub description: Option<String>,
 }
 
-impl FromKeyValue for TrafficFilter {
+impl KeyValue for TrafficFilter {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
     }

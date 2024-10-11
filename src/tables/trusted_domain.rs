@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
 use super::Value;
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{types::KeyValue, Map, Table, UniqueKey};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrustedDomain {
@@ -12,7 +12,7 @@ pub struct TrustedDomain {
     pub remarks: String,
 }
 
-impl FromKeyValue for TrustedDomain {
+impl KeyValue for TrustedDomain {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self, anyhow::Error> {
         Ok(TrustedDomain {
             name: std::str::from_utf8(key)?.to_owned(),
@@ -74,7 +74,7 @@ mod test {
 
     use rocksdb::Direction;
 
-    use crate::types::FromKeyValue;
+    use crate::types::KeyValue;
     use crate::{Iterable, Store, TrustedDomain};
 
     #[test]

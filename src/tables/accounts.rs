@@ -7,11 +7,11 @@ use bincode::Options;
 use rocksdb::OptimisticTransactionDB;
 
 use crate::{
-    types::{Account, FromKeyValue},
+    types::{Account, KeyValue},
     Map, Role, Table, EXCLUSIVE,
 };
 
-impl FromKeyValue for Account {
+impl KeyValue for Account {
     fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
         super::deserialize(value)
     }

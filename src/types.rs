@@ -11,13 +11,27 @@ use strum_macros::Display;
 use super::TrafficDirection;
 pub use crate::account::{Account, Role};
 
-pub trait FromKeyValue: Sized + private::Sealed {
+/// A trait for types that can be represented as a key-value pair.
+pub trait KeyValue: Sized + private::Sealed {
+    type Key<'a>: 'a
+    where
+        Self: 'a;
+    type Value<'a>: 'a
+    where
+        Self: 'a;
+
     /// Creates a new instance from the given key and value.
     ///
     /// # Errors
     ///
     /// Returns an error if the key or value cannot be deserialized.
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self>;
+
+    /// Returns the key of the key-value pair.
+    fn key(&self) -> Self::Key<'_>;
+
+    /// Returns the value of the key-value pair.
+    fn value(&self) -> Self::Value<'_>;
 }
 
 mod private {

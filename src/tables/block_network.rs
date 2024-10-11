@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    types::FromKeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
+    types::KeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
     IndexedTable,
 };
 
@@ -20,7 +20,7 @@ pub struct BlockNetwork {
     pub description: String,
 }
 
-impl FromKeyValue for BlockNetwork {
+impl KeyValue for BlockNetwork {
     fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
         super::deserialize(value)
     }

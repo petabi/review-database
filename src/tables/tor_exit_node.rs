@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{types::KeyValue, Map, Table, UniqueKey};
 
 pub struct TorExitNode {
     pub ip_address: String,
@@ -28,7 +28,7 @@ impl UniqueKey for TorExitNode {
     }
 }
 
-impl FromKeyValue for TorExitNode {
+impl KeyValue for TorExitNode {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let ip_address =
             String::from_utf8(key.to_vec()).context("invalid IP address in database")?;

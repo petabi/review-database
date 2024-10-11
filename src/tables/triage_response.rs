@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    types::FromKeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, Iterable,
+    types::KeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, Iterable,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -68,7 +68,7 @@ impl TriageResponse {
     }
 }
 
-impl FromKeyValue for TriageResponse {
+impl KeyValue for TriageResponse {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
     }

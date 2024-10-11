@@ -12,7 +12,7 @@ use flate2::read::GzDecoder;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, Map, Table};
+use crate::{types::KeyValue, Map, Table};
 
 #[derive(Default)]
 pub struct ModelIndicator {
@@ -60,7 +60,7 @@ struct Value {
     last_modification_time: DateTime<Utc>,
 }
 
-impl FromKeyValue for ModelIndicator {
+impl KeyValue for ModelIndicator {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let name = std::str::from_utf8(key)?.to_string();
         let value: Value = super::deserialize(value)?;

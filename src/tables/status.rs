@@ -6,14 +6,14 @@ use rocksdb::OptimisticTransactionDB;
 
 use super::UniqueKey;
 use crate::{
-    types::{FromKeyValue, Status},
+    types::{KeyValue, Status},
     Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
 };
 
 // The following will be used when PostgreSQL status table is deleted
 const DEFAULT_ENTRIES: [(u32, &str); 3] = [(1, "reviewed"), (2, "pending review"), (3, "disabled")];
 
-impl FromKeyValue for Status {
+impl KeyValue for Status {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
     }

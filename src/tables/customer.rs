@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    types::FromKeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
+    types::KeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
     IndexedTable, NetworkType,
 };
 
@@ -22,7 +22,7 @@ pub struct Customer {
     pub creation_time: DateTime<Utc>,
 }
 
-impl FromKeyValue for Customer {
+impl KeyValue for Customer {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
     }

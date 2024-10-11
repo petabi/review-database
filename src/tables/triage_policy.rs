@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    types::{EventCategory, FromKeyValue},
+    types::{EventCategory, KeyValue},
     Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
 };
 
@@ -24,7 +24,7 @@ pub struct TriagePolicy {
     pub creation_time: DateTime<Utc>,
 }
 
-impl FromKeyValue for TriagePolicy {
+impl KeyValue for TriagePolicy {
     fn from_key_value(_key: &[u8], value: &[u8]) -> Result<Self> {
         super::deserialize(value)
     }
