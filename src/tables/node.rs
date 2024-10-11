@@ -354,17 +354,6 @@ impl Indexable for Inner {
 
 /// Functions for the `node` indexed map.
 impl<'d> IndexedTable<'d, Inner> {
-    /// Opens the `node` table in the database.
-    ///
-    /// Returns `None` if the table does not exist.
-    #[allow(dead_code)]
-    pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
-        IndexedMap::new(db, super::NODES)
-            .map(IndexedTable::new)
-            .ok()
-    }
-
-    #[allow(dead_code)]
     pub(crate) fn raw(&self) -> &IndexedMap<'_> {
         &self.indexed_map
     }
