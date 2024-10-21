@@ -4817,7 +4817,7 @@ mod tests {
             issuer_org_name: "org".to_string(),
             issuer_org_unit_name: "unit".to_string(),
             issuer_common_name: "common".to_string(),
-            category: EventCategory::Unknown,
+            category: EventCategory::Unspecified,
             last_alert: 1,
         }
     }
@@ -4836,7 +4836,7 @@ mod tests {
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unspecified" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1""#
         );
 
         let suspicious_tls_traffic =
@@ -4849,7 +4849,10 @@ mod tests {
             suspicious_tls_traffic.dst_addr(),
             IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
         );
-        assert_eq!(suspicious_tls_traffic.category(), EventCategory::Unknown);
+        assert_eq!(
+            suspicious_tls_traffic.category(),
+            EventCategory::Unspecified
+        );
         assert_eq!(suspicious_tls_traffic.src_port(), 10000);
         assert_eq!(suspicious_tls_traffic.dst_port(), 443);
         assert_eq!(suspicious_tls_traffic.proto(), 6);
@@ -4858,7 +4861,7 @@ mod tests {
 
         assert_eq!(
             &block_list_tls,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unspecified" source="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" triage_scores="""#
         );
     }
 
@@ -4918,7 +4921,7 @@ mod tests {
 
         let mut counter = HashMap::new();
         event.count_category(&mut counter, None, &filter).unwrap();
-        assert_eq!(counter.get(&EventCategory::Unknown), Some(&1));
+        assert_eq!(counter.get(&EventCategory::Unspecified), Some(&1));
 
         let mut counter = HashMap::new();
         event

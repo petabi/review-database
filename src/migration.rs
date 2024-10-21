@@ -278,7 +278,7 @@ fn migrate_0_30_tidb(store: &super::Store) -> Result<()> {
             "HttpUriThreat" => EventCategory::Reconnaissance,
             "ProcessCreate" => EventCategory::Impact,
             "spamhaus drop ip" => EventCategory::InitialAccess,
-            _ => EventCategory::Unknown,
+            _ => EventCategory::Unspecified,
         };
         let new_tidb = Tidb::try_from((old_tidb, category))?;
 

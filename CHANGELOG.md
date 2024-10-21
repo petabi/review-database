@@ -10,6 +10,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - `FromKeyValue` is sealed.
+- Renamed `EventCategory::Unknown` to `Unspecified`.
 
 ### Removed
 
