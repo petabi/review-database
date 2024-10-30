@@ -95,7 +95,7 @@ impl<'d> IndexedTable<'d, SamplingPolicy> {
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
-        IndexedMap::new(db, super::NETWORKS)
+        IndexedMap::new(db, super::SAMPLING_POLICY)
             .map(IndexedTable::new)
             .ok()
     }

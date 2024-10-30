@@ -22,6 +22,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `serde::Deserialize`. Its serialized form in the database is internal and
   should not be exposed to other modules.
 
+### Fixed
+
+- Fixed the indexed map name for `SamplingPolicy` in `IndexedTable`
+  implementation, changing it from `NETWORKS` to `SAMPLING_POLICY`.
+
 ## [0.31.0] - 2024-10-01
 
 ### Added
