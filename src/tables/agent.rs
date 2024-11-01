@@ -27,10 +27,10 @@ use crate::{tables::Value as ValueTrait, types::FromKeyValue, Map, Table, Unique
 #[repr(u32)]
 #[strum(serialize_all = "snake_case")]
 pub enum Kind {
-    Reconverge = 1,
-    Piglet = 2,
-    Hog = 3,
-    // Crusher,
+    Unsupervised = 1,
+    Sensor = 2,
+    SemiSupervised = 3,
+    TimeSeriesGenerator = 4,
 }
 
 #[derive(
@@ -254,13 +254,13 @@ mod test {
         let agent = create_agent(
             1,
             "test_key",
-            Kind::Reconverge,
+            Kind::Unsupervised,
             Some(VALID_TOML),
             Some(VALID_TOML),
         );
         assert_eq!(agent.node, 1);
         assert_eq!(agent.key, "test_key");
-        assert_eq!(agent.kind, Kind::Reconverge);
+        assert_eq!(agent.kind, Kind::Unsupervised);
         assert_eq!(agent.config.as_ref().unwrap().as_ref(), VALID_TOML);
         assert_eq!(agent.draft.as_ref().unwrap().as_ref(), VALID_TOML);
 
@@ -268,7 +268,7 @@ mod test {
         assert!(Agent::new(
             1,
             "test_key".to_string(),
-            Kind::Reconverge,
+            Kind::Unsupervised,
             Status::Enabled,
             Some(invalid.to_string()),
             Some(invalid.to_string()),
@@ -287,7 +287,7 @@ mod test {
         let agent = create_agent(
             1,
             "test_key",
-            Kind::Reconverge,
+            Kind::Unsupervised,
             Some(VALID_TOML),
             Some(VALID_TOML),
         );
@@ -301,7 +301,7 @@ mod test {
         let store = setup_store();
         let table = store.agents_map();
 
-        let agent = create_agent(1, "test_key", Kind::Reconverge, Some(VALID_TOML), None);
+        let agent = create_agent(1, "test_key", Kind::Unsupervised, Some(VALID_TOML), None);
 
         // Insert and retrieve agent
         assert!(table.insert(&agent).is_ok());
@@ -311,7 +311,7 @@ mod test {
         let new_toml = r#"another_test = "abc""#;
         // Update agent
         let updated_agent =
-            create_agent(1, "test_key", Kind::Piglet, Some(new_toml), Some(new_toml));
+            create_agent(1, "test_key", Kind::Sensor, Some(new_toml), Some(new_toml));
         table.update(&agent, &updated_agent).unwrap();
         let retrieved_updated_agent = table.get(1, "test_key").unwrap().unwrap();
         assert_eq!(updated_agent, retrieved_updated_agent);

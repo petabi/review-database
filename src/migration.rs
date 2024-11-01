@@ -693,7 +693,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                     let agent = Agent {
                         node: input.id,
                         key: "hog".to_string(),
-                        kind: crate::AgentKind::Hog,
+                        kind: crate::AgentKind::SemiSupervised,
                         config: Some(config),
                         draft: None,
                         status,
@@ -766,7 +766,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                     let agent = Agent {
                         node: input.id,
                         key: "piglet".to_string(),
-                        kind: crate::AgentKind::Piglet,
+                        kind: crate::AgentKind::Sensor,
                         config: Some(config),
                         draft: None,
                         status,
@@ -779,7 +779,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                     let agent = Agent {
                         node: input.id,
                         key: "reconverge".to_string(),
-                        kind: crate::AgentKind::Reconverge,
+                        kind: crate::AgentKind::Unsupervised,
                         config: Some(config),
                         draft: None,
                         status,
@@ -832,7 +832,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         agents[0] = Some(Agent {
                             node: input.id,
                             key: "hog".to_string(),
-                            kind: crate::AgentKind::Hog,
+                            kind: crate::AgentKind::SemiSupervised,
                             config: None,
                             draft: Some(draft),
                             status,
@@ -908,7 +908,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         agents[1] = Some(Agent {
                             node: input.id,
                             key: "piglet".to_string(),
-                            kind: crate::AgentKind::Piglet,
+                            kind: crate::AgentKind::Sensor,
                             config: None,
                             draft: Some(draft),
                             status,
@@ -924,7 +924,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         agents[2] = Some(Agent {
                             node: input.id,
                             key: "reconverge".to_string(),
-                            kind: crate::AgentKind::Reconverge,
+                            kind: crate::AgentKind::Unsupervised,
                             config: None,
                             draft: Some(draft),
                             status,

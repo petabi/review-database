@@ -184,7 +184,7 @@ impl<'d> Table<'d> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the database operation fails.   
+    /// Returns an error if the database operation fails.
     pub fn remove(&self, id: u32) -> Result<(Vec<u8>, Vec<String>)> {
         use anyhow::anyhow;
         let inner = self.node.get_by_id(id)?.ok_or(anyhow!("No such id"))?;
@@ -525,28 +525,34 @@ mod test {
         agents
             .iter()
             .map(|agent| match agent {
-                AgentKind::Reconverge => Some("".to_string().try_into().unwrap()),
-                AgentKind::Hog => {
+                AgentKind::Unsupervised => Some("".to_string().try_into().unwrap()),
+                AgentKind::SemiSupervised => {
                     let mut config = Hog::default();
                     config.giganto_ip = ip;
                     config.giganto_port = port;
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
-                AgentKind::Piglet => {
+                AgentKind::Sensor => {
                     let mut config = Piglet::default();
                     config.giganto_ip = ip;
                     config.giganto_port = port;
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
+                AgentKind::TimeSeriesGenerator => Some("".to_string().try_into().unwrap()),
             })
             .collect()
     }
 
     #[test]
     fn node_creation() {
-        let kinds = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+        let kinds = vec![
+            AgentKind::Unsupervised,
+            AgentKind::Sensor,
+            AgentKind::SemiSupervised,
+            AgentKind::TimeSeriesGenerator,
+        ];
         let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
+        let configs2 = vec![None, None, None, None];
 
         let profile = Profile::default();
 
@@ -566,7 +572,11 @@ mod test {
     fn put_and_get() {
         let store = setup_store();
 
-        let kinds = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+        let kinds = vec![
+            AgentKind::Unsupervised,
+            AgentKind::Sensor,
+            AgentKind::SemiSupervised,
+        ];
         let configs1: Vec<_> = create_configs(&kinds);
         let configs2 = vec![None, None, None];
 
@@ -596,7 +606,11 @@ mod test {
     fn remove() {
         let store = setup_store();
 
-        let kinds = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+        let kinds = vec![
+            AgentKind::Unsupervised,
+            AgentKind::Sensor,
+            AgentKind::SemiSupervised,
+        ];
         let configs1: Vec<_> = create_configs(&kinds);
         let configs2 = vec![None, None, None];
 
@@ -629,7 +643,11 @@ mod test {
     #[test]
     fn update() {
         let store = setup_store();
-        let kinds = vec![AgentKind::Reconverge, AgentKind::Piglet, AgentKind::Hog];
+        let kinds = vec![
+            AgentKind::Unsupervised,
+            AgentKind::Sensor,
+            AgentKind::SemiSupervised,
+        ];
         let configs1: Vec<_> = create_configs(&kinds);
         let configs2 = vec![None, None, None];
 
@@ -687,7 +705,7 @@ mod test {
     #[test]
     fn update_agents_drafts_only() {
         let store: Arc<Store> = setup_store();
-        let kinds = vec![AgentKind::Reconverge, AgentKind::Hog];
+        let kinds = vec![AgentKind::Unsupervised, AgentKind::SemiSupervised];
         let configs1: Vec<_> = create_configs(&kinds);
         let configs2 = vec![None, None, None];
 
@@ -729,7 +747,7 @@ mod test {
             .collect();
         update_agents.extend(create_agents(
             id,
-            &[AgentKind::Piglet],
+            &[AgentKind::Sensor],
             &[Some(
                 toml::to_string(&Piglet::default())
                     .unwrap()
