@@ -10,6 +10,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - `FromKeyValue` is sealed.
+- Added a new variant `TimeSeriesGenerator` to `agent::Kind` and renamed below
+  variants:
+  - `Reconverge` to `Unsupervised`
+  - `Hog` to `SemiSupervised`
+  - `Piglet` to `Sensor`
 
 ### Removed
 
