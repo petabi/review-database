@@ -9,7 +9,7 @@ mod text;
 use std::{cmp::Reverse, collections::HashMap};
 
 use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, QueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use futures::future::join_all;
 use serde::Serialize;
@@ -69,18 +69,23 @@ impl Database {
         cluster: i32,
         time: Vec<NaiveDateTime>,
     ) -> Result<Vec<Statistics>, Error> {
-        let mut conn = self.pool.get().await?;
-
-        let mut query = cd_d::column_description
-            .select((cd_d::id, cd_d::type_id))
-            .filter(cd_d::cluster_id.eq(cluster))
-            .order_by(cd_d::type_id)
-            .into_boxed();
-        if !time.is_empty() {
-            query = query.filter(cd_d::batch_ts.eq_any(&time));
+        if time.is_empty() {
+            return Err(Error::InvalidInput(
+                "The `time` argument is empty".to_string(),
+            ));
         }
 
-        let column_info = query.load::<ColumnDescriptionLoad>(&mut conn).await?;
+        let mut conn = self.pool.get().await?;
+        let column_info = cd_d::column_description
+            .select((cd_d::id, cd_d::type_id))
+            .filter(
+                cd_d::cluster_id
+                    .eq(cluster)
+                    .and(cd_d::batch_ts.eq_any(&time)),
+            )
+            .order_by(cd_d::type_id)
+            .load::<ColumnDescriptionLoad>(&mut conn)
+            .await?;
 
         let mut columns: HashMap<i32, Vec<i32>> = HashMap::new();
         for c in &column_info {
