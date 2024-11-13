@@ -169,12 +169,15 @@ impl<'d> Table<'d, Tidb> {
     /// # Errors
     ///
     /// * Returns an error if it fails to decode TI database
-    pub fn get_patterns(&self, info: Vec<(String, String)>) -> Result<Vec<(String, Option<Tidb>)>> {
+    pub fn get_patterns<'a>(
+        &self,
+        info: &[(&'a str, &str)],
+    ) -> Result<Vec<(&'a str, Option<Tidb>)>> {
         //TODO: This job is too heavy if tidb is nothing changed.
         //      Tidb header and patterns should be stored separately.
         let mut ret = Vec::new();
-        for (db_name, db_version) in info {
-            let Some(mut tidb) = self.get(&db_name)? else {
+        for &(db_name, db_version) in info {
+            let Some(mut tidb) = self.get(db_name)? else {
                 return Ok(Vec::new());
             };
 

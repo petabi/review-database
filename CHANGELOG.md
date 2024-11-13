@@ -5,6 +5,13 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Modified `Table::get_patterns` to take a reference to a slice of tuples
+  instead of taking ownership of a vector, making the function more flexible.
+
 ## [0.32.0] - 2024-11-07
 
 ### Changed
@@ -721,6 +728,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.32.0...main
 [0.32.0]: https://github.com/petabi/review-database/compare/0.31.0...0.32.0
 [0.31.0]: https://github.com/petabi/review-database/compare/0.30.0...0.31.0
 [0.30.0]: https://github.com/petabi/review-database/compare/0.29.1...0.30.0
