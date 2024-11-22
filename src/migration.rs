@@ -1751,7 +1751,7 @@ mod tests {
         let rank = 789;
         let id = 0;
         let source = "some source".to_string();
-        let distance = 3.1415926;
+        let distance = 4.0;
         let is_saved = true;
         let sample = crate::OutlierInfo {
             model_id,
