@@ -67,3 +67,4 @@ migrate = ["config", "tokio/rt-multi-thread"]
 
 [lints.clippy]
 pedantic = "warn"
+unwrap_used = "warn"
