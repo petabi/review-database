@@ -505,7 +505,7 @@ mod test {
         drafts: &[Option<Config>],
     ) -> Vec<Agent> {
         kinds
-            .into_iter()
+            .iter()
             .zip(configs)
             .zip(drafts)
             .map(|((kind, config), draft)| Agent {
@@ -680,7 +680,7 @@ mod test {
             name_draft: Some("update".to_string()),
             profile: Some(profile.clone()),
             profile_draft: Some(profile.clone()),
-            agents: agents[1..].into_iter().cloned().collect(),
+            agents: agents[1..].iter().cloned().collect(),
             giganto: Some(Giganto::default()),
         };
         let old = node.clone().into();

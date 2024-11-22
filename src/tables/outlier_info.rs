@@ -283,9 +283,8 @@ mod tests {
         let distance = 0.3;
         let is_saved = false;
         (1..3)
-            .into_iter()
             .flat_map(|timestamp| {
-                (2..4).into_iter().map(move |rank| {
+                (2..4).map(move |rank| {
                     create_entry(model_id, timestamp, rank, rank, source, distance, is_saved)
                 })
             })
