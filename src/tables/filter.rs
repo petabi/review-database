@@ -207,7 +207,7 @@ mod tests {
         let table = store.filter_map();
 
         let tester = &[("bbb", "f2"), ("aaa", "f1"), ("bb", "f1"), ("aaaa", "f2")];
-        for (username, name) in tester {
+        for &(username, name) in tester {
             let filter = Filter {
                 username: username.to_string(),
                 name: name.to_string(),
@@ -216,7 +216,7 @@ mod tests {
             assert!(table.insert(filter).is_ok());
         }
 
-        for (username, name) in tester {
+        for &(username, name) in tester {
             let filter = Filter {
                 username: username.to_string(),
                 name: name.to_string(),

@@ -265,7 +265,7 @@ mod tests {
             assert!(table.insert(entry).is_ok());
         }
 
-        for name in tester {
+        for &name in tester {
             let res = table.get(name).unwrap().map(|entry: Tidb| entry.name);
             assert_eq!(Some(name.to_string()), res);
         }

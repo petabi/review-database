@@ -176,7 +176,7 @@ mod tests {
         let table = store.model_indicator_map();
 
         let tester = &["1", "2", "3"];
-        for name in tester {
+        for &name in tester {
             let mi = ModelIndicator {
                 name: name.to_string(),
                 ..Default::default()
@@ -184,7 +184,7 @@ mod tests {
             assert!(table.insert(mi).is_ok());
         }
 
-        for name in tester {
+        for &name in tester {
             let res = table.get(name).unwrap().map(|mi| mi.name);
             assert_eq!(Some(name.to_string()), res);
         }

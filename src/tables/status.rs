@@ -164,11 +164,11 @@ mod tests {
         let testers = &["c", "a", "b", "d"];
         let mut entries: Vec<_> = DEFAULT_ENTRIES
             .iter()
-            .map(|(i, d)| Status {
-                id: *i,
+            .map(|&(i, d)| Status {
+                id: i,
                 description: d.to_string(),
             })
-            .chain(testers.iter().map(|d| Status {
+            .chain(testers.iter().map(|&d| Status {
                 id: u32::MAX,
                 description: d.to_string(),
             }))

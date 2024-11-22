@@ -167,11 +167,11 @@ mod tests {
         let testers = &["c", "a", "b", "d"];
         let mut entries: Vec<_> = DEFAULT_ENTRIES
             .iter()
-            .map(|(i, d)| Qualifier {
-                id: *i,
+            .map(|&(i, d)| Qualifier {
+                id: i,
                 description: d.to_string(),
             })
-            .chain(testers.iter().map(|d| Qualifier {
+            .chain(testers.iter().map(|&d| Qualifier {
                 id: u32::MAX,
                 description: d.to_string(),
             }))
