@@ -336,6 +336,6 @@ mod tests {
         assert_eq!(
             account.password_hash_algorithm,
             Account::DEFAULT_HASH_ALGORITHM
-        )
+        );
     }
 }
