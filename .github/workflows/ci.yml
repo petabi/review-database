@@ -17,7 +17,7 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check --config group_imports=StdExternalCrate
       - name: Clippy
-        run: cargo clippy --tests -- -D warnings
+        run: cargo clippy --bins --tests --all-features -- -D warnings
       - name: markdownlint
         uses: articulate/actions-markdownlint@v1
 
