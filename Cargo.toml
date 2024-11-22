@@ -64,3 +64,6 @@ path = "src/migrate.rs"
 [features]
 default = []
 migrate = ["config", "tokio/rt-multi-thread"]
+
+[lints.clippy]
+pedantic = "warn"
