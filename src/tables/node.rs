@@ -680,7 +680,7 @@ mod test {
             name_draft: Some("update".to_string()),
             profile: Some(profile.clone()),
             profile_draft: Some(profile.clone()),
-            agents: agents[1..].iter().cloned().collect(),
+            agents: agents[1..].to_vec(),
             giganto: Some(Giganto::default()),
         };
         let old = node.clone().into();
