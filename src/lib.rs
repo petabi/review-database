@@ -488,7 +488,7 @@ pub enum Error {
 mod tests {
     use tempfile::TempDir;
 
-    fn pseudo_pretrained() -> anyhow::Result<(TempDir, Vec<(&'static str, bool)>, Vec<i64>)> {
+    fn pseudo_pretrained() -> (TempDir, Vec<(&'static str, bool)>, Vec<i64>) {
         let dir = tempfile::tempdir().unwrap();
         let names = vec![("test-model", true), ("test_model01", false)];
         let timestamps = vec![1, 2, 34567, 34568];
@@ -501,15 +501,15 @@ mod tests {
                     format!("{name}-{ts}")
                 };
                 let file_path = dir.path().join(&file_name);
-                std::fs::File::create(file_path)?;
+                std::fs::File::create(file_path).unwrap();
             }
         }
-        Ok((dir, names, timestamps))
+        (dir, names, timestamps)
     }
 
     #[test]
     fn get_most_recent() {
-        let (dir, names, timestamps) = pseudo_pretrained().expect("fail to set up temp dir");
+        let (dir, names, timestamps) = pseudo_pretrained();
         let most_recent = timestamps.iter().fold(0, |t, cur| std::cmp::max(t, *cur));
         for (name, with_ext) in names {
             if with_ext {
