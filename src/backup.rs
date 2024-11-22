@@ -162,8 +162,8 @@ mod tests {
         // get backup list
         let backup_list = list(&store).await.unwrap();
         assert_eq!(backup_list.len(), 3);
-        assert_eq!(backup_list.get(0).unwrap().id, 1);
-        assert_eq!(backup_list.get(1).unwrap().id, 2);
-        assert_eq!(backup_list.get(2).unwrap().id, 3);
+        assert_eq!(backup_list[0].id, 1);
+        assert_eq!(backup_list[1].id, 2);
+        assert_eq!(backup_list[2].id, 3);
     }
 }

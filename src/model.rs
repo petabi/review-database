@@ -87,7 +87,7 @@ impl Model {
     /// # Errors
     ///
     /// Returns an error if format version doesn't match `MagicHeader::FORMAT_VERSION` or
-    /// if deserialization process failed.  
+    /// if deserialization process failed.
     pub fn from_serialized(serialized: &[u8]) -> Result<Self> {
         use anyhow::anyhow;
 
@@ -119,7 +119,7 @@ impl Model {
 
     /// # Errors
     ///
-    /// Returns an error if serialization process failed.  
+    /// Returns an error if serialization process failed.
     pub fn into_serialized(self) -> Result<Vec<u8>> {
         let mut buf = <Vec<u8>>::from(self.header()?);
         let model = Body {
@@ -565,7 +565,7 @@ mod tests {
         assert_eq!(header.version, 2);
         assert_eq!(header.format, super::MagicHeader::FORMAT_VERSION);
 
-        let serialized: Vec<u8> = header.try_into().unwrap();
+        let serialized: Vec<u8> = header.into();
         assert_eq!(&serialized[..4], super::MagicHeader::MAGIC_STRING);
         assert_eq!(
             &serialized[4..8],
@@ -587,7 +587,7 @@ mod tests {
 
         let (model, body) = example();
         let header = model.header().unwrap();
-        let s_header: Vec<u8> = header.try_into().unwrap();
+        let s_header: Vec<u8> = header.into();
         let s_body = bincode::DefaultOptions::new().serialize(&body).unwrap();
 
         let serialized = model.into_serialized().unwrap();

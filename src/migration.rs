@@ -1807,7 +1807,7 @@ mod tests {
 
         let value = bincode::DefaultOptions::new()
             .serialize(&OldAccountPolicy {
-                expiration_time: i64::try_from(time).unwrap(),
+                expiration_time: i64::from(time),
             })
             .unwrap();
         assert!(ap_db.put(key, &value).is_ok());
