@@ -208,18 +208,20 @@ mod tests {
 
         let tester = &[("bbb", "f2"), ("aaa", "f1"), ("bb", "f1"), ("aaaa", "f2")];
         for (username, name) in tester {
-            let mut filter = Filter::default();
-            filter.username = username.to_string();
-            filter.name = name.to_string();
-
+            let filter = Filter {
+                username: username.to_string(),
+                name: name.to_string(),
+                ..Default::default()
+            };
             assert!(table.insert(filter).is_ok());
         }
 
         for (username, name) in tester {
-            let mut filter = Filter::default();
-            filter.username = username.to_string();
-            filter.name = name.to_string();
-
+            let filter = Filter {
+                username: username.to_string(),
+                name: name.to_string(),
+                ..Default::default()
+            };
             assert!(table.insert(filter).is_err());
         }
 

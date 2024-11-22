@@ -527,15 +527,19 @@ mod test {
             .map(|agent| match agent {
                 AgentKind::Unsupervised => Some("".to_string().try_into().unwrap()),
                 AgentKind::SemiSupervised => {
-                    let mut config = Hog::default();
-                    config.giganto_ip = ip;
-                    config.giganto_port = port;
+                    let config = Hog {
+                        giganto_ip: ip,
+                        giganto_port: port,
+                        ..Default::default()
+                    };
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
                 AgentKind::Sensor => {
-                    let mut config = Piglet::default();
-                    config.giganto_ip = ip;
-                    config.giganto_port = port;
+                    let config = Piglet {
+                        giganto_ip: ip,
+                        giganto_port: port,
+                        ..Default::default()
+                    };
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
                 AgentKind::TimeSeriesGenerator => Some("".to_string().try_into().unwrap()),

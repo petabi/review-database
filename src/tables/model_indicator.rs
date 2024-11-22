@@ -177,9 +177,10 @@ mod tests {
 
         let tester = &["1", "2", "3"];
         for name in tester {
-            let mut mi = ModelIndicator::default();
-            mi.name = name.to_string();
-
+            let mi = ModelIndicator {
+                name: name.to_string(),
+                ..Default::default()
+            };
             assert!(table.insert(mi).is_ok());
         }
 
