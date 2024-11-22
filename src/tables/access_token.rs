@@ -99,14 +99,14 @@ mod tests {
         let names = &["abc", "abcd", "def"];
 
         for (count, name) in names.iter().enumerate() {
-            for i in 0..count + 1 {
+            for i in 0..=count {
                 assert!(table.insert(name, &i.to_string()).is_ok());
             }
         }
 
         for (count, name) in names.iter().enumerate() {
             assert_eq!(count + 1, table.tokens(name).count());
-            for i in 0..count + 1 {
+            for i in 0..=count {
                 assert!(table.contains(name, &i.to_string()).unwrap());
             }
             assert!(table.revoke(name, &0.to_string()).is_ok());
