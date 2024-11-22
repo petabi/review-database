@@ -179,10 +179,10 @@ mod tests {
         assert!(tag_set.remove_workflow_tag(1).is_err());
 
         let updated = tag_set.update(2, "tag3", "tag3.1").unwrap();
-        assert_eq!(updated, true);
+        assert!(updated);
         let updated = tag_set.update(2, "tag3", "tag3.2").unwrap();
-        assert_eq!(updated, false);
+        assert!(!updated);
         let updated = tag_set.update(2, "tag5", "tag5.1").unwrap();
-        assert_eq!(updated, false);
+        assert!(!updated);
     }
 }
