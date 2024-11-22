@@ -336,11 +336,9 @@ mod test {
         assert!(res.is_ok());
         assert_eq!(res.unwrap().map(|r| r.len()), Some(1));
 
-        assert_eq!(table.remove_rules("something else", &vec![]).ok(), Some(0));
+        assert_eq!(table.remove_rules("something else", &[]).ok(), Some(0));
         assert_eq!(
-            table
-                .remove_rules(agent, &vec![network.parse().unwrap()])
-                .ok(),
+            table.remove_rules(agent, &[network.parse().unwrap()]).ok(),
             Some(0)
         );
         assert_eq!(table.iter(Direction::Forward, None).count(), 0);
