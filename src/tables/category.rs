@@ -122,7 +122,7 @@ mod tests {
             },
         ];
 
-        for e in entries.iter_mut() {
+        for e in &mut entries {
             let added = table.insert(&e.name).unwrap();
             e.id = added as u32;
         }
