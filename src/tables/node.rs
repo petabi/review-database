@@ -525,7 +525,7 @@ mod test {
         agents
             .iter()
             .map(|agent| match agent {
-                AgentKind::Unsupervised => Some("".to_string().try_into().unwrap()),
+                AgentKind::Unsupervised => Some(String::new().try_into().unwrap()),
                 AgentKind::SemiSupervised => {
                     let config = Hog {
                         giganto_ip: ip,
@@ -542,7 +542,7 @@ mod test {
                     };
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
-                AgentKind::TimeSeriesGenerator => Some("".to_string().try_into().unwrap()),
+                AgentKind::TimeSeriesGenerator => Some(String::new().try_into().unwrap()),
             })
             .collect()
     }
