@@ -489,7 +489,7 @@ mod test {
         Node {
             id,
             name: name.to_string(),
-            name_draft: name_draft.map(|s| s.to_string()),
+            name_draft: name_draft.map(ToString::to_string),
             profile,
             profile_draft,
             agents,

@@ -243,8 +243,8 @@ mod test {
             key.to_string(),
             kind,
             Status::Enabled,
-            config.map(|s| s.to_string()),
-            draft.map(|s| s.to_string()),
+            config.map(ToString::to_string),
+            draft.map(ToString::to_string),
         )
         .unwrap()
     }
