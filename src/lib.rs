@@ -491,7 +491,7 @@ mod tests {
     fn pseudo_pretrained() -> anyhow::Result<(TempDir, Vec<(&'static str, bool)>, Vec<i64>)> {
         let dir = tempfile::tempdir().unwrap();
         let names = vec![("test-model", true), ("test_model01", false)];
-        let timestamps = vec![1, 2, 34567, 034568];
+        let timestamps = vec![1, 2, 34567, 34568];
 
         for (name, with_ext) in &names {
             for ts in &timestamps {
