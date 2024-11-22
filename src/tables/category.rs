@@ -158,7 +158,11 @@ mod tests {
         let mut table = store.category_map();
 
         assert!(table
-            .update(1 + DEFAULT_ENTRIES.len() as u32 + 1, "a", "b")
+            .update(
+                1 + u32::try_from(DEFAULT_ENTRIES.len()).unwrap() + 1,
+                "a",
+                "b"
+            )
             .is_err());
 
         assert_eq!(
