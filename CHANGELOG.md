@@ -7,10 +7,34 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added triage functionality for scoring with attributes of each protocol.
+  - Added a new enum type `AttrValue`. This type is used to convert the
+    attribute value of each protocol to its corresponding type to perform
+    comparison operations.
+  - Added the `target_attribute` to the `Match` trait to generate an `AttrValue`
+    from the field in all detection event.
+  - Implemented `score_by_packet_attr` under `Match` trait.
+
 ### Changed
 
 - Modified `Table::get_patterns` to take a reference to a slice of tuples
   instead of taking ownership of a vector, making the function more flexible.
+- Removed the `tor` module file. The structures (`HttpEventFields`,
+  `TorConnection`) and implementations within that module have been moved to
+  `crate::event::http`.
+- Fixed HTTP detection events to consistently use `referrer` instead of
+  `referrer` and `referrer` interchangeably.
+- Modified the `ValueKind` enum to support different types of input for packet
+  attribute triage.
+- Changed the type of fields in the detection event structure for some
+  protocols. This change allows users to see meaningful values directly without
+  having to do any special conversion for that field.
+  - `post_body`: `Vec<u8>` to `String`.
+  - `chaddr`: `Vec<u8>` to `String`.
+  - `class_id`: `Vec<u8>` to `String`.
+  - `client_id`: `Vec<u8>` to `String`.
 
 ## [0.32.0] - 2024-11-07
 
@@ -315,7 +339,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Changed the return type of `Store::network_map` to `IndexedTable<Network>`
   to enhance security by preventing direct exposure of internal structure.
 - Replaced `IndexedMap::get_by_id` function with `Indexed::get_by_id`, providing
-   a more structured and type-safe result.
+  a more structured and type-safe result.
   - Previously, the function returned a binary representation of the key-value
     pair: `Result<(Option<impl AsRef<[u8]>>, Option<impl AsRef<[u8]>>)>`.
   - Now, it returns `Result<Option<T>>`, where T is the entry type.
@@ -331,8 +355,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   more straightforward and human-readable format compared to the raw binary
   format exposed by `IndexSet`.
 - Replaced the `IndexedTable<Category>::get`, `IndexedTable<Qualifier>::get` and
- `IndexedTable<Status>::get` method with the more general function
- `IndexedTable<R>::get_by_id`. This change enhances flexibility by allowing
+  `IndexedTable<Status>::get` method with the more general function
+  `IndexedTable<R>::get_by_id`. This change enhances flexibility by allowing
   retrieval based on any type R rather than being limited to a specific category.
   Existing code using get for categories should be updated to use get_by_id with
   the appropriate type.
@@ -374,7 +398,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure template management.
 - Introduced `Structured`, `Unstructured`, `StructuredClusteringAlgorithm` and
- `UnstructuredClusteringAlgorithm` to describe data stored in `Table<Template>`.
+  `UnstructuredClusteringAlgorithm` to describe data stored in `Table<Template>`.
 - Introduced `TriageResponse` to describe data stored in `IndexedTable<TriageResponse>`.
 - Introduced `TriageResponseUpdate` to support `TriageResponse` record update.
 - Added new functions to facilitate insert, remove, and update operations,
@@ -406,7 +430,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   enhance security by preventing direct exposure of `Map`.
 - The `get_by_id` method in the `IndexedMap` struct has been updated to return a
   key-value pair (`(Vec<u8>, Vec<u8>)`) instead of just the value (`impl
-  AsRef<[u8]>`). This change accommodates scenarios where the information stored
+AsRef<[u8]>`). This change accommodates scenarios where the information stored
   in a key may not be present in the value for some Column Families. Previously,
   if you called `get_by_id` with a specific ID, you would receive the
   corresponding value as `Option<impl AsRef<[u8]>>`. Now, calling `get_by_id`
@@ -595,7 +619,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Removed `batch_info` and `scores` arguments from `Model::from_storage` function.
   These arguments were previously used for custom initialization of the
   `batch_info` and `scores` fields within the model. This change means that when
-  you create a model using `Model::from_storage`, the  `batch_info` and `scores`
+  you create a model using `Model::from_storage`, the `batch_info` and `scores`
   fields will now be initialized with their default values. If you previously
   relied on custom values for these fields, you will need to update your code accordingly.
 
@@ -683,6 +707,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   Please note that if you are currently using a version of the application
   earlier than 0.12.0, database migration support has been deprecated and will
   no longer be available.
+
   - Users on versions prior to 0.12.0 will need to manually manage their database
     schema updates if they choose to continue using these older versions.
   - We highly recommend upgrading to the latest version (0.12.0 or later) to
@@ -720,6 +745,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   code if you have been using the old naming convention. We apologise for any
   inconvenience this may cause, but we believe this change will bring greater
   consistency and readability to the codebase.
+
 - Removed `src_port` field from `FtpBruteForce` and `LdapBruteForce` events.
   to align with the event fields provided by hog.
 - Modified `LdapPlainText` fields to appropriate LDAP event fields from wrong

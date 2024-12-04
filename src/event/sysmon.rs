@@ -7,9 +7,33 @@ use std::{
 
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+// TODO: We plan to implement the triage feature only after we have cleaned up the range of
+// values for the properties for each sysmon service.
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum WindowAttr {
+    #[strum(serialize = "window-service")]
+    Service,
+    #[strum(serialize = "window-agent_name")]
+    AgentName,
+    #[strum(serialize = "window-agent_id")]
+    AgentId,
+    #[strum(serialize = "window-process_guid")]
+    ProcessGuid,
+    #[strum(serialize = "window-process_id")]
+    ProcessId,
+    #[strum(serialize = "window-image")]
+    Image,
+    #[strum(serialize = "window-user")]
+    User,
+    #[strum(serialize = "window-content")]
+    Content,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct WindowsThreat {
@@ -61,7 +85,7 @@ impl fmt::Display for WindowsThreat {
 }
 
 // TODO: Make new Match trait for Windows threat events
-impl Match for WindowsThreat {
+impl Match<WindowAttr> for WindowsThreat {
     fn source(&self) -> &str {
         &self.source
     }
@@ -102,7 +126,17 @@ impl Match for WindowsThreat {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: WindowAttr) -> Option<AttrValue> {
+        let target_value = match proto_attr {
+            WindowAttr::Service => AttrValue::String(&self.service),
+            WindowAttr::AgentName => AttrValue::String(&self.agent_name),
+            WindowAttr::AgentId => AttrValue::String(&self.agent_id),
+            WindowAttr::ProcessGuid => AttrValue::String(&self.process_guid),
+            WindowAttr::ProcessId => AttrValue::UInt(self.process_id.into()),
+            WindowAttr::Image => AttrValue::String(&self.image),
+            WindowAttr::User => AttrValue::String(&self.user),
+            WindowAttr::Content => AttrValue::String(&self.content),
+        };
+        Some(target_value)
     }
 }

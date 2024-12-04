@@ -2,9 +2,119 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::{triage_scores_to_string, vector_to_string};
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, vector_to_string, AttrValue};
+
+macro_rules! tls_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            TlsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            TlsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            TlsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            TlsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            TlsAttr::Proto => AttrValue::UInt($event.proto.into()),
+            TlsAttr::ServerName => AttrValue::String(&$event.server_name),
+            TlsAttr::AlpnProtocol => AttrValue::String(&$event.server_name),
+            TlsAttr::Ja3 => AttrValue::String(&$event.ja3),
+            TlsAttr::Version => AttrValue::String(&$event.version),
+            TlsAttr::ClientCipherSuites => AttrValue::VecUInt(
+                $event
+                    .client_cipher_suites
+                    .iter()
+                    .map(|val| u64::from(*val))
+                    .collect(),
+            ),
+            TlsAttr::ClientExtensions => AttrValue::VecUInt(
+                $event
+                    .client_extensions
+                    .iter()
+                    .map(|val| u64::from(*val))
+                    .collect(),
+            ),
+            TlsAttr::Cipher => AttrValue::UInt($event.cipher.into()),
+            TlsAttr::Extensions => AttrValue::VecUInt(
+                $event
+                    .extensions
+                    .iter()
+                    .map(|val| u64::from(*val))
+                    .collect(),
+            ),
+            TlsAttr::Ja3s => AttrValue::String(&$event.ja3s),
+            TlsAttr::Serial => AttrValue::String(&$event.serial),
+            TlsAttr::SubjectCountry => AttrValue::String(&$event.subject_country),
+            TlsAttr::SubjectOrgName => AttrValue::String(&$event.subject_org_name),
+            TlsAttr::SubjectCommonName => AttrValue::String(&$event.subject_common_name),
+            TlsAttr::ValidityNotBefore => AttrValue::SInt($event.validity_not_before.into()),
+            TlsAttr::ValidityNotAfter => AttrValue::SInt($event.validity_not_after.into()),
+            TlsAttr::SubjectAltName => AttrValue::String(&$event.subject_alt_name),
+            TlsAttr::IssuerCountry => AttrValue::String(&$event.issuer_country),
+            TlsAttr::IssuerOrgName => AttrValue::String(&$event.issuer_org_name),
+            TlsAttr::IssuerOrgUnitName => AttrValue::String(&$event.issuer_org_unit_name),
+            TlsAttr::IssuerCommonName => AttrValue::String(&$event.issuer_common_name),
+            TlsAttr::LastAlert => AttrValue::UInt($event.last_alert.into()),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum TlsAttr {
+    #[strum(serialize = "tls-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "tls-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "tls-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "tls-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "tls-proto")]
+    Proto,
+    #[strum(serialize = "tls-server_name")]
+    ServerName,
+    #[strum(serialize = "tls-alpn_protocol")]
+    AlpnProtocol,
+    #[strum(serialize = "tls-ja3")]
+    Ja3,
+    #[strum(serialize = "tls-version")]
+    Version,
+    #[strum(serialize = "tls-client_cipher_suites")]
+    ClientCipherSuites,
+    #[strum(serialize = "tls-client_extensions")]
+    ClientExtensions,
+    #[strum(serialize = "tls-cipher")]
+    Cipher,
+    #[strum(serialize = "tls-extensions")]
+    Extensions,
+    #[strum(serialize = "tls-ja3s")]
+    Ja3s,
+    #[strum(serialize = "tls-serial")]
+    Serial,
+    #[strum(serialize = "tls-subject_country")]
+    SubjectCountry,
+    #[strum(serialize = "tls-subject_org_name")]
+    SubjectOrgName,
+    #[strum(serialize = "tls-subject_common_name")]
+    SubjectCommonName,
+    #[strum(serialize = "tls-validity_not_before")]
+    ValidityNotBefore,
+    #[strum(serialize = "tls-validity_not_after")]
+    ValidityNotAfter,
+    #[strum(serialize = "tls-subject_alt_name")]
+    SubjectAltName,
+    #[strum(serialize = "tls-issuer_country")]
+    IssuerCountry,
+    #[strum(serialize = "tls-issuer_org_name")]
+    IssuerOrgName,
+    #[strum(serialize = "tls-issuer_org_unit_name")]
+    IssuerOrgUnitName,
+    #[strum(serialize = "tls-issuer_common_name")]
+    IssuerCommonName,
+    #[strum(serialize = "tls-last_alert")]
+    LastAlert,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListTlsFields {
@@ -186,7 +296,7 @@ impl BlockListTls {
     }
 }
 
-impl Match for BlockListTls {
+impl Match<TlsAttr> for BlockListTls {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -227,8 +337,8 @@ impl Match for BlockListTls {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: TlsAttr) -> Option<AttrValue> {
+        tls_target_attr!(self, proto_attr)
     }
 }
 
@@ -342,7 +452,7 @@ impl SuspiciousTlsTraffic {
     }
 }
 
-impl Match for SuspiciousTlsTraffic {
+impl Match<TlsAttr> for SuspiciousTlsTraffic {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -382,7 +492,7 @@ impl Match for SuspiciousTlsTraffic {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: TlsAttr) -> Option<AttrValue> {
+        tls_target_attr!(self, proto_attr)
     }
 }

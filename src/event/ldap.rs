@@ -3,9 +3,59 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! ldap_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            LdapAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            LdapAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            LdapAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            LdapAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            LdapAttr::Proto => AttrValue::UInt($event.proto.into()),
+            LdapAttr::MessageId => AttrValue::UInt($event.message_id.into()),
+            LdapAttr::Version => AttrValue::UInt($event.version.into()),
+            LdapAttr::Opcode => AttrValue::VecString(&$event.opcode),
+            LdapAttr::Result => AttrValue::VecString(&$event.result),
+            LdapAttr::DiagnosticMessage => AttrValue::VecString(&$event.diagnostic_message),
+            LdapAttr::Object => AttrValue::VecString(&$event.object),
+            LdapAttr::Argument => AttrValue::VecString(&$event.argument),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum LdapAttr {
+    #[strum(serialize = "ldap-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "ldap-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "ldap-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "ldap-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "ldap-proto")]
+    Proto,
+    #[strum(serialize = "ldap-message_id")]
+    MessageId,
+    #[strum(serialize = "ldap-version")]
+    Version,
+    #[strum(serialize = "ldap-opcode")]
+    Opcode,
+    #[strum(serialize = "ldap-result")]
+    Result,
+    #[strum(serialize = "ldap-diagnostic_message")]
+    DiagnosticMessage,
+    #[strum(serialize = "ldap-object")]
+    Object,
+    #[strum(serialize = "ldap-argument")]
+    Argument,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForceFields {
@@ -94,7 +144,7 @@ impl LdapBruteForce {
     }
 }
 
-impl Match for LdapBruteForce {
+impl Match<LdapAttr> for LdapBruteForce {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -135,8 +185,14 @@ impl Match for LdapBruteForce {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: LdapAttr) -> Option<AttrValue> {
+        match proto_attr {
+            LdapAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+            LdapAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+            LdapAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+            LdapAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+            _ => None,
+        }
     }
 }
 
@@ -251,7 +307,7 @@ impl LdapPlainText {
     }
 }
 
-impl Match for LdapPlainText {
+impl Match<LdapAttr> for LdapPlainText {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -292,8 +348,8 @@ impl Match for LdapPlainText {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: LdapAttr) -> Option<AttrValue> {
+        ldap_target_attr!(self, proto_attr)
     }
 }
 
@@ -366,7 +422,7 @@ impl BlockListLdap {
     }
 }
 
-impl Match for BlockListLdap {
+impl Match<LdapAttr> for BlockListLdap {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -407,7 +463,7 @@ impl Match for BlockListLdap {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: LdapAttr) -> Option<AttrValue> {
+        ldap_target_attr!(self, proto_attr)
     }
 }

@@ -8,12 +8,44 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
 use super::{
     common::{vector_to_string, Match},
-    EventCategory, TriagePolicy, TriageScore, MEDIUM,
+    EventCategory, TriageScore, MEDIUM,
 };
-use crate::event::common::triage_scores_to_string;
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! rdp_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            RdpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            RdpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            RdpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            RdpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            RdpAttr::Proto => AttrValue::UInt($event.proto.into()),
+            RdpAttr::Cookie => AttrValue::String(&$event.cookie),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum RdpAttr {
+    #[strum(serialize = "rdp-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "rdp-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "rdp-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "rdp-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "rdp-proto")]
+    Proto,
+    #[strum(serialize = "rdp-cookie")]
+    Cookie,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct RdpBruteForceFields {
@@ -80,7 +112,7 @@ impl RdpBruteForce {
     }
 }
 
-impl Match for RdpBruteForce {
+impl Match<RdpAttr> for RdpBruteForce {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -121,8 +153,13 @@ impl Match for RdpBruteForce {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: RdpAttr) -> Option<AttrValue> {
+        match proto_attr {
+            RdpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+            RdpAttr::DstAddr => Some(AttrValue::VecAddr(&self.dst_addrs)),
+            RdpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+            _ => None,
+        }
     }
 }
 
@@ -204,7 +241,7 @@ impl BlockListRdp {
     }
 }
 
-impl Match for BlockListRdp {
+impl Match<RdpAttr> for BlockListRdp {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -245,7 +282,7 @@ impl Match for BlockListRdp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: RdpAttr) -> Option<AttrValue> {
+        rdp_target_attr!(self, proto_attr)
     }
 }

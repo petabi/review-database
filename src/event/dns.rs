@@ -3,9 +3,76 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, HIGH, MEDIUM};
-use crate::event::common::{triage_scores_to_string, vector_to_string};
+use super::{common::Match, EventCategory, TriageScore, HIGH, MEDIUM};
+use crate::event::common::{triage_scores_to_string, vector_to_string, AttrValue};
+
+macro_rules! dns_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            DnsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            DnsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            DnsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            DnsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            DnsAttr::Proto => AttrValue::UInt($event.proto.into()),
+            DnsAttr::Query => AttrValue::String(&$event.query),
+            DnsAttr::Answers => AttrValue::VecString(&$event.answer),
+            DnsAttr::TransId => AttrValue::UInt($event.trans_id.into()),
+            DnsAttr::Rtt => AttrValue::SInt($event.rtt.into()),
+            DnsAttr::QClass => AttrValue::UInt($event.qclass.into()),
+            DnsAttr::QType => AttrValue::UInt($event.qtype.into()),
+            DnsAttr::RCode => AttrValue::UInt($event.rcode.into()),
+            DnsAttr::AA => AttrValue::Bool($event.aa_flag),
+            DnsAttr::TC => AttrValue::Bool($event.tc_flag),
+            DnsAttr::RD => AttrValue::Bool($event.rd_flag),
+            DnsAttr::RA => AttrValue::Bool($event.ra_flag),
+            DnsAttr::Ttl => {
+                AttrValue::VecSInt($event.ttl.iter().map(|val| i64::from(*val)).collect())
+            }
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum DnsAttr {
+    #[strum(serialize = "dns-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "dns-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "dns-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "dns-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "dns-proto")]
+    Proto,
+    #[strum(serialize = "dns-query")]
+    Query,
+    #[strum(serialize = "dns-answers")]
+    Answers,
+    #[strum(serialize = "dns-trans_id")]
+    TransId,
+    #[strum(serialize = "dns-rtt")]
+    Rtt,
+    #[strum(serialize = "dns-qclass")]
+    QClass,
+    #[strum(serialize = "dns-qtype")]
+    QType,
+    #[strum(serialize = "dns-rcode")]
+    RCode,
+    #[strum(serialize = "dns-AA")]
+    AA,
+    #[strum(serialize = "dns-TC")]
+    TC,
+    #[strum(serialize = "dns-RD")]
+    RD,
+    #[strum(serialize = "dns-RA")]
+    RA,
+    #[strum(serialize = "dns-TTL")]
+    Ttl,
+}
 
 #[derive(Deserialize, Serialize)]
 pub struct DnsEventFields {
@@ -148,7 +215,7 @@ impl DnsCovertChannel {
     }
 }
 
-impl Match for DnsCovertChannel {
+impl Match<DnsAttr> for DnsCovertChannel {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -189,8 +256,8 @@ impl Match for DnsCovertChannel {
         Some(self.confidence)
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: DnsAttr) -> Option<AttrValue> {
+        dns_target_attr!(self, proto_attr)
     }
 }
 
@@ -281,7 +348,7 @@ impl LockyRansomware {
     }
 }
 
-impl Match for LockyRansomware {
+impl Match<DnsAttr> for LockyRansomware {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -322,8 +389,8 @@ impl Match for LockyRansomware {
         Some(self.confidence)
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: DnsAttr) -> Option<AttrValue> {
+        dns_target_attr!(self, proto_attr)
     }
 }
 
@@ -468,7 +535,7 @@ impl CryptocurrencyMiningPool {
     }
 }
 
-impl Match for CryptocurrencyMiningPool {
+impl Match<DnsAttr> for CryptocurrencyMiningPool {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -509,8 +576,8 @@ impl Match for CryptocurrencyMiningPool {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: DnsAttr) -> Option<AttrValue> {
+        dns_target_attr!(self, proto_attr)
     }
 }
 
@@ -649,7 +716,7 @@ impl BlockListDns {
     }
 }
 
-impl Match for BlockListDns {
+impl Match<DnsAttr> for BlockListDns {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -690,7 +757,7 @@ impl Match for BlockListDns {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: DnsAttr) -> Option<AttrValue> {
+        dns_target_attr!(self, proto_attr)
     }
 }

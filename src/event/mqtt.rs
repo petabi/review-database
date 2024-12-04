@@ -2,9 +2,62 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! mqtt_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            MqttAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            MqttAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            MqttAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            MqttAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            MqttAttr::Proto => AttrValue::UInt($event.proto.into()),
+            MqttAttr::Protocol => AttrValue::String(&$event.protocol),
+            MqttAttr::Version => AttrValue::UInt($event.version.into()),
+            MqttAttr::ClientId => AttrValue::String(&$event.client_id),
+            MqttAttr::ConnackReason => AttrValue::UInt($event.connack_reason.into()),
+            MqttAttr::Subscribe => AttrValue::VecString(&$event.subscribe),
+            MqttAttr::SubackReason => AttrValue::VecUInt(
+                $event
+                    .suback_reason
+                    .iter()
+                    .map(|val| u64::from(*val))
+                    .collect(),
+            ),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum MqttAttr {
+    #[strum(serialize = "mqtt-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "mqtt-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "mqtt-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "mqtt-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "mqtt-proto")]
+    Proto,
+    #[strum(serialize = "mqtt-protocol")]
+    Protocol,
+    #[strum(serialize = "mqtt-version")]
+    Version,
+    #[strum(serialize = "mqtt-client_id")]
+    ClientId,
+    #[strum(serialize = "mqtt-connack_reason")]
+    ConnackReason,
+    #[strum(serialize = "mqtt-subscribe")]
+    Subscribe,
+    #[strum(serialize = "mqtt-suback_reason")]
+    SubackReason,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListMqttFields {
@@ -111,7 +164,7 @@ impl BlockListMqtt {
     }
 }
 
-impl Match for BlockListMqtt {
+impl Match<MqttAttr> for BlockListMqtt {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -152,7 +205,7 @@ impl Match for BlockListMqtt {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: MqttAttr) -> Option<AttrValue> {
+        mqtt_target_attr!(self, proto_attr)
     }
 }

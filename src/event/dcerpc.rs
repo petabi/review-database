@@ -2,9 +2,53 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use super::{
+    common::{AttrValue, Match},
+    EventCategory, TriageScore, MEDIUM,
+};
 use crate::event::common::triage_scores_to_string;
+
+macro_rules! dcerpc_target_attr {
+    ($event: expr, $proto_attr: expr) => {{
+        let target_value = match $proto_attr {
+            DceRpcAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+            DceRpcAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+            DceRpcAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+            DceRpcAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+            DceRpcAttr::Proto => AttrValue::UInt($event.proto.into()),
+            DceRpcAttr::Rtt => AttrValue::SInt($event.rtt),
+            DceRpcAttr::NamedPipe => AttrValue::String(&$event.named_pipe),
+            DceRpcAttr::Endpoint => AttrValue::String(&$event.endpoint),
+            DceRpcAttr::Operation => AttrValue::String(&$event.operation),
+        };
+        Some(target_value)
+    }};
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, EnumString, PartialEq)]
+pub enum DceRpcAttr {
+    #[strum(serialize = "dcerpc-id.orig_h")]
+    SrcAddr,
+    #[strum(serialize = "dcerpc-id.orig_p")]
+    SrcPort,
+    #[strum(serialize = "dcerpc-id.resp_h")]
+    DstAddr,
+    #[strum(serialize = "dcerpc-id.resp_p")]
+    DstPort,
+    #[strum(serialize = "dcerpc-proto")]
+    Proto,
+    #[strum(serialize = "dcerpc-rtt")]
+    Rtt,
+    #[strum(serialize = "dcerpc-named_pipe")]
+    NamedPipe,
+    #[strum(serialize = "dcerpc-endpoint")]
+    Endpoint,
+    #[strum(serialize = "dcerpc-operation")]
+    Operation,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListDceRpcFields {
@@ -101,7 +145,7 @@ impl BlockListDceRpc {
     }
 }
 
-impl Match for BlockListDceRpc {
+impl Match<DceRpcAttr> for BlockListDceRpc {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }
@@ -142,7 +186,7 @@ impl Match for BlockListDceRpc {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, proto_attr: DceRpcAttr) -> Option<AttrValue> {
+        dcerpc_target_attr!(self, proto_attr)
     }
 }
