@@ -96,7 +96,7 @@ impl fmt::Display for BlockListKerberos {
             self.realm,
             self.sname_type.to_string(),
             self.service_name.join(","),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

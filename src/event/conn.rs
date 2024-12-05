@@ -60,7 +60,7 @@ impl fmt::Display for PortScan {
             self.start_time.to_rfc3339(),
             self.last_time.to_rfc3339(),
             self.proto.to_string(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
@@ -177,7 +177,7 @@ impl fmt::Display for MultiHostPortScan {
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
             self.last_time.to_rfc3339(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
@@ -290,7 +290,7 @@ impl fmt::Display for ExternalDdos {
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
             self.last_time.to_rfc3339(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
@@ -442,7 +442,7 @@ impl fmt::Display for BlockListConn {
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
             self.resp_l2_bytes.to_string(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

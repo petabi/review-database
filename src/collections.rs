@@ -547,7 +547,7 @@ pub struct IndexedMapIterator<'i> {
     >,
 }
 
-impl<'i> Iterator for IndexedMapIterator<'i> {
+impl Iterator for IndexedMapIterator<'_> {
     type Item = (Box<[u8]>, Box<[u8]>);
 
     fn next(&mut self) -> Option<Self::Item> {

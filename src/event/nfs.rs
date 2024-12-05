@@ -66,7 +66,7 @@ impl fmt::Display for BlockListNfs {
             self.last_time.to_string(),
             self.read_files.join(","),
             self.write_files.join(","),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

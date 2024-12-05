@@ -11,7 +11,7 @@ pub struct IndexedMap<'a> {
     cf: &'a rocksdb::ColumnFamily,
 }
 
-impl<'a> Indexed for IndexedMap<'a> {
+impl Indexed for IndexedMap<'_> {
     fn db(&self) -> &rocksdb::OptimisticTransactionDB {
         self.db
     }

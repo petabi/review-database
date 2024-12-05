@@ -72,7 +72,7 @@ impl fmt::Display for LdapBruteForce {
             get_user_pw_list(&self.user_pw_list),
             self.start_time.to_rfc3339(),
             self.last_time.to_rfc3339(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
@@ -222,7 +222,7 @@ impl fmt::Display for LdapPlainText {
             self.diagnostic_message.join(","),
             self.object.join(","),
             self.argument.join(","),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
@@ -337,7 +337,7 @@ impl fmt::Display for BlockListLdap {
             self.diagnostic_message.join(","),
             self.object.join(","),
             self.argument.join(","),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

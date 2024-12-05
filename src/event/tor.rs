@@ -150,7 +150,7 @@ impl fmt::Display for TorConnection {
             self.resp_mime_types.join(","),
             get_post_body(&self.post_body),
             self.state,
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

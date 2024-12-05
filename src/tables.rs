@@ -462,7 +462,7 @@ impl<'i, R> TableIter<'i, R> {
     }
 }
 
-impl<'i, R> Iterator for TableIter<'i, R>
+impl<R> Iterator for TableIter<'_, R>
 where
     R: FromKeyValue,
 {
@@ -505,7 +505,7 @@ impl<'d, R> Table<'d, R> {
     }
 }
 
-impl<'d, R: UniqueKey + Value> Table<'d, R> {
+impl<R: UniqueKey + Value> Table<'_, R> {
     /// Stores a record into the database.
     ///
     /// # Errors

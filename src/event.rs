@@ -2033,7 +2033,7 @@ pub struct EventDb<'a> {
 
 impl<'a> EventDb<'a> {
     #[must_use]
-    pub fn new(inner: &'a rocksdb::OptimisticTransactionDB) -> EventDb {
+    pub fn new(inner: &'a rocksdb::OptimisticTransactionDB) -> EventDb<'a> {
         Self { inner }
     }
 
@@ -2156,7 +2156,7 @@ pub struct EventIterator<'i> {
     >,
 }
 
-impl<'i> Iterator for EventIterator<'i> {
+impl Iterator for EventIterator<'_> {
     type Item = Result<(i128, Event), InvalidEvent>;
 
     fn next(&mut self) -> Option<Self::Item> {

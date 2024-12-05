@@ -55,7 +55,7 @@ impl fmt::Display for WindowsThreat {
             self.cluster_id.to_string(),
             self.attack_kind,
             self.confidence.to_string(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

@@ -75,7 +75,7 @@ impl fmt::Display for BlockListDceRpc {
             self.named_pipe,
             self.endpoint,
             self.operation,
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

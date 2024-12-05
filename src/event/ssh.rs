@@ -110,7 +110,7 @@ impl fmt::Display for BlockListSsh {
             self.hassh_server,
             self.client_shka,
             self.server_shka,
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

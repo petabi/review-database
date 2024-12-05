@@ -8,7 +8,7 @@ pub struct EventTagId;
 /// A compile-time tag indicating that tag IDs are for network tags.
 pub struct NetworkTagId;
 
-/// A compile-time tag indicating that tag IDs are for network tags.
+// A compile-time tag indicating that tag IDs are for network tags.
 // will be used when `Store::network_tag_set` is converted to use `TagSet`.
 // pub struct NetworkTagId;
 
@@ -82,7 +82,7 @@ impl<'a, IdKind> TagSet<'a, IdKind> {
     }
 }
 
-impl<'a> TagSet<'a, EventTagId> {
+impl TagSet<'_, EventTagId> {
     /// Removes a tag from the event tag set, returning its name.
     ///
     /// # Errors
@@ -102,7 +102,7 @@ impl<'a> TagSet<'a, EventTagId> {
     }
 }
 
-impl<'a> TagSet<'a, NetworkTagId> {
+impl TagSet<'_, NetworkTagId> {
     /// Removes a tag from the network tag set, returning its name.
     ///
     /// # Errors
@@ -122,7 +122,7 @@ impl<'a> TagSet<'a, NetworkTagId> {
     }
 }
 
-impl<'a> TagSet<'a, WorkflowTagId> {
+impl TagSet<'_, WorkflowTagId> {
     /// Removes a tag from the workflow tag set, returning its name.
     ///
     /// # Errors

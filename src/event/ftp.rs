@@ -64,7 +64,7 @@ impl fmt::Display for FtpBruteForce {
             self.start_time.to_rfc3339(),
             self.last_time.to_rfc3339(),
             self.is_internal.to_string(),
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
@@ -235,7 +235,7 @@ impl fmt::Display for FtpPlainText {
             self.file,
             self.file_size.to_string(),
             self.file_id,
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
@@ -365,7 +365,7 @@ impl fmt::Display for BlockListFtp {
             self.file,
             self.file_size.to_string(),
             self.file_id,
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }

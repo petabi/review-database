@@ -62,7 +62,7 @@ impl From<Node> for Update {
     }
 }
 
-impl<'i, 'j, 'k> Iterable<'i, TableIter<'j>> for Table<'k>
+impl<'i, 'j> Iterable<'i, TableIter<'j>> for Table<'_>
 where
     'i: 'j,
 {
@@ -276,7 +276,7 @@ pub struct TableIter<'d> {
     agent: CrateTable<'d, Agent>,
 }
 
-impl<'d> Iterator for TableIter<'d> {
+impl Iterator for TableIter<'_> {
     type Item = Result<Node, anyhow::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -353,7 +353,7 @@ impl Indexable for Inner {
 }
 
 /// Functions for the `node` indexed map.
-impl<'d> IndexedTable<'d, Inner> {
+impl IndexedTable<'_, Inner> {
     pub(crate) fn raw(&self) -> &IndexedMap<'_> {
         &self.indexed_map
     }

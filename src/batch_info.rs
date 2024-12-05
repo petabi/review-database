@@ -30,7 +30,10 @@ impl From<crate::types::ModelBatchInfo> for BatchInfo {
 }
 
 impl UniqueKey for BatchInfo {
-    type AsBytes<'a> = Vec<u8> where Self: 'a;
+    type AsBytes<'a>
+        = Vec<u8>
+    where
+        Self: 'a;
 
     fn unique_key(&self) -> Self::AsBytes<'_> {
         let mut key = self.model.to_be_bytes().to_vec();

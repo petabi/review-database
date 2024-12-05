@@ -77,7 +77,7 @@ impl fmt::Display for BlockListNtlm {
             self.hostname,
             self.domainname,
             self.success,
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

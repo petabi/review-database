@@ -59,7 +59,7 @@ impl fmt::Display for RepeatedHttpSessions {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
@@ -313,7 +313,7 @@ impl fmt::Display for HttpThreat {
             self.cluster_id.to_string(),
             self.attack_kind,
             self.confidence.to_string(),
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
@@ -579,7 +579,7 @@ impl fmt::Display for DomainGenerationAlgorithm {
             get_post_body(&self.post_body),
             self.state,
             self.confidence.to_string(),
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
@@ -740,7 +740,7 @@ impl fmt::Display for NonBrowser {
             self.resp_mime_types.join(","),
             get_post_body(&self.post_body),
             self.state,
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
@@ -973,7 +973,7 @@ impl fmt::Display for BlockListHttp {
             self.resp_mime_types.join(","),
             get_post_body(&self.post_body),
             self.state,
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }

@@ -143,7 +143,7 @@ impl fmt::Display for BlockListTls {
             self.issuer_org_unit_name,
             self.issuer_common_name,
             self.last_alert.to_string(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
@@ -299,7 +299,7 @@ impl fmt::Display for SuspiciousTlsTraffic {
                 self.issuer_org_unit_name,
                 self.issuer_common_name,
                 self.last_alert.to_string(),
-                triage_scores_to_string(&self.triage_scores)
+                triage_scores_to_string(self.triage_scores.as_ref())
             )
     }
 }

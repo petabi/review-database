@@ -87,7 +87,7 @@ impl fmt::Display for BlockListSmtp {
             self.subject,
             self.agent,
             self.state,
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

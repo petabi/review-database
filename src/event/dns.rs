@@ -113,7 +113,7 @@ impl fmt::Display for DnsCovertChannel {
             self.ra_flag.to_string(),
             vector_to_string(&self.ttl),
             self.confidence.to_string(),
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
@@ -246,7 +246,7 @@ impl fmt::Display for LockyRansomware {
             self.ra_flag.to_string(),
             vector_to_string(&self.ttl),
             self.confidence.to_string(),
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
@@ -433,7 +433,7 @@ impl fmt::Display for CryptocurrencyMiningPool {
             self.ra_flag.to_string(),
             vector_to_string(&self.ttl),
             self.coins.join(","),
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
@@ -615,7 +615,7 @@ impl fmt::Display for BlockListDns {
             self.rd_flag.to_string(),
             self.ra_flag.to_string(),
             vector_to_string(&self.ttl),
-            triage_scores_to_string(&self.triage_scores),
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }

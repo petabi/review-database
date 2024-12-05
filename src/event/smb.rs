@@ -102,7 +102,7 @@ impl fmt::Display for BlockListSmb {
             self.access_time.to_string(),
             self.write_time.to_string(),
             self.change_time.to_string(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

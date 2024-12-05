@@ -175,7 +175,7 @@ pub struct MapIterator<'i> {
     >,
 }
 
-impl<'i> Iterator for MapIterator<'i> {
+impl Iterator for MapIterator<'_> {
     type Item = (Box<[u8]>, Box<[u8]>);
 
     fn next(&mut self) -> Option<Self::Item> {

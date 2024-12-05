@@ -136,7 +136,7 @@ impl fmt::Display for BlockListDhcp {
             to_hardware_address(&self.class_id),
             self.client_id_type.to_string(),
             to_hardware_address(&self.client_id),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

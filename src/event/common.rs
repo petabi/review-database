@@ -253,7 +253,7 @@ impl fmt::Display for TriageScore {
     }
 }
 
-pub fn triage_scores_to_string(v: &Option<Vec<TriageScore>>) -> String {
+pub fn triage_scores_to_string(v: Option<&Vec<TriageScore>>) -> String {
     if let Some(v) = v {
         v.iter()
             .map(ToString::to_string)

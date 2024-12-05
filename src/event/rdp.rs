@@ -60,7 +60,7 @@ impl fmt::Display for RdpBruteForce {
             self.start_time.to_rfc3339(),
             self.last_time.to_rfc3339(),
             self.proto.to_string(),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
@@ -181,7 +181,7 @@ impl fmt::Display for BlockListRdp {
             self.proto.to_string(),
             self.last_time.to_string(),
             self.cookie,
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }

@@ -83,7 +83,7 @@ impl fmt::Display for BlockListMqtt {
             self.connack_reason.to_string(),
             self.subscribe.join(","),
             String::from_utf8_lossy(&self.suback_reason),
-            triage_scores_to_string(&self.triage_scores)
+            triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
 }
