@@ -16,7 +16,7 @@ use crate::{
 pub struct TriageResponse {
     pub id: u32,
     key: Vec<u8>,
-    source: String,
+    sensor: String,
     time: DateTime<Utc>,
     tag_ids: Vec<u32>,
     pub remarks: String,
@@ -26,16 +26,16 @@ pub struct TriageResponse {
 
 impl TriageResponse {
     #[must_use]
-    pub fn new(source: String, time: DateTime<Utc>, tag_ids: Vec<u32>, remarks: String) -> Self {
+    pub fn new(sensor: String, time: DateTime<Utc>, tag_ids: Vec<u32>, remarks: String) -> Self {
         let creation_time = Utc::now();
         let last_modified_time = creation_time;
         let tag_ids = Self::clean_up(tag_ids);
-        let key = Self::create_key(&source, &time);
+        let key = Self::create_key(&sensor, &time);
 
         Self {
             id: u32::MAX,
             key,
-            source,
+            sensor,
             time,
             tag_ids,
             remarks,
@@ -55,8 +55,8 @@ impl TriageResponse {
             .map_err(|idx| anyhow::anyhow!("{idx}"))
     }
 
-    fn create_key(source: &str, time: &DateTime<Utc>) -> Vec<u8> {
-        let mut key = source.as_bytes().to_vec();
+    fn create_key(sensor: &str, time: &DateTime<Utc>) -> Vec<u8> {
+        let mut key = sensor.as_bytes().to_vec();
         key.extend_from_slice(&time.timestamp_nanos_opt().unwrap_or_default().to_be_bytes());
         key
     }
@@ -115,13 +115,13 @@ impl<'d> IndexedTable<'d, TriageResponse> {
             .ok()
     }
 
-    /// Returns the `TriageResponse` with the given `source` and `time`.
+    /// Returns the `TriageResponse` with the given `sensor` and `time`.
     ///
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    pub fn get(&self, source: &str, time: &DateTime<Utc>) -> Result<Option<TriageResponse>> {
-        let key = TriageResponse::create_key(source, time);
+    pub fn get(&self, sensor: &str, time: &DateTime<Utc>) -> Result<Option<TriageResponse>> {
+        let key = TriageResponse::create_key(sensor, time);
         self.indexed_map
             .get_by_key(&key)?
             .map(|value| super::deserialize(value.as_ref()))
@@ -239,11 +239,11 @@ mod test {
         let mut table = store.triage_response_map();
 
         let time = Utc::now();
-        let source = "source";
+        let sensor = "sensor";
         let remarks = "remarks";
         let tag_ids = &[3, 1, 2, 1];
         let response = TriageResponse::new(
-            source.to_string(),
+            sensor.to_string(),
             time,
             tag_ids.to_vec(),
             remarks.to_string(),
@@ -254,7 +254,7 @@ mod test {
         assert!(res.is_ok());
         let id = res.unwrap();
 
-        let res = table.get(source, &time).ok().flatten();
+        let res = table.get(sensor, &time).ok().flatten();
         assert!(res.is_some());
         let response = res.unwrap();
         assert_eq!(&response.remarks, remarks);
@@ -265,7 +265,7 @@ mod test {
             TriageResponseUpdate::new(key.clone(), Some(vec![4, 3, 1, 1]), Some("nah".to_owned()));
         let res = table.update(id, &old, &new);
         assert!(res.is_ok());
-        let updated = table.get(source, &time).unwrap().unwrap();
+        let updated = table.get(sensor, &time).unwrap().unwrap();
         assert_eq!(updated.tag_ids, vec![1, 3, 4]);
         assert_eq!(&updated.remarks, "nah");
 
@@ -275,7 +275,7 @@ mod test {
         let newer = TriageResponseUpdate::new(key.clone(), Some(vec![1, 2, 5]), None);
         let res = table.update(id, &new, &newer);
         assert!(res.is_ok());
-        let updated = table.get(source, &time).unwrap().unwrap();
+        let updated = table.get(sensor, &time).unwrap().unwrap();
         assert_eq!(updated.tag_ids, vec![1, 2, 5]);
         assert_eq!(&updated.remarks, "nah");
 
