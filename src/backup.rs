@@ -83,7 +83,7 @@ mod tests {
     fn example_message() -> EventMessage {
         let codec = bincode::DefaultOptions::new();
         let fields = DnsEventFields {
-            source: "collector1".to_string(),
+            sensor: "collector1".to_string(),
             session_end_time: Utc::now(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,

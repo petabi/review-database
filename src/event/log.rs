@@ -15,7 +15,7 @@ use crate::event::common::triage_scores_to_string;
 pub struct ExtraThreat {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
-    pub source: String,
+    pub sensor: String,
     pub service: String,
     pub content: String,
     pub db_name: String,
@@ -31,8 +31,8 @@ impl fmt::Display for ExtraThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} service={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
-            self.source,
+            "sensor={:?} service={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            self.sensor,
             self.service,
             self.content,
             self.db_name,
@@ -79,8 +79,8 @@ impl Match for ExtraThreat {
         "extra threat"
     }
 
-    fn source(&self) -> &str {
-        self.source.as_str()
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {

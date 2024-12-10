@@ -25,7 +25,7 @@ struct ClusterDbSchema {
     category_id: i32,
     detector_id: i32,
     event_ids: Vec<Option<i64>>,
-    event_sources: Vec<Option<String>>,
+    sensors: Vec<Option<String>>,
     labels: Option<Vec<Option<String>>>,
     qualifier_id: i32,
     status_id: i32,
@@ -39,7 +39,7 @@ struct ClusterDbSchema {
 impl From<ClusterDbSchema> for Cluster {
     fn from(c: ClusterDbSchema) -> Self {
         let event_ids: Vec<i64> = c.event_ids.into_iter().flatten().collect();
-        let event_sources: Vec<String> = c.event_sources.into_iter().flatten().collect();
+        let sensors: Vec<String> = c.sensors.into_iter().flatten().collect();
         let labels: Option<Vec<String>> = c
             .labels
             .map(|labels| labels.into_iter().flatten().collect());
@@ -49,7 +49,7 @@ impl From<ClusterDbSchema> for Cluster {
             category_id: c.category_id,
             detector_id: c.detector_id,
             event_ids,
-            event_sources,
+            sensors,
             labels,
             qualifier_id: c.qualifier_id,
             status_id: c.status_id,
@@ -120,7 +120,7 @@ impl Database {
                 dsl::category_id,
                 dsl::detector_id,
                 dsl::event_ids,
-                dsl::event_sources,
+                dsl::sensors,
                 dsl::labels,
                 dsl::qualifier_id,
                 dsl::status_id,
@@ -276,7 +276,7 @@ async fn upsert(
 
     let query = "SELECT attempt_cluster_upsert(
         $1::text, $2::int4, $3::int8[], $4::text[], $5::int4, $6::text, $7::int8, $8::int4, $9::text[], $10::float8)";
-    let (timestamps, sources) =
+    let (timestamps, sensors) =
         cluster
             .event_ids
             .iter()
@@ -290,7 +290,7 @@ async fn upsert(
         .bind::<Text, _>(&cluster.cluster_id)
         .bind::<Integer, _>(&cluster.detector_id)
         .bind::<Array<BigInt>, _>(&timestamps)
-        .bind::<Array<Text>, _>(&sources)
+        .bind::<Array<Text>, _>(&sensors)
         .bind::<Integer, _>(&model_id)
         .bind::<Text, _>(&cluster.signature)
         .bind::<BigInt, _>(&cluster.size)

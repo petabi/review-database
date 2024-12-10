@@ -114,7 +114,7 @@ impl Match for PortScan {
         "port scan"
     }
 
-    fn source(&self) -> &str {
+    fn sensor(&self) -> &str {
         "-"
     }
 
@@ -231,7 +231,7 @@ impl Match for MultiHostPortScan {
         "multi host port scan"
     }
 
-    fn source(&self) -> &str {
+    fn sensor(&self) -> &str {
         "-"
     }
 
@@ -343,7 +343,7 @@ impl Match for ExternalDdos {
         "external ddos"
     }
 
-    fn source(&self) -> &str {
+    fn sensor(&self) -> &str {
         "-"
     }
 
@@ -358,7 +358,7 @@ impl Match for ExternalDdos {
 
 #[derive(Deserialize, Serialize)]
 pub struct BlockListConnFields {
-    pub source: String,
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -380,8 +380,8 @@ impl fmt::Display for BlockListConnFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?}",
-            self.source,
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -402,7 +402,7 @@ impl fmt::Display for BlockListConnFields {
 
 #[allow(clippy::module_name_repetitions)]
 pub struct BlockListConn {
-    pub source: String,
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -426,8 +426,8 @@ impl fmt::Display for BlockListConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
-            self.source,
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -451,7 +451,7 @@ impl BlockListConn {
     pub(super) fn new(time: DateTime<Utc>, fields: BlockListConnFields) -> Self {
         Self {
             time,
-            source: fields.source,
+            sensor: fields.sensor,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -505,8 +505,8 @@ impl Match for BlockListConn {
         "block list conn"
     }
 
-    fn source(&self) -> &str {
-        self.source.as_str()
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {

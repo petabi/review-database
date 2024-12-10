@@ -76,7 +76,7 @@ pub struct BlockListConnBeforeV30 {
 impl From<BlockListConnBeforeV30> for BlockListConnFields {
     fn from(input: BlockListConnBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -221,7 +221,7 @@ impl From<HttpThreatBeforeV30> for HttpThreatFields {
     fn from(input: HttpThreatBeforeV30) -> Self {
         Self {
             time: input.time,
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -363,7 +363,7 @@ pub struct DgaBeforeV30 {
 impl From<DgaBeforeV30> for DgaFields {
     fn from(input: DgaBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -501,7 +501,7 @@ pub struct NonBrowserBeforeV30 {
 impl From<NonBrowserBeforeV30> for HttpEventFields {
     fn from(input: NonBrowserBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             session_end_time: input.session_end_time,
             src_addr: input.src_addr,
             src_port: input.src_port,
@@ -562,7 +562,7 @@ pub struct BlockListDnsBeforeV30 {
 impl From<BlockListDnsBeforeV30> for BlockListDnsFields {
     fn from(input: BlockListDnsBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -612,7 +612,7 @@ pub struct BlockListFtpBeforeV30 {
 impl From<BlockListFtpBeforeV30> for FtpEventFields {
     fn from(input: BlockListFtpBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -739,7 +739,7 @@ pub struct BlockListHttpBeforeV30 {
 impl From<BlockListHttpBeforeV30> for BlockListHttpFields {
     fn from(input: BlockListHttpBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -796,7 +796,7 @@ pub struct BlockListKerberosBeforeV30 {
 impl From<BlockListKerberosBeforeV30> for BlockListKerberosFields {
     fn from(input: BlockListKerberosBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -838,7 +838,7 @@ pub struct BlockListLdapBeforeV30 {
 impl From<BlockListLdapBeforeV30> for LdapEventFields {
     fn from(input: BlockListLdapBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -913,7 +913,7 @@ pub struct BlockListNtlmBeforeV30 {
 impl From<BlockListNtlmBeforeV30> for BlockListNtlmFields {
     fn from(input: BlockListNtlmBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -945,7 +945,7 @@ pub struct BlockListRdpBeforeV30 {
 impl From<BlockListRdpBeforeV30> for BlockListRdpFields {
     fn from(input: BlockListRdpBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -1017,7 +1017,7 @@ pub struct BlockListSmtpBeforeV30 {
 impl From<BlockListSmtpBeforeV30> for BlockListSmtpFields {
     fn from(input: BlockListSmtpBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -1113,7 +1113,7 @@ pub struct BlockListSshBeforeV30 {
 impl From<BlockListSshBeforeV30> for BlockListSshFields {
     fn from(input: BlockListSshBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -1237,7 +1237,7 @@ pub struct BlockListTlsBeforeV30 {
 impl From<BlockListTlsBeforeV30> for BlockListTlsFields {
     fn from(input: BlockListTlsBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -1299,7 +1299,7 @@ pub struct CryptocurrencyMiningPoolBeforeV30 {
 impl From<CryptocurrencyMiningPoolBeforeV30> for CryptocurrencyMiningPoolFields {
     fn from(input: CryptocurrencyMiningPoolBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -1353,7 +1353,7 @@ pub struct DnsCovertChannelBeforeV30 {
 impl From<DnsCovertChannelBeforeV30> for DnsEventFields {
     fn from(input: DnsCovertChannelBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             session_end_time: input.session_end_time,
             src_addr: input.src_addr,
             src_port: input.src_port,
@@ -1454,7 +1454,7 @@ pub struct FtpPlainTextBeforeV30 {
 impl From<FtpPlainTextBeforeV30> for FtpEventFields {
     fn from(input: FtpPlainTextBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -1525,7 +1525,7 @@ pub struct LdapPlainTextBeforeV30 {
 impl From<LdapPlainTextBeforeV30> for LdapEventFields {
     fn from(input: LdapPlainTextBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -1594,7 +1594,7 @@ impl From<NetworkThreatBeforeV30> for NetworkThreat {
     fn from(input: NetworkThreatBeforeV30) -> Self {
         Self {
             time: input.time,
-            source: input.source,
+            sensor: input.source,
             orig_addr: input.orig_addr,
             orig_port: input.orig_port,
             resp_addr: input.resp_addr,
@@ -1650,7 +1650,7 @@ pub struct RepeatedHttpSessionsBeforeV30 {
 impl From<RepeatedHttpSessionsBeforeV30> for RepeatedHttpSessionsFields {
     fn from(input: RepeatedHttpSessionsBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             src_addr: input.src_addr,
             src_port: input.src_port,
             dst_addr: input.dst_addr,
@@ -1716,7 +1716,7 @@ pub struct TorConnectionBeforeV30 {
 impl From<TorConnectionBeforeV30> for HttpEventFields {
     fn from(input: TorConnectionBeforeV30) -> Self {
         Self {
-            source: input.source,
+            sensor: input.source,
             session_end_time: input.session_end_time,
             src_addr: input.src_addr,
             src_port: input.src_port,
@@ -1776,7 +1776,7 @@ impl From<WindowsThreatBeforeV30> for WindowsThreat {
     fn from(input: WindowsThreatBeforeV30) -> Self {
         Self {
             time: input.time,
-            source: input.source,
+            sensor: input.source,
             service: input.service,
             agent_name: input.agent_name,
             agent_id: input.agent_id,

@@ -127,7 +127,7 @@ impl Match for LdapBruteForce {
         "ldap brute force"
     }
 
-    fn source(&self) -> &str {
+    fn sensor(&self) -> &str {
         "-"
     }
 
@@ -142,7 +142,7 @@ impl Match for LdapBruteForce {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LdapEventFields {
-    pub source: String,
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -163,8 +163,8 @@ impl fmt::Display for LdapEventFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
-            self.source,
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -185,7 +185,7 @@ impl fmt::Display for LdapEventFields {
 #[derive(Deserialize, Serialize)]
 pub struct LdapPlainText {
     pub time: DateTime<Utc>,
-    pub source: String,
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -207,8 +207,8 @@ impl fmt::Display for LdapPlainText {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
-            self.source,
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -231,7 +231,7 @@ impl LdapPlainText {
     pub(super) fn new(time: DateTime<Utc>, fields: LdapEventFields) -> Self {
         Self {
             time,
-            source: fields.source,
+            sensor: fields.sensor,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -284,8 +284,8 @@ impl Match for LdapPlainText {
         "ldap plain text"
     }
 
-    fn source(&self) -> &str {
-        self.source.as_str()
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
@@ -300,7 +300,7 @@ impl Match for LdapPlainText {
 #[derive(Deserialize, Serialize)]
 pub struct BlockListLdap {
     pub time: DateTime<Utc>,
-    pub source: String,
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -322,8 +322,8 @@ impl fmt::Display for BlockListLdap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
-            self.source,
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -346,7 +346,7 @@ impl BlockListLdap {
     pub(super) fn new(time: DateTime<Utc>, fields: LdapEventFields) -> Self {
         Self {
             time,
-            source: fields.source,
+            sensor: fields.sensor,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -399,8 +399,8 @@ impl Match for BlockListLdap {
         "block list ldap"
     }
 
-    fn source(&self) -> &str {
-        self.source.as_str()
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
