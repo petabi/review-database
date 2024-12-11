@@ -11,7 +11,7 @@ use crate::event::common::triage_scores_to_string;
 pub struct NetworkThreat {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
-    pub source: String,
+    pub sensor: String,
     pub orig_addr: IpAddr,
     pub orig_port: u16,
     pub resp_addr: IpAddr,
@@ -34,8 +34,8 @@ impl fmt::Display for NetworkThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} last_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
-            self.source,
+            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} last_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            self.sensor,
             self.orig_addr.to_string(),
             self.orig_port.to_string(),
             self.resp_addr.to_string(),
@@ -88,8 +88,8 @@ impl Match for NetworkThreat {
         "network threat"
     }
 
-    fn source(&self) -> &str {
-        self.source.as_str()
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {

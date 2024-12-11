@@ -15,7 +15,7 @@ diesel::table! {
         signature -> Text,
         size -> Int8,
         status_id -> Int4,
-        event_sources -> Array<Nullable<Text>>,
+        sensors -> Array<Nullable<Text>>,
     }
 }
 
