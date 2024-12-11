@@ -28,7 +28,7 @@ pub(super) trait Match {
     fn category(&self) -> EventCategory;
     fn level(&self) -> NonZeroU8;
     fn kind(&self) -> &str;
-    fn source(&self) -> &str;
+    fn sensor(&self) -> &str;
     fn confidence(&self) -> Option<f32>;
 
     /// Calculates a score based on packet attributes according to the triage policy.
@@ -179,7 +179,7 @@ pub(super) trait Match {
         }
 
         if let Some(sensors) = &filter.sensors {
-            if sensors.iter().all(|s| s != self.source()) {
+            if sensors.iter().all(|s| s != self.sensor()) {
                 return Ok((false, None));
             }
         }

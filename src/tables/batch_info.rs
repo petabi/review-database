@@ -105,7 +105,7 @@ mod tests {
                 earliest: 1,
                 latest: 2,
                 size: 1,
-                sources: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                sensors: vec!["a".to_string(), "b".to_string(), "c".to_string()],
             },
         );
         let entry2 = BatchInfo::new(
@@ -115,7 +115,7 @@ mod tests {
                 earliest: 1,
                 latest: 2,
                 size: 1,
-                sources: vec!["a".to_string(), "b".to_string()],
+                sensors: vec!["a".to_string(), "b".to_string()],
             },
         );
         let entry3 = BatchInfo::new(
@@ -125,7 +125,7 @@ mod tests {
                 earliest: 1,
                 latest: 2,
                 size: 1,
-                sources: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                sensors: vec!["a".to_string(), "b".to_string(), "c".to_string()],
             },
         );
         vec![entry1, entry2, entry3]

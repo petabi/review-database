@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.30.0,<0.33.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.33.0-alpha.1,<0.33.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -1105,7 +1105,7 @@ fn migrate_outlier_info(store: &super::Store) -> Result<()> {
             timestamp,
             rank,
             id,
-            source,
+            sensor: source,
         };
         let new_key = new_key.to_bytes();
         raw.update((&key, &value), (&new_key, &value))?;
@@ -1758,13 +1758,13 @@ mod tests {
             timestamp,
             rank,
             id,
-            source,
+            sensor: source,
             distance,
             is_saved,
         };
 
         let key = bincode::DefaultOptions::new()
-            .serialize(&(model_id, timestamp, rank, id, &sample.source))
+            .serialize(&(model_id, timestamp, rank, id, &sample.sensor))
             .unwrap();
         let value = bincode::DefaultOptions::new()
             .serialize(&(distance, is_saved))

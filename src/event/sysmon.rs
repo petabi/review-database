@@ -15,7 +15,7 @@ use crate::event::common::triage_scores_to_string;
 pub struct WindowsThreat {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
-    pub source: String,
+    pub sensor: String,
     pub service: String,
     pub agent_name: String,
     pub agent_id: String,
@@ -39,8 +39,8 @@ impl fmt::Display for WindowsThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "source={:?} service={:?} agent_name={:?} agent_id={:?} process_guid={:?} process_id={:?} image=\"{}\" user=\"{}\" content=\"{}\" db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
-            self.source,
+            "sensor={:?} service={:?} agent_name={:?} agent_id={:?} process_guid={:?} process_id={:?} image=\"{}\" user=\"{}\" content=\"{}\" db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            self.sensor,
             self.service,
             self.agent_name,
             self.agent_id,
@@ -62,8 +62,8 @@ impl fmt::Display for WindowsThreat {
 
 // TODO: Make new Match trait for Windows threat events
 impl Match for WindowsThreat {
-    fn source(&self) -> &str {
-        &self.source
+    fn sensor(&self) -> &str {
+        &self.sensor
     }
 
     fn src_addr(&self) -> IpAddr {

@@ -54,8 +54,8 @@ mod private {
 }
 
 pub(crate) type Timestamp = i64;
-pub(crate) type Source = String;
-pub(crate) type Id = (Timestamp, Source);
+pub(crate) type Sensor = String;
+pub(crate) type Id = (Timestamp, Sensor);
 
 pub struct PretrainedModel(pub Vec<u8>);
 
@@ -97,7 +97,7 @@ pub struct Cluster {
     pub category_id: i32,
     pub detector_id: i32,
     pub event_ids: Vec<Timestamp>,
-    pub event_sources: Vec<Source>,
+    pub sensors: Vec<Sensor>,
     pub labels: Option<Vec<String>>,
     pub qualifier_id: i32,
     pub status_id: i32,
@@ -201,7 +201,7 @@ pub struct Outlier {
     #[serde(with = "serde_bytes")]
     pub raw_event: Vec<u8>,
     pub event_ids: Vec<Timestamp>,
-    pub event_sources: Vec<Source>,
+    pub sensors: Vec<Sensor>,
     pub size: i64,
     pub model_id: i32,
 }
@@ -215,7 +215,7 @@ pub struct ModelBatchInfo {
     pub earliest: i64,
     pub latest: i64,
     pub size: usize,
-    pub sources: Vec<String>,
+    pub sensors: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]

@@ -15,7 +15,7 @@ pub struct OutlierInfo {
     pub timestamp: i64,
     pub rank: i64,
     pub id: i64,
-    pub source: String,
+    pub sensor: String,
     pub distance: f64,
     pub is_saved: bool,
 }
@@ -31,7 +31,7 @@ impl FromKeyValue for OutlierInfo {
             timestamp: key.timestamp,
             rank: key.rank,
             id: key.id,
-            source: key.source,
+            sensor: key.sensor,
             distance: value.distance,
             is_saved: value.is_saved,
         })
@@ -47,7 +47,7 @@ impl UniqueKey for OutlierInfo {
         buf.extend(self.timestamp.to_be_bytes());
         buf.extend(self.rank.to_be_bytes());
         buf.extend(self.id.to_be_bytes());
-        buf.extend(self.source.as_bytes());
+        buf.extend(self.sensor.as_bytes());
         buf
     }
 }
@@ -70,20 +70,20 @@ pub struct Key {
     pub timestamp: i64,
     pub rank: i64,
     pub id: i64,
-    pub source: String,
+    pub sensor: String,
 }
 
 impl Key {
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
-        let capacity = size_of::<i32>() + size_of::<i64>() * 3 + self.source.as_bytes().len();
+        let capacity = size_of::<i32>() + size_of::<i64>() * 3 + self.sensor.as_bytes().len();
 
         let mut buf = Vec::with_capacity(capacity);
         buf.extend(self.model_id.to_be_bytes());
         buf.extend(self.timestamp.to_be_bytes());
         buf.extend(self.rank.to_be_bytes());
         buf.extend(self.id.to_be_bytes());
-        buf.extend(self.source.as_bytes());
+        buf.extend(self.sensor.as_bytes());
         buf
     }
 
@@ -112,14 +112,14 @@ impl Key {
         buf.copy_from_slice(val);
         let id = i64::from_be_bytes(buf);
 
-        let source = std::str::from_utf8(rest)?.to_owned();
+        let sensor = std::str::from_utf8(rest)?.to_owned();
 
         Ok(Self {
             model_id,
             timestamp,
             rank,
             id,
-            source,
+            sensor,
         })
     }
 }
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn serde() {
-        let entry = create_entry(123, 456, 789, 0, "some source", 0.2, true);
+        let entry = create_entry(123, 456, 789, 0, "some sensor", 0.2, true);
         let key = entry.unique_key();
 
         let res = super::Key::from_be_bytes(&key);
@@ -261,7 +261,7 @@ mod tests {
             let key = super::Key::from_be_bytes(&entry.unique_key()).unwrap();
             assert!(table.update_is_saved(&key).unwrap());
         }
-        let new = create_entry(345, 0, 0, 0, "some source", 0., false);
+        let new = create_entry(345, 0, 0, 0, "some sensor", 0., false);
         let new_key = super::Key::from_be_bytes(&new.unique_key()).unwrap();
         assert!(table.update_is_saved(&new_key).is_err());
 
@@ -279,13 +279,13 @@ mod tests {
 
     fn create_entries() -> Vec<OutlierInfo> {
         let model_id = 123;
-        let source = "some source";
+        let sensor = "some sensor";
         let distance = 0.3;
         let is_saved = false;
         (1..3)
             .flat_map(|timestamp| {
                 (2..4).map(move |rank| {
-                    create_entry(model_id, timestamp, rank, rank, source, distance, is_saved)
+                    create_entry(model_id, timestamp, rank, rank, sensor, distance, is_saved)
                 })
             })
             .collect()
@@ -296,7 +296,7 @@ mod tests {
         timestamp: i64,
         rank: i64,
         id: i64,
-        source: &str,
+        sensor: &str,
         distance: f64,
         is_saved: bool,
     ) -> OutlierInfo {
@@ -305,7 +305,7 @@ mod tests {
             timestamp,
             rank,
             id,
-            source: source.to_owned(),
+            sensor: sensor.to_owned(),
             distance,
             is_saved,
         }

@@ -11,6 +11,18 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Modified `Table::get_patterns` to take a reference to a slice of tuples
   instead of taking ownership of a vector, making the function more flexible.
+- Replaced the term source with sensor, where it refers to a device or software
+  that captures or detects raw events.
+  - This update affects not only the fields in the event protocol structs such
+    as `DnsEventFields::source` to `DnsEventFields::sensor`, but also in the
+    following structs:
+    - `Cluster::event_sources` to `Cluster::sensors`
+    - `ModelBatchInfo::sources` to `ModelBatchInfo::sensors`
+    - `Outlier::event_sources` to `Outlier::sensors`
+    - `OutlierInfo::source` to `OutlierInfo::sensor`
+    - `TriageResponse::source` to `TriageResponse::sensor`
+  - With this update, the `syslog_message` function's return value reflects the
+    updated terminology, replacing "source=" with "sensor=".
 
 ## [0.32.0] - 2024-11-07
 
