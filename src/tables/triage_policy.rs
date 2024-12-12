@@ -247,7 +247,7 @@ impl Ord for Response {
 
 /// Functions for the `triage_policy` indexed map.
 impl<'d> IndexedTable<'d, TriagePolicy> {
-    /// Opens the `data_source` table in the database.
+    /// Opens the `triage_policy` table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
