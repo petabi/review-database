@@ -1,10 +1,39 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{BootpAttr, RawEventKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::{to_hardware_address, triage_scores_to_string};
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{to_hardware_address, triage_scores_to_string, AttrValue};
+
+macro_rules! bootp_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventKind::Bootp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                BootpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                BootpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                BootpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                BootpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                BootpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                BootpAttr::Op => AttrValue::UInt($event.op.into()),
+                BootpAttr::Htype => AttrValue::UInt($event.htype.into()),
+                BootpAttr::Hops => AttrValue::UInt($event.hops.into()),
+                BootpAttr::Xid => AttrValue::UInt($event.xid.into()),
+                BootpAttr::CiAddr => AttrValue::Addr($event.ciaddr),
+                BootpAttr::YiAddr => AttrValue::Addr($event.yiaddr),
+                BootpAttr::SiAddr => AttrValue::Addr($event.siaddr),
+                BootpAttr::GiAddr => AttrValue::Addr($event.giaddr),
+                BootpAttr::ChAddr => AttrValue::String(&$event.chaddr),
+                BootpAttr::SName => AttrValue::String(&$event.sname),
+                BootpAttr::File => AttrValue::String(&$event.file),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListBootpFields {
@@ -73,7 +102,7 @@ pub struct BlockListBootp {
     pub yiaddr: IpAddr,
     pub siaddr: IpAddr,
     pub giaddr: IpAddr,
-    pub chaddr: Vec<u8>,
+    pub chaddr: String,
     pub sname: String,
     pub file: String,
     pub category: EventCategory,
@@ -99,7 +128,7 @@ impl fmt::Display for BlockListBootp {
             self.yiaddr.to_string(),
             self.siaddr.to_string(),
             self.giaddr.to_string(),
-            to_hardware_address(&self.chaddr),
+            self.chaddr,
             self.sname.to_string(),
             self.file.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref())
@@ -126,7 +155,7 @@ impl BlockListBootp {
             yiaddr: fields.yiaddr,
             siaddr: fields.siaddr,
             giaddr: fields.giaddr,
-            chaddr: fields.chaddr,
+            chaddr: to_hardware_address(&fields.chaddr),
             sname: fields.sname,
             file: fields.file,
             category: fields.category,
@@ -176,7 +205,7 @@ impl Match for BlockListBootp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, raw_event_attr: RawEventKind) -> Option<AttrValue> {
+        bootp_target_attr!(self, raw_event_attr)
     }
 }

@@ -5,11 +5,34 @@ use std::{
     num::NonZeroU8,
 };
 
+use attrievent::attribute::{RawEventKind, WindowAttr};
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+// TODO: We plan to implement the triage feature only after we have cleaned up the range of
+// values for the properties for each sysmon service.
+macro_rules! window_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {
+        if let RawEventKind::Window(attr) = $raw_event_attr {
+            let target_value = match attr {
+                WindowAttr::Service => AttrValue::String(&$event.service),
+                WindowAttr::AgentName => AttrValue::String(&$event.agent_name),
+                WindowAttr::AgentId => AttrValue::String(&$event.agent_id),
+                WindowAttr::ProcessGuid => AttrValue::String(&$event.process_guid),
+                WindowAttr::ProcessId => AttrValue::UInt($event.process_id.into()),
+                WindowAttr::Image => AttrValue::String(&$event.image),
+                WindowAttr::User => AttrValue::String(&$event.user),
+                WindowAttr::Content => AttrValue::String(&$event.content),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    };
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct WindowsThreat {
@@ -102,7 +125,7 @@ impl Match for WindowsThreat {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, raw_event_attr: RawEventKind) -> Option<AttrValue> {
+        window_target_attr!(self, raw_event_attr)
     }
 }

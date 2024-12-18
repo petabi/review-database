@@ -5,11 +5,12 @@ use std::{
     num::NonZeroU8,
 };
 
+use attrievent::attribute::{LogAttr, RawEventKind};
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
 
 #[derive(Serialize, Deserialize)]
 pub struct ExtraThreat {
@@ -87,7 +88,10 @@ impl Match for ExtraThreat {
         Some(self.confidence)
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, raw_event_attr: RawEventKind) -> Option<AttrValue> {
+        if let RawEventKind::Log(LogAttr::Content) = raw_event_attr {
+            return Some(AttrValue::String(&self.content));
+        }
+        None
     }
 }

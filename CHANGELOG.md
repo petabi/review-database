@@ -5,6 +5,35 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added triage functionality for scoring with attributes of each raw event.
+  - Added a new enum type `AttrValue`. This type is used to convert the
+    attribute value of each raw event to its corresponding type to perform
+    comparison operations.
+  - Added the `target_attribute` to the `Match` trait to generate an `AttrValue`
+    from the field in all detection event.
+  - Implemented `score_by_packet_attr` under `Match` trait.
+
+### Changed
+
+- Removed the `tor` module file. The structures (`HttpEventFields`,
+  `TorConnection`) and implementations within that module have been moved to
+  `crate::event::http`.
+- Fixed HTTP detection events to consistently use `referrer` instead of
+  `referrer` and `referrer` interchangeably.
+- Modified the `ValueKind` enum to support different types of input for packet
+  attribute triage.
+- Changed the type of fields in the detection event structure for some raw
+  event. This change allows users to see meaningful values directly without
+  having to do any special conversion for that field.
+  - `post_body`(HTTP): `Vec<u8>` to `String`.
+  - `chaddr`(BOOTP): `Vec<u8>` to `String`.
+  - `class_id`(DHCP): `Vec<u8>` to `String`.
+  - `client_id`(DHCP): `Vec<u8>` to `String`.
+
 ## [0.33.0] - 2024-12-12
 
 ### Changed
@@ -327,7 +356,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Changed the return type of `Store::network_map` to `IndexedTable<Network>`
   to enhance security by preventing direct exposure of internal structure.
 - Replaced `IndexedMap::get_by_id` function with `Indexed::get_by_id`, providing
-   a more structured and type-safe result.
+  a more structured and type-safe result.
   - Previously, the function returned a binary representation of the key-value
     pair: `Result<(Option<impl AsRef<[u8]>>, Option<impl AsRef<[u8]>>)>`.
   - Now, it returns `Result<Option<T>>`, where T is the entry type.
@@ -343,8 +372,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   more straightforward and human-readable format compared to the raw binary
   format exposed by `IndexSet`.
 - Replaced the `IndexedTable<Category>::get`, `IndexedTable<Qualifier>::get` and
- `IndexedTable<Status>::get` method with the more general function
- `IndexedTable<R>::get_by_id`. This change enhances flexibility by allowing
+  `IndexedTable<Status>::get` method with the more general function
+  `IndexedTable<R>::get_by_id`. This change enhances flexibility by allowing
   retrieval based on any type R rather than being limited to a specific category.
   Existing code using get for categories should be updated to use get_by_id with
   the appropriate type.
@@ -386,7 +415,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure template management.
 - Introduced `Structured`, `Unstructured`, `StructuredClusteringAlgorithm` and
- `UnstructuredClusteringAlgorithm` to describe data stored in `Table<Template>`.
+  `UnstructuredClusteringAlgorithm` to describe data stored in `Table<Template>`.
 - Introduced `TriageResponse` to describe data stored in `IndexedTable<TriageResponse>`.
 - Introduced `TriageResponseUpdate` to support `TriageResponse` record update.
 - Added new functions to facilitate insert, remove, and update operations,
@@ -607,7 +636,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Removed `batch_info` and `scores` arguments from `Model::from_storage` function.
   These arguments were previously used for custom initialization of the
   `batch_info` and `scores` fields within the model. This change means that when
-  you create a model using `Model::from_storage`, the  `batch_info` and `scores`
+  you create a model using `Model::from_storage`, the `batch_info` and `scores`
   fields will now be initialized with their default values. If you previously
   relied on custom values for these fields, you will need to update your code accordingly.
 
@@ -740,6 +769,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[Unreleased]: https://github.com/aicers/review-database/compare/0.33.0...main
 [0.33.0]: https://github.com/petabi/review-database/compare/0.32.0...0.33.0
 [0.32.0]: https://github.com/petabi/review-database/compare/0.31.0...0.32.0
 [0.31.0]: https://github.com/petabi/review-database/compare/0.30.0...0.31.0

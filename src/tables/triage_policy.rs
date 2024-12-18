@@ -68,8 +68,11 @@ pub enum TiCmpKind {
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
 pub enum ValueKind {
     String,
-    Integer,
+    SInteger,
+    UInteger,
     Float,
+    IpAddr,
+    Bool,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
@@ -135,6 +138,7 @@ impl Ord for Ti {
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
 pub struct PacketAttr {
+    pub raw_event_type: String,
     pub attr_name: String,
     pub value_kind: ValueKind,
     pub cmp_kind: AttrCmpKind,

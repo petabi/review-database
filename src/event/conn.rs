@@ -4,11 +4,38 @@ use std::{
     num::NonZeroU8,
 };
 
+use attrievent::attribute::{ConnAttr, RawEventKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::{triage_scores_to_string, vector_to_string};
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, vector_to_string, AttrValue};
+
+macro_rules! conn_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventKind::Conn(attr) = $raw_event_attr {
+            let target_value = match attr {
+                ConnAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                ConnAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                ConnAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                ConnAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                ConnAttr::Proto => AttrValue::UInt($event.proto.into()),
+                ConnAttr::ConnState => AttrValue::String(&$event.conn_state),
+                ConnAttr::Duration => AttrValue::SInt($event.duration),
+                ConnAttr::Service => AttrValue::String(&$event.service),
+                ConnAttr::OrigBytes => AttrValue::UInt($event.orig_bytes),
+                ConnAttr::RespBytes => AttrValue::UInt($event.resp_bytes),
+                ConnAttr::OrigPkts => AttrValue::UInt($event.orig_pkts),
+                ConnAttr::RespPkts => AttrValue::UInt($event.resp_pkts),
+                ConnAttr::OrigL2Bytes => AttrValue::UInt($event.orig_l2_bytes),
+                ConnAttr::RespL2Bytes => AttrValue::UInt($event.resp_l2_bytes),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct PortScanFields {
@@ -122,8 +149,20 @@ impl Match for PortScan {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, raw_event_attr: RawEventKind) -> Option<AttrValue> {
+        if let RawEventKind::Conn(attr) = raw_event_attr {
+            match attr {
+                ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                ConnAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                ConnAttr::DstPort => Some(AttrValue::VecUInt(
+                    self.dst_ports.iter().map(|val| u64::from(*val)).collect(),
+                )),
+                ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -239,8 +278,18 @@ impl Match for MultiHostPortScan {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, raw_event_attr: RawEventKind) -> Option<AttrValue> {
+        if let RawEventKind::Conn(attr) = raw_event_attr {
+            match attr {
+                ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                ConnAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+                ConnAttr::DstAddr => Some(AttrValue::VecAddr(&self.dst_addrs)),
+                ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -351,8 +400,17 @@ impl Match for ExternalDdos {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, raw_event_attr: RawEventKind) -> Option<AttrValue> {
+        if let RawEventKind::Conn(attr) = raw_event_attr {
+            match attr {
+                ConnAttr::SrcAddr => Some(AttrValue::VecAddr(&self.src_addrs)),
+                ConnAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -513,7 +571,7 @@ impl Match for BlockListConn {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn target_attribute(&self, raw_event_attr: RawEventKind) -> Option<AttrValue> {
+        conn_target_attr!(self, raw_event_attr)
     }
 }
