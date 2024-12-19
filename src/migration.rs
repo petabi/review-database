@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.33.0,<0.34.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.33.1-alpha.1,<0.34.0-alpha";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -136,6 +136,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.30.0")?,
             migrate_0_29_to_0_30_0,
         ),
+        (
+            VersionReq::parse(">=0.30.0,<0.33.1-alpha.1")?,
+            Version::parse("0.33.1-alpha.1")?,
+            migrate_0_30_to_0_33_1,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -209,6 +214,13 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn migrate_0_30_to_0_33_1(_store: &super::Store) -> Result<()> {
+    // This migration function is intentionally left as no-op. While PostgreSQL schema is updated,
+    // RocksDB schema remains unchanged, necessitating no migration steps at this point.
+    Ok(())
 }
 
 fn migrate_0_29_to_0_30_0(store: &super::Store) -> Result<()> {
@@ -1090,9 +1102,9 @@ fn migrate_0_26_to_0_28(store: &super::Store) -> Result<()> {
 
 fn migrate_outlier_info(store: &super::Store) -> Result<()> {
     use bincode::Options;
+    use migration_structures::OutlierInfoKeyBefore33;
 
     use crate::collections::IterableMap;
-    use crate::OutlierInfoKey;
 
     let map = store.outlier_map();
     let raw = map.raw();
@@ -1100,12 +1112,12 @@ fn migrate_outlier_info(store: &super::Store) -> Result<()> {
         let (model_id, timestamp, rank, id, source) = bincode::DefaultOptions::new()
             .deserialize::<(i32, i64, i64, i64, String)>(&key)
             .context("Failed to migrate node database: invalid node value")?;
-        let new_key = OutlierInfoKey {
+        let new_key = OutlierInfoKeyBefore33 {
             model_id,
             timestamp,
             rank,
             id,
-            sensor: source,
+            source,
         };
         let new_key = new_key.to_bytes();
         raw.update((&key, &value), (&new_key, &value))?;

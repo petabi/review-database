@@ -1882,3 +1882,27 @@ pub struct GigantoConfig {
 
     pub ack_transmission: u16,
 }
+
+#[derive(Debug, PartialEq)]
+pub struct OutlierInfoKeyBefore33 {
+    pub model_id: i32,
+    pub timestamp: i64,
+    pub rank: i64,
+    pub id: i64,
+    pub source: String,
+}
+
+impl OutlierInfoKeyBefore33 {
+    #[must_use]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let capacity = size_of::<i32>() + size_of::<i64>() * 3 + self.source.as_bytes().len();
+
+        let mut buf = Vec::with_capacity(capacity);
+        buf.extend(self.model_id.to_be_bytes());
+        buf.extend(self.timestamp.to_be_bytes());
+        buf.extend(self.rank.to_be_bytes());
+        buf.extend(self.id.to_be_bytes());
+        buf.extend(self.source.as_bytes());
+        buf
+    }
+}
