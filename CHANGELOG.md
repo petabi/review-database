@@ -9,10 +9,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Corrected the migration failure issue. The previous version, 0.33.0, needs to
-  be yanked due to this issue.
+- Corrected the migration bug introduced in 0.33.0. If the migration function
+  in 0.33.0 is called with the database version earlier than 0.30.0, it will
+  fail to migrate the database, and the database will be left in an inconsistent
+  state. This issue has been fixed in this release. The bug does not affect the
+  database version 0.30.0 or later. Users who have already migrated to those
+  versions, even though they have seen the migration failure message, can safely
+  upgrade to this version.
 
-## [0.33.0] - 2024-12-12
+## [0.33.0] - 2024-12-12 [YANKED]
 
 ### Changed
 
