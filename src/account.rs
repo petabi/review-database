@@ -36,6 +36,7 @@ pub struct Account {
     pub name: String,
     pub department: String,
     pub language: Option<String>,
+    pub theme: Option<String>,
     pub(crate) creation_time: DateTime<Utc>,
     pub(crate) last_signin_time: Option<DateTime<Utc>>,
     pub allow_access_from: Option<Vec<IpAddr>>,
@@ -60,6 +61,7 @@ impl Account {
         name: String,
         department: String,
         language: Option<String>,
+        theme: Option<String>,
         allow_access_from: Option<Vec<IpAddr>>,
         max_parallel_sessions: Option<u32>,
     ) -> Result<Self> {
@@ -72,6 +74,7 @@ impl Account {
             role,
             name,
             department,
+            theme,
             language,
             creation_time: now,
             last_signin_time: None,
@@ -170,7 +173,7 @@ impl SaltedPassword {
     /// # Errors
     ///
     /// Returns an error if the salt cannot be generated.
-    fn new_with_hash_algorithm(
+    pub(crate) fn new_with_hash_algorithm(
         password: &str,
         hash_algorithm: &PasswordHashAlgorithm,
     ) -> Result<Self> {
@@ -292,6 +295,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
         assert!(account.is_ok());
 
@@ -319,6 +323,7 @@ mod tests {
             department: String::new(),
             name: String::new(),
             language: None,
+            theme: None,
             creation_time: Utc::now(),
             last_signin_time: None,
             allow_access_from: None,

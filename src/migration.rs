@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.30.0,<0.34.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.34.0-alpha.1,<0.34.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -136,6 +136,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.30.0")?,
             migrate_0_29_to_0_30_0,
         ),
+        (
+            VersionReq::parse(">=0.30.0,<0.34.0-alpha.1")?,
+            Version::parse("0.34.0-alpha.1")?,
+            migrate_0_30_to_0_34_0,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -209,6 +214,64 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_30_to_0_34_0(store: &super::Store) -> Result<()> {
+    migrate_0_34_account(store)
+}
+
+fn migrate_0_34_account(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+    use chrono::{DateTime, Utc};
+
+    use crate::account::{PasswordHashAlgorithm, Role, SaltedPassword};
+    use crate::types::Account;
+
+    #[derive(Deserialize, Serialize)]
+    pub struct OldAccount {
+        pub username: String,
+        password: SaltedPassword,
+        pub role: Role,
+        pub name: String,
+        pub department: String,
+        pub language: Option<String>,
+        creation_time: DateTime<Utc>,
+        last_signin_time: Option<DateTime<Utc>>,
+        pub allow_access_from: Option<Vec<IpAddr>>,
+        pub max_parallel_sessions: Option<u32>,
+        password_hash_algorithm: PasswordHashAlgorithm,
+        password_last_modified_at: DateTime<Utc>,
+    }
+
+    impl From<OldAccount> for Account {
+        fn from(input: OldAccount) -> Self {
+            Self {
+                username: input.username,
+                password: input.password,
+                role: input.role,
+                name: input.name,
+                department: input.department,
+                language: input.language,
+                theme: None,
+                creation_time: input.creation_time,
+                last_signin_time: input.last_signin_time,
+                allow_access_from: input.allow_access_from,
+                max_parallel_sessions: input.max_parallel_sessions,
+                password_hash_algorithm: input.password_hash_algorithm,
+                password_last_modified_at: input.password_last_modified_at,
+            }
+        }
+    }
+
+    let map = store.account_map();
+    let raw = map.raw();
+    for (key, old_value) in raw.iter_forward()? {
+        let old = bincode::DefaultOptions::new().deserialize::<OldAccount>(&old_value)?;
+        let new: Account = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<Account>(&new)?;
+        raw.update((&key, &old_value), (&key, &new_value))?;
+    }
+    Ok(())
 }
 
 fn migrate_0_29_to_0_30_0(store: &super::Store) -> Result<()> {
@@ -1016,7 +1079,6 @@ fn migrate_0_29_account(store: &super::Store) -> Result<()> {
     use chrono::{DateTime, Utc};
 
     use crate::account::{PasswordHashAlgorithm, Role, SaltedPassword};
-    use crate::types::Account;
 
     #[derive(Deserialize, Serialize)]
     pub struct OldAccount {
@@ -1032,7 +1094,23 @@ fn migrate_0_29_account(store: &super::Store) -> Result<()> {
         password_hash_algorithm: PasswordHashAlgorithm,
     }
 
-    impl From<OldAccount> for Account {
+    #[derive(Deserialize, Serialize)]
+    pub struct AccountV29 {
+        pub username: String,
+        password: SaltedPassword,
+        pub role: Role,
+        pub name: String,
+        pub department: String,
+        language: Option<String>,
+        creation_time: DateTime<Utc>,
+        last_signin_time: Option<DateTime<Utc>>,
+        pub allow_access_from: Option<Vec<IpAddr>>,
+        pub max_parallel_sessions: Option<u32>,
+        password_hash_algorithm: PasswordHashAlgorithm,
+        password_last_modified_at: DateTime<Utc>,
+    }
+
+    impl From<OldAccount> for AccountV29 {
         fn from(input: OldAccount) -> Self {
             Self {
                 username: input.username,
@@ -1053,14 +1131,11 @@ fn migrate_0_29_account(store: &super::Store) -> Result<()> {
 
     let map = store.account_map();
     let raw = map.raw();
-    let mut accounts = vec![];
     for (key, old_value) in raw.iter_forward()? {
         let old = bincode::DefaultOptions::new().deserialize::<OldAccount>(&old_value)?;
-        raw.delete(&key)?;
-        accounts.push(old.into());
-    }
-    for account in accounts {
-        map.insert(&account)?;
+        let new: AccountV29 = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<AccountV29>(&new)?;
+        raw.update((&key, &old_value), (&key, &new_value))?;
     }
     Ok(())
 }
@@ -3441,12 +3516,12 @@ mod tests {
     fn migrate_0_26_to_0_29_account() {
         use std::net::IpAddr;
 
+        use anyhow::Result;
         use bincode::Options;
         use chrono::{DateTime, Utc};
         use serde::{Deserialize, Serialize};
 
         use crate::account::{PasswordHashAlgorithm, Role, SaltedPassword};
-        use crate::types::Account;
 
         #[derive(Deserialize, Serialize)]
         pub struct OldAccount {
@@ -3462,7 +3537,58 @@ mod tests {
             password_hash_algorithm: PasswordHashAlgorithm,
         }
 
-        impl From<OldAccount> for Account {
+        #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
+        pub struct AccountV29 {
+            pub username: String,
+            password: SaltedPassword,
+            pub role: Role,
+            pub name: String,
+            pub department: String,
+            language: Option<String>,
+            creation_time: DateTime<Utc>,
+            last_signin_time: Option<DateTime<Utc>>,
+            pub allow_access_from: Option<Vec<IpAddr>>,
+            pub max_parallel_sessions: Option<u32>,
+            password_hash_algorithm: PasswordHashAlgorithm,
+            password_last_modified_at: DateTime<Utc>,
+        }
+
+        impl AccountV29 {
+            const DEFAULT_HASH_ALGORITHM: PasswordHashAlgorithm = PasswordHashAlgorithm::Argon2id;
+            #[allow(clippy::too_many_arguments)]
+            fn new(
+                username: &str,
+                password: &str,
+                role: Role,
+                name: String,
+                department: String,
+                language: Option<String>,
+                allow_access_from: Option<Vec<IpAddr>>,
+                max_parallel_sessions: Option<u32>,
+            ) -> Result<Self> {
+                let password = SaltedPassword::new_with_hash_algorithm(
+                    password,
+                    &Self::DEFAULT_HASH_ALGORITHM,
+                )?;
+                let now = Utc::now();
+                Ok(Self {
+                    username: username.to_string(),
+                    password,
+                    role,
+                    name,
+                    department,
+                    language,
+                    creation_time: now,
+                    last_signin_time: None,
+                    allow_access_from,
+                    max_parallel_sessions,
+                    password_hash_algorithm: Self::DEFAULT_HASH_ALGORITHM,
+                    password_last_modified_at: now,
+                })
+            }
+        }
+
+        impl From<OldAccount> for AccountV29 {
             fn from(input: OldAccount) -> Self {
                 Self {
                     username: input.username,
@@ -3481,8 +3607,8 @@ mod tests {
             }
         }
 
-        impl From<Account> for OldAccount {
-            fn from(input: Account) -> Self {
+        impl From<AccountV29> for OldAccount {
+            fn from(input: AccountV29) -> Self {
                 Self {
                     username: input.username,
                     password: input.password,
@@ -3502,7 +3628,7 @@ mod tests {
         let map = settings.store.account_map();
         let raw = map.raw();
 
-        let mut test = Account::new(
+        let mut test = AccountV29::new(
             "test",
             "password",
             Role::SecurityAdministrator,
@@ -3526,13 +3652,21 @@ mod tests {
         assert!(super::migrate_0_29_account(&settings.store).is_ok());
 
         let map = settings.store.account_map();
-        let res = map.get(&test.username);
-        assert!(res.is_ok());
-        let account = res.unwrap();
-        if let Some(a) = &account {
-            test.password_last_modified_at = a.password_last_modified_at;
-        }
-        assert_eq!(account, Some(test));
+        let raw = map.raw();
+        let raw_value = raw
+            .get(test.username.as_bytes())
+            .expect("Failed to get raw value from database");
+        assert!(raw_value.is_some());
+
+        let raw_owned = raw_value.unwrap();
+        let raw_bytes = raw_owned.as_ref();
+
+        let account: AccountV29 = bincode::DefaultOptions::new()
+            .deserialize(raw_bytes)
+            .expect("Failed to deserialize into AccountV29");
+
+        test.password_last_modified_at = account.password_last_modified_at;
+        assert_eq!(account, test);
     }
 
     #[test]
@@ -3613,5 +3747,108 @@ mod tests {
         new.patterns.iter().for_each(|rule| {
             assert_eq!(rule.category, EventCategory::Reconnaissance);
         });
+    }
+
+    #[test]
+    fn migrate_0_34_account() {
+        use std::net::IpAddr;
+
+        use bincode::Options;
+        use chrono::{DateTime, Utc};
+        use serde::{Deserialize, Serialize};
+
+        use crate::account::{PasswordHashAlgorithm, Role, SaltedPassword};
+        use crate::types::Account;
+
+        #[derive(Deserialize, Serialize)]
+        pub struct OldAccount {
+            pub username: String,
+            password: SaltedPassword,
+            pub role: Role,
+            pub name: String,
+            pub department: String,
+            language: Option<String>,
+            creation_time: DateTime<Utc>,
+            last_signin_time: Option<DateTime<Utc>>,
+            pub allow_access_from: Option<Vec<IpAddr>>,
+            pub max_parallel_sessions: Option<u32>,
+            password_hash_algorithm: PasswordHashAlgorithm,
+            password_last_modified_at: DateTime<Utc>,
+        }
+
+        impl From<OldAccount> for Account {
+            fn from(input: OldAccount) -> Self {
+                Self {
+                    username: input.username,
+                    password: input.password,
+                    role: input.role,
+                    name: input.name,
+                    department: input.department,
+                    language: input.language,
+                    theme: None,
+                    creation_time: input.creation_time,
+                    last_signin_time: input.last_signin_time,
+                    allow_access_from: input.allow_access_from,
+                    max_parallel_sessions: input.max_parallel_sessions,
+                    password_hash_algorithm: input.password_hash_algorithm,
+                    password_last_modified_at: input.password_last_modified_at,
+                }
+            }
+        }
+
+        impl From<Account> for OldAccount {
+            fn from(input: Account) -> Self {
+                Self {
+                    username: input.username,
+                    password: input.password,
+                    role: input.role,
+                    name: input.name,
+                    department: input.department,
+                    language: input.language,
+                    creation_time: input.creation_time,
+                    last_signin_time: input.last_signin_time,
+                    allow_access_from: input.allow_access_from,
+                    max_parallel_sessions: input.max_parallel_sessions,
+                    password_hash_algorithm: input.password_hash_algorithm,
+                    password_last_modified_at: input.password_last_modified_at,
+                }
+            }
+        }
+
+        let settings = TestSchema::new();
+        let map = settings.store.account_map();
+        let raw = map.raw();
+
+        let test = Account::new(
+            "test",
+            "password",
+            Role::SecurityAdministrator,
+            "name".to_string(),
+            "department".to_string(),
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        let old: OldAccount = test.clone().into();
+        let value = bincode::DefaultOptions::new()
+            .serialize(&old)
+            .expect("serializable");
+
+        assert!(raw.put(old.username.as_bytes(), &value).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        assert!(super::migrate_0_34_account(&settings.store).is_ok());
+
+        let map = settings.store.account_map();
+        let res = map.get(&test.username);
+        assert!(res.is_ok());
+        let account = res.unwrap();
+
+        assert_eq!(account, Some(test));
     }
 }
