@@ -77,6 +77,7 @@ impl<'d> Table<'d, Account> {
         name: &Option<(String, String)>,
         department: &Option<(String, String)>,
         language: &Option<(Option<String>, Option<String>)>,
+        theme: &Option<(Option<String>, Option<String>)>,
         allow_access_from: &Option<(Option<Vec<IpAddr>>, Option<Vec<IpAddr>>)>,
         max_parallel_sessions: &Option<(Option<u32>, Option<u32>)>,
     ) -> Result<(), anyhow::Error> {
@@ -116,6 +117,12 @@ impl<'d> Table<'d, Account> {
                         bail!("old value mismatch");
                     }
                     account.language.clone_from(new);
+                }
+                if let Some((old, new)) = theme {
+                    if account.theme != *old {
+                        bail!("old value mismatch");
+                    }
+                    account.theme.clone_from(new);
                 }
                 if let Some((old, new)) = &allow_access_from {
                     if account.allow_access_from != *old {
@@ -177,6 +184,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap();
         table.put(&acc1).unwrap();
@@ -188,6 +196,7 @@ mod tests {
             Role::SystemAdministrator,
             "User 2".to_string(),
             "Department 2".to_string(),
+            None,
             None,
             None,
             None,
@@ -221,6 +230,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap();
         table.put(&acc1).unwrap();
@@ -236,6 +246,7 @@ mod tests {
             Role::SystemAdministrator,
             "User 2".to_string(),
             "Department 2".to_string(),
+            None,
             None,
             None,
             None,
