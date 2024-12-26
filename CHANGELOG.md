@@ -16,9 +16,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Corrected the migration bug introduced in 0.33.0. If the migration function
-  in 0.33.0 is called with the database version earlier than 0.30.0, it will
-  fail to migrate the database, and the database will be left in an inconsistent
+- Corrected the migration bug introduced in 0.33.0. If the migration function in
+  0.33.0 is called with the database version earlier than 0.30.0, it will fail
+  to migrate the database, and the database will be left in an inconsistent
   state. This issue has been fixed in this release. The bug does not affect the
   database version 0.30.0 or later. Users who have already migrated to those
   versions, even though they have seen the migration failure message, can safely
@@ -71,11 +71,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Introduced a new tool, review-migrate, for managing database migrations. The
   tool can be configured using either environment variables or a TOML file. This
-  release introduces greater flexibility for managing REview's database migrations,
-  allowing users to leverage both environment variables and TOML configuration files.
+  release introduces greater flexibility for managing REview's database
+  migrations, allowing users to leverage both environment variables and TOML
+  configuration files.
   - Users can provide a TOML configuration file to define the following settings:
-    - `data_dir`: Path for REview's database backup storage. Default is
-      the backup directory in the current directory.
+    - `data_dir`: Path for REview's database backup storage. Default is the
+      backup directory in the current directory.
     - `backup_dir`: Path for REview's local storage. Default is the data
       directory in the current directory.
     - `database_url`: PostgreSQL connection URI. Default is
@@ -144,8 +145,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Resolved an issue in the `NodeTable::update` method, where changes to
   `NodeUpdate::agents` were not being correctly reflected in the database. This
-  fix ensures that any updates to agents are now accurately stored and retrieved,
-  maintaining consistency between in-memory data structures and persistent storage.
+  fix ensures that any updates to agents are now accurately stored and
+  retrieved, maintaining consistency between in-memory data structures and
+  persistent storage.
 
 ### Security
 
@@ -254,20 +256,25 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Introduced `SamplingInterval`, `SamplingPeriod`, `SamplingKind`, `SamplingPolicy`
-  and `SamplingPolicyUpdate` to describe data stored in `IndexedTable<SamplingPolicy>`.
+- Introduced `SamplingInterval`, `SamplingPeriod`, `SamplingKind`,
+  `SamplingPolicy` and `SamplingPolicyUpdate` to describe data stored in
+  `IndexedTable<SamplingPolicy>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure sampling policy management.
-- Introduced `CustomerUpdate` to describe data for updating `IndexedTable<Customer>`.
+- Introduced `CustomerUpdate` to describe data for updating
+  `IndexedTable<Customer>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure customer management.
-- Introduced `DataSourceUpdate` to describe data for updating `IndexedTable<DataSource>`.
+- Introduced `DataSourceUpdate` to describe data for updating
+  `IndexedTable<DataSource>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure data source management.
-- Introduced `TriagePolicyUpdate` to describe data for updating `IndexedTable<TriagePolicy>`.
+- Introduced `TriagePolicyUpdate` to describe data for updating
+  `IndexedTable<TriagePolicy>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure triage policy management.
-- Introduced `Node`, `NodeSettings` and `NodeUpdate` to describe data stored in `IndexedTable<Node>`.
+- Introduced `Node`, `NodeSettings` and `NodeUpdate` to describe data stored in
+  `IndexedTable<Node>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure node management.
 - Added new functions to facilitate insert, remove, and update operations,
@@ -275,7 +282,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduced `TrustedDomain` to describe data stored in `Table<TrustedDomain>`.
 - Added new functions to facilitate insert, remove operations, ensuring a more
   controlled and secure trusted domain management.
-- Introduced `TrustedUserAgent` to describe data stored in `IndexedTable<TrustedUserAgent>`.
+- Introduced `TrustedUserAgent` to describe data stored in
+  `IndexedTable<TrustedUserAgent>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure trusted user agent management.
 - Added new functions to facilitate insert, remove, and update operations,
@@ -283,18 +291,21 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Changed the return type of `Store::sampling_policy_map` to `IndexedTable<SamplingPolicy>`
-  to enhance security by preventing direct exposure of internal structure.
+- Changed the return type of `Store::sampling_policy_map` to
+  `IndexedTable<SamplingPolicy>` to enhance security by preventing direct
+  exposure of internal structure.
 - Changed the return type of `Store::customer_map` to `IndexedTable<Customer>`
   to enhance security by preventing direct exposure of internal structure.
 - Moved `crate::types::Customer` and `crate::types::CustomerNetwork` to
   `crate::Customer` and `crate::CustomerNetwork` respectively to align with other
   type definitions.
-- Associated `Customer`, `CustomerNetwork`, with the customer data table in the database.
+- Associated `Customer`, `CustomerNetwork`, with the customer data table in the
+  database.
 - Moved `crate::types::DataSource` and `crate::types::DataType` to
   `crate::DataSource` and `crate::DataType` respectively to align with other
   type definitions.
-- Associated `DataSource`, `DataType`, with the customer data table in the database.
+- Associated `DataSource`, `DataType`, with the customer data table in the
+  database.
 - Moved `AttrCmpKind`, `Confidence`, `PacketAttr`, `Response`, `ResponseKind`,
   `Ti`, `TiCmpKind`, `TriagePolicy`, `ValueKind` from `crate::types` to `crate`
   in order to align with other type definitions.
@@ -303,18 +314,19 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   to enhance security by preventing direct exposure of internal structure.
 - Moved `Tidb`, `TidbKind` and `TidbRule` from `crate::types` to `crate` in order
   to align with other type definitions.
-- Changed the return type of `Store::tidb_map` to `Table<Tidb>` to enhance security
-  by preventing direct exposure of internal structure.
+- Changed the return type of `Store::tidb_map` to `Table<Tidb>` to enhance
+  security by preventing direct exposure of internal structure.
 - Modified `Tidb::new` method to require input string serialization using
   `bincode::DefaultOptions::new().serialize` instead of `bincode::serialize` for
   consistency across the library.
 - Replaced `Store::trusted_dns_servers_map` with `Store::trusted_domain_map` for
-  consistency and to enhance security by preventing direct exposure of internal structure.
+  consistency and to enhance security by preventing direct exposure of internal
+  structure.
 - Changed the return type of `Store::trusted_user_agent_map` to
   `Table<TrustedUserAgent>` to enhance security by preventing direct exposure of
   internal structure.
-- Moved `TrafficFilter` and `ProtocolPorts` from `crate::types` to `crate` in order
-  to align with other type definitions.
+- Moved `TrafficFilter` and `ProtocolPorts` from `crate::types` to `crate` in
+  order to align with other type definitions.
 - Changed the return type of `Store::traffic_filter_map` to
   `Table<TrafficFilter>` to enhance security by preventing direct exposure of
   internal structure.
@@ -326,13 +338,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `Indexable::id` and `Indexable::make_indexed_key` for `Indexable` trait.
   This enhancement provides users with greater flexibility in customizing the
   `indexed_key` associated with `Indexable` trait.
-- Introduced `Network` and `NetworkUpdate` to describe data stored in `Table<Network>`.
+- Introduced `Network` and `NetworkUpdate` to describe data stored in
+  `Table<Network>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure allow network management.
-- Introduced `AllowNetwork` and `AllowNetworkUpdate` to describe data stored in `Table<Network>`.
+- Introduced `AllowNetwork` and `AllowNetworkUpdate` to describe data stored in
+  `Table<Network>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure network management.
-- Introduced `BlockNetwork` and `BlockNetworkUpdate` to describe data stored in `Table<Network>`.
+- Introduced `BlockNetwork` and `BlockNetworkUpdate` to describe data stored in
+  `Table<Network>`.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure block network management.
 
@@ -346,7 +361,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Changed the return type of `Store::network_map` to `IndexedTable<Network>`
   to enhance security by preventing direct exposure of internal structure.
 - Replaced `IndexedMap::get_by_id` function with `Indexed::get_by_id`, providing
-   a more structured and type-safe result.
+  a more structured and type-safe result.
   - Previously, the function returned a binary representation of the key-value
     pair: `Result<(Option<impl AsRef<[u8]>>, Option<impl AsRef<[u8]>>)>`.
   - Now, it returns `Result<Option<T>>`, where T is the entry type.
@@ -362,21 +377,23 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   more straightforward and human-readable format compared to the raw binary
   format exposed by `IndexSet`.
 - Replaced the `IndexedTable<Category>::get`, `IndexedTable<Qualifier>::get` and
- `IndexedTable<Status>::get` method with the more general function
- `IndexedTable<R>::get_by_id`. This change enhances flexibility by allowing
-  retrieval based on any type R rather than being limited to a specific category.
-  Existing code using get for categories should be updated to use get_by_id with
-  the appropriate type.
-- Changed the return type of `Store::allow_network_map` to `IndexedTable<AllowNetwork>`
-  to enhance security by preventing direct exposure of internal structure.
-- Changed the return type of `Store::block_network_map` to `IndexedTable<BlockNetwork>`
-  to enhance security by preventing direct exposure of internal structure.
+  `IndexedTable<Status>::get` method with the more general function
+  `IndexedTable<R>::get_by_id`. This change enhances flexibility by allowing
+  retrieval based on any type R rather than being limited to a specific
+  category. Existing code using get for categories should be updated to use
+  get_by_id with the appropriate type.
+- Changed the return type of `Store::allow_network_map` to
+  `IndexedTable<AllowNetwork>` to enhance security by preventing direct exposure
+  of internal structure.
+- Changed the return type of `Store::block_network_map` to
+  `IndexedTable<BlockNetwork>` to enhance security by preventing direct exposure
+  of internal structure.
 
 ### Removed
 
 - `IndexedMultiMap` has been removed from the codebase, for table that currently
-  use `IndexedMultiMap` use `IndexedMap` with a customized `Indexable::make_indexed_key`
-  for entries stored instead.
+  use `IndexedMultiMap` use `IndexedMap` with a customized
+  `Indexable::make_indexed_key` for entries stored instead.
 - `IndexedSet` has been removed, replaced by `TagSet`.
 - `csv_column_extra` table from PostgreSQL database is now permanently removed.
   - To ensure data integrity and avoid potential data loss, users currently
@@ -405,8 +422,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure template management.
 - Introduced `Structured`, `Unstructured`, `StructuredClusteringAlgorithm` and
- `UnstructuredClusteringAlgorithm` to describe data stored in `Table<Template>`.
-- Introduced `TriageResponse` to describe data stored in `IndexedTable<TriageResponse>`.
+  `UnstructuredClusteringAlgorithm` to describe data stored in `Table<Template>`.
+- Introduced `TriageResponse` to describe data stored in
+  `IndexedTable<TriageResponse>`.
 - Introduced `TriageResponseUpdate` to support `TriageResponse` record update.
 - Added new functions to facilitate insert, remove, and update operations,
   ensuring a more controlled and secure triage response management.
@@ -417,8 +435,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Moved the csv_column_extra table from the PostgreSQL database to RocksDB.
-  - The csv_column_extra table data is now stored in RocksDB for improved performance
-    and scalability.
+  - The csv_column_extra table data is now stored in RocksDB for improved
+    performance and scalability.
   - A migration function has been provided to seamlessly transition data from
     the old PostgreSQL table to RocksDB.
 - The `Indexable::key()`, `Indexable::indexed_key()`, `IndexedMapUpdate::key()`,
@@ -433,11 +451,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   readability of the log output. The same information, if needed, can be
   obtained by checking the return value of each function, and the caller can
   decide whether to log it or not.
-- Changed the return type of `Store::access_token_map` to `Table<AccessToken>` to
-  enhance security by preventing direct exposure of `Map`.
+- Changed the return type of `Store::access_token_map` to `Table<AccessToken>`
+  to enhance security by preventing direct exposure of `Map`.
 - The `get_by_id` method in the `IndexedMap` struct has been updated to return a
   key-value pair (`(Vec<u8>, Vec<u8>)`) instead of just the value (`impl
-  AsRef<[u8]>`). This change accommodates scenarios where the information stored
+AsRef<[u8]>`). This change accommodates scenarios where the information stored
   in a key may not be present in the value for some Column Families. Previously,
   if you called `get_by_id` with a specific ID, you would receive the
   corresponding value as `Option<impl AsRef<[u8]>>`. Now, calling `get_by_id`
@@ -448,26 +466,28 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   enhance security by preventing direct exposure of `Map`.
 - Modified `Filter` struct to include the `username` property, representing the
   associated username for the specific `Filter`.
-- Changed the return type of `Store::model_indicator_map` to `Table<ModelIndicator>`
-  to enhance security by preventing direct exposure of `Map`.
-- Moved member functions of `ModelIndicator` that are related to database operations
-  under `Table<ModelIndicator>` to facilitate insert, remove, update, get and
-  list operations, ensuring a more controlled and secure model indicator management
-  and improved code organization.
-- Modified `ModelIndicator` struct to include the `name` property, representing the
-  associated name for the specific `ModelIndicator`.
+- Changed the return type of `Store::model_indicator_map` to
+  `Table<ModelIndicator>` to enhance security by preventing direct exposure of
+  `Map`.
+- Moved member functions of `ModelIndicator` that are related to database
+  operations under `Table<ModelIndicator>` to facilitate insert, remove, update,
+  get and list operations, ensuring a more controlled and secure model indicator
+  management and improved code organization.
+- Modified `ModelIndicator` struct to include the `name` property, representing
+  the associated name for the specific `ModelIndicator`.
 - `Store::event_tag_set` and `Store::workflow_tag_set` now returns `TagSet`
   instead of `IndexSet`. This change is made to leverage the new `TagSet`
   structure for a more user-friendly approach in accessing tags. The `TagSet`
   allows users to interact with tags through the `Tag` struct, which includes
   `name` and `id` fields, offering a more straightforward and human-readable
   format compared to the raw binary format exposed by `IndexSet`.
-- Changed the return type of `Store::template_map` to `Table<Template>` to enhance
-  security by preventing direct exposure of `Map`.
+- Changed the return type of `Store::template_map` to `Table<Template>` to
+  enhance security by preventing direct exposure of `Map`.
 - The Template type has been replaced with the enum type. This modification
   reflects the diverse templates supported by the database.
-- Changed the return type of `Store::triage_response_map` to `IndexedTable<TriageResponse>`
-  to enhance security by preventing direct exposure of `IndexedMap`.
+- Changed the return type of `Store::triage_response_map` to
+  `IndexedTable<TriageResponse>` to enhance security by preventing direct
+  exposure of `IndexedMap`.
 - Changed the return type of `Store::tor_exit_node_map` to `Table<TorExitNode>`
   to enhance security by preventing direct exposure of `Map`.
 - Modify the kind value of the Blocklist/CryptocurrencyMiningPool/TorConnection
@@ -605,8 +625,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     and scalability.
   - A migration function has been provided to seamlessly transition data from
     the old PostgreSQL table to RocksDB.
-- `nodes` table's fields are modified. Migration of data is supported by function
-  `migrate_0_20_to_0_22`.
+- `nodes` table's fields are modified. Migration of data is supported by
+  function `migrate_0_20_to_0_22`.
 
 ### Deprecated
 
@@ -623,12 +643,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Removed `batch_info` and `scores` arguments from `Model::from_storage` function.
-  These arguments were previously used for custom initialization of the
-  `batch_info` and `scores` fields within the model. This change means that when
-  you create a model using `Model::from_storage`, the  `batch_info` and `scores`
-  fields will now be initialized with their default values. If you previously
-  relied on custom values for these fields, you will need to update your code accordingly.
+- Removed `batch_info` and `scores` arguments from `Model::from_storage`
+  function. These arguments were previously used for custom initialization of
+  the `batch_info` and `scores` fields within the model. This change means that
+  when you create a model using `Model::from_storage`, the `batch_info` and
+  `scores` fields will now be initialized with their default values. If you
+  previously relied on custom values for these fields, you will need to update
+  your code accordingly.
 
 ### Removed
 
@@ -668,24 +689,26 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Introduced a new column `version` within the model table of the database. It
-  indicates the specific version associated with each model. Existing model entry
-  will have default version 0.
+  indicates the specific version associated with each model. Existing model
+  entry will have default version 0.
 - Introduced new database tables `BATCH_INFO` and `SCORES` to facilitate the
   recording of batch information and scores.
-- Introduced the `ModelSql` struct, aimed at encapsulating all information related
-  to models stored in the PostgreSQL database.
-- Introduced the `ModelDigest` struct, designed to encapsulate all the information
-  necessary for the web user interface.
+- Introduced the `ModelSql` struct, aimed at encapsulating all information
+  related to models stored in the PostgreSQL database.
+- Introduced the `ModelDigest` struct, designed to encapsulate all the
+  information necessary for the web user interface.
 - Requires a 16 bytes long header for serializing or deserializing `Model`, encoded
   with version, kind, format version information for `Model`.
 
 ### Changed
 
-- Updated the `Model` struct, encompassing all the information pertinent to a model.
+- Updated the `Model` struct, encompassing all the information pertinent to a
+  model.
 - Return deleted model id for `delete_model`.
 - Enhanced and Modified `add_model`, `update_model` for improved usability and
   clarity. The functions now accept a single parameter of type `SqlModel`
-  encapsulating various attributes that are required for adding or updating a model.
+  encapsulating various attributes that are required for adding or updating a
+  model.
 - Updated `load_model_by_name` to return a `SqlModel` struct, encapsulating
   various attributes that are required by user.
 
@@ -714,8 +737,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   Please note that if you are currently using a version of the application
   earlier than 0.12.0, database migration support has been deprecated and will
   no longer be available.
-  - Users on versions prior to 0.12.0 will need to manually manage their database
-    schema updates if they choose to continue using these older versions.
+
+  - Users on versions prior to 0.12.0 will need to manually manage their
+    database schema updates if they choose to continue using these older
+    versions.
   - We highly recommend upgrading to the latest version (0.12.0 or later) to
     benefit from the most recent features, bug fixes, and ongoing support.
 
@@ -751,8 +776,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   code if you have been using the old naming convention. We apologise for any
   inconvenience this may cause, but we believe this change will bring greater
   consistency and readability to the codebase.
-- Removed `src_port` field from `FtpBruteForce` and `LdapBruteForce` events.
-  to align with the event fields provided by hog.
+
+- Removed `src_port` field from `FtpBruteForce` and `LdapBruteForce` events. to
+  align with the event fields provided by hog.
 - Modified `LdapPlainText` fields to appropriate LDAP event fields from wrong
   fields. This changes require updates in dependent projects due to complete
   change of the fields.
