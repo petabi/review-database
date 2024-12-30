@@ -28,7 +28,6 @@ use std::{
     fmt::{self},
     net::IpAddr,
     num::NonZeroU8,
-    sync::{Arc, Mutex, MutexGuard},
 };
 
 use aho_corasick::AhoCorasickBuilder;
@@ -473,7 +472,7 @@ impl Event {
     /// not available.
     pub fn matches(
         &self,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<(bool, Option<Vec<TriageScore>>)> {
         match self {
@@ -521,7 +520,7 @@ impl Event {
 
     fn address_pair(
         &self,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<(Option<IpAddr>, Option<IpAddr>)> {
         let mut addr_pair = (None, None);
@@ -711,7 +710,7 @@ impl Event {
 
     fn kind(
         &self,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<Option<&'static str>> {
         let mut kind = None;
@@ -963,25 +962,22 @@ impl Event {
     /// # Errors
     ///
     /// Returns an error if matching the event against the filter fails.
-    #[allow(clippy::needless_pass_by_value)] // function prototype must be the same as other `count_*` functions.
     pub fn count_country(
         &self,
         counter: &mut HashMap<String, usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
-        let addr_pair = self.address_pair(locator.clone(), filter)?;
+        let addr_pair = self.address_pair(locator, filter)?;
 
         let mut src_country = "ZZ".to_string();
         let mut dst_country = "ZZ".to_string();
-        if let Some(mutex) = &locator {
-            if let Ok(mut guarded_locator) = mutex.lock() {
-                if let Some(src_addr) = addr_pair.0 {
-                    src_country = find_ip_country(&mut guarded_locator, src_addr);
-                }
-                if let Some(dst_addr) = addr_pair.1 {
-                    dst_country = find_ip_country(&mut guarded_locator, dst_addr);
-                }
+        if let Some(locator) = locator {
+            if let Some(src_addr) = addr_pair.0 {
+                src_country = find_ip_country(locator, src_addr);
+            }
+            if let Some(dst_addr) = addr_pair.1 {
+                dst_country = find_ip_country(locator, dst_addr);
             }
         }
         if src_country != dst_country && addr_pair.0.is_some() && addr_pair.1.is_some() {
@@ -1008,7 +1004,7 @@ impl Event {
     pub fn count_category(
         &self,
         counter: &mut HashMap<EventCategory, usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
         let mut category = None;
@@ -1217,7 +1213,7 @@ impl Event {
     pub fn count_ip_address(
         &self,
         counter: &mut HashMap<IpAddr, usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
         let addr_pair = self.address_pair(locator, filter)?;
@@ -1240,7 +1236,7 @@ impl Event {
     pub fn count_ip_address_pair(
         &self,
         counter: &mut HashMap<(IpAddr, IpAddr), usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
         let addr_pair = self.address_pair(locator, filter)?;
@@ -1265,10 +1261,10 @@ impl Event {
     pub fn count_ip_address_pair_and_kind(
         &self,
         counter: &mut HashMap<(IpAddr, IpAddr, &'static str), usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
-        let addr_pair = self.address_pair(locator.clone(), filter)?;
+        let addr_pair = self.address_pair(locator, filter)?;
         let kind = self.kind(locator, filter)?;
 
         if let Some(src_addr) = addr_pair.0 {
@@ -1293,7 +1289,7 @@ impl Event {
     pub fn count_src_ip_address(
         &self,
         counter: &mut HashMap<IpAddr, usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
         let addr_pair = self.address_pair(locator, filter)?;
@@ -1313,7 +1309,7 @@ impl Event {
     pub fn count_dst_ip_address(
         &self,
         counter: &mut HashMap<IpAddr, usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
         let addr_pair = self.address_pair(locator, filter)?;
@@ -1333,7 +1329,7 @@ impl Event {
     pub fn count_kind(
         &self,
         counter: &mut HashMap<String, usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
         let kind = if let Event::HttpThreat(event) = self {
@@ -1361,7 +1357,7 @@ impl Event {
     pub fn count_level(
         &self,
         counter: &mut HashMap<NonZeroU8, usize>,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
         let mut level = None;
@@ -1571,7 +1567,7 @@ impl Event {
         &self,
         counter: &mut HashMap<u32, usize>,
         networks: &[Network],
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<()> {
         let addr_pair = self.address_pair(locator, filter)?;
@@ -2536,7 +2532,8 @@ pub enum TrafficDirection {
     To,
 }
 
-pub fn find_ip_country(locator: &mut ip2location::DB, addr: IpAddr) -> String {
+#[must_use]
+pub fn find_ip_country(locator: &ip2location::DB, addr: IpAddr) -> String {
     locator
         .ip_lookup(addr)
         .map(|r| get_record_country_short_name(&r))
@@ -2545,11 +2542,7 @@ pub fn find_ip_country(locator: &mut ip2location::DB, addr: IpAddr) -> String {
         .unwrap_or_else(|| "XX".to_string())
 }
 
-fn eq_ip_country(
-    locator: &mut MutexGuard<ip2location::DB>,
-    addr: IpAddr,
-    country: [u8; 2],
-) -> bool {
+fn eq_ip_country(locator: &ip2location::DB, addr: IpAddr, country: [u8; 2]) -> bool {
     locator
         .ip_lookup(addr)
         .ok()

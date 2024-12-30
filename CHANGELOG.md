@@ -12,6 +12,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `Account::theme` field to represent user's selected screen color theme
   on the user interface.
 
+### Changed
+
+- The APIs taking an ip2location database non longer requires a mutable
+  reference to the database. This change improves the ergonomics of the API and
+  removes the need for locking the database.
+
 ## [0.33.1] - 2024-12-20
 
 ### Fixed

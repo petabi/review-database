@@ -25,7 +25,7 @@ fallible-iterator = "0.2" # should be the same version as what postgres-protocol
 flate2 = "1.0"
 futures = "0.3"
 humantime-serde = "1"
-ip2location = "0.5"
+ip2location = "0.5.4"
 ipnet = { version = "2", features = ["serde"] }
 num-derive = "0.4"
 num-traits = "0.2"

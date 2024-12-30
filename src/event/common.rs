@@ -2,10 +2,9 @@ use std::{
     fmt::{self, Formatter},
     net::IpAddr,
     num::NonZeroU8,
-    sync::{Arc, Mutex},
 };
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +47,7 @@ pub(super) trait Match {
     /// not available.
     fn matches(
         &self,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
         filter: &EventFilter,
     ) -> Result<(bool, Option<Vec<TriageScore>>)> {
         if !self.kind_matches(filter) {
@@ -78,7 +77,7 @@ pub(super) trait Match {
     fn other_matches(
         &self,
         filter: &EventFilter,
-        locator: Option<Arc<Mutex<ip2location::DB>>>,
+        locator: Option<&ip2location::DB>,
     ) -> Result<(bool, Option<Vec<TriageScore>>)> {
         if let Some(customers) = &filter.customers {
             if customers.iter().all(|customer| {
@@ -138,12 +137,9 @@ pub(super) trait Match {
 
         if let Some(countries) = &filter.countries {
             if let Some(locator) = locator {
-                let Ok(mut locator) = locator.lock() else {
-                    bail!("IP location database unavailable")
-                };
                 if countries.iter().all(|country| {
-                    !eq_ip_country(&mut locator, self.src_addr(), *country)
-                        && !eq_ip_country(&mut locator, self.dst_addr(), *country)
+                    !eq_ip_country(locator, self.src_addr(), *country)
+                        && !eq_ip_country(locator, self.dst_addr(), *country)
                 }) {
                     return Ok((false, None));
                 }
