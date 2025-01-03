@@ -1833,7 +1833,7 @@ impl EventFilter {
             moderate_kinds_by(kinds, &["dns", "covert", "channel"], "dns covert channel");
             moderate_kinds_by(
                 kinds,
-                &["http", "covert", "channel"],
+                &["http", "covert", "channel", "repeated", "http", "sessions"],
                 "repeated http sessions",
             );
             moderate_kinds_by(kinds, &["rdp", "brute", "force"], "rdp brute force");
@@ -1848,17 +1848,25 @@ impl EventFilter {
                 &["multi", "host", "port", "scan"],
                 "multi host port scan",
             );
-            moderate_kinds_by(kinds, &["external", "ddos"], "external ddos");
+            moderate_kinds_by(kinds, &["external", "ddos", "dos"], "external ddos");
             moderate_kinds_by(kinds, &["port", "scan"], "port scan");
-            moderate_kinds_by(kinds, &["non", "browser"], "non browser");
             moderate_kinds_by(
                 kinds,
-                &["cryptocurrency", "mining", "pool"],
+                &["non", "browser", "non-browser", "connection"],
+                "non browser",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["cryptocurrency", "mining", "pool", "network", "connection"],
                 "cryptocurrency mining pool",
             );
             moderate_kinds_by(kinds, &["block", "list", "bootp"], "block list bootp");
             moderate_kinds_by(kinds, &["block", "list", "conn"], "block list conn");
-            moderate_kinds_by(kinds, &["block", "list", "dcerpc"], "block list dcerpc");
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "dcerpc", "dce/rpc"],
+                "block list dcerpc",
+            );
             moderate_kinds_by(kinds, &["block", "list", "dhcp"], "block list dhcp");
             moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
             moderate_kinds_by(kinds, &["block", "list", "ftp"], "block list ftp");
