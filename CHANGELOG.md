@@ -11,6 +11,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added `Account::theme` field to represent user's selected screen color theme
   on the user interface.
+- Added kind keywords for detailed searching of `RepeatedHttpSessions`,
+  `NonBrowser`,`ExternalDdos`, `CryptocurrencyMiningPool`, `BlockListDceRpc`
+  detection events.
 
 ### Changed
 
