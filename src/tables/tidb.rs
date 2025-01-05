@@ -40,9 +40,9 @@ impl Tidb {
     }
 
     fn into_key_value(self) -> Result<(Vec<u8>, Vec<u8>)> {
-        let key = self.name.as_bytes().to_owned();
-
-        Ok((key, super::serialize(&self)?))
+        let value = super::serialize(&self)?;
+        let key = self.name.into_bytes();
+        Ok((key, value))
     }
 
     fn validate(&self) -> Result<()> {

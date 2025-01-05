@@ -14,8 +14,11 @@ pub enum Template {
 
 impl Template {
     fn into_key_value(self) -> Result<(Vec<u8>, Vec<u8>)> {
-        let key = self.name().as_bytes().to_vec();
         let value = super::serialize(&self)?;
+        let key = match self {
+            Self::Structured(s) => s.name.into_bytes(),
+            Self::Unstructured(u) => u.name.into_bytes(),
+        };
         Ok((key, value))
     }
 

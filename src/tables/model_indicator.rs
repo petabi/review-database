@@ -40,7 +40,7 @@ impl ModelIndicator {
     }
 
     fn into_key_value(self) -> Result<(Vec<u8>, Vec<u8>)> {
-        let key = self.name.as_bytes().to_owned();
+        let key = self.name.into_bytes();
         let value = Value {
             description: self.description,
             model_id: self.model_id,
