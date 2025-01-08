@@ -24,6 +24,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   detection event structures: `ExtraThreat`, `HttpThreatFields`, `HttpThreat`,
   `NetworkThreat`, and `WindowsThreat`, to account for events that may be
   generated from raw data other than clusters.
+- Changed the type of `max_parallel_sessions` of `Account` from `Option<u32>` to
+  `Option<u8>`, since the value is expected not to exceed the range of `u8`.
 
 ## [0.33.1] - 2024-12-20
 

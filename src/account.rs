@@ -40,7 +40,7 @@ pub struct Account {
     pub(crate) creation_time: DateTime<Utc>,
     pub(crate) last_signin_time: Option<DateTime<Utc>>,
     pub allow_access_from: Option<Vec<IpAddr>>,
-    pub max_parallel_sessions: Option<u32>,
+    pub max_parallel_sessions: Option<u8>,
     pub(crate) password_hash_algorithm: PasswordHashAlgorithm,
     pub(crate) password_last_modified_at: DateTime<Utc>,
 }
@@ -63,7 +63,7 @@ impl Account {
         language: Option<String>,
         theme: Option<String>,
         allow_access_from: Option<Vec<IpAddr>>,
-        max_parallel_sessions: Option<u32>,
+        max_parallel_sessions: Option<u8>,
     ) -> Result<Self> {
         let password =
             SaltedPassword::new_with_hash_algorithm(password, &Self::DEFAULT_HASH_ALGORITHM)?;

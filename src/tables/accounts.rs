@@ -79,7 +79,7 @@ impl<'d> Table<'d, Account> {
         language: &Option<(Option<String>, Option<String>)>,
         theme: &Option<(Option<String>, Option<String>)>,
         allow_access_from: &Option<(Option<Vec<IpAddr>>, Option<Vec<IpAddr>>)>,
-        max_parallel_sessions: &Option<(Option<u32>, Option<u32>)>,
+        max_parallel_sessions: &Option<(Option<u8>, Option<u8>)>,
     ) -> Result<(), anyhow::Error> {
         loop {
             let txn = self.map.db.transaction();

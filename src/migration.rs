@@ -99,7 +99,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.34.0-alpha.1,<0.34.0-alpha.3";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.34.0-alpha.2,<0.34.0-alpha.3";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -368,7 +368,9 @@ fn migrate_0_34_account(store: &super::Store) -> Result<()> {
                 creation_time: input.creation_time,
                 last_signin_time: input.last_signin_time,
                 allow_access_from: input.allow_access_from,
-                max_parallel_sessions: input.max_parallel_sessions,
+                max_parallel_sessions: input
+                    .max_parallel_sessions
+                    .and_then(|v| u8::try_from(v).ok()),
                 password_hash_algorithm: input.password_hash_algorithm,
                 password_last_modified_at: input.password_last_modified_at,
             }
@@ -3880,7 +3882,7 @@ mod tests {
             pub role: Role,
             pub name: String,
             pub department: String,
-            language: Option<String>,
+            pub language: Option<String>,
             creation_time: DateTime<Utc>,
             last_signin_time: Option<DateTime<Utc>>,
             pub allow_access_from: Option<Vec<IpAddr>>,
@@ -3902,7 +3904,9 @@ mod tests {
                     creation_time: input.creation_time,
                     last_signin_time: input.last_signin_time,
                     allow_access_from: input.allow_access_from,
-                    max_parallel_sessions: input.max_parallel_sessions,
+                    max_parallel_sessions: input
+                        .max_parallel_sessions
+                        .and_then(|v| u8::try_from(v).ok()),
                     password_hash_algorithm: input.password_hash_algorithm,
                     password_last_modified_at: input.password_last_modified_at,
                 }
@@ -3921,7 +3925,7 @@ mod tests {
                     creation_time: input.creation_time,
                     last_signin_time: input.last_signin_time,
                     allow_access_from: input.allow_access_from,
-                    max_parallel_sessions: input.max_parallel_sessions,
+                    max_parallel_sessions: input.max_parallel_sessions.map(u32::from),
                     password_hash_algorithm: input.password_hash_algorithm,
                     password_last_modified_at: input.password_last_modified_at,
                 }
