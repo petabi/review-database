@@ -223,7 +223,7 @@ impl Match for TorConnection {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "tor exit nodes"
     }
 

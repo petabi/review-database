@@ -94,7 +94,7 @@ impl Match for WindowsThreat {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "windows threat"
     }
 

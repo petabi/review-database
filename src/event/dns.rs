@@ -177,7 +177,7 @@ impl Match for DnsCovertChannel {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "dns covert channel"
     }
 
@@ -310,7 +310,7 @@ impl Match for LockyRansomware {
         HIGH
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "locky ransomware"
     }
 
@@ -497,7 +497,7 @@ impl Match for CryptocurrencyMiningPool {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "cryptocurrency mining pool"
     }
 
@@ -678,7 +678,7 @@ impl Match for BlockListDns {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list dns"
     }
 

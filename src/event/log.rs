@@ -76,7 +76,7 @@ impl Match for ExtraThreat {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "extra threat"
     }
 

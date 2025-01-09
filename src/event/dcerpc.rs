@@ -130,7 +130,7 @@ impl Match for BlockListDceRpc {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list dcerpc"
     }
 

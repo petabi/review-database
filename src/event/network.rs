@@ -84,7 +84,7 @@ impl Match for NetworkThreat {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "network threat"
     }
 

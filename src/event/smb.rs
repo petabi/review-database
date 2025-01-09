@@ -163,7 +163,7 @@ impl Match for BlockListSmb {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list smb"
     }
 

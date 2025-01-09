@@ -127,7 +127,7 @@ impl Match for LdapBruteForce {
         "ldap brute force"
     }
 
-    fn sensor(&self) -> &str {
+    fn sensor(&self) -> &'static str {
         "-"
     }
 
@@ -280,7 +280,7 @@ impl Match for LdapPlainText {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "ldap plain text"
     }
 
@@ -395,7 +395,7 @@ impl Match for BlockListLdap {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list ldap"
     }
 

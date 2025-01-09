@@ -156,7 +156,7 @@ impl Match for BlockListKerberos {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list kerberos"
     }
 

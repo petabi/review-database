@@ -114,7 +114,7 @@ impl Match for PortScan {
         "port scan"
     }
 
-    fn sensor(&self) -> &str {
+    fn sensor(&self) -> &'static str {
         "-"
     }
 
@@ -231,7 +231,7 @@ impl Match for MultiHostPortScan {
         "multi host port scan"
     }
 
-    fn sensor(&self) -> &str {
+    fn sensor(&self) -> &'static str {
         "-"
     }
 
@@ -343,7 +343,7 @@ impl Match for ExternalDdos {
         "external ddos"
     }
 
-    fn sensor(&self) -> &str {
+    fn sensor(&self) -> &'static str {
         "-"
     }
 
@@ -501,7 +501,7 @@ impl Match for BlockListConn {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list conn"
     }
 

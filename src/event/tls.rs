@@ -215,7 +215,7 @@ impl Match for BlockListTls {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list tls"
     }
 
@@ -371,7 +371,7 @@ impl Match for SuspiciousTlsTraffic {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "suspicious tls traffic"
     }
 
