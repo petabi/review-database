@@ -20,23 +20,84 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 
 /// The range of versions that use the current database format.
 ///
-/// The range should include all the earlier, released versions that use the current database
-/// format, and exclude the first future version that uses a new database format.
+/// The range should include all the earlier, released versions that use the
+/// current database format, and exclude the first future version that uses a
+/// new database format.
 ///
 /// # Examples
 ///
 /// ```rust
-/// // The current version is 0.4.1 and the database format hasn't been changed since 0.3.0.
-/// // This should include future patch versions such as 0.4.2, 0.4.3, etc. since they won't
-/// // change the database format.
+/// // [Case 1: Stable Patch Version, No Format Change]
+/// // The current version is 0.4.1 and the database format hasn't been changed
+/// // since 0.3.0. This should include future patch versions such as 0.4.2,
+/// // 0.4.3, etc. since they won't change the database format.
 /// const COMPATIBLE_VERSION: &str = ">=0.3,<0.5.0-alpha";
 /// ```
 ///
 /// ```rust
-/// // The current version is 0.5.0-alpha.4 and the database format hasn't been changed since
-/// // 0.5.0-alpha.2. This shouldn't include any future version since we cannot guarantee that
-/// // the database format won't be changed in the future alpha or beta versions.
-/// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
+/// // [Case 2: Alpha Patch Version, No RocksDB Format Change]
+/// // The current version is 3.4.6-alpha.2 and the database format hasn't been
+/// // changed since 1.0.0. Future pre-release versions such as 3.4.6-alpha.3
+/// // are compatible since they won't change the database format.
+/// const COMPATIBLE_VERSION: &str = ">=1.0.0,<3.5.0-alpha";
+/// ```
+///
+/// ```rust
+/// // [Case 3: Transition to New Alpha Version, No RocksDB Format Change]
+/// // The current version is 3.4.5 and the database format hasn't been changed
+/// // since 1.0.0. The next version to pre-release is 3.5.0-alpha.1, if no
+/// // database format change is involved, then compatible version should be
+/// // extended to 3.5.0-alpha.1.
+/// const COMPATIBLE_VERSION: &str = ">=1.0.0,<=3.5.0-alpha.1";
+/// ```
+///
+/// ```rust
+/// // [Case 4: Transition to Stable Major Version, No RocksDB Format Change]
+/// // The current version is 3.4.5 and the database format hasn't been changed
+/// // since 1.0.0. The next version to release is 3.5.0 (stable), if no
+/// // database format change is involved, then migration is not needed, while
+/// // compatible version should be extended to 3.5.0., including all future
+/// // patch versions.
+/// const COMPATIBLE_VERSION: &str = ">=1.0.0,<3.6.0-alpha";
+/// ```
+///
+/// ```rust
+/// // [Case 5: Transition from Alpha to Stable Version, No RocksDB Format Change]
+/// // The current version is 3.4.5-alpha.3 and the database format hasn't been
+/// // changed since 1.0.0. The next version to release is 3.5.0 (stable), with
+/// // compatibility extended to future patch versions.
+/// const COMPATIBLE_VERSION: &str = ">=1.0.0,<3.6.0-alpha";
+/// ```
+///
+/// ```rust
+/// // [Case 6: Transition to New Alpha Version, RocksDB Format Change]
+/// // The current version is 3.4.5 and the database format is changing in
+/// // 3.5.0-alpha.1. The compatibility is now restricted to 3.5.0-alpha.1,
+/// // requiring a migration from the 1.0.0 format.
+/// const COMPATIBLE_VERSION: &str = ">=3.5.0-alpha.1,<3.5.0-alpha.2";
+/// // Migration: `migrate_1_0_to_3_5` must handle changes from 1.0.0 to
+/// // 3.5.0-alpha.1.
+/// ```
+///
+/// ```rust
+/// // [Case 7: Transition Between Alpha Versions, RocksDB Format Change]
+/// // The current version is 3.5.0-alpha.2 and the database format is changing in
+/// // 3.5.0-alpha.3. The compatibility is now restricted to 3.5.0-alpha.3,
+/// // requiring a migration from the 1.0.0 format.
+/// const COMPATIBLE_VERSION: &str = ">=3.5.0-alpha.3,<3.5.0-alpha.4";
+/// // Migration: `migrate_1_0_to_3_5` must handle changes from 1.0.0 to
+/// // 3.5.0-alpha.3, including prior alpha changes.
+///```
+///
+/// ```rust
+/// // [Case 8: Transition from Alpha to Stable Version, RocksDB Format Finalized]
+/// // The current version is 3.5.0-alpha.2 and the database format is
+/// // finalized in 3.5.0. The compatibility is extended to all 3.5.0 versions,
+/// // requiring a migration from the 1.0.0 format.
+/// const COMPATIBLE_VERSION: &str = ">=3.5.0,<3.6.0-alpha";
+/// // Migration: `migrate_1_0_to_3_5` must handle changes from 1.0.0 (last
+/// // release that involves database format change) to 3.5.0, including
+/// // all alpha changes finalized in 3.5.0.
 /// ```
 const COMPATIBLE_VERSION_REQ: &str = ">=0.34.0-alpha.1,<0.34.0-alpha.3";
 
