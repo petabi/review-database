@@ -2555,7 +2555,7 @@ fn eq_ip_country(locator: &ip2location::DB, addr: IpAddr, country: [u8; 2]) -> b
         .ip_lookup(addr)
         .ok()
         .and_then(|r| get_record_country_short_name(&r))
-        .map_or(false, |c| c.as_bytes() == country)
+        .is_some_and(|c| c.as_bytes() == country)
 }
 
 fn get_record_country_short_name(record: &ip2location::Record) -> Option<String> {

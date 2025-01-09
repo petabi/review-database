@@ -420,26 +420,26 @@ impl Database {
 
             let q = if let Some(time) = time {
                 format!(
-                    r#"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
+                    r"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
                         FROM {} AS top
                         INNER JOIN column_description AS col ON top.description_id = col.id
                         INNER JOIN cluster ON cluster.id = col.cluster_id
                         INNER JOIN model ON cluster.model_id = model.id
                         GROUP BY model.id, cluster.cluster_id, col.column_index, top.description_id, cluster.category_id, col.batch_ts
                         HAVING COUNT(top.id) > {} AND model.id = {} AND col.column_index = {} AND cluster.category_id != 2 AND col.batch_ts = '{}'
-                        ORDER BY COUNT(top.id) DESC"#,
+                        ORDER BY COUNT(top.id) DESC",
                     top_table, min_top_n_of_1_to_n, model_id, *column_n, time
                 )
             } else {
                 format!(
-                    r#"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
+                    r"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
                         FROM {} AS top
                         INNER JOIN column_description AS col ON top.description_id = col.id
                         INNER JOIN cluster ON cluster.id = col.cluster_id
                         INNER JOIN model ON cluster.model_id = model.id
                         GROUP BY model.id, cluster.cluster_id, col.column_index, top.description_id, cluster.category_id, col.time
                         HAVING COUNT(top.id) > {} AND model.id = {} AND col.column_index = {} AND cluster.category_id != 2
-                        ORDER BY COUNT(top.id) DESC"#,
+                        ORDER BY COUNT(top.id) DESC",
                     top_table, min_top_n_of_1_to_n, model_id, *column_n
                 )
             };
