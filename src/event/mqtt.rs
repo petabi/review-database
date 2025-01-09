@@ -140,7 +140,7 @@ impl Match for BlockListMqtt {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list mqtt"
     }
 

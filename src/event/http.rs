@@ -109,7 +109,7 @@ impl Match for RepeatedHttpSessions {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "repeated http sessions"
     }
 
@@ -392,7 +392,7 @@ impl Match for HttpThreat {
         LOW
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "http threat"
     }
 
@@ -653,7 +653,7 @@ impl Match for DomainGenerationAlgorithm {
         LOW
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "dga"
     }
 
@@ -813,7 +813,7 @@ impl Match for NonBrowser {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "non browser"
     }
 
@@ -1046,7 +1046,7 @@ impl Match for BlockListHttp {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list http"
     }
 

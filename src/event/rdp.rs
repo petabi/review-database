@@ -113,7 +113,7 @@ impl Match for RdpBruteForce {
         "rdp brute force"
     }
 
-    fn sensor(&self) -> &str {
+    fn sensor(&self) -> &'static str {
         "-"
     }
 
@@ -233,7 +233,7 @@ impl Match for BlockListRdp {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list rdp"
     }
 

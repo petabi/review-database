@@ -120,7 +120,7 @@ impl Match for FtpBruteForce {
         "ftp brute force"
     }
 
-    fn sensor(&self) -> &str {
+    fn sensor(&self) -> &'static str {
         "-"
     }
 
@@ -298,7 +298,7 @@ impl Match for FtpPlainText {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "ftp plain text"
     }
 
@@ -428,7 +428,7 @@ impl Match for BlockListFtp {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list ftp"
     }
 

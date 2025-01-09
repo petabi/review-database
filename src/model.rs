@@ -504,7 +504,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn update_model<'a>(&self, model: &SqlModel) -> Result<i32, Error> {
+    pub async fn update_model(&self, model: &SqlModel) -> Result<i32, Error> {
         let mut conn = self.pool.get().await?;
 
         diesel::update(dsl::model.filter(dsl::id.eq(model.id)))

@@ -174,7 +174,7 @@ impl Match for BlockListSsh {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list ssh"
     }
 

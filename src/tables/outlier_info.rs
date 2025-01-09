@@ -76,7 +76,7 @@ pub struct Key {
 impl Key {
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
-        let capacity = size_of::<i32>() + size_of::<i64>() * 3 + self.sensor.as_bytes().len();
+        let capacity = size_of::<i32>() + size_of::<i64>() * 3 + self.sensor.len();
 
         let mut buf = Vec::with_capacity(capacity);
         buf.extend(self.model_id.to_be_bytes());

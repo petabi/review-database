@@ -132,7 +132,7 @@ impl Match for BlockListNtlm {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list ntlm"
     }
 

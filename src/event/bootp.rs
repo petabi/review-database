@@ -164,7 +164,7 @@ impl Match for BlockListBootp {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list bootp"
     }
 

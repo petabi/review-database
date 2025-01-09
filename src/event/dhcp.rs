@@ -205,7 +205,7 @@ impl Match for BlockListDhcp {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list dhcp"
     }
 

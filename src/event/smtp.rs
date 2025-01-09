@@ -145,7 +145,7 @@ impl Match for BlockListSmtp {
         MEDIUM
     }
 
-    fn kind(&self) -> &str {
+    fn kind(&self) -> &'static str {
         "block list stmp"
     }
 
