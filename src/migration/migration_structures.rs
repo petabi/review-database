@@ -11,9 +11,10 @@ use crate::{
     BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
     BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
     BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
-    ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpEventFields, HttpThreatFields,
-    LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat, PortScanFields,
-    RdpBruteForceFields, RepeatedHttpSessionsFields, TriageScore, WindowsThreat,
+    ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
+    HttpThreatFields, LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields,
+    NetworkThreat, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, TriageScore,
+    WindowsThreat,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -217,7 +218,7 @@ pub struct HttpThreatBeforeV30 {
     pub confidence: f32,
 }
 
-impl From<HttpThreatBeforeV30> for HttpThreatFields {
+impl From<HttpThreatBeforeV30> for HttpThreatBeforeV34 {
     fn from(input: HttpThreatBeforeV30) -> Self {
         Self {
             time: input.time,
@@ -257,6 +258,93 @@ impl From<HttpThreatBeforeV30> for HttpThreatFields {
             attack_kind: input.attack_kind,
             confidence: input.confidence,
             category: EventCategory::Reconnaissance,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub struct HttpThreatBeforeV34 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub duration: i64,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: usize,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<HttpThreatBeforeV34> for HttpThreatFields {
+    fn from(input: HttpThreatBeforeV34) -> Self {
+        Self {
+            time: input.time,
+            sensor: input.sensor,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            duration: input.duration,
+            method: input.method,
+            host: input.host,
+            uri: input.uri,
+            referer: input.referer,
+            version: input.version,
+            user_agent: input.user_agent,
+            request_len: input.request_len,
+            response_len: input.response_len,
+            status_code: input.status_code,
+            status_msg: input.status_msg,
+            username: input.username,
+            password: input.password,
+            cookie: input.cookie,
+            content_encoding: input.content_encoding,
+            content_type: input.content_type,
+            cache_control: input.cache_control,
+            orig_filenames: input.orig_filenames,
+            orig_mime_types: input.orig_mime_types,
+            resp_filenames: input.resp_filenames,
+            resp_mime_types: input.resp_mime_types,
+            post_body: input.post_body,
+            state: input.state,
+            db_name: input.db_name,
+            rule_id: input.rule_id,
+            matched_to: input.matched_to,
+            cluster_id: Some(input.cluster_id),
+            attack_kind: input.attack_kind,
+            confidence: input.confidence,
+            category: input.category,
         }
     }
 }
@@ -1590,7 +1678,7 @@ pub struct NetworkThreatBeforeV30 {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl From<NetworkThreatBeforeV30> for NetworkThreat {
+impl From<NetworkThreatBeforeV30> for NetworkThreatBeforeV34 {
     fn from(input: NetworkThreatBeforeV30) -> Self {
         Self {
             time: input.time,
@@ -1611,6 +1699,54 @@ impl From<NetworkThreatBeforeV30> for NetworkThreat {
             confidence: input.confidence,
             triage_scores: input.triage_scores,
             category: EventCategory::Reconnaissance,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NetworkThreatBeforeV34 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub orig_addr: IpAddr,
+    pub orig_port: u16,
+    pub resp_addr: IpAddr,
+    pub resp_port: u16,
+    pub proto: u8,
+    pub service: String,
+    pub last_time: i64,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: usize,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub triage_scores: Option<Vec<TriageScore>>,
+    pub category: EventCategory,
+}
+
+impl From<NetworkThreatBeforeV34> for NetworkThreat {
+    fn from(input: NetworkThreatBeforeV34) -> Self {
+        Self {
+            time: input.time,
+            sensor: input.sensor,
+            orig_addr: input.orig_addr,
+            orig_port: input.orig_port,
+            resp_addr: input.resp_addr,
+            resp_port: input.resp_port,
+            proto: input.proto,
+            service: input.service,
+            last_time: input.last_time,
+            content: input.content,
+            db_name: input.db_name,
+            rule_id: input.rule_id,
+            matched_to: input.matched_to,
+            cluster_id: Some(input.cluster_id),
+            attack_kind: input.attack_kind,
+            confidence: input.confidence,
+            triage_scores: input.triage_scores,
+            category: input.category,
         }
     }
 }
@@ -1772,7 +1908,7 @@ pub struct WindowsThreatBeforeV30 {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl From<WindowsThreatBeforeV30> for WindowsThreat {
+impl From<WindowsThreatBeforeV30> for WindowsThreatBeforeV34 {
     fn from(input: WindowsThreatBeforeV30) -> Self {
         Self {
             time: input.time,
@@ -1793,6 +1929,90 @@ impl From<WindowsThreatBeforeV30> for WindowsThreat {
             confidence: input.confidence,
             triage_scores: input.triage_scores,
             category: EventCategory::Impact,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct WindowsThreatBeforeV34 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub service: String,
+    pub agent_name: String,
+    pub agent_id: String,
+    pub process_guid: String,
+    pub process_id: u32,
+    pub image: String,
+    pub user: String,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: usize,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<WindowsThreatBeforeV34> for WindowsThreat {
+    fn from(input: WindowsThreatBeforeV34) -> Self {
+        Self {
+            time: input.time,
+            sensor: input.sensor,
+            service: input.service,
+            agent_name: input.agent_name,
+            agent_id: input.agent_id,
+            process_guid: input.process_guid,
+            process_id: input.process_id,
+            image: input.image,
+            user: input.user,
+            content: input.content,
+            db_name: input.db_name,
+            rule_id: input.rule_id,
+            matched_to: input.matched_to,
+            cluster_id: Some(input.cluster_id),
+            attack_kind: input.attack_kind,
+            confidence: input.confidence,
+            triage_scores: input.triage_scores,
+            category: input.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ExtraThreatBeforeV34 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub service: String,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: usize,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<ExtraThreatBeforeV34> for ExtraThreat {
+    fn from(input: ExtraThreatBeforeV34) -> Self {
+        Self {
+            time: input.time,
+            sensor: input.sensor,
+            service: input.service,
+            content: input.content,
+            db_name: input.db_name,
+            rule_id: input.rule_id,
+            matched_to: input.matched_to,
+            cluster_id: Some(input.cluster_id),
+            attack_kind: input.attack_kind,
+            confidence: input.confidence,
+            triage_scores: input.triage_scores,
+            category: input.category,
         }
     }
 }

@@ -27,7 +27,7 @@ pub struct WindowsThreat {
     pub db_name: String,
     pub rule_id: u32,
     pub matched_to: String,
-    pub cluster_id: usize,
+    pub cluster_id: Option<usize>,
     pub attack_kind: String,
     pub confidence: f32,
     pub category: EventCategory,
@@ -52,7 +52,7 @@ impl fmt::Display for WindowsThreat {
             self.db_name,
             self.rule_id.to_string(),
             self.matched_to,
-            self.cluster_id.to_string(),
+            self.cluster_id.map_or("-".to_string(), |s| s.to_string()),
             self.attack_kind,
             self.confidence.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref())

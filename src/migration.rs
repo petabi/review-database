@@ -38,7 +38,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // the database format won't be changed in the future alpha or beta versions.
 /// const COMPATIBLE_VERSION: &str = ">=0.5.0-alpha.2,<=0.5.0-alpha.4";
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.34.0-alpha.1,<0.34.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.34.0-alpha.1,<0.34.0-alpha.3";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -137,8 +137,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_29_to_0_30_0,
         ),
         (
-            VersionReq::parse(">=0.30.0,<0.34.0-alpha.1")?,
-            Version::parse("0.34.0-alpha.1")?,
+            VersionReq::parse(">=0.30.0,<0.34.0-alpha.2")?,
+            Version::parse("0.34.0-alpha.2")?,
             migrate_0_30_to_0_34_0,
         ),
     ];
@@ -217,7 +217,58 @@ fn read_version_file(path: &Path) -> Result<Version> {
 }
 
 fn migrate_0_30_to_0_34_0(store: &super::Store) -> Result<()> {
-    migrate_0_34_account(store)
+    migrate_0_34_account(store)?;
+    migrate_0_34_events(store)
+}
+
+fn migrate_0_34_events(store: &super::Store) -> Result<()> {
+    use migration_structures::{
+        ExtraThreatBeforeV34, HttpThreatBeforeV34, NetworkThreatBeforeV34, WindowsThreatBeforeV34,
+    };
+    use num_traits::FromPrimitive;
+
+    use crate::event::{EventKind, ExtraThreat, HttpThreatFields, NetworkThreat, WindowsThreat};
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        match event_kind {
+            EventKind::HttpThreat => {
+                update_event_db_with_new_event::<HttpThreatBeforeV34, HttpThreatFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::NetworkThreat => {
+                update_event_db_with_new_event::<NetworkThreatBeforeV34, NetworkThreat>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::ExtraThreat => {
+                update_event_db_with_new_event::<ExtraThreatBeforeV34, ExtraThreat>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::WindowsThreat => {
+                update_event_db_with_new_event::<WindowsThreatBeforeV34, WindowsThreat>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            _ => continue,
+        }
+    }
+    Ok(())
 }
 
 fn migrate_0_34_account(store: &super::Store) -> Result<()> {
@@ -361,10 +412,11 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
         BlockListNtlmBeforeV30, BlockListRdpBeforeV30, BlockListSmtpBeforeV30,
         BlockListSshBeforeV30, BlockListTlsBeforeV30, CryptocurrencyMiningPoolBeforeV30,
         DgaBeforeV30, DnsCovertChannelBeforeV30, ExternalDdosBeforeV30, FtpBruteForceBeforeV30,
-        FtpPlainTextBeforeV30, HttpThreatBeforeV30, LdapBruteForceBeforeV30,
+        FtpPlainTextBeforeV30, HttpThreatBeforeV30, HttpThreatBeforeV34, LdapBruteForceBeforeV30,
         LdapPlainTextBeforeV30, MultiHostPortScanBeforeV30, NetworkThreatBeforeV30,
-        NonBrowserBeforeV30, PortScanBeforeV30, RdpBruteForceBeforeV30,
+        NetworkThreatBeforeV34, NonBrowserBeforeV30, PortScanBeforeV30, RdpBruteForceBeforeV30,
         RepeatedHttpSessionsBeforeV30, TorConnectionBeforeV30, WindowsThreatBeforeV30,
+        WindowsThreatBeforeV34,
     };
     use num_traits::FromPrimitive;
 
@@ -372,9 +424,9 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
         BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
         BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
         BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventKind,
-        ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpEventFields, HttpThreatFields,
-        LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat,
-        PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, WindowsThreat,
+        ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpEventFields,
+        LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, PortScanFields,
+        RdpBruteForceFields, RepeatedHttpSessionsFields,
     };
 
     let event_db = store.events();
@@ -394,7 +446,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
 
         match event_kind {
             EventKind::HttpThreat => {
-                update_event_db_with_new_event::<HttpThreatBeforeV30, HttpThreatFields>(
+                update_event_db_with_new_event::<HttpThreatBeforeV30, HttpThreatBeforeV34>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -505,7 +557,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                 >(&k, &v, &event_db)?;
             }
             EventKind::NetworkThreat => {
-                update_event_db_with_new_event::<NetworkThreatBeforeV30, NetworkThreat>(
+                update_event_db_with_new_event::<NetworkThreatBeforeV30, NetworkThreatBeforeV34>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -531,7 +583,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::WindowsThreat => {
-                update_event_db_with_new_event::<WindowsThreatBeforeV30, WindowsThreat>(
+                update_event_db_with_new_event::<WindowsThreatBeforeV30, WindowsThreatBeforeV34>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -3850,5 +3902,146 @@ mod tests {
         let account = res.unwrap();
 
         assert_eq!(account, Some(test));
+    }
+
+    #[test]
+    fn migrate_0_30_to_0_34_events() {
+        use std::net::IpAddr;
+
+        use crate::{EventKind, EventMessage};
+
+        let settings = TestSchema::new();
+        let event_db = settings.store.events();
+
+        let value = super::migration_structures::HttpThreatBeforeV34 {
+            time: chrono::Utc::now(),
+            sensor: "sensor_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 17,
+            duration: 1,
+            method: "POST".to_string(),
+            host: "cluml".to_string(),
+            uri: "/cluml.gif".to_string(),
+            referer: "cluml.com".to_string(),
+            version: "version".to_string(),
+            user_agent: "review-database".to_string(),
+            request_len: 0,
+            response_len: 0,
+            status_code: 200,
+            status_msg: "status_msg".to_string(),
+            username: "username".to_string(),
+            password: "password".to_string(),
+            cookie: "cookie".to_string(),
+            content_encoding: "content_encoding".to_string(),
+            content_type: "content_type".to_string(),
+            cache_control: "cache_control".to_string(),
+            orig_filenames: vec!["orig_filenames".to_string()],
+            orig_mime_types: vec!["orig_mime_types".to_string()],
+            resp_filenames: vec!["resp_filenames".to_string()],
+            resp_mime_types: vec!["resp_mime_types".to_string()],
+            post_body: vec![],
+            state: "state".to_string(),
+            db_name: "db_name".to_string(),
+            rule_id: 10,
+            matched_to: "matched_to".to_string(),
+            cluster_id: 200,
+            attack_kind: "attack_kind".to_string(),
+            confidence: 0.3,
+            category: crate::EventCategory::Reconnaissance,
+        };
+        let message = EventMessage {
+            time: value.time,
+            kind: EventKind::HttpThreat,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        assert!(event_db.put(&message).is_ok());
+
+        let value = super::migration_structures::NetworkThreatBeforeV34 {
+            time: chrono::Utc::now(),
+            sensor: "sensor_1".to_string(),
+            orig_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            orig_port: 46378,
+            resp_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            resp_port: 80,
+            proto: 6,
+            service: "service".to_string(),
+            last_time: 1,
+            content: "content".to_string(),
+            db_name: "db_name".to_string(),
+            rule_id: 200_101,
+            matched_to: "matched_to".to_string(),
+            cluster_id: 11,
+            attack_kind: "attack_kind".to_string(),
+            confidence: 0.3,
+            triage_scores: None,
+            category: crate::EventCategory::Reconnaissance,
+        };
+        let message = EventMessage {
+            time: value.time,
+            kind: EventKind::NetworkThreat,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        assert!(event_db.put(&message).is_ok());
+
+        let value = super::migration_structures::WindowsThreatBeforeV34 {
+            time: chrono::Utc::now(),
+            sensor: "sensor_1".to_string(),
+            service: "service".to_string(),
+            agent_name: "agent_name".to_string(),
+            agent_id: "agent_id".to_string(),
+            process_guid: "process_guid".to_string(),
+            process_id: 1001,
+            image: "image".to_string(),
+            user: "user".to_string(),
+            content: "content".to_string(),
+            db_name: "db_name".to_string(),
+            rule_id: 200_101,
+            matched_to: "matched_to".to_string(),
+            cluster_id: 10,
+            attack_kind: "attack_kind".to_string(),
+            confidence: 0.3,
+            triage_scores: None,
+            category: crate::EventCategory::Reconnaissance,
+        };
+
+        let message = EventMessage {
+            time: value.time,
+            kind: EventKind::WindowsThreat,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        assert!(event_db.put(&message).is_ok());
+
+        let value = super::migration_structures::ExtraThreatBeforeV34 {
+            time: chrono::Utc::now(),
+            sensor: "sensor_1".to_string(),
+            service: "service".to_string(),
+            content: "content".to_string(),
+            db_name: "db_name".to_string(),
+            rule_id: 200_101,
+            matched_to: "matched_to".to_string(),
+            cluster_id: 15,
+            attack_kind: "attack_kind".to_string(),
+            confidence: 0.3,
+            triage_scores: None,
+            category: crate::EventCategory::Reconnaissance,
+        };
+
+        let message = EventMessage {
+            time: value.time,
+            kind: EventKind::ExtraThreat,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_30_to_0_34_0(&settings.store).is_ok());
     }
 }

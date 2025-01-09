@@ -20,6 +20,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - The APIs taking an ip2location database non longer requires a mutable
   reference to the database. This change improves the ergonomics of the API and
   removes the need for locking the database.
+- Modified the type `usize` to `Option<usize>` of `cluster_id` of the detection
+  event structures - `ExtraThreat`, `HttpThreatFields`, `HttpThreat`, `NetworkThreat`,
+  and `WindowsThreat`. Unsupervised-engine is being modified to generate unlabeled
+  events from outliers. These detection event structures use the `cluster_id`
+  field type as `usize`, but this cannot be specified for outliers because they
+  do not belong to a cluster.
 
 ## [0.33.1] - 2024-12-20
 
