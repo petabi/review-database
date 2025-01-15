@@ -66,10 +66,11 @@ pub use self::tables::{
     AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
     AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Confidence,
     CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
-    DataSourceUpdate, DataType, Filter, Giganto, IndexedTable, Iterable, ModelIndicator, Network,
-    NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey,
-    OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval,
-    SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
+    DataSourceUpdate, DataType, ExternalService, ExternalServiceConfig, ExternalServiceKind,
+    ExternalServiceStatus, Filter, IndexedTable, Iterable, ModelIndicator, Network, NetworkUpdate,
+    Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey, OutlierInfoValue,
+    PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval, SamplingKind,
+    SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
     StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
     TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
     TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
@@ -260,6 +261,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn outlier_map(&self) -> Table<OutlierInfo> {
         self.states.outlier_infos()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn external_service_map(&self) -> Table<ExternalService> {
+        self.states.external_service()
     }
 
     #[must_use]

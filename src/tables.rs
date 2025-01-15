@@ -9,6 +9,7 @@ mod category;
 mod csv_column_extra;
 mod customer;
 mod data_source;
+mod external_service;
 mod filter;
 mod model_indicator;
 mod network;
@@ -34,18 +35,21 @@ use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
 pub use self::account_policy::AccountPolicy;
-pub use self::agent::{Agent, Config as AgentConfig, Kind as AgentKind, Status as AgentStatus};
+pub use self::agent::{Agent, AgentKind};
 pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::customer::{Customer, Network as CustomerNetwork, Update as CustomerUpdate};
 pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
+pub use self::external_service::{ExternalService, ExternalServiceKind};
 pub use self::filter::Filter;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
 pub(crate) use self::node::Inner as InnerNode;
 pub use self::node::{
-    Giganto, Node, Profile as NodeProfile, Table as NodeTable, Update as NodeUpdate,
+    Config as AgentConfig, Config as ExternalServiceConfig, Node, Profile as NodeProfile,
+    Status as AgentStatus, Status as ExternalServiceStatus, Table as NodeTable,
+    Update as NodeUpdate,
 };
 pub use self::outlier_info::{Key as OutlierInfoKey, OutlierInfo, Value as OutlierInfoValue};
 pub use self::sampling_policy::{
@@ -95,6 +99,7 @@ pub(super) const NETWORKS: &str = "networks";
 pub(super) const NODES: &str = "nodes";
 pub(super) const OUTLIERS: &str = "outliers";
 pub(super) const QUALIFIERS: &str = "qualifiers";
+pub(super) const EXTERNAL_SERVICES: &str = "external services";
 pub(super) const SAMPLING_POLICY: &str = "sampling policy";
 pub(super) const SCORES: &str = "scores";
 pub(super) const STATUSES: &str = "statuses";
@@ -107,7 +112,7 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 29] = [
+const MAP_NAMES: [&str; 30] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -126,6 +131,7 @@ const MAP_NAMES: [&str; 29] = [
     NODES,
     OUTLIERS,
     QUALIFIERS,
+    EXTERNAL_SERVICES,
     SAMPLING_POLICY,
     SCORES,
     STATUSES,
@@ -182,6 +188,12 @@ impl StateDb {
     pub(crate) fn agents(&self) -> Table<Agent> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Agent>::open(inner).expect("{AGENTS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn external_service(&self) -> Table<ExternalService> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<ExternalService>::open(inner).expect("{EXTERNAL_SERVICES} table must be present")
     }
 
     #[must_use]

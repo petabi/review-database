@@ -1,22 +1,69 @@
 //! The `network` table.
 
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Display};
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use num_derive::{FromPrimitive, ToPrimitive};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
 use super::TableIter as TI;
 use crate::{
-    Agent, AgentConfig, AgentStatus, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
-    IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey, types::FromKeyValue,
+    Agent, ExternalService, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+    Iterable, Map, Table as CrateTable, UniqueKey, types::FromKeyValue,
 };
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Giganto {
-    pub status: AgentStatus,
-    pub draft: Option<AgentConfig>,
+#[derive(
+    Serialize,
+    Default,
+    Deserialize,
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    EnumString,
+    FromPrimitive,
+    ToPrimitive,
+)]
+#[repr(u8)]
+#[strum(serialize_all = "snake_case")]
+pub enum Status {
+    Disabled = 0,
+    #[default]
+    Enabled = 1,
+    ReloadFailed = 2,
+    Unknown = u8::MAX,
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug, Default)]
+pub struct Config {
+    inner: String,
+}
+
+impl TryFrom<String> for Config {
+    type Error = anyhow::Error;
+
+    fn try_from(inner: String) -> Result<Self> {
+        let _ = &inner.parse::<toml::Table>()?;
+        Ok(Self { inner })
+    }
+}
+
+impl AsRef<str> for Config {
+    fn as_ref(&self) -> &str {
+        &self.inner
+    }
+}
+
+impl Display for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
@@ -27,7 +74,7 @@ pub struct Node {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<Agent>,
-    pub giganto: Option<Giganto>,
+    pub external_services: Vec<ExternalService>,
     pub creation_time: DateTime<Utc>,
 }
 
@@ -38,7 +85,7 @@ pub struct Update {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<Agent>,
-    pub giganto: Option<Giganto>,
+    pub external_services: Vec<ExternalService>,
 }
 
 impl UniqueKey for Node {
@@ -57,7 +104,7 @@ impl From<Node> for Update {
             profile: input.profile,
             profile_draft: input.profile_draft,
             agents: input.agents,
-            giganto: input.giganto,
+            external_services: input.external_services,
         }
     }
 }
@@ -70,6 +117,7 @@ where
         TableIter {
             node: self.node.iter(direction, from),
             agent: self.agent.clone(),
+            external_service: self.external_service.clone(),
         }
     }
 
@@ -83,6 +131,7 @@ where
         TableIter {
             node: iter,
             agent: self.agent.clone(),
+            external_service: self.external_service.clone(),
         }
     }
 }
@@ -90,7 +139,10 @@ where
 pub struct Table<'d> {
     node: IndexedTable<'d, Inner>,
     agent: CrateTable<'d, Agent>,
+    external_service: CrateTable<'d, ExternalService>,
 }
+
+type NodeWithInvalidAgentExternalService = (Node, Vec<String>, Vec<String>);
 
 impl<'d> Table<'d> {
     /// Opens the node table in the database.
@@ -105,11 +157,24 @@ impl<'d> Table<'d> {
             .map(IndexedTable::new)
             .expect("{super::NODES} must be present");
         let agent = Map::open(db, super::AGENTS).map(CrateTable::new)?;
-        Some(Self { node, agent })
+        let external_service = Map::open(db, super::EXTERNAL_SERVICES).map(CrateTable::new)?;
+        Some(Self {
+            node,
+            agent,
+            external_service,
+        })
     }
 
     pub(crate) fn raw(&self) -> &IndexedMap<'_> {
         self.node.raw()
+    }
+
+    pub(crate) fn agent_raw(&self) -> &Map<'_> {
+        self.agent.raw()
+    }
+
+    pub(crate) fn external_service_raw(&self) -> &Map<'_> {
+        self.external_service.raw()
     }
 
     /// Returns the total count of nodes available.
@@ -121,12 +186,12 @@ impl<'d> Table<'d> {
         self.node.count()
     }
 
-    /// Returns a tuple of `(node, invalid_agents)` when node with `id` exists.
+    /// Returns a tuple of `(node, invalid_agents, invalid_external_services)` when node with `id` exists.
     ///
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn get_by_id(&self, id: u32) -> Result<Option<(Node, Vec<String>)>> {
+    pub fn get_by_id(&self, id: u32) -> Result<Option<NodeWithInvalidAgentExternalService>> {
         let Some(inner) = self.node.get_by_id(id)? else {
             return Ok(None);
         };
@@ -141,6 +206,16 @@ impl<'d> Table<'d> {
             }
         }
 
+        let mut external_services = vec![];
+        let mut invalid_external_services = vec![];
+        for es_id in inner.external_services {
+            if let Some(external_service) = self.external_service.get(id, &es_id)? {
+                external_services.push(external_service);
+            } else {
+                invalid_external_services.push(es_id);
+            }
+        }
+
         let node = Node {
             id: inner.id,
             name: inner.name,
@@ -148,10 +223,10 @@ impl<'d> Table<'d> {
             profile: inner.profile,
             profile_draft: inner.profile_draft,
             agents,
-            giganto: inner.giganto,
+            external_services,
             creation_time: inner.creation_time,
         };
-        Ok(Some((node, invalid_agents)))
+        Ok(Some((node, invalid_agents, invalid_external_services)))
     }
 
     /// Inserts a node entry, returns the `id` of the inserted node.
@@ -168,7 +243,11 @@ impl<'d> Table<'d> {
             profile_draft: entry.profile_draft,
             creation_time: entry.creation_time,
             agents: entry.agents.iter().map(|a| a.key.clone()).collect(),
-            giganto: entry.giganto,
+            external_services: entry
+                .external_services
+                .iter()
+                .map(|a| a.key.clone())
+                .collect(),
         };
 
         let node = self.node.put(inner)?;
@@ -177,24 +256,38 @@ impl<'d> Table<'d> {
             agent.node = node;
             self.agent.put(&agent)?;
         }
+
+        for mut external_service in entry.external_services {
+            external_service.node = node;
+            self.external_service.put(&external_service)?;
+        }
         Ok(node)
     }
 
-    /// Removes a node with given `id`, returns `(key, invalid_agents)`.
+    /// Removes a node with given `id`, returns `(key, invalid_agents, invalid_external_services)`.
     ///
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn remove(&self, id: u32) -> Result<(Vec<u8>, Vec<String>)> {
+    pub fn remove(&self, id: u32) -> Result<(Vec<u8>, Vec<String>, Vec<String>)> {
         use anyhow::anyhow;
         let inner = self.node.get_by_id(id)?.ok_or(anyhow!("No such id"))?;
-        let mut invalids = vec![];
+        let mut invalid_agents = vec![];
         for agent in inner.agents {
             if self.agent.delete(id, &agent).is_err() {
-                invalids.push(agent);
+                invalid_agents.push(agent);
             }
         }
-        self.node.remove(id).map(|key| (key, invalids))
+
+        let mut invalid_external_services = vec![];
+        for external_service in inner.external_services {
+            if self.external_service.delete(id, &external_service).is_err() {
+                invalid_external_services.push(external_service);
+            }
+        }
+        self.node
+            .remove(id)
+            .map(|key| (key, invalid_agents, invalid_external_services))
     }
 
     #[must_use]
@@ -202,12 +295,14 @@ impl<'d> Table<'d> {
         TableIter {
             node: self.node.iter(direction, from),
             agent: self.agent.clone(),
+            external_service: self.external_service.clone(),
         }
     }
 
-    /// Updates the `Node` from `old` to `new` using the specified `id`. The `id` is used
-    /// for the `Agent::node` field, meaning the `node` field of each agent in both `old.agents`
-    /// and `new.agents` will be disregarded.
+    /// Updates the `Node` from `old` to `new` using the specified `id`. The `id` is used for both
+    /// the `Agent::node` and `ExternalService::node` fields, meaning the `node` field of each agent
+    ///  in both `old.agents` and `new.agents`, as well as each external service in both
+    /// `old.external_services` and `new.external_services`, will be disregarded.
     ///
     /// # Errors
     ///
@@ -215,6 +310,7 @@ impl<'d> Table<'d> {
     pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
         use std::collections::HashMap;
 
+        // Update Agent
         let mut old_agents: HashMap<_, _> = old.agents.iter().map(|a| (&a.key, a)).collect();
         let mut new_agents: HashMap<_, _> = new.agents.iter().map(|a| (&a.key, a)).collect();
 
@@ -249,13 +345,58 @@ impl<'d> Table<'d> {
             self.agent.update(&old, &new)?;
         }
 
+        // Update ExternalService
+        let mut old_external_services: HashMap<_, _> =
+            old.external_services.iter().map(|a| (&a.key, a)).collect();
+        let mut new_external_services: HashMap<_, _> =
+            new.external_services.iter().map(|a| (&a.key, a)).collect();
+
+        for to_remove in old_external_services
+            .keys()
+            .filter(|k| !new_external_services.contains_key(*k))
+        {
+            self.external_service.delete(id, to_remove)?;
+        }
+        old_external_services.retain(|&k, _| new_external_services.contains_key(k));
+
+        for (_k, to_insert) in new_external_services
+            .iter()
+            .filter(|(k, _v)| !old_external_services.contains_key(*k))
+        {
+            let mut to_insert: ExternalService = (*to_insert).clone();
+            to_insert.node = id;
+            self.external_service.put(&to_insert)?;
+        }
+        new_external_services.retain(|&k, _| old_external_services.contains_key(k));
+
+        let mut old_external_services: Vec<_> = old_external_services.values().collect();
+        old_external_services.sort_unstable_by_key(|a| a.key.clone());
+        let mut new_external_services: Vec<_> = new_external_services.values().collect();
+        new_external_services.sort_unstable_by_key(|a| a.key.clone());
+        for (old, new) in old_external_services
+            .into_iter()
+            .zip(new_external_services)
+            .filter(|(o, n)| **o != **n)
+        {
+            let mut old = (*old).clone();
+            old.node = id;
+            let mut new = (*new).clone();
+            new.node = id;
+            self.external_service.update(&old, &new)?;
+        }
+
+        // Update Node
         let old_inner = InnerUpdate {
             name: old.name.clone(),
             name_draft: old.name_draft.clone(),
             profile: old.profile.clone(),
             profile_draft: old.profile_draft.clone(),
             agents: old.agents.iter().map(|a| a.key.clone()).collect(),
-            giganto: old.giganto.clone(),
+            external_services: old
+                .external_services
+                .iter()
+                .map(|a| a.key.clone())
+                .collect(),
         };
 
         let new_inner = InnerUpdate {
@@ -264,7 +405,11 @@ impl<'d> Table<'d> {
             profile: new.profile.clone(),
             profile_draft: new.profile_draft.clone(),
             agents: new.agents.iter().map(|a| a.key.clone()).collect(),
-            giganto: new.giganto.clone(),
+            external_services: new
+                .external_services
+                .iter()
+                .map(|a| a.key.clone())
+                .collect(),
         };
 
         self.node.update(id, &old_inner, &new_inner)
@@ -284,7 +429,7 @@ impl<'d> Table<'d> {
         &mut self,
         hostname: &str,
         agent_key: &str,
-        new_status: AgentStatus,
+        new_status: Status,
     ) -> Result<()> {
         let mut target_node = None;
         for result in self.iter(Direction::Forward, None) {
@@ -317,6 +462,7 @@ impl<'d> Table<'d> {
 pub struct TableIter<'d> {
     node: TI<'d, Inner>,
     agent: CrateTable<'d, Agent>,
+    external_service: CrateTable<'d, ExternalService>,
 }
 
 impl Iterator for TableIter<'_> {
@@ -332,6 +478,14 @@ impl Iterator for TableIter<'_> {
                     }
                 }
 
+                let mut external_services = vec![];
+                for es_id in inner.external_services {
+                    if let Ok(Some(external_service)) = self.external_service.get(inner.id, &es_id)
+                    {
+                        external_services.push(external_service);
+                    }
+                }
+
                 Node {
                     id: inner.id,
                     name: inner.name,
@@ -339,7 +493,7 @@ impl Iterator for TableIter<'_> {
                     profile: inner.profile,
                     profile_draft: inner.profile_draft,
                     agents,
-                    giganto: inner.giganto,
+                    external_services,
                     creation_time: inner.creation_time,
                 }
             })
@@ -356,15 +510,14 @@ pub struct Profile {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub(crate) struct Inner {
-    id: u32,
-    name: String,
-    name_draft: Option<String>,
-    profile: Option<Profile>,
-    profile_draft: Option<Profile>,
-    creation_time: DateTime<Utc>,
-
-    agents: Vec<String>,
-    giganto: Option<Giganto>,
+    pub id: u32,
+    pub name: String,
+    pub name_draft: Option<String>,
+    pub profile: Option<Profile>,
+    pub profile_draft: Option<Profile>,
+    pub creation_time: DateTime<Utc>,
+    pub agents: Vec<String>,
+    pub external_services: Vec<String>,
 }
 
 impl FromKeyValue for Inner {
@@ -417,7 +570,7 @@ struct InnerUpdate {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<String>,
-    pub giganto: Option<Giganto>,
+    pub external_services: Vec<String>,
 }
 
 impl From<Inner> for InnerUpdate {
@@ -428,7 +581,7 @@ impl From<Inner> for InnerUpdate {
             profile: input.profile,
             profile_draft: input.profile_draft,
             agents: input.agents,
-            giganto: input.giganto,
+            external_services: input.external_services,
         }
     }
 }
@@ -448,7 +601,7 @@ impl IndexedMapUpdate for InnerUpdate {
         value.profile.clone_from(&self.profile);
         value.profile_draft.clone_from(&self.profile_draft);
         value.agents.clone_from(&self.agents);
-        value.giganto.clone_from(&self.giganto);
+        value.external_services.clone_from(&self.external_services);
         Ok(value)
     }
 
@@ -470,30 +623,29 @@ impl IndexedMapUpdate for InnerUpdate {
         if self.agents != value.agents {
             return false;
         }
-        self.giganto == value.giganto
+        self.external_services == value.external_services
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::net::IpAddr;
-    use std::sync::Arc;
+    use std::{
+        net::{IpAddr, SocketAddr},
+        sync::Arc,
+    };
 
     use num_traits::ToPrimitive;
 
     use super::*;
-    use crate::AgentKind;
-    use crate::AgentStatus;
-    use crate::Store;
-    use crate::tables::agent::Config;
+    use crate::{AgentKind, ExternalServiceKind, Store};
 
     type PortNumber = u16;
 
     #[allow(clippy::struct_excessive_bools)]
     #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
     struct Piglet {
-        pub giganto_ip: Option<IpAddr>,
-        pub giganto_port: Option<PortNumber>,
+        pub data_store_ip: Option<IpAddr>,
+        pub data_store_port: Option<PortNumber>,
         pub save_packets: bool,
         pub http: bool,
         pub office: bool,
@@ -507,11 +659,22 @@ mod test {
 
     #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
     struct Hog {
-        pub giganto_ip: Option<IpAddr>,
-        pub giganto_port: Option<PortNumber>,
+        pub data_store_ip: Option<IpAddr>,
+        pub data_store_port: Option<PortNumber>,
         pub protocols: Option<Vec<String>>,
 
         pub sensors: Option<Vec<String>>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    struct DataStore {
+        pub data_store_addr: SocketAddr,
+        pub ack_transmission: u16,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    struct TiContainer {
+        pub ti_container_graphql_addr: SocketAddr,
     }
 
     fn setup_store() -> Arc<Store> {
@@ -527,6 +690,7 @@ mod test {
         profile: Option<Profile>,
         profile_draft: Option<Profile>,
         agents: Vec<Agent>,
+        external_services: Vec<ExternalService>,
     ) -> Node {
         let creation_time = Utc::now();
         Node {
@@ -536,8 +700,8 @@ mod test {
             profile,
             profile_draft,
             agents,
+            external_services,
             creation_time,
-            giganto: None,
         }
     }
 
@@ -555,31 +719,50 @@ mod test {
                 node,
                 key: kind.to_u32().unwrap().to_string(),
                 kind: *kind,
-                status: AgentStatus::Enabled,
+                status: Status::Enabled,
                 config: config.clone(),
                 draft: draft.clone(),
             })
             .collect()
     }
 
-    fn create_configs(agents: &[AgentKind]) -> Vec<Option<Config>> {
-        let ip = Some("127.0.0.1".parse::<IpAddr>().unwrap());
-        let port = Some(1234);
-        agents
+    fn create_external_services(
+        node: u32,
+        kinds: &[ExternalServiceKind],
+        drafts: &[Option<Config>],
+    ) -> Vec<ExternalService> {
+        kinds
             .iter()
-            .map(|agent| match agent {
+            .zip(drafts)
+            .map(|(kind, draft)| ExternalService {
+                node,
+                key: kind.to_u32().unwrap().to_string(),
+                kind: *kind,
+                status: Status::Enabled,
+                draft: draft.clone(),
+            })
+            .collect()
+    }
+
+    fn create_agent_configs(kinds: &[AgentKind]) -> Vec<Option<Config>> {
+        let ip = "127.0.0.1".parse::<IpAddr>().unwrap();
+        let data_store_port = 1234;
+
+        kinds
+            .iter()
+            .map(|kind| match kind {
                 AgentKind::SemiSupervised => {
                     let config = Hog {
-                        giganto_ip: ip,
-                        giganto_port: port,
+                        data_store_ip: Some(ip),
+                        data_store_port: Some(data_store_port),
                         ..Default::default()
                     };
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
                 AgentKind::Sensor => {
                     let config = Piglet {
-                        giganto_ip: ip,
-                        giganto_port: port,
+                        data_store_ip: Some(ip),
+                        data_store_port: Some(data_store_port),
                         ..Default::default()
                     };
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
@@ -591,25 +774,74 @@ mod test {
             .collect()
     }
 
+    fn create_external_service_configs(kinds: &[ExternalServiceKind]) -> Vec<Option<Config>> {
+        let ip = "127.0.0.1".parse::<IpAddr>().unwrap();
+        let data_store_port = 1234;
+        let ti_container_port = 4567;
+
+        kinds
+            .iter()
+            .map(|kind| match kind {
+                ExternalServiceKind::DataStore => {
+                    let config = DataStore {
+                        data_store_addr: SocketAddr::new(ip, data_store_port),
+                        ack_transmission: 1000,
+                    };
+                    Some(toml::to_string(&config).unwrap().try_into().unwrap())
+                }
+                ExternalServiceKind::TiContainer => {
+                    let config = TiContainer {
+                        ti_container_graphql_addr: SocketAddr::new(ip, ti_container_port),
+                    };
+                    Some(toml::to_string(&config).unwrap().try_into().unwrap())
+                }
+            })
+            .collect()
+    }
+
     #[test]
     fn node_creation() {
-        let kinds = vec![
+        let agent_kinds = vec![
             AgentKind::Unsupervised,
             AgentKind::Sensor,
             AgentKind::SemiSupervised,
             AgentKind::TimeSeriesGenerator,
         ];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None, None];
-
+        let agent_configs1 = create_agent_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(1, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(1, &kinds, &configs1, &configs2);
+        let external_service_kinds = vec![
+            ExternalServiceKind::DataStore,
+            ExternalServiceKind::TiContainer,
+        ];
+        let external_service_config = create_external_service_configs(&external_service_kinds);
+        let external_services =
+            create_external_services(1, &external_service_kinds, &external_service_config);
 
-        let node = create_node(1, "test", None, Some(profile), None, agents);
+        let node = create_node(
+            1,
+            "test",
+            None,
+            Some(profile),
+            None,
+            agents,
+            external_services,
+        );
         assert_eq!(
             node.agents.into_iter().map(|a| a.key).collect::<Vec<_>>(),
-            kinds
+            agent_kinds
+                .into_iter()
+                .map(|k| k.to_u32().unwrap().to_string())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            node.external_services
+                .into_iter()
+                .map(|a| a.key)
+                .collect::<Vec<_>>(),
+            external_service_kinds
                 .into_iter()
                 .map(|k| k.to_u32().unwrap().to_string())
                 .collect::<Vec<_>>()
@@ -620,19 +852,33 @@ mod test {
     fn put_and_get() {
         let store = setup_store();
 
-        let kinds = vec![
+        let agent_kinds = vec![
             AgentKind::Unsupervised,
             AgentKind::Sensor,
             AgentKind::SemiSupervised,
         ];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
-
+        let agent_configs1: Vec<_> = create_agent_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(456, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(456, &kinds, &configs1, &configs2);
+        let external_service_kinds = vec![
+            ExternalServiceKind::DataStore,
+            ExternalServiceKind::TiContainer,
+        ];
+        let external_service_config = create_external_service_configs(&external_service_kinds);
+        let external_services =
+            create_external_services(456, &external_service_kinds, &external_service_config);
 
-        let mut node = create_node(123, "test", None, Some(profile), None, agents);
+        let mut node = create_node(
+            123,
+            "test",
+            None,
+            Some(profile),
+            None,
+            agents,
+            external_services,
+        );
         let node_table = store.node_map();
         assert_eq!(node_table.count().unwrap(), 0);
         let res = node_table.put(node.clone());
@@ -641,12 +887,16 @@ mod test {
         // update node id to the actual id in database.
         node.id = res.unwrap();
         node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.external_services
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
 
         let res = node_table.get_by_id(node.id).unwrap();
         assert!(res.is_some());
 
-        let (returned, invalid_agents) = res.unwrap();
+        let (returned, invalid_agents, invalid_external_services) = res.unwrap();
         assert!(invalid_agents.is_empty());
+        assert!(invalid_external_services.is_empty());
         assert_eq!(returned, node);
     }
 
@@ -654,54 +904,99 @@ mod test {
     fn remove() {
         let store = setup_store();
 
-        let kinds = vec![
+        let agent_kinds = vec![
             AgentKind::Unsupervised,
             AgentKind::Sensor,
             AgentKind::SemiSupervised,
         ];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
-
+        let agent_configs1: Vec<_> = create_agent_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(1, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(1, &kinds, &configs1, &configs2);
+        let external_service_kinds = vec![
+            ExternalServiceKind::DataStore,
+            ExternalServiceKind::TiContainer,
+        ];
+        let external_service_config = create_external_service_configs(&external_service_kinds);
+        let external_services =
+            create_external_services(1, &external_service_kinds, &external_service_config);
 
-        let mut node = create_node(1, "test", None, None, Some(profile), agents);
+        let mut node = create_node(
+            1,
+            "test",
+            None,
+            None,
+            Some(profile),
+            agents,
+            external_services,
+        );
 
         let node_table = store.node_map();
         assert_eq!(node_table.count().unwrap(), 0);
         assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 0);
+        assert_eq!(
+            store
+                .external_service_map()
+                .iter(Direction::Forward, None)
+                .count(),
+            0
+        );
         let res = node_table.put(node.clone());
         assert!(res.is_ok());
 
         // update node id to the actual id in database.
         node.id = res.unwrap();
         node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.external_services
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
 
         assert_eq!(node_table.count().unwrap(), 1);
         assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 3);
+        assert_eq!(
+            store
+                .external_service_map()
+                .iter(Direction::Forward, None)
+                .count(),
+            2
+        );
 
         assert!(node_table.remove(node.id).is_ok());
         let res = node_table.get_by_id(node.id).unwrap();
         assert!(res.is_none());
 
         assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 0);
+        assert_eq!(
+            store
+                .external_service_map()
+                .iter(Direction::Forward, None)
+                .count(),
+            0
+        );
     }
 
     #[test]
     fn update() {
         let store = setup_store();
-        let kinds = vec![
+
+        let agent_kinds = vec![
             AgentKind::Unsupervised,
             AgentKind::Sensor,
             AgentKind::SemiSupervised,
         ];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
-
+        let agent_configs1: Vec<_> = create_agent_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(123, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(123, &kinds, &configs1, &configs2);
+        let external_service_kinds = vec![
+            ExternalServiceKind::DataStore,
+            ExternalServiceKind::TiContainer,
+        ];
+        let external_service_config = create_external_service_configs(&external_service_kinds);
+        let external_services =
+            create_external_services(123, &external_service_kinds, &external_service_config);
 
         let mut node = create_node(
             456,
@@ -710,8 +1005,8 @@ mod test {
             None,
             Some(profile.clone()),
             agents.clone(),
+            external_services.clone(),
         );
-
         let mut node_table = store.node_map();
 
         let res = node_table.put(node.clone());
@@ -720,6 +1015,9 @@ mod test {
         // update node id to the actual id in database.
         node.id = res.unwrap();
         node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.external_services
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
 
         let id = node.id;
 
@@ -729,7 +1027,7 @@ mod test {
             profile: Some(profile.clone()),
             profile_draft: Some(profile.clone()),
             agents: agents[1..].to_vec(),
-            giganto: Some(Giganto::default()),
+            external_services: external_services[1..].to_vec(),
         };
         let old = node.clone().into();
 
@@ -737,15 +1035,16 @@ mod test {
 
         let updated = node_table.get_by_id(id).unwrap();
         assert!(updated.is_some());
-        let (updated, invalid) = updated.unwrap();
+        let (updated, invalid_agents, invalid_external_services) = updated.unwrap();
 
-        assert!(invalid.is_empty());
+        assert!(invalid_agents.is_empty());
+        assert!(invalid_external_services.is_empty());
 
         node.name_draft = Some("update".to_string());
         node.profile = Some(profile.clone());
         node.profile_draft = Some(profile.clone());
         node.agents = node.agents.into_iter().skip(1).collect();
-        node.giganto = Some(Giganto::default());
+        node.external_services = node.external_services.into_iter().skip(1).collect();
 
         assert_eq!(updated, node);
     }
@@ -753,13 +1052,20 @@ mod test {
     #[test]
     fn update_agents_drafts_only() {
         let store: Arc<Store> = setup_store();
-        let kinds = vec![AgentKind::Unsupervised, AgentKind::SemiSupervised];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
 
+        let agent_kinds = vec![AgentKind::Unsupervised, AgentKind::SemiSupervised];
+        let agent_configs1: Vec<_> = create_agent_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(123, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(123, &kinds, &configs1, &configs2);
+        let external_service_kinds = vec![
+            ExternalServiceKind::DataStore,
+            ExternalServiceKind::TiContainer,
+        ];
+        let external_service_config = create_external_service_configs(&external_service_kinds);
+        let external_services =
+            create_external_services(123, &external_service_kinds, &external_service_config);
 
         let mut node = create_node(
             456,
@@ -768,6 +1074,7 @@ mod test {
             None,
             Some(profile.clone()),
             agents.clone(),
+            external_services.clone(),
         );
 
         let mut node_table = store.node_map();
@@ -778,6 +1085,9 @@ mod test {
         // update node id to the actual id in database.
         node.id = res.unwrap();
         node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.external_services
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
 
         let id = node.id;
 
@@ -811,8 +1121,9 @@ mod test {
 
         let updated = node_table.get_by_id(id).unwrap();
         assert!(updated.is_some());
-        let (updated, invalid) = updated.unwrap();
-        assert!(invalid.is_empty());
+        let (updated, invalid_agents, invalid_external_services) = updated.unwrap();
+        assert!(invalid_agents.is_empty());
+        assert!(invalid_external_services.is_empty());
 
         assert_eq!(updated.agents, update.agents);
     }
@@ -821,7 +1132,7 @@ mod test {
     fn update_agent_status_by_hostname() {
         let store = setup_store();
         let kinds = vec![AgentKind::Sensor, AgentKind::SemiSupervised];
-        let configs: Vec<_> = create_configs(&kinds);
+        let configs: Vec<_> = create_agent_configs(&kinds);
 
         let profile = Profile {
             hostname: "test-hostname".to_string(),
@@ -837,6 +1148,7 @@ mod test {
             Some(profile.clone()),
             Some(profile.clone()),
             agents.clone(),
+            vec![],
         );
 
         let mut node_table = store.node_map();
@@ -854,20 +1166,88 @@ mod test {
                 .update_agent_status_by_hostname(
                     "test-hostname",
                     "3", // The agent key of `AgentKind::SemiSupervised` was set to "3" in `create_agents`.
-                    AgentStatus::Disabled
+                    Status::Disabled
                 )
                 .is_ok()
         );
 
         let updated = node_table.get_by_id(id).unwrap();
         assert!(updated.is_some());
-        let (updated, invalid) = updated.unwrap();
+        let (updated, invalid, _) = updated.unwrap();
         assert!(invalid.is_empty());
 
         // Check that the status of the `AgentKind::Sensor` agent was not updated.
-        assert_eq!(updated.agents[0].status, AgentStatus::Enabled);
+        assert_eq!(updated.agents[0].status, Status::Enabled);
 
         // Check that the status of the `AgentKind::SemiSupervised` agent was updated.
-        assert_eq!(updated.agents[1].status, AgentStatus::Disabled);
+        assert_eq!(updated.agents[1].status, Status::Disabled);
+    }
+
+    #[test]
+    fn update_external_services_draft() {
+        let store: Arc<Store> = setup_store();
+
+        let agent_kinds = vec![AgentKind::Unsupervised, AgentKind::SemiSupervised];
+        let agent_configs1: Vec<_> = create_agent_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
+        let profile = Profile::default();
+        let agents = create_agents(123, &agent_kinds, &agent_configs1, &agent_configs2);
+
+        let external_service_kinds = vec![
+            ExternalServiceKind::DataStore,
+            ExternalServiceKind::TiContainer,
+        ];
+        let external_service_config = create_external_service_configs(&external_service_kinds);
+        let external_services =
+            create_external_services(123, &external_service_kinds, &external_service_config);
+
+        let mut node = create_node(
+            456,
+            "test",
+            None,
+            None,
+            Some(profile.clone()),
+            agents.clone(),
+            external_services.clone(),
+        );
+
+        let mut node_table = store.node_map();
+
+        let res = node_table.put(node.clone());
+        assert!(res.is_ok());
+
+        // update node id to the actual id in database.
+        node.id = res.unwrap();
+        node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.external_services
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
+
+        let id = node.id;
+
+        let old = node.clone().into();
+        let mut update = node.clone();
+        let update_external_services: Vec<_> = update
+            .external_services
+            .into_iter()
+            .skip(1) // remove Reconverge
+            .map(|mut a| {
+                // update draft of ti container
+                a.draft = Some("my_key=10".to_string().try_into().unwrap());
+                a
+            })
+            .collect();
+        update.external_services = update_external_services;
+
+        let update = update.into();
+        assert!(node_table.update(id, &old, &update).is_ok());
+
+        let updated = node_table.get_by_id(id).unwrap();
+        assert!(updated.is_some());
+        let (updated, invalid_agents, invalid_external_services) = updated.unwrap();
+        assert!(invalid_agents.is_empty());
+        assert!(invalid_external_services.is_empty());
+
+        assert_eq!(updated.external_services, update.external_services);
     }
 }
