@@ -20,6 +20,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   a breaking change if you were using identifiers affected by this change.
 - Modify the syslog message generation procedure to use dedicated formatter
   instead of Display trait.
+- Modified the `Node` structure to allow you to manage the configuration of all
+  remote servers that communicate with the REview.
+  - Introduced `Remote`, a new structure that stores configuration information
+    for remote servers.
+  - Added a `remotes` field of type `Vec<Remote>` within the `Node` structure to
+    store the all remote server configuration.
+  - Added a `Datalake`, `TiContainer` field inside `node::kind`.
 
 ### Fixed
 
