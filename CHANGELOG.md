@@ -22,6 +22,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   instead of Display trait.
 - `Filter::host_name` has been renamed to `Filter::hostname` to align with the
   naming convention used in other parts of the codebase.
+- Modified the `Node` structure to allow you to manage the configuration of all
+  remote servers that communicate with the REview.
+  - Introduced `Remote`, a new structure that stores only configuration drafts
+    for remote servers.
+  - Introduced `RemoteConfig`, `RemoteStatus`, and `RemoteKind` as internal
+    types used by the new `Remote` structure.
+  - Added a `remotes` field of type `Vec<Remote>` within the `Node` structure to
+    store the all remote server configuration.
+  - Added a `Datalake`, `TiContainer` field inside `node::kind`.
 
 ### Fixed
 
