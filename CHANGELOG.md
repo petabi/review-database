@@ -30,6 +30,18 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   naming convention used in other parts of the codebase.
 - Modified the `ValueKind` enum to support different types of input for packet
   attribute triage.
+- Modified the `Node` structure to support managing the configuration of all
+  external services that communicate with REview.
+  - Introduced `ExternalService`, a new structure that stores configuration
+    drafts for external services.
+  - Introduced `ExternalServiceConfig`, `ExternalServiceStatus`, and
+    `ExternalServiceKind` as types used by the `ExternalService` structure.
+    - `ExternalServiceConfig` and `ExternalServiceStatus` are aliases of
+      existing types (`node::Config`, `node::Status`).
+    - `ExternalServiceKind` is a newly introduced enum with variants such as
+      `DataStore` and `TiContainer`.
+  - Added an `external_services` field of type `Vec<ExternalService>` to the
+    `Node` structure to store all external service configurations.
 
 ### Fixed
 

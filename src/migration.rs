@@ -16,7 +16,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
-use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
+use crate::{Agent, ExternalService, Indexed, IterableMap};
 
 /// The range of versions that use the current database format.
 ///
@@ -99,7 +99,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.37.0,<0.38.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.38.0-alpha.1,<0.38.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -208,9 +208,14 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_34_0_to_0_36,
         ),
         (
-            VersionReq::parse(">=0.36.0,<0.37.0-alpha")?,
+            VersionReq::parse(">=0.36.0,<0.37.0")?,
             Version::parse("0.37.0")?,
             migrate_0_36_0_to_0_37,
+        ),
+        (
+            VersionReq::parse(">=0.37.0,<0.38.0-alpha.1")?,
+            Version::parse("0.38.0-alpha.1")?,
+            migrate_0_37_to_0_38_0,
         ),
     ];
 
@@ -285,6 +290,45 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_37_to_0_38_0(store: &super::Store) -> Result<()> {
+    migrate_0_38_node(store)
+}
+
+fn migrate_0_38_node(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+    use migration_structures::OldInnerFromV29BeforeV37;
+
+    use crate::{
+        IterableMap,
+        tables::{InnerNode, UniqueKey, Value},
+    };
+
+    let map = store.node_map();
+    let node_raw = map.raw();
+    let external_service_raw = map.external_service_raw();
+    for (_key, old_value) in node_raw.iter_forward()? {
+        let old_inner_node = bincode::DefaultOptions::new()
+            .deserialize::<OldInnerFromV29BeforeV37>(&old_value)
+            .context("Failed to migrate node database: invalid node value")?;
+        if let Some(ref config) = old_inner_node.giganto {
+            let external_service = ExternalService {
+                node: old_inner_node.id,
+                key: "giganto".to_string(),
+                kind: crate::ExternalServiceKind::DataStore,
+                status: config.status,
+                draft: config.draft.clone(),
+            };
+            external_service_raw.insert(
+                external_service.unique_key().as_ref(),
+                external_service.value().as_ref(),
+            )?;
+        }
+        let new_inner_node: InnerNode = old_inner_node.into();
+        node_raw.overwrite(&new_inner_node)?;
+    }
+    Ok(())
 }
 
 fn migrate_0_36_0_to_0_37(store: &super::Store) -> Result<()> {
@@ -815,14 +859,17 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
 
     use bincode::Options;
     use chrono::{DateTime, Utc};
+    use migration_structures::{Giganto, OldInnerFromV29BeforeV37, OldNodeFromV29BeforeV37};
 
-    use crate::IterableMap;
-    use crate::{Node, NodeProfile};
+    use crate::{
+        tables::{UniqueKey, Value},
+        {IterableMap, NodeProfile, collections::Indexed},
+    };
 
     type PortNumber = u16;
 
     #[derive(Clone, Deserialize, Serialize)]
-    pub struct OldNode {
+    pub struct OldNodeBeforeV29 {
         pub id: u32,
         pub name: String,
         pub name_draft: Option<String>,
@@ -894,10 +941,10 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
         }
     }
 
-    impl TryFrom<OldNode> for Node {
+    impl TryFrom<OldNodeBeforeV29> for OldNodeFromV29BeforeV37 {
         type Error = anyhow::Error;
 
-        fn try_from(input: OldNode) -> Result<Self, Self::Error> {
+        fn try_from(input: OldNodeBeforeV29) -> Result<Self, Self::Error> {
             use migration_structures::{
                 DumpHttpContentType, DumpItem, GigantoConfig, HogConfig, PigletConfig,
                 ProtocolForHog,
@@ -905,7 +952,9 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
 
             let mut giganto = None;
             let mut agents = vec![None, None, None];
-            let status = crate::AgentStatus::Enabled;
+            let agent_status = crate::AgentStatus::Enabled;
+            let external_service_status = crate::ExternalServiceStatus::Enabled;
+
             if let Some(s) = input.settings.as_ref() {
                 if s.hog {
                     let config = HogConfig {
@@ -944,7 +993,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         kind: crate::AgentKind::SemiSupervised,
                         config: Some(config),
                         draft: None,
-                        status,
+                        status: agent_status,
                     };
                     agents[0] = Some(agent);
                 }
@@ -1017,7 +1066,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         kind: crate::AgentKind::Sensor,
                         config: Some(config),
                         draft: None,
-                        status,
+                        status: agent_status,
                     };
                     agents[1] = Some(agent);
                 }
@@ -1030,14 +1079,14 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                         kind: crate::AgentKind::Unsupervised,
                         config: Some(config),
                         draft: None,
-                        status,
+                        status: agent_status,
                     };
                     agents[2] = Some(agent);
                 }
 
                 if s.giganto {
                     giganto = Some(Giganto {
-                        status: AgentStatus::Enabled,
+                        status: external_service_status,
                         draft: None,
                     });
                 }
@@ -1083,7 +1132,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                             kind: crate::AgentKind::SemiSupervised,
                             config: None,
                             draft: Some(draft),
-                            status,
+                            status: agent_status,
                         });
                     }
                 }
@@ -1159,7 +1208,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                             kind: crate::AgentKind::Sensor,
                             config: None,
                             draft: Some(draft),
-                            status,
+                            status: agent_status,
                         });
                     }
                 }
@@ -1175,7 +1224,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                             kind: crate::AgentKind::Unsupervised,
                             config: None,
                             draft: Some(draft),
-                            status,
+                            status: agent_status,
                         });
                     }
                 }
@@ -1217,7 +1266,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                     };
                     let draft = Some(toml::to_string(&draft)?.try_into()?);
                     giganto = Some(Giganto {
-                        status: AgentStatus::Enabled,
+                        status: external_service_status,
                         draft,
                     });
                 }
@@ -1236,26 +1285,26 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
     }
 
     let map = store.node_map();
-    let raw = map.raw();
-    let mut nodes = vec![];
-    for (_key, old_value) in raw.iter_forward()? {
+    let node_raw = map.raw();
+    let agent_raw = map.agent_raw();
+    for (_key, old_value) in node_raw.iter_forward()? {
         let old_node = bincode::DefaultOptions::new()
-            .deserialize::<OldNode>(&old_value)
+            .deserialize::<OldNodeBeforeV29>(&old_value)
             .context("Failed to migrate node database: invalid node value")?;
-        match TryInto::<Node>::try_into(old_node) {
+        match TryInto::<OldNodeFromV29BeforeV37>::try_into(old_node) {
             Ok(new_node) => {
-                raw.deactivate(new_node.id)?;
-                nodes.push(new_node);
+                for agent in &new_node.agents {
+                    agent_raw.insert(agent.unique_key().as_ref(), agent.value().as_ref())?;
+                }
+                let inner: OldInnerFromV29BeforeV37 = new_node.into();
+                node_raw.overwrite(&inner)?;
             }
             Err(e) => {
                 warn!("Skip the migration for an item: {e}");
             }
         }
     }
-    raw.clear_inactive()?;
-    for node in nodes {
-        let _ = map.put(node)?;
-    }
+
     Ok(())
 }
 
@@ -3525,11 +3574,16 @@ mod tests {
         use serde::{Deserialize, Serialize};
 
         use crate::{
-            Indexable, collections::Indexed, migration::migration_structures::PigletConfig,
+            Agent, Indexable,
+            collections::Indexed,
+            migration::migration_structures::{
+                OldInnerFromV29BeforeV37, OldNodeFromV29BeforeV37, PigletConfig,
+            },
+            types::FromKeyValue,
         };
 
         #[derive(Clone, Deserialize, Serialize)]
-        pub struct OldNode {
+        pub struct OldNodeBeforeV29 {
             pub id: u32,
             pub name: String,
             pub name_draft: Option<String>,
@@ -3591,7 +3645,7 @@ mod tests {
             pub sensor_list: HashMap<String, bool>,
         }
 
-        impl Indexable for OldNode {
+        impl Indexable for OldNodeBeforeV29 {
             fn key(&self) -> Cow<[u8]> {
                 Cow::from(self.name.as_bytes())
             }
@@ -3619,7 +3673,7 @@ mod tests {
         let map = settings.store.node_map();
         let node_db = map.raw();
 
-        let old_node = OldNode {
+        let old_node = OldNodeBeforeV29 {
             id: 0,
             name: "name".to_string(),
             name_draft: None,
@@ -3671,19 +3725,42 @@ mod tests {
             }),
         };
 
-        let res = node_db.insert(old_node.clone());
-        assert!(res.is_ok());
-        let id = res.unwrap();
+        assert!(node_db.insert(old_node.clone()).is_ok());
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
 
         assert!(super::migrate_0_29_node(&settings.store).is_ok());
 
         let map = settings.store.node_map();
-        let (new_node, invalid_agent) = map.get_by_id(id).unwrap().unwrap();
+        let node_db = map.raw();
+        let agent_db = map.agent_raw();
+        let raw_data = node_db.get_by_key("name".as_bytes()).unwrap().unwrap();
+        let new_inner_node: OldInnerFromV29BeforeV37 = bincode::DefaultOptions::new()
+            .deserialize(raw_data.as_ref())
+            .expect("deserializable");
 
-        assert!(invalid_agent.is_empty());
-        assert_eq!(new_node.id, id);
+        let mut agents = vec![];
+        for aid in new_inner_node.agents {
+            let mut key = new_inner_node.id.to_be_bytes().to_vec();
+            key.extend(aid.as_bytes());
+            if let Ok(Some(value)) = agent_db.get(&key) {
+                if let Ok(agent) = Agent::from_key_value(&key, value.as_ref()) {
+                    agents.push(agent);
+                }
+            }
+        }
+        let new_node = OldNodeFromV29BeforeV37 {
+            id: new_inner_node.id,
+            name: new_inner_node.name,
+            name_draft: new_inner_node.name_draft,
+            profile: new_inner_node.profile,
+            profile_draft: new_inner_node.profile_draft,
+            agents,
+            giganto: new_inner_node.giganto,
+            creation_time: new_inner_node.creation_time,
+        };
+
+        assert_eq!(new_node.id, 0);
         assert_eq!(new_node.name, "name");
         assert_eq!(new_node.agents.len(), 2);
         assert_eq!(new_node.agents[0].key, "hog");
@@ -4326,5 +4403,164 @@ mod tests {
                 _ => {}
             }
         }
+    }
+
+    #[test]
+    fn migrate_0_37_to_0_38_node() {
+        use std::{
+            net::{IpAddr, SocketAddr},
+            str::FromStr,
+        };
+
+        use chrono::Utc;
+
+        use super::migration_structures::{
+            DumpItem, OldInnerFromV29BeforeV37, OldNodeFromV29BeforeV37,
+        };
+        use crate::{
+            Agent, NodeProfile,
+            collections::Indexed,
+            migration::migration_structures::{Giganto, GigantoConfig, HogConfig, PigletConfig},
+            tables::{UniqueKey, Value},
+        };
+        let agent_status = crate::AgentStatus::Enabled;
+        let external_service_status = crate::ExternalServiceStatus::Enabled;
+
+        let hog_config = HogConfig {
+            active_protocols: Some(Vec::new()),
+            active_sources: Some(Vec::new()),
+            giganto_publish_srv_addr: Some(SocketAddr::new(
+                IpAddr::from_str("1.1.1.1").unwrap(),
+                3050,
+            )),
+            cryptocurrency_mining_pool: String::new(),
+            log_dir: String::new(),
+            export_dir: String::new(),
+            services_path: String::new(),
+        };
+
+        let hog_agent = Agent {
+            node: 0,
+            key: "hog".to_string(),
+            kind: crate::AgentKind::SemiSupervised,
+            status: agent_status,
+            config: None,
+            draft: Some(toml::to_string(&hog_config).unwrap().try_into().unwrap()),
+        };
+
+        let piglet_config = PigletConfig {
+            dpdk_args: String::new(),
+            dpdk_input: Vec::new(),
+            dpdk_output: Vec::new(),
+            src_mac: String::new(),
+            dst_mac: String::new(),
+            log_dir: String::new(),
+            dump_dir: String::new(),
+            dump_items: Some(vec![DumpItem::Pcap]),
+            dump_http_content_types: Some(Vec::new()),
+            giganto_ingest_srv_addr: SocketAddr::new(IpAddr::from_str("1.1.1.2").unwrap(), 3030),
+            giganto_name: String::new(),
+            pcap_max_size: 4_294_967_295,
+        };
+
+        let piglet_agent = Agent {
+            node: 0,
+            key: "piglet".to_string(),
+            kind: crate::AgentKind::Sensor,
+            status: agent_status,
+            config: None,
+            draft: Some(toml::to_string(&piglet_config).unwrap().try_into().unwrap()),
+        };
+
+        let giganto_config = GigantoConfig {
+            ingest_srv_addr: SocketAddr::new(IpAddr::from_str("0.0.0.0").unwrap(), 3030),
+            publish_srv_addr: SocketAddr::new(IpAddr::from_str("0.0.0.0").unwrap(), 3050),
+            graphql_srv_addr: SocketAddr::new(IpAddr::from_str("0.0.0.0").unwrap(), 5050),
+            data_dir: String::new(),
+            log_dir: String::new(),
+            export_dir: String::new(),
+            retention: {
+                let days = u64::from(100_u16);
+                std::time::Duration::from_secs(days * 24 * 60 * 60)
+            },
+            max_open_files: i32::MAX,
+            max_mb_of_level_base: u64::MIN,
+            num_of_thread: i32::MAX,
+            max_sub_compactions: u32::MAX,
+            ack_transmission: u16::MAX,
+        };
+
+        let old_node = OldNodeFromV29BeforeV37 {
+            id: 0,
+            name: "name".to_string(),
+            name_draft: None,
+            profile: None,
+            profile_draft: Some(NodeProfile {
+                customer_id: 20,
+                description: "description".to_string(),
+                hostname: "host".to_string(),
+            }),
+            agents: vec![hog_agent.clone(), piglet_agent.clone()],
+            giganto: Some(Giganto {
+                status: external_service_status,
+                draft: Some(
+                    toml::to_string(&giganto_config)
+                        .unwrap()
+                        .try_into()
+                        .unwrap(),
+                ),
+            }),
+            creation_time: Utc::now(),
+        };
+
+        let settings = TestSchema::new();
+        let map = settings.store.node_map();
+        let node_db = map.raw();
+        let agent_db = map.agent_raw();
+
+        let hog_res = agent_db.insert(hog_agent.unique_key().as_ref(), hog_agent.value().as_ref());
+        assert!(hog_res.is_ok());
+        let piglet_res = agent_db.insert(
+            piglet_agent.unique_key().as_ref(),
+            piglet_agent.value().as_ref(),
+        );
+        assert!(piglet_res.is_ok());
+        let old_inner_node: OldInnerFromV29BeforeV37 = old_node.clone().into();
+        let res = node_db.insert(old_inner_node);
+        assert!(res.is_ok());
+
+        let id = res.unwrap();
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        assert!(super::migrate_0_38_node(&settings.store).is_ok());
+
+        let map = settings.store.node_map();
+        let (new_node, invalid_agent, invalid_external_services) =
+            map.get_by_id(id).unwrap().unwrap();
+
+        assert!(invalid_agent.is_empty());
+        assert!(invalid_external_services.is_empty());
+        assert_eq!(new_node.id, id);
+        assert_eq!(new_node.name, "name");
+        assert_eq!(new_node.agents.len(), 2);
+        assert_eq!(new_node.agents[0].key, "hog");
+        assert!(new_node.agents[0].config.is_none());
+        assert!(new_node.agents[0].draft.is_some());
+        assert_eq!(new_node.agents[1].key, "piglet");
+        assert!(new_node.agents[1].config.is_none());
+        let draft = new_node.agents[1].draft.clone().unwrap();
+        let piglet: PigletConfig = toml::from_str(draft.as_ref()).unwrap();
+        assert!(piglet.dump_items.is_some());
+        assert!(piglet.dump_http_content_types.is_some_and(|v| v.is_empty()));
+        assert_eq!(new_node.external_services.len(), 1);
+        assert_eq!(new_node.external_services[0].key, "giganto");
+        assert!(new_node.external_services[0].draft.is_some());
+        let draft = new_node.external_services[0].draft.clone().unwrap();
+        let giganto: GigantoConfig = toml::from_str(draft.as_ref()).unwrap();
+        assert_eq!(
+            giganto.retention,
+            std::time::Duration::from_secs(100 * 24 * 60 * 60)
+        );
     }
 }
