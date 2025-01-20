@@ -5,7 +5,7 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.34.0] - 2025-01-20
 
 ### Added
 
@@ -800,7 +800,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
-[Unreleased]: https://github.com/petabi/review-database/compare/0.33.1...main
+[0.34.0]: https://github.com/petabi/review-database/compare/0.33.1...0.34.0
 [0.33.1]: https://github.com/petabi/review-database/compare/0.33.0...0.33.1
 [0.33.0]: https://github.com/petabi/review-database/compare/0.32.0...0.33.0
 [0.32.0]: https://github.com/petabi/review-database/compare/0.31.0...0.32.0
