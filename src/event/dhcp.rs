@@ -1,10 +1,55 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{DhcpAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use super::{
+    common::{AttrValue, Match},
+    EventCategory, TriageScore, MEDIUM,
+};
 use crate::event::common::{to_hardware_address, triage_scores_to_string, vector_to_string};
+
+macro_rules! dhcp_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Dhcp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                DhcpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                DhcpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                DhcpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                DhcpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                DhcpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                DhcpAttr::MgsType => todo!(),
+                DhcpAttr::CiAddr => AttrValue::Addr($event.ciaddr),
+                DhcpAttr::YiAddr => AttrValue::Addr($event.yiaddr),
+                DhcpAttr::SiAddr => AttrValue::Addr($event.siaddr),
+                DhcpAttr::GiAddr => AttrValue::Addr($event.giaddr),
+                DhcpAttr::SubNetMask => AttrValue::Addr($event.subnet_mask),
+                DhcpAttr::Router => AttrValue::VecAddr(&$event.router),
+                DhcpAttr::DomainNameServer => AttrValue::VecAddr(&$event.domain_name_server),
+                DhcpAttr::ReqIpAddr => AttrValue::Addr($event.req_ip_addr),
+                DhcpAttr::LeaseTime => AttrValue::UInt($event.lease_time.into()),
+                DhcpAttr::ServerId => AttrValue::Addr($event.server_id),
+                DhcpAttr::ParamReqList => AttrValue::VecUInt(
+                    $event
+                        .param_req_list
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+                DhcpAttr::Message => AttrValue::String(&$event.message),
+                DhcpAttr::RenewalTime => AttrValue::UInt($event.renewal_time.into()),
+                DhcpAttr::RebindingTime => AttrValue::UInt($event.rebinding_time.into()),
+                DhcpAttr::ClassId => AttrValue::String(&$event.class_id),
+                DhcpAttr::ClientIdType => AttrValue::UInt($event.client_id_type.into()),
+                DhcpAttr::ClientId => AttrValue::String(&$event.client_id),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListDhcpFields {
@@ -68,7 +113,7 @@ impl fmt::Display for BlockListDhcpFields {
             self.message.to_string(),
             self.renewal_time.to_string(),
             self.rebinding_time.to_string(),
-            to_hardware_address(&self.class_id),
+            std::str::from_utf8(&self.class_id).unwrap_or_default().to_string(),
             self.client_id_type.to_string(),
             to_hardware_address(&self.client_id),
         )
@@ -100,9 +145,9 @@ pub struct BlockListDhcp {
     pub message: String,
     pub renewal_time: u32,
     pub rebinding_time: u32,
-    pub class_id: Vec<u8>,
+    pub class_id: String,
     pub client_id_type: u8,
-    pub client_id: Vec<u8>,
+    pub client_id: String,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -133,9 +178,9 @@ impl fmt::Display for BlockListDhcp {
             self.message.to_string(),
             self.renewal_time.to_string(),
             self.rebinding_time.to_string(),
-            to_hardware_address(&self.class_id),
+            self.class_id,
             self.client_id_type.to_string(),
-            to_hardware_address(&self.client_id),
+            self.client_id,
             triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
@@ -167,9 +212,11 @@ impl BlockListDhcp {
             message: fields.message,
             renewal_time: fields.renewal_time,
             rebinding_time: fields.rebinding_time,
-            class_id: fields.class_id,
+            class_id: std::str::from_utf8(&fields.class_id)
+                .unwrap_or_default()
+                .to_string(),
             client_id_type: fields.client_id_type,
-            client_id: fields.client_id,
+            client_id: to_hardware_address(&fields.client_id),
             category: fields.category,
             triage_scores: None,
         }
@@ -217,7 +264,7 @@ impl Match for BlockListDhcp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        dhcp_target_attr!(self, raw_event_attr)
     }
 }

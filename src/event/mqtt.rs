@@ -1,10 +1,40 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{MqttAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! mqtt_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Mqtt(attr) = $raw_event_attr {
+            let target_value = match attr {
+                MqttAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                MqttAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                MqttAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                MqttAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                MqttAttr::Proto => AttrValue::UInt($event.proto.into()),
+                MqttAttr::Protocol => AttrValue::String(&$event.protocol),
+                MqttAttr::Version => AttrValue::UInt($event.version.into()),
+                MqttAttr::ClientId => AttrValue::String(&$event.client_id),
+                MqttAttr::ConnackReason => AttrValue::UInt($event.connack_reason.into()),
+                MqttAttr::Subscribe => AttrValue::VecString(&$event.subscribe),
+                MqttAttr::SubackReason => AttrValue::VecUInt(
+                    $event
+                        .suback_reason
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListMqttFields {
@@ -152,7 +182,7 @@ impl Match for BlockListMqtt {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        mqtt_target_attr!(self, raw_event_attr)
     }
 }
