@@ -45,7 +45,7 @@ pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
 pub(crate) use self::node::Inner as InnerNode;
 pub use self::node::{
-    Giganto, Node, Profile as NodeProfile, Table as NodeTable, Update as NodeUpdate,
+    ConnectionlessAgent, Node, Profile as NodeProfile, Table as NodeTable, Update as NodeUpdate,
 };
 pub use self::outlier_info::{Key as OutlierInfoKey, OutlierInfo, Value as OutlierInfoValue};
 pub use self::sampling_policy::{

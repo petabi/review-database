@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Giganto {
+pub struct ConnectionlessAgent {
     pub status: AgentStatus,
     pub draft: Option<AgentConfig>,
 }
@@ -27,7 +27,8 @@ pub struct Node {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<Agent>,
-    pub giganto: Option<Giganto>,
+    pub giganto: Option<ConnectionlessAgent>,
+    pub ti_container: Option<ConnectionlessAgent>,
     pub creation_time: DateTime<Utc>,
 }
 
@@ -38,7 +39,8 @@ pub struct Update {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<Agent>,
-    pub giganto: Option<Giganto>,
+    pub giganto: Option<ConnectionlessAgent>,
+    pub ti_container: Option<ConnectionlessAgent>,
 }
 
 impl UniqueKey for Node {
@@ -58,6 +60,7 @@ impl From<Node> for Update {
             profile_draft: input.profile_draft,
             agents: input.agents,
             giganto: input.giganto,
+            ti_container: input.ti_container,
         }
     }
 }
@@ -112,6 +115,10 @@ impl<'d> Table<'d> {
         self.node.raw()
     }
 
+    pub(crate) fn agent_raw(&self) -> &Map<'_> {
+        self.agent.raw()
+    }
+
     /// Returns the total count of nodes available.
     ///
     /// # Errors
@@ -149,6 +156,7 @@ impl<'d> Table<'d> {
             profile_draft: inner.profile_draft,
             agents,
             giganto: inner.giganto,
+            ti_container: inner.ti_container,
             creation_time: inner.creation_time,
         };
         Ok(Some((node, invalid_agents)))
@@ -169,6 +177,7 @@ impl<'d> Table<'d> {
             creation_time: entry.creation_time,
             agents: entry.agents.iter().map(|a| a.key.clone()).collect(),
             giganto: entry.giganto,
+            ti_container: entry.ti_container,
         };
 
         let node = self.node.put(inner)?;
@@ -256,6 +265,7 @@ impl<'d> Table<'d> {
             profile_draft: old.profile_draft.clone(),
             agents: old.agents.iter().map(|a| a.key.clone()).collect(),
             giganto: old.giganto.clone(),
+            ti_container: old.ti_container.clone(),
         };
 
         let new_inner = InnerUpdate {
@@ -265,6 +275,7 @@ impl<'d> Table<'d> {
             profile_draft: new.profile_draft.clone(),
             agents: new.agents.iter().map(|a| a.key.clone()).collect(),
             giganto: new.giganto.clone(),
+            ti_container: new.ti_container.clone(),
         };
 
         self.node.update(id, &old_inner, &new_inner)
@@ -297,6 +308,7 @@ impl Iterator for TableIter<'_> {
                     profile_draft: inner.profile_draft,
                     agents,
                     giganto: inner.giganto,
+                    ti_container: inner.ti_container,
                     creation_time: inner.creation_time,
                 }
             })
@@ -313,15 +325,15 @@ pub struct Profile {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub(crate) struct Inner {
-    id: u32,
-    name: String,
-    name_draft: Option<String>,
-    profile: Option<Profile>,
-    profile_draft: Option<Profile>,
-    creation_time: DateTime<Utc>,
-
-    agents: Vec<String>,
-    giganto: Option<Giganto>,
+    pub id: u32,
+    pub name: String,
+    pub name_draft: Option<String>,
+    pub profile: Option<Profile>,
+    pub profile_draft: Option<Profile>,
+    pub creation_time: DateTime<Utc>,
+    pub agents: Vec<String>,
+    pub giganto: Option<ConnectionlessAgent>,
+    pub ti_container: Option<ConnectionlessAgent>,
 }
 
 impl FromKeyValue for Inner {
@@ -374,7 +386,8 @@ struct InnerUpdate {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<String>,
-    pub giganto: Option<Giganto>,
+    pub giganto: Option<ConnectionlessAgent>,
+    pub ti_container: Option<ConnectionlessAgent>,
 }
 
 impl From<Inner> for InnerUpdate {
@@ -386,6 +399,7 @@ impl From<Inner> for InnerUpdate {
             profile_draft: input.profile_draft,
             agents: input.agents,
             giganto: input.giganto,
+            ti_container: input.ti_container,
         }
     }
 }
@@ -406,6 +420,7 @@ impl IndexedMapUpdate for InnerUpdate {
         value.profile_draft.clone_from(&self.profile_draft);
         value.agents.clone_from(&self.agents);
         value.giganto.clone_from(&self.giganto);
+        value.ti_container.clone_from(&self.ti_container);
         Ok(value)
     }
 
@@ -427,7 +442,10 @@ impl IndexedMapUpdate for InnerUpdate {
         if self.agents != value.agents {
             return false;
         }
-        self.giganto == value.giganto
+        if self.giganto != value.giganto {
+            return false;
+        }
+        self.ti_container == value.ti_container
     }
 }
 
@@ -495,6 +513,7 @@ mod test {
             agents,
             creation_time,
             giganto: None,
+            ti_container: None,
         }
     }
 
@@ -686,7 +705,8 @@ mod test {
             profile: Some(profile.clone()),
             profile_draft: Some(profile.clone()),
             agents: agents[1..].to_vec(),
-            giganto: Some(Giganto::default()),
+            giganto: Some(ConnectionlessAgent::default()),
+            ti_container: Some(ConnectionlessAgent::default()),
         };
         let old = node.clone().into();
 
@@ -702,7 +722,8 @@ mod test {
         node.profile = Some(profile.clone());
         node.profile_draft = Some(profile.clone());
         node.agents = node.agents.into_iter().skip(1).collect();
-        node.giganto = Some(Giganto::default());
+        node.giganto = Some(ConnectionlessAgent::default());
+        node.ti_container = Some(ConnectionlessAgent::default());
 
         assert_eq!(updated, node);
     }
