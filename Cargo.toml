@@ -21,7 +21,6 @@ diesel = { version = "2", features = ["chrono", "postgres", "serde_json"] }
 diesel-async = { version = "0.5", features = ["bb8", "postgres"] }
 diesel_derives = "2.0"
 diesel_migrations = "2"
-fallible-iterator = "0.2" # should be the same version as what postgres-protocol depends on
 flate2 = "1.0"
 futures = "0.3"
 humantime-serde = "1"
