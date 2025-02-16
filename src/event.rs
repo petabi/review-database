@@ -35,7 +35,7 @@ use anyhow::{bail, Context, Result};
 use chrono::{serde::ts_nanoseconds, DateTime, TimeZone, Utc};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 pub use rocksdb::Direction;
 use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
 use serde::{Deserialize, Serialize};
@@ -2086,7 +2086,7 @@ impl<'a> EventDb<'a> {
                 .context("cannot read from event database")?
                 .is_some()
             {
-                let start = i128::from(thread_rng().next_u32());
+                let start = i128::from(rng().next_u32());
                 key |= start;
                 #[allow(clippy::cast_possible_wrap)] // bit pattern
                 while txn
