@@ -4,7 +4,7 @@ version = "0.34.0"
 edition = "2021"
 
 [dependencies]
-aho-corasick = "0.7"
+aho-corasick = "1"
 anyhow = "1"
 argon2 = { version = "0.5", features = ["std"] }
 bb8-postgres = { version = "0.9", features = [

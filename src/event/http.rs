@@ -417,7 +417,8 @@ impl Match for HttpThreat {
                 .collect::<Vec<String>>();
             let ac = AhoCorasickBuilder::new()
                 .ascii_case_insensitive(true)
-                .build(patterns);
+                .build(patterns)
+                .expect("automatic build should not fail");
             if kinds.iter().all(|kind| {
                 let words = kind
                     .split_whitespace()

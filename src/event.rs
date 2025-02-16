@@ -1897,7 +1897,8 @@ impl EventFilter {
 fn moderate_kinds_by(kinds: &mut Vec<String>, patterns: &[&str], full_name: &str) {
     let ac = AhoCorasickBuilder::new()
         .ascii_case_insensitive(true)
-        .build(patterns);
+        .build(patterns)
+        .expect("automatic build should not fail");
     if kinds.iter().any(|kind| {
         let words = kind
             .split_whitespace()
