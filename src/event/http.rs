@@ -1,14 +1,53 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use aho_corasick::AhoCorasickBuilder;
+use attrievent::attribute::{HttpAttr, RawEventAttrKind};
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{
-    common::Match, EventCategory, EventFilter, HttpEventFields, TriagePolicy, TriageScore, LOW,
-    MEDIUM,
-};
-use crate::event::common::triage_scores_to_string;
+use super::{common::Match, EventCategory, EventFilter, HttpEventFields, TriageScore, LOW, MEDIUM};
+use crate::event::common::{triage_scores_to_string, AttrValue};
+
+macro_rules! http_target_attr {
+    ($event: expr, $raw_event_attr: expr, $field: ident) => {
+        if let RawEventAttrKind::Http(attr) = $raw_event_attr {
+            match attr {
+                HttpAttr::SrcAddr => Some(AttrValue::Addr($event.src_addr)),
+                HttpAttr::SrcPort => Some(AttrValue::UInt($event.src_port.into())),
+                HttpAttr::DstAddr => Some(AttrValue::Addr($event.dst_addr)),
+                HttpAttr::DstPort => Some(AttrValue::UInt($event.dst_port.into())),
+                HttpAttr::Proto => Some(AttrValue::UInt($event.proto.into())),
+                HttpAttr::Method => Some(AttrValue::String(&$event.method)),
+                HttpAttr::Host => Some(AttrValue::String(&$event.host)),
+                HttpAttr::Uri => Some(AttrValue::String(&$event.uri)),
+                HttpAttr::Referrer => Some(AttrValue::String(&$event.$field)),
+                HttpAttr::Version => Some(AttrValue::String(&$event.version)),
+                HttpAttr::UserAgent => Some(AttrValue::String(&$event.user_agent)),
+                HttpAttr::RequestLen => u64::try_from($event.request_len).ok().map(AttrValue::UInt),
+                HttpAttr::ResponseLen => {
+                    u64::try_from($event.response_len).ok().map(AttrValue::UInt)
+                }
+                HttpAttr::StatusCode => Some(AttrValue::UInt($event.status_code.into())),
+                HttpAttr::StatusMsg => Some(AttrValue::String(&$event.status_msg)),
+                HttpAttr::Username => Some(AttrValue::String(&$event.username)),
+                HttpAttr::Password => Some(AttrValue::String(&$event.password)),
+                HttpAttr::Cookie => Some(AttrValue::String(&$event.cookie)),
+                HttpAttr::ContentEncoding => Some(AttrValue::String(&$event.content_encoding)),
+                HttpAttr::ContentType => Some(AttrValue::String(&$event.content_type)),
+                HttpAttr::CacheControl => Some(AttrValue::String(&$event.cache_control)),
+                HttpAttr::OrigFilenames => Some(AttrValue::VecString(&$event.orig_filenames)),
+                HttpAttr::OrigMimeTypes => Some(AttrValue::VecString(&$event.orig_mime_types)),
+                HttpAttr::RespFilenames => Some(AttrValue::VecString(&$event.resp_filenames)),
+                HttpAttr::RespMimeTypes => Some(AttrValue::VecString(&$event.resp_mime_types)),
+                HttpAttr::PostBody => Some(AttrValue::VecRaw(&$event.post_body)),
+                HttpAttr::State => Some(AttrValue::String(&$event.state)),
+            }
+        } else {
+            None
+        }
+    };
+}
+pub(super) use http_target_attr;
 
 #[derive(Serialize, Deserialize)]
 pub struct RepeatedHttpSessionsFields {
@@ -121,9 +160,19 @@ impl Match for RepeatedHttpSessions {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        // TODO: implement
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        if let RawEventAttrKind::Http(attr) = raw_event_attr {
+            match attr {
+                HttpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                HttpAttr::SrcPort => Some(AttrValue::UInt(self.src_port.into())),
+                HttpAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                HttpAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+                HttpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -404,8 +453,8 @@ impl Match for HttpThreat {
         Some(self.confidence)
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        http_target_attr!(self, raw_event_attr, referer)
     }
 
     fn kind_matches(&self, filter: &EventFilter) -> bool {
@@ -666,8 +715,8 @@ impl Match for DomainGenerationAlgorithm {
         Some(self.confidence)
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        http_target_attr!(self, raw_event_attr, referer)
     }
 }
 
@@ -826,8 +875,8 @@ impl Match for NonBrowser {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        http_target_attr!(self, raw_event_attr, referrer)
     }
 }
 
@@ -1059,7 +1108,7 @@ impl Match for BlockListHttp {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        http_target_attr!(self, raw_event_attr, referrer)
     }
 }

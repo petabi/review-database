@@ -1,10 +1,14 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{HttpAttr, RawEventAttrKind};
 use chrono::{serde::ts_nanoseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
-use crate::event::{common::triage_scores_to_string, http::get_post_body};
+use super::{common::Match, EventCategory, TriageScore, MEDIUM};
+use crate::event::{
+    common::{triage_scores_to_string, AttrValue},
+    http::{get_post_body, http_target_attr},
+};
 
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -235,7 +239,7 @@ impl Match for TorConnection {
         None
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        http_target_attr!(self, raw_event_attr, referrer)
     }
 }
