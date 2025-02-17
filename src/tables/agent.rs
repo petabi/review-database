@@ -181,6 +181,10 @@ impl<'d> Table<'d, Agent> {
         Map::open(db, super::AGENTS).map(Table::new)
     }
 
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
+    }
+
     /// Returns an agent with the given `node` and `id`.
     ///
     /// # Errors
