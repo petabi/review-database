@@ -29,7 +29,7 @@ mod trusted_user_agent;
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
@@ -66,14 +66,14 @@ pub use self::triage_policy::{
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 pub use self::trusted_domain::TrustedDomain;
 pub use self::trusted_user_agent::TrustedUserAgent;
-use super::{event, Indexed, IndexedMap, Map};
+use super::{Indexed, IndexedMap, Map, event};
 use crate::{
+    Direction, Indexable,
     batch_info::BatchInfo,
     category::Category,
     collections::IndexedSet,
     scores::Scores,
     types::{Account, FromKeyValue, Qualifier, Status},
-    Direction, Indexable,
 };
 
 // Key-value map names in `Database`.
@@ -482,7 +482,7 @@ where
                     }
                 }
                 let item = R::from_key_value(&key, &value);
-                Some(item.map_err(Into::into))
+                Some(item)
             }
             Err(e) => Some(Err(e.into())),
         }

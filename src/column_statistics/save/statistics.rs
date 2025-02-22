@@ -7,9 +7,9 @@ use diesel_async::RunQueryDsl;
 use serde::Deserialize;
 use structured::{ColumnStatistics, Element};
 
-use super::{binary, datetime, float_range, int, ipaddr, r#enum, text};
-use crate::schema::{cluster::dsl as cluster_d, column_description::dsl as cd_d};
+use super::{binary, datetime, r#enum, float_range, int, ipaddr, text};
 use crate::Database;
+use crate::schema::{cluster::dsl as cluster_d, column_description::dsl as cd_d};
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]

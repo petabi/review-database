@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{tables::Value, UniqueKey};
+use crate::{UniqueKey, tables::Value};
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct BatchInfo {

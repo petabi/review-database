@@ -25,7 +25,7 @@ pub mod types;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bb8_postgres::{bb8, tokio_postgres};
 pub use rocksdb::backup::BackupEngineInfo;
 pub use tags::TagSet;
@@ -42,22 +42,22 @@ pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, IterableMap, Ma
 pub use self::column_statistics::*;
 pub use self::event::EventKind;
 pub use self::event::{
-    find_ip_country, BlockListBootp, BlockListBootpFields, BlockListConn, BlockListConnFields,
-    BlockListDceRpc, BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields, BlockListDns,
-    BlockListDnsFields, BlockListFtp, BlockListHttp, BlockListHttpFields, BlockListKerberos,
-    BlockListKerberosFields, BlockListLdap, BlockListMqtt, BlockListMqttFields, BlockListNfs,
-    BlockListNfsFields, BlockListNtlm, BlockListNtlmFields, BlockListRdp, BlockListRdpFields,
-    BlockListSmb, BlockListSmbFields, BlockListSmtp, BlockListSmtpFields, BlockListSsh,
-    BlockListSshFields, BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool,
-    CryptocurrencyMiningPoolFields, DgaFields, Direction, DnsCovertChannel, DnsEventFields,
-    DomainGenerationAlgorithm, Event, EventDb, EventFilter, EventIterator, EventMessage,
-    ExternalDdos, ExternalDdosFields, ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce,
-    FtpBruteForceFields, FtpEventFields, FtpPlainText, HttpEventFields, HttpThreat,
-    HttpThreatFields, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText,
-    LearningMethod, LockyRansomware, MultiHostPortScan, MultiHostPortScanFields, NetworkThreat,
-    NetworkType, NonBrowser, PortScan, PortScanFields, RdpBruteForce, RdpBruteForceFields,
-    RecordType, RepeatedHttpSessions, RepeatedHttpSessionsFields, SuspiciousTlsTraffic,
-    TorConnection, TrafficDirection, TriageScore, WindowsThreat,
+    BlockListBootp, BlockListBootpFields, BlockListConn, BlockListConnFields, BlockListDceRpc,
+    BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields, BlockListDns, BlockListDnsFields,
+    BlockListFtp, BlockListHttp, BlockListHttpFields, BlockListKerberos, BlockListKerberosFields,
+    BlockListLdap, BlockListMqtt, BlockListMqttFields, BlockListNfs, BlockListNfsFields,
+    BlockListNtlm, BlockListNtlmFields, BlockListRdp, BlockListRdpFields, BlockListSmb,
+    BlockListSmbFields, BlockListSmtp, BlockListSmtpFields, BlockListSsh, BlockListSshFields,
+    BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
+    DgaFields, Direction, DnsCovertChannel, DnsEventFields, DomainGenerationAlgorithm, Event,
+    EventDb, EventFilter, EventIterator, EventMessage, ExternalDdos, ExternalDdosFields,
+    ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce, FtpBruteForceFields, FtpEventFields,
+    FtpPlainText, HttpEventFields, HttpThreat, HttpThreatFields, LdapBruteForce,
+    LdapBruteForceFields, LdapEventFields, LdapPlainText, LearningMethod, LockyRansomware,
+    MultiHostPortScan, MultiHostPortScanFields, NetworkThreat, NetworkType, NonBrowser, PortScan,
+    PortScanFields, RdpBruteForce, RdpBruteForceFields, RecordType, RepeatedHttpSessions,
+    RepeatedHttpSessionsFields, SuspiciousTlsTraffic, TorConnection, TrafficDirection, TriageScore,
+    WindowsThreat, find_ip_country,
 };
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};

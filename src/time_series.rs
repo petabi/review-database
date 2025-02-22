@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use anyhow::Result;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::{
-    dsl::{max, min},
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
+    dsl::{max, min},
 };
 use diesel_async::RunQueryDsl;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use tracing::error;
 
 use super::{
-    schema::{cluster::dsl as c_d, time_series::dsl as t_d},
     Database, Error,
+    schema::{cluster::dsl as c_d, time_series::dsl as t_d},
 };
 
 const MAX_CSV_COLUMNS: usize = 200;
@@ -240,7 +240,7 @@ impl Database {
                 _ => {
                     return Err(Error::InvalidInput(format!(
                         "illegal time range provided({start}, {end})"
-                    )))
+                    )));
                 }
             }
         } else {

@@ -1,9 +1,9 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{serde::ts_nanoseconds, DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use super::{EventCategory, MEDIUM, TriagePolicy, TriageScore, common::Match};
 use crate::event::{common::triage_scores_to_string, http::get_post_body};
 
 #[derive(Deserialize, Serialize)]

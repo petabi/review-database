@@ -7,7 +7,7 @@ use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
-use crate::{types::FromKeyValue, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable};
+use crate::{Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, types::FromKeyValue};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct DataSource {

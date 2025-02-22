@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    types::FromKeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
-    IndexedTable,
+    HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+    types::FromKeyValue,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

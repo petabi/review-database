@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{Map, Table, UniqueKey, types::FromKeyValue};
 
 pub struct TorExitNode {
     pub ip_address: String,

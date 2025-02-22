@@ -31,11 +31,11 @@ use std::{
 };
 
 use aho_corasick::AhoCorasickBuilder;
-use anyhow::{bail, Context, Result};
-use chrono::{serde::ts_nanoseconds, DateTime, TimeZone, Utc};
+use anyhow::{Context, Result, bail};
+use chrono::{DateTime, TimeZone, Utc, serde::ts_nanoseconds};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
-use rand::{rng, RngCore};
+use rand::{RngCore, rng};
 pub use rocksdb::Direction;
 use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
 use serde::{Deserialize, Serialize};
@@ -75,8 +75,8 @@ pub use self::{
     tor::{HttpEventFields, TorConnection},
 };
 use super::{
-    types::{Endpoint, HostNetworkGroup},
     Customer, EventCategory, Network, TriagePolicy,
+    types::{Endpoint, HostNetworkGroup},
 };
 
 // event levels (currently unused ones commented out)
@@ -2073,12 +2073,12 @@ impl<'a> EventDb<'a> {
     /// Returns an error if a database operation fails.
     pub fn put(&self, event: &EventMessage) -> Result<i128> {
         use anyhow::anyhow;
-        let mut key = i128::from(event.time.timestamp_nanos_opt().unwrap_or(i64::MAX)) << 64
-            | event
+        let mut key = (i128::from(event.time.timestamp_nanos_opt().unwrap_or(i64::MAX)) << 64)
+            | (event
                 .kind
                 .to_i128()
                 .ok_or(anyhow!("`EventKind` exceeds i128::MAX"))?
-                << 32;
+                << 32);
         loop {
             let txn = self.inner.transaction();
             if txn
@@ -2585,17 +2585,17 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use crate::{
-        event::LOCKY_RANSOMWARE, types::EventCategory, BlockListBootp, BlockListBootpFields,
-        BlockListConnFields, BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields,
-        BlockListDnsFields, BlockListHttp, BlockListHttpFields, BlockListKerberosFields,
-        BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields, BlockListRdpFields,
-        BlockListSmbFields, BlockListSmtpFields, BlockListSshFields, BlockListTlsFields,
-        CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, DomainGenerationAlgorithm,
-        Event, EventFilter, EventKind, EventMessage, ExternalDdos, ExternalDdosFields, ExtraThreat,
-        FtpBruteForceFields, FtpEventFields, HttpEventFields, HttpThreat, HttpThreatFields,
-        LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, NetworkThreat,
-        PortScanFields, RdpBruteForceFields, RecordType, RepeatedHttpSessionsFields, Store,
-        SuspiciousTlsTraffic, TriageScore, WindowsThreat,
+        BlockListBootp, BlockListBootpFields, BlockListConnFields, BlockListDceRpcFields,
+        BlockListDhcp, BlockListDhcpFields, BlockListDnsFields, BlockListHttp, BlockListHttpFields,
+        BlockListKerberosFields, BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields,
+        BlockListRdpFields, BlockListSmbFields, BlockListSmtpFields, BlockListSshFields,
+        BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields,
+        DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
+        ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
+        HttpThreat, HttpThreatFields, LdapBruteForceFields, LdapEventFields,
+        MultiHostPortScanFields, NetworkThreat, PortScanFields, RdpBruteForceFields, RecordType,
+        RepeatedHttpSessionsFields, Store, SuspiciousTlsTraffic, TriageScore, WindowsThreat,
+        event::LOCKY_RANSOMWARE, types::EventCategory,
     };
 
     fn example_message(kind: EventKind, category: EventCategory) -> EventMessage {
@@ -2822,14 +2822,16 @@ mod tests {
             &rocksdb::Env::new().unwrap(),
         )
         .unwrap();
-        assert!(backup
-            .restore_from_backup(
-                db_dir.path().join("states.db"),
-                db_dir.path().join("states.db"),
-                &RestoreOptions::default(),
-                1,
-            )
-            .is_ok());
+        assert!(
+            backup
+                .restore_from_backup(
+                    db_dir.path().join("states.db"),
+                    db_dir.path().join("states.db"),
+                    &RestoreOptions::default(),
+                    1,
+                )
+                .is_ok()
+        );
 
         let store = Arc::new(RwLock::new(
             Store::new(db_dir.path(), backup_dir.path()).unwrap(),
@@ -4585,20 +4587,26 @@ mod tests {
         };
 
         let syslog_message = format!("{message}");
-        assert_eq!(&syslog_message,
+        assert_eq!(
+            &syslog_message,
             "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"WindowsThreat\" category=\"Impact\" sensor=\"collector1\" service=\"notepad\" agent_name=\"win64\" agent_id=\"e7e2386a-5485-4da9-b388-b3e50ee7cbb0\" process_guid=\"{bac98147-6b03-64d4-8200-000000000700}\" process_id=\"2972\" image=\"C:\\Users\\vboxuser\\Desktop\\mal_bazaar\\ransomware\\918504.exe\" user=\"WIN64\\vboxuser\" content=\"cmd /c \"vssadmin.exe Delete Shadows /all /quiet\"\" db_name=\"db\" rule_id=\"100\" matched_to=\"match\" cluster_id=\"900\" attack_kind=\"Ransomware_Alcatraz\" confidence=\"0.9\" triage_scores=\"\""
         );
         assert!(syslog_message.contains("user=\"WIN64\\vboxuser\""));
-        assert!(syslog_message
-            .contains("content=\"cmd /c \"vssadmin.exe Delete Shadows /all /quiet\"\""));
+        assert!(
+            syslog_message
+                .contains("content=\"cmd /c \"vssadmin.exe Delete Shadows /all /quiet\"\"")
+        );
 
         let windows_threat = Event::WindowsThreat(fields).to_string();
-        assert_eq!(&windows_threat,
+        assert_eq!(
+            &windows_threat,
             "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"WindowsThreat\" category=\"Impact\" sensor=\"collector1\" service=\"notepad\" agent_name=\"win64\" agent_id=\"e7e2386a-5485-4da9-b388-b3e50ee7cbb0\" process_guid=\"{bac98147-6b03-64d4-8200-000000000700}\" process_id=\"2972\" image=\"C:\\Users\\vboxuser\\Desktop\\mal_bazaar\\ransomware\\918504.exe\" user=\"WIN64\\vboxuser\" content=\"cmd /c \"vssadmin.exe Delete Shadows /all /quiet\"\" db_name=\"db\" rule_id=\"100\" matched_to=\"match\" cluster_id=\"900\" attack_kind=\"Ransomware_Alcatraz\" confidence=\"0.9\" triage_scores=\"\""
         );
         assert!(windows_threat.contains("process_guid=\"{bac98147-6b03-64d4-8200-000000000700}\""));
-        assert!(windows_threat
-            .contains(r#"image="C:\Users\vboxuser\Desktop\mal_bazaar\ransomware\918504.exe""#));
+        assert!(
+            windows_threat
+                .contains(r#"image="C:\Users\vboxuser\Desktop\mal_bazaar\ransomware\918504.exe""#)
+        );
     }
 
     #[tokio::test]

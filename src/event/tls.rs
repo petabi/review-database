@@ -3,7 +3,7 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use super::{EventCategory, MEDIUM, TriagePolicy, TriageScore, common::Match};
 use crate::event::common::{triage_scores_to_string, vector_to_string};
 
 #[derive(Serialize, Deserialize)]
@@ -269,38 +269,38 @@ pub struct SuspiciousTlsTraffic {
 impl fmt::Display for SuspiciousTlsTraffic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-                f,
-                "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} triage_scores={:?}",
-                self.sensor,
-                self.src_addr.to_string(),
-                self.src_port.to_string(),
-                self.dst_addr.to_string(),
-                self.dst_port.to_string(),
-                self.proto.to_string(),
-                self.last_time.to_string(),
-                self.server_name,
-                self.alpn_protocol,
-                self.ja3,
-                self.version,
-                vector_to_string(&self.client_cipher_suites),
-                vector_to_string(&self.client_extensions),
-                self.cipher.to_string(),
-                vector_to_string(&self.extensions),
-                self.ja3s,
-                self.serial,
-                self.subject_country,
-                self.subject_org_name,
-                self.subject_common_name,
-                self.validity_not_before.to_string(),
-                self.validity_not_after.to_string(),
-                self.subject_alt_name,
-                self.issuer_country,
-                self.issuer_org_name,
-                self.issuer_org_unit_name,
-                self.issuer_common_name,
-                self.last_alert.to_string(),
-                triage_scores_to_string(self.triage_scores.as_ref())
-            )
+            f,
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} triage_scores={:?}",
+            self.sensor,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.last_time.to_string(),
+            self.server_name,
+            self.alpn_protocol,
+            self.ja3,
+            self.version,
+            vector_to_string(&self.client_cipher_suites),
+            vector_to_string(&self.client_extensions),
+            self.cipher.to_string(),
+            vector_to_string(&self.extensions),
+            self.ja3s,
+            self.serial,
+            self.subject_country,
+            self.subject_org_name,
+            self.subject_common_name,
+            self.validity_not_before.to_string(),
+            self.validity_not_after.to_string(),
+            self.subject_alt_name,
+            self.issuer_country,
+            self.issuer_org_name,
+            self.issuer_org_unit_name,
+            self.issuer_common_name,
+            self.last_alert.to_string(),
+            triage_scores_to_string(self.triage_scores.as_ref())
+        )
     }
 }
 

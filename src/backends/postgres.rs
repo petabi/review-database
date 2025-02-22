@@ -7,16 +7,14 @@ use std::{
 };
 
 use bb8_postgres::{
-    bb8,
+    PostgresConnectionManager, bb8,
     tokio_postgres::{
-        self,
+        self, NoTls, Socket,
         tls::{MakeTlsConnect, TlsConnect},
-        NoTls, Socket,
     },
-    PostgresConnectionManager,
 };
 use diesel_async::AsyncPgConnection;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use rustls::{CertificateError, ClientConfig, RootCertStore};
 use rustls_pki_types::CertificateDer;
 use tokio_postgres_rustls::MakeRustlsConnect;
@@ -127,7 +125,7 @@ impl ConnectionPoolType {
 // diesel_migrations doesn't support async connections
 // diesel_async#17
 fn run_migrations(url: &str) -> Result<(), Error> {
-    use diesel::{pg::PgConnection, Connection};
+    use diesel::{Connection, pg::PgConnection};
 
     let mut conn = PgConnection::establish(url)?;
     conn.run_pending_migrations(MIGRATIONS)

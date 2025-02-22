@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, FilterEndpoint, FlowKind, Iterable, LearningMethod, Map, Table};
+use crate::{FilterEndpoint, FlowKind, Iterable, LearningMethod, Map, Table, types::FromKeyValue};
 
 #[derive(Default)]
 pub struct Filter {

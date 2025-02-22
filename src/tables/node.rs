@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::TableIter as TI;
 use crate::{
-    types::FromKeyValue, Agent, AgentConfig, AgentStatus, Indexable, Indexed, IndexedMap,
-    IndexedMapUpdate, IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey,
+    Agent, AgentConfig, AgentStatus, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
+    IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey, types::FromKeyValue,
 };
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -439,10 +439,10 @@ mod test {
     use num_traits::ToPrimitive;
 
     use super::*;
-    use crate::tables::agent::Config;
     use crate::AgentKind;
     use crate::AgentStatus;
     use crate::Store;
+    use crate::tables::agent::Config;
 
     type PortNumber = u16;
 

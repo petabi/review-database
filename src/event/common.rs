@@ -9,8 +9,8 @@ use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    eq_ip_country, EventCategory, EventFilter, FlowKind, LearningMethod, TrafficDirection,
-    TriagePolicy,
+    EventCategory, EventFilter, FlowKind, LearningMethod, TrafficDirection, TriagePolicy,
+    eq_ip_country,
 };
 
 // TODO: Make new Match trait to support Windows Events
@@ -225,9 +225,9 @@ pub(super) trait Match {
         triage.confidence.iter().fold(0.0, |score, conf| {
             if conf.threat_category == self.category()
                 && conf.threat_kind.to_lowercase() == self.kind().to_lowercase()
-                && self.confidence().map_or(true, |c| {
-                    c.to_f64().expect("safe: f32 -> f64") >= conf.confidence
-                })
+                && self
+                    .confidence()
+                    .is_none_or(|c| c.to_f64().expect("safe: f32 -> f64") >= conf.confidence)
             {
                 score + conf.weight.unwrap_or(1.0)
             } else {

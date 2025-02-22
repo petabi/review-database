@@ -1,12 +1,12 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use aho_corasick::AhoCorasickBuilder;
-use chrono::{serde::ts_nanoseconds, DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{
-    common::Match, EventCategory, EventFilter, HttpEventFields, TriagePolicy, TriageScore, LOW,
-    MEDIUM,
+    EventCategory, EventFilter, HttpEventFields, LOW, MEDIUM, TriagePolicy, TriageScore,
+    common::Match,
 };
 use crate::event::common::triage_scores_to_string;
 

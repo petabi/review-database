@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
 use super::TableIter;
-use crate::{types::FromKeyValue, Iterable, Map, Table};
+use crate::{Iterable, Map, Table, types::FromKeyValue};
 
 #[derive(Debug, PartialEq)]
 pub struct AccessToken {

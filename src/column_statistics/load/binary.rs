@@ -1,14 +1,14 @@
 use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use structured::{Description, Element, ElementCount, NLargestCount};
 
 use super::{
+    BatchTimestamp, ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription,
+    ToElementCount, ToNLargestCount,
     schema::{
         column_description::dsl as cd, description_binary::dsl as desc, top_n_binary::dsl as top_n,
     },
-    BatchTimestamp, ColumnIndex, DescriptionIndex, Error, Statistics, ToDescription,
-    ToElementCount, ToNLargestCount,
 };
 
 #[derive(Debug, Queryable)]

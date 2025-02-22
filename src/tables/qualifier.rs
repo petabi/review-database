@@ -6,8 +6,8 @@ use rocksdb::OptimisticTransactionDB;
 
 use super::UniqueKey;
 use crate::{
-    types::{FromKeyValue, Qualifier},
     Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+    types::{FromKeyValue, Qualifier},
 };
 
 // The following will be used when PostgreSQL qualifier table is deleted
@@ -156,7 +156,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::DEFAULT_ENTRIES;
-    use crate::{types::Qualifier, Store};
+    use crate::{Store, types::Qualifier};
 
     fn set_up_db() -> (Arc<Store>, Vec<Qualifier>) {
         let db_dir = tempfile::tempdir().unwrap();
@@ -210,22 +210,24 @@ mod tests {
         let (store, entries) = set_up_db();
         let mut table = store.qualifier_map();
 
-        assert!(table
-            .update(
-                entries
-                    .iter()
-                    .find_map(|v| {
-                        if v.description == "a" {
-                            Some(v.id)
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap(),
-                "a",
-                "b"
-            )
-            .is_err());
+        assert!(
+            table
+                .update(
+                    entries
+                        .iter()
+                        .find_map(|v| {
+                            if v.description == "a" {
+                                Some(v.id)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap(),
+                    "a",
+                    "b"
+                )
+                .is_err()
+        );
 
         assert_eq!(table.count().unwrap(), entries.len());
     }

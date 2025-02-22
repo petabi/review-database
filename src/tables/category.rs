@@ -3,7 +3,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
 use super::UniqueKey;
-use crate::{category::Category, types::FromKeyValue, Indexed, IndexedMap, IndexedTable};
+use crate::{Indexed, IndexedMap, IndexedTable, category::Category, types::FromKeyValue};
 
 const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irrelevant Alert")];
 
@@ -95,7 +95,7 @@ impl<'d> IndexedTable<'d, Category> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{category::Category, tables::category::DEFAULT_ENTRIES, Store};
+    use crate::{Store, category::Category, tables::category::DEFAULT_ENTRIES};
 
     fn set_up_db() -> (Arc<Store>, Vec<Category>) {
         let db_dir = tempfile::tempdir().unwrap();
@@ -157,13 +157,15 @@ mod tests {
         let (store, entries) = set_up_db();
         let mut table = store.category_map();
 
-        assert!(table
-            .update(
-                1 + u32::try_from(DEFAULT_ENTRIES.len()).unwrap() + 1,
-                "a",
-                "b"
-            )
-            .is_err());
+        assert!(
+            table
+                .update(
+                    1 + u32::try_from(DEFAULT_ENTRIES.len()).unwrap() + 1,
+                    "a",
+                    "b"
+                )
+                .is_err()
+        );
 
         assert_eq!(
             table.count().unwrap(),

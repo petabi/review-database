@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 
 use super::Value;
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{Map, Table, UniqueKey, types::FromKeyValue};
 
 pub struct TrustedUserAgent {
     pub user_agent: String,

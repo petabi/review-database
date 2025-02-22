@@ -5,8 +5,8 @@ use serde::Deserialize;
 use structured::{ColumnStatistics, Element, FloatRange};
 
 use crate::{
-    schema::{description_float::dsl as desc_d, top_n_float::dsl as topn_d},
     Error,
+    schema::{description_float::dsl as desc_d, top_n_float::dsl as topn_d},
 };
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]

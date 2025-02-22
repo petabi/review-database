@@ -1,7 +1,7 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use rocksdb::IteratorMode;
 
-use crate::{IterableMap, EXCLUSIVE};
+use crate::{EXCLUSIVE, IterableMap};
 
 #[derive(Clone)]
 pub struct Map<'a> {

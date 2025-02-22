@@ -2,13 +2,13 @@
 
 use std::io::{BufReader, Read};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use data_encoding::BASE64;
 use flate2::read::GzDecoder;
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, EventCategory, Iterable, Map, Table, UniqueKey};
+use crate::{EventCategory, Iterable, Map, Table, UniqueKey, types::FromKeyValue};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Tidb {
@@ -230,7 +230,7 @@ mod tests {
         use std::io::{Cursor, Read};
 
         use data_encoding::BASE64;
-        use flate2::{bufread::GzEncoder, Compression};
+        use flate2::{Compression, bufread::GzEncoder};
 
         let name = "tidb";
         let value = create_entry(name);

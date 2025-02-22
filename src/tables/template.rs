@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{Map, Table, UniqueKey, types::FromKeyValue};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub enum Template {
@@ -146,21 +146,27 @@ mod tests {
             min_token_length: None,
         };
 
-        assert!(table
-            .insert(Template::Structured(structured.clone()))
-            .is_ok());
-        assert!(table
-            .insert(Template::Unstructured(unstructured.clone()))
-            .is_ok());
+        assert!(
+            table
+                .insert(Template::Structured(structured.clone()))
+                .is_ok()
+        );
+        assert!(
+            table
+                .insert(Template::Unstructured(unstructured.clone()))
+                .is_ok()
+        );
 
         let mut new_structured = structured.clone();
         new_structured.name = "new_structured".to_string();
-        assert!(table
-            .update(
-                Template::Structured(structured),
-                Template::Structured(new_structured.clone())
-            )
-            .is_ok());
+        assert!(
+            table
+                .update(
+                    Template::Structured(structured),
+                    Template::Structured(new_structured.clone())
+                )
+                .is_ok()
+        );
 
         assert!(table.remove("unstructured").is_ok());
 

@@ -6,8 +6,8 @@ use rocksdb::OptimisticTransactionDB;
 
 use super::UniqueKey;
 use crate::{
-    types::{FromKeyValue, Status},
     Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+    types::{FromKeyValue, Status},
 };
 
 // The following will be used when PostgreSQL status table is deleted
@@ -153,7 +153,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::DEFAULT_ENTRIES;
-    use crate::{types::Status, Store};
+    use crate::{Store, types::Status};
 
     fn set_up_db() -> (Arc<Store>, Vec<Status>) {
         let db_dir = tempfile::tempdir().unwrap();
@@ -207,22 +207,24 @@ mod tests {
         let (store, entries) = set_up_db();
         let mut table = store.status_map();
 
-        assert!(table
-            .update(
-                entries
-                    .iter()
-                    .find_map(|v| {
-                        if v.description == "a" {
-                            Some(v.id)
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap(),
-                "a",
-                "b"
-            )
-            .is_err());
+        assert!(
+            table
+                .update(
+                    entries
+                        .iter()
+                        .find_map(|v| {
+                            if v.description == "a" {
+                                Some(v.id)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap(),
+                    "a",
+                    "b"
+                )
+                .is_err()
+        );
 
         assert_eq!(table.count().unwrap(), entries.len());
     }

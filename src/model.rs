@@ -1,11 +1,11 @@
 use anyhow::Result;
 use bincode::Options;
 use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use super::{schema::model::dsl, Database, Error};
+use super::{Database, Error, schema::model::dsl};
 
 #[derive(Deserialize, Queryable)]
 pub struct Digest {

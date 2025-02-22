@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    types::{EventCategory, FromKeyValue},
     Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+    types::{EventCategory, FromKeyValue},
 };
 
 #[derive(Clone, Deserialize, Serialize)]

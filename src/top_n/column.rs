@@ -4,21 +4,21 @@ use chrono::NaiveDateTime;
 use cluster::dsl as c_d;
 use column_description::dsl as col_d;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use num_traits::ToPrimitive;
 use structured::{Element, FloatRange};
 
 use super::{
-    get_limited_cluster_ids, limited_top_n_of_clusters, to_element_counts, total_of_top_n,
-    TopElementCountsByColumn, TopNOfMultipleCluster, ValueType, DEFAULT_NUMBER_OF_CLUSTER,
-    DEFAULT_PORTION_OF_CLUSTER, DEFAULT_PORTION_OF_TOP_N,
+    DEFAULT_NUMBER_OF_CLUSTER, DEFAULT_PORTION_OF_CLUSTER, DEFAULT_PORTION_OF_TOP_N,
+    TopElementCountsByColumn, TopNOfMultipleCluster, ValueType, get_limited_cluster_ids,
+    limited_top_n_of_clusters, to_element_counts, total_of_top_n,
 };
 use crate::{
+    Database, Error,
     schema::{
         cluster, column_description, csv_column_extra, top_n_binary, top_n_datetime, top_n_enum,
         top_n_float, top_n_int, top_n_ipaddr, top_n_text,
     },
-    Database, Error,
 };
 
 macro_rules! get_top_n_of_column {

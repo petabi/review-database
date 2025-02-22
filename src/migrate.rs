@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use config::File;
-use review_database::{migrate_backend, migrate_data_dir, Database, Store};
+use review_database::{Database, Store, migrate_backend, migrate_data_dir};
 use serde::Deserialize;
 
 #[cfg(feature = "migrate")]

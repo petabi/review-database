@@ -3,7 +3,7 @@
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{scores::Scores, Map, Table};
+use crate::{Map, Table, scores::Scores};
 
 impl<'d> Table<'d, Scores> {
     /// Opens the scores table in the database.
@@ -43,7 +43,7 @@ impl<'d> Table<'d, Scores> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{scores::Scores, types::ModelScores, Store};
+    use crate::{Store, scores::Scores, types::ModelScores};
 
     #[test]
     fn put_delete() {

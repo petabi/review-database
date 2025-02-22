@@ -1,15 +1,14 @@
 use std::{cmp::Reverse, collections::HashMap};
 
 use chrono::{NaiveDateTime, TimeDelta, Utc};
-use diesel::{dsl::max, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, dsl::max};
+use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use num_traits::ToPrimitive;
 use serde::Deserialize;
 
 use crate::{
-    self as database,
+    self as database, Database, Error, TimeCount,
     schema::{cluster, time_series},
-    Database, Error, TimeCount,
 };
 
 #[derive(Debug, Queryable)]
@@ -158,7 +157,7 @@ async fn get_time_series_of_clusters(
                 _ => {
                     return Err(database::Error::InvalidInput(format!(
                         "illegal time range provided ({start},{end})"
-                    )))
+                    )));
                 }
             }
         } else {

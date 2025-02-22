@@ -1,4 +1,4 @@
-use crate::{collections::IndexedSet, IndexedTable, Network, TriageResponse};
+use crate::{IndexedTable, Network, TriageResponse, collections::IndexedSet};
 
 // Kinds of tag IDs. They are used to define the behavior of tag sets.
 

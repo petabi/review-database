@@ -5,7 +5,7 @@ use std::mem::size_of;
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
-use crate::{batch_info::BatchInfo, types::FromKeyValue, Iterable, Map, Table, UniqueKey};
+use crate::{Iterable, Map, Table, UniqueKey, batch_info::BatchInfo, types::FromKeyValue};
 
 impl FromKeyValue for BatchInfo {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
@@ -83,7 +83,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
                 Err(e) => {
                     return Err(anyhow::anyhow!(
                         "Deleted: {deleted}\nDeletion ended due to: {e}"
-                    ))
+                    ));
                 }
             }
         }
@@ -95,7 +95,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{batch_info::BatchInfo, types::ModelBatchInfo, Store};
+    use crate::{Store, batch_info::BatchInfo, types::ModelBatchInfo};
 
     fn entries() -> Vec<BatchInfo> {
         let entry1 = BatchInfo::new(

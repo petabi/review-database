@@ -2,13 +2,13 @@
 
 use std::net::IpAddr;
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use bincode::Options;
 use rocksdb::OptimisticTransactionDB;
 
 use crate::{
+    EXCLUSIVE, Map, Role, Table,
     types::{Account, FromKeyValue},
-    Map, Role, Table, EXCLUSIVE,
 };
 
 impl FromKeyValue for Account {
@@ -165,7 +165,7 @@ impl<'d> Table<'d, Account> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{types::Account, Direction, Role, Store};
+    use crate::{Direction, Role, Store, types::Account};
 
     #[test]
     fn put_delete() {

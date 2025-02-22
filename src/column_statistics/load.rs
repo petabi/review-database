@@ -17,8 +17,8 @@ use structured::{ColumnStatistics, Description, ElementCount, NLargestCount};
 use tracing::error;
 
 use crate::{
-    schema::{self, column_description::dsl as cd_d},
     Database, Error,
+    schema::{self, column_description::dsl as cd_d},
 };
 
 #[derive(Debug, Queryable)]

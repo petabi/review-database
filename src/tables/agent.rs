@@ -8,7 +8,7 @@ use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::{tables::Value as ValueTrait, types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{Map, Table, UniqueKey, tables::Value as ValueTrait, types::FromKeyValue};
 
 #[derive(
     Serialize,
@@ -265,15 +265,17 @@ mod test {
         assert_eq!(agent.draft.as_ref().unwrap().as_ref(), VALID_TOML);
 
         let invalid = "invalid";
-        assert!(Agent::new(
-            1,
-            "test_key".to_string(),
-            Kind::Unsupervised,
-            Status::Enabled,
-            Some(invalid.to_string()),
-            Some(invalid.to_string()),
-        )
-        .is_err());
+        assert!(
+            Agent::new(
+                1,
+                "test_key".to_string(),
+                Kind::Unsupervised,
+                Status::Enabled,
+                Some(invalid.to_string()),
+                Some(invalid.to_string()),
+            )
+            .is_err()
+        );
     }
 
     #[test]

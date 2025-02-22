@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, MEDIUM};
+use super::{EventCategory, MEDIUM, TriagePolicy, TriageScore, common::Match};
 use crate::event::common::{triage_scores_to_string, vector_to_string};
 
 #[derive(Serialize, Deserialize)]

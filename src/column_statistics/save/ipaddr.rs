@@ -5,8 +5,8 @@ use serde::Deserialize;
 use structured::{ColumnStatistics, Element};
 
 use crate::{
-    schema::{description_ipaddr::dsl as desc_d, top_n_ipaddr::dsl as topn_d},
     Error,
+    schema::{description_ipaddr::dsl as desc_d, top_n_ipaddr::dsl as topn_d},
 };
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]

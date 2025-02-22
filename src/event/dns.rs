@@ -1,10 +1,10 @@
 #![allow(clippy::module_name_repetitions, clippy::struct_excessive_bools)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{serde::ts_nanoseconds, DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{common::Match, EventCategory, TriagePolicy, TriageScore, HIGH, MEDIUM};
+use super::{EventCategory, HIGH, MEDIUM, TriagePolicy, TriageScore, common::Match};
 use crate::event::common::{triage_scores_to_string, vector_to_string};
 
 #[derive(Deserialize, Serialize)]

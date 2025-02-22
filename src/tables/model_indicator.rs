@@ -6,13 +6,13 @@ use std::{
 };
 
 use anyhow::Result;
-use chrono::{serde::ts_seconds, DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_seconds};
 use data_encoding::BASE64;
 use flate2::read::GzDecoder;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{types::FromKeyValue, Map, Table};
+use crate::{Map, Table, types::FromKeyValue};
 
 #[derive(Default)]
 pub struct ModelIndicator {
@@ -143,7 +143,7 @@ mod tests {
 
         use chrono::Utc;
         use data_encoding::BASE64;
-        use flate2::{bufread::GzEncoder, Compression};
+        use flate2::{Compression, bufread::GzEncoder};
 
         let name = "mi_1";
         let value = super::Value {

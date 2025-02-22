@@ -4,7 +4,7 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
 use super::Value;
-use crate::{types::FromKeyValue, Map, Table, UniqueKey};
+use crate::{Map, Table, UniqueKey, types::FromKeyValue};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrustedDomain {

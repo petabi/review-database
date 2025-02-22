@@ -4,14 +4,14 @@
 mod migration_structures;
 
 use std::{
-    fs::{create_dir_all, File},
+    fs::{File, create_dir_all},
     io::{Read, Write},
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
     str::FromStr,
 };
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
@@ -1281,8 +1281,8 @@ fn migrate_0_26_to_0_28(store: &super::Store) -> Result<()> {
 fn migrate_outlier_info(store: &super::Store) -> Result<()> {
     use bincode::Options;
 
-    use crate::collections::IterableMap;
     use crate::OutlierInfoKey;
+    use crate::collections::IterableMap;
 
     let map = store.outlier_map();
     let raw = map.raw();
@@ -1336,9 +1336,9 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
     use bincode::Options;
     use chrono::{DateTime, Utc};
 
-    use crate::collections::Indexed;
     use crate::Indexable;
     use crate::IterableMap;
+    use crate::collections::Indexed;
 
     type PortNumber = u16;
 
@@ -1673,7 +1673,7 @@ mod tests {
         use chrono::{DateTime, Utc};
         use serde::{Deserialize, Serialize};
 
-        use crate::{collections::Indexed, Indexable};
+        use crate::{Indexable, collections::Indexed};
 
         #[derive(Deserialize, Serialize, Clone)]
         pub struct OldNode {
@@ -2058,7 +2058,7 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_conn() {
         use crate::{
-            migration::migration_structures::BlockListConnBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListConnBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2086,7 +2086,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::BlockListDnsBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListDnsBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2189,7 +2189,7 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_http_threat() {
         use crate::{
-            migration::migration_structures::HttpThreatBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::HttpThreatBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2264,7 +2264,7 @@ mod tests {
 
     #[test]
     fn migrate_0_29_to_0_30_dga() {
-        use crate::{migration::migration_structures::DgaBeforeV30, EventKind, EventMessage};
+        use crate::{EventKind, EventMessage, migration::migration_structures::DgaBeforeV30};
 
         let settings = TestSchema::new();
         let value: DgaBeforeV30 = dga_before_v29().into();
@@ -2291,7 +2291,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::BlockListFtpBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListFtpBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2388,7 +2388,7 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_non_browser() {
         use crate::{
-            migration::migration_structures::NonBrowserBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::NonBrowserBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2468,7 +2468,7 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_http() {
         use crate::{
-            migration::migration_structures::BlockListHttpBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListHttpBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2497,7 +2497,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::BlockListKerberosBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListKerberosBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2544,7 +2544,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::BlockListLdapBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListLdapBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2589,7 +2589,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::BlockListRdpBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListRdpBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2666,7 +2666,7 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_ntlm() {
         use crate::{
-            migration::migration_structures::BlockListNtlmBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListNtlmBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2732,7 +2732,7 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_smtp() {
         use crate::{
-            migration::migration_structures::BlockListSmtpBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListSmtpBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2804,7 +2804,7 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_ssh() {
         use crate::{
-            migration::migration_structures::BlockListSshBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListSshBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2882,7 +2882,7 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_tls() {
         use crate::{
-            migration::migration_structures::BlockListTlsBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::BlockListTlsBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2911,8 +2911,8 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::CryptocurrencyMiningPoolBeforeV30, EventKind,
-            EventMessage,
+            EventKind, EventMessage,
+            migration::migration_structures::CryptocurrencyMiningPoolBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -2963,7 +2963,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::DnsCovertChannelBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::DnsCovertChannelBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -3014,7 +3014,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::ExternalDdosBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::ExternalDdosBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -3053,7 +3053,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::FtpBruteForceBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::FtpBruteForceBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -3092,7 +3092,7 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::FtpPlainTextBeforeV30, EventKind, EventMessage,
+            EventKind, EventMessage, migration::migration_structures::FtpPlainTextBeforeV30,
         };
 
         let settings = TestSchema::new();
@@ -3142,8 +3142,8 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::{LdapBruteForceBeforeV30, LdapPlainTextBeforeV30},
             EventKind, EventMessage,
+            migration::migration_structures::{LdapBruteForceBeforeV30, LdapPlainTextBeforeV30},
         };
 
         let settings = TestSchema::new();
@@ -3208,10 +3208,10 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
+            EventKind, EventMessage,
             migration::migration_structures::{
                 MultiHostPortScanBeforeV30, NetworkThreatBeforeV30, RdpBruteForceBeforeV30,
             },
-            EventKind, EventMessage,
         };
 
         let settings = TestSchema::new();
@@ -3301,8 +3301,8 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::{PortScanBeforeV30, RepeatedHttpSessionsBeforeV30},
             EventKind, EventMessage,
+            migration::migration_structures::{PortScanBeforeV30, RepeatedHttpSessionsBeforeV30},
         };
 
         let settings = TestSchema::new();
@@ -3357,8 +3357,8 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            migration::migration_structures::{TorConnectionBeforeV30, WindowsThreatBeforeV30},
             EventKind, EventMessage, TriageScore,
+            migration::migration_structures::{TorConnectionBeforeV30, WindowsThreatBeforeV30},
         };
 
         let settings = TestSchema::new();
@@ -3455,7 +3455,7 @@ mod tests {
         use serde::{Deserialize, Serialize};
 
         use crate::{
-            collections::Indexed, migration::migration_structures::PigletConfig, Indexable,
+            Indexable, collections::Indexed, migration::migration_structures::PigletConfig,
         };
 
         #[derive(Clone, Deserialize, Serialize)]

@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use chrono::{serde::ts_nanoseconds, DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 

@@ -2,7 +2,7 @@
 use std::{cmp::Ordering, net::IpAddr, ops::RangeInclusive};
 
 use anyhow::Result;
-use chrono::{naive::serde::ts_nanoseconds_option, NaiveDateTime};
+use chrono::{NaiveDateTime, naive::serde::ts_nanoseconds_option};
 use ipnet::IpNet;
 use num_derive::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};

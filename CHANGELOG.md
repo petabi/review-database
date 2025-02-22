@@ -7,6 +7,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Updated the Rust edition to 2024. It requires Rust version 1.85.0 or later.
+
 ### Fixed
 
 - Fixed an issue where the `attempt_cluster_upsert` database function was not

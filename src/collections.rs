@@ -4,7 +4,7 @@ mod map;
 
 use std::{borrow::Cow, cmp::Ordering, convert::TryFrom, mem};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bincode::Options;
 use rocksdb::{Direction, IteratorMode};
 use serde::{Deserialize, Serialize};
@@ -72,7 +72,7 @@ impl KeyIndex {
     fn deactivate(&mut self, id: u32) -> Result<Vec<u8>> {
         let i = usize::try_from(id).context("index out of range")?;
         let key = match self.keys.get_mut(i) {
-            Some(KeyIndexEntry::Key(ref mut key)) => mem::take(key),
+            Some(KeyIndexEntry::Key(key)) => mem::take(key),
             Some(KeyIndexEntry::Inactive(_) | KeyIndexEntry::Index(_)) => {
                 bail!("no such ID");
             }
@@ -131,7 +131,7 @@ impl KeyIndex {
     fn remove(&mut self, id: u32) -> Result<Vec<u8>> {
         let i = usize::try_from(id).context("index out of range")?;
         let key = match self.keys.get_mut(i) {
-            Some(KeyIndexEntry::Key(ref mut key)) => mem::take(key),
+            Some(KeyIndexEntry::Key(key)) => mem::take(key),
             Some(KeyIndexEntry::Inactive(_) | KeyIndexEntry::Index(_)) => {
                 bail!("no such ID");
             }
@@ -146,7 +146,7 @@ impl KeyIndex {
     fn update(&mut self, id: u32, key: &[u8]) -> Result<Vec<u8>> {
         let i = usize::try_from(id).context("index out of range")?;
         let key = match self.keys.get_mut(i) {
-            Some(KeyIndexEntry::Key(ref mut old_key)) => mem::replace(old_key, key.to_vec()),
+            Some(KeyIndexEntry::Key(old_key)) => mem::replace(old_key, key.to_vec()),
             Some(KeyIndexEntry::Inactive(_) | KeyIndexEntry::Index(_)) => {
                 bail!("no such ID");
             }

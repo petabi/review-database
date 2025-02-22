@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    types::FromKeyValue, HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
-    IndexedTable, Iterable,
+    HostNetworkGroup, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, Iterable,
+    types::FromKeyValue,
 };
 
 #[derive(Clone, PartialEq, Debug)]
@@ -306,7 +306,7 @@ mod test {
 
     use rocksdb::Direction;
 
-    use crate::{types::HostNetworkGroup, Iterable, Network, Store};
+    use crate::{Iterable, Network, Store, types::HostNetworkGroup};
 
     #[test]
     fn insert_and_get() {

@@ -2,12 +2,12 @@
 
 use std::mem::size_of;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
 use super::TableIter;
-use crate::{tables::Value as ValueTrait, types::FromKeyValue, Iterable, Map, Table, UniqueKey};
+use crate::{Iterable, Map, Table, UniqueKey, tables::Value as ValueTrait, types::FromKeyValue};
 
 #[derive(Debug, PartialEq)]
 pub struct OutlierInfo {
@@ -193,7 +193,7 @@ mod tests {
 
     use rocksdb::Direction;
 
-    use crate::{tables::Value, types::FromKeyValue, Iterable, OutlierInfo, Store, UniqueKey};
+    use crate::{Iterable, OutlierInfo, Store, UniqueKey, tables::Value, types::FromKeyValue};
 
     #[test]
     fn serde() {

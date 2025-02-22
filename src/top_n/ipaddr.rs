@@ -4,19 +4,18 @@ use chrono::NaiveDateTime;
 use cluster::dsl as c_d;
 use column_description::dsl as col_d;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
-use diesel_async::{pg::AsyncPgConnection, RunQueryDsl};
+use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use num_traits::ToPrimitive;
 use top_n_ipaddr::dsl as top_d;
 
 use super::{
-    get_cluster_sizes, get_limited_cluster_ids, limited_top_n_of_clusters, to_element_counts,
-    total_of_top_n, ElementCount, TopElementCountsByColumn, TopNOfCluster, TopNOfMultipleCluster,
-    DEFAULT_NUMBER_OF_CLUSTER, DEFAULT_PORTION_OF_CLUSTER, DEFAULT_PORTION_OF_TOP_N,
+    DEFAULT_NUMBER_OF_CLUSTER, DEFAULT_PORTION_OF_CLUSTER, DEFAULT_PORTION_OF_TOP_N, ElementCount,
+    TopElementCountsByColumn, TopNOfCluster, TopNOfMultipleCluster, get_cluster_sizes,
+    get_limited_cluster_ids, limited_top_n_of_clusters, to_element_counts, total_of_top_n,
 };
 use crate::{
-    self as database,
+    self as database, Database, Error,
     schema::{cluster, column_description, top_n_ipaddr},
-    Database, Error,
 };
 
 async fn get_top_n_of_multiple_clusters(

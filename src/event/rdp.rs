@@ -10,8 +10,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{
-    common::{vector_to_string, Match},
-    EventCategory, TriagePolicy, TriageScore, MEDIUM,
+    EventCategory, MEDIUM, TriagePolicy, TriageScore,
+    common::{Match, vector_to_string},
 };
 use crate::event::common::triage_scores_to_string;
 

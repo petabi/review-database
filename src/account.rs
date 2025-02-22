@@ -2,8 +2,8 @@ use std::{net::IpAddr, num::NonZeroU32};
 
 use anyhow::Result;
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use chrono::{DateTime, Utc};
 use ring::{
@@ -13,7 +13,7 @@ use ring::{
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use crate::{tables::Value, UniqueKey};
+use crate::{UniqueKey, tables::Value};
 
 /// Possible role types of `Account`.
 #[derive(Clone, Copy, Debug, Display, Eq, PartialEq, Deserialize, Serialize, EnumString)]

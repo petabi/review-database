@@ -3,8 +3,8 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 
 use crate::{
-    schema::{cluster::dsl as c_d, column_description::dsl as cd_d},
     Database, Error,
+    schema::{cluster::dsl as c_d, column_description::dsl as cd_d},
 };
 
 impl Database {

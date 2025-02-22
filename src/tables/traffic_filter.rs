@@ -2,14 +2,14 @@
 
 use std::collections::HashMap;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use ipnet::IpNet;
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
 use super::Value;
-use crate::{types::FromKeyValue, Iterable, Map, Table, UniqueKey};
+use crate::{Iterable, Map, Table, UniqueKey, types::FromKeyValue};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct TrafficFilter {
@@ -357,28 +357,34 @@ mod test {
         let entry = create_entry(agent, any, tcp.clone());
         assert!(table.insert(&entry).is_ok());
 
-        assert!(table
-            .add_rules(agent, any.parse().unwrap(), Some(vec![80]), None, None)
-            .is_err());
+        assert!(
+            table
+                .add_rules(agent, any.parse().unwrap(), Some(vec![80]), None, None)
+                .is_err()
+        );
 
         let network = "172.30.0.0/16".parse().unwrap();
         assert!(table.add_rules(agent, network, tcp, None, None).is_ok());
 
         let new_tcp_ports = vec![8080, 8888];
         let subnet_network = "172.30.1.0/24".parse().unwrap();
-        assert!(table
-            .add_rules(
-                agent,
-                subnet_network,
-                Some(new_tcp_ports.clone()),
-                None,
-                None
-            )
-            .is_err());
+        assert!(
+            table
+                .add_rules(
+                    agent,
+                    subnet_network,
+                    Some(new_tcp_ports.clone()),
+                    None,
+                    None
+                )
+                .is_err()
+        );
 
-        assert!(table
-            .update(agent, network, Some(new_tcp_ports), None, None)
-            .is_ok());
+        assert!(
+            table
+                .update(agent, network, Some(new_tcp_ports), None, None)
+                .is_ok()
+        );
 
         let r = table.get(agent);
         assert!(r.is_ok());

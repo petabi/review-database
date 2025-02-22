@@ -4,7 +4,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-use crate::{schema::cluster::dsl, types::Cluster, Database, Error};
+use crate::{Database, Error, schema::cluster::dsl, types::Cluster};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UpdateClusterRequest {
