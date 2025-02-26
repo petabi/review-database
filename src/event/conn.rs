@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, MEDIUM, TriagePolicy, TriageScore, common::Match};
+use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
 use crate::event::common::{triage_scores_to_string, vector_to_string};
 
 #[derive(Serialize, Deserialize)]
@@ -120,6 +120,10 @@ impl Match for PortScan {
 
     fn confidence(&self) -> Option<f32> {
         None
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
@@ -239,6 +243,10 @@ impl Match for MultiHostPortScan {
         None
     }
 
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
+    }
+
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
         0.0
     }
@@ -349,6 +357,10 @@ impl Match for ExternalDdos {
 
     fn confidence(&self) -> Option<f32> {
         None
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
@@ -511,6 +523,10 @@ impl Match for BlockListConn {
 
     fn confidence(&self) -> Option<f32> {
         None
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {

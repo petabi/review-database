@@ -5,8 +5,8 @@ use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{
-    EventCategory, EventFilter, HttpEventFields, LOW, MEDIUM, TriagePolicy, TriageScore,
-    common::Match,
+    EventCategory, EventFilter, HttpEventFields, LOW, LearningMethod, MEDIUM, TriagePolicy,
+    TriageScore, common::Match,
 };
 use crate::event::common::triage_scores_to_string;
 
@@ -119,6 +119,10 @@ impl Match for RepeatedHttpSessions {
 
     fn confidence(&self) -> Option<f32> {
         None
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
@@ -404,6 +408,10 @@ impl Match for HttpThreat {
         Some(self.confidence)
     }
 
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::Unsupervised
+    }
+
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
         0.0
     }
@@ -666,6 +674,10 @@ impl Match for DomainGenerationAlgorithm {
         Some(self.confidence)
     }
 
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
+    }
+
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
         0.0
     }
@@ -824,6 +836,10 @@ impl Match for NonBrowser {
 
     fn confidence(&self) -> Option<f32> {
         None
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
@@ -1057,6 +1073,10 @@ impl Match for BlockListHttp {
 
     fn confidence(&self) -> Option<f32> {
         None
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
