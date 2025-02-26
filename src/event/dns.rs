@@ -4,7 +4,9 @@ use std::{fmt, net::IpAddr, num::NonZeroU8};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, HIGH, MEDIUM, TriagePolicy, TriageScore, common::Match};
+use super::{
+    EventCategory, HIGH, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match,
+};
 use crate::event::common::{triage_scores_to_string, vector_to_string};
 
 #[derive(Deserialize, Serialize)]
@@ -189,6 +191,10 @@ impl Match for DnsCovertChannel {
         Some(self.confidence)
     }
 
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
+    }
+
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
         0.0
     }
@@ -320,6 +326,10 @@ impl Match for LockyRansomware {
 
     fn confidence(&self) -> Option<f32> {
         Some(self.confidence)
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
@@ -509,6 +519,10 @@ impl Match for CryptocurrencyMiningPool {
         None
     }
 
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
+    }
+
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
         0.0
     }
@@ -688,6 +702,10 @@ impl Match for BlockListDns {
 
     fn confidence(&self) -> Option<f32> {
         None
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::SemiSupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {

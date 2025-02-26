@@ -5,6 +5,16 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## Fixed
+
+- Fixed learning method matches for the detected events. The previous
+  implementation of learning method match used the `EventCategory`, but now all
+  detected events have been modified to return `LearningMethod` (via the new
+  `learning_method` method added to `Match` trait), so learning method match is
+  performed using this value.
+
 ## [0.35.0] - 2025-02-22
 
 ### Changed
@@ -814,6 +824,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.35.0...main
 [0.35.0]: https://github.com/petabi/review-database/compare/0.34.0...0.35.0
 [0.34.0]: https://github.com/petabi/review-database/compare/0.33.1...0.34.0
 [0.33.1]: https://github.com/petabi/review-database/compare/0.33.0...0.33.1

@@ -8,7 +8,7 @@ use std::{
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, MEDIUM, TriagePolicy, TriageScore, common::Match};
+use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
 use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
@@ -86,6 +86,10 @@ impl Match for ExtraThreat {
 
     fn confidence(&self) -> Option<f32> {
         Some(self.confidence)
+    }
+
+    fn learning_method(&self) -> LearningMethod {
+        LearningMethod::Unsupervised
     }
 
     fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
