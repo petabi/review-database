@@ -1,11 +1,41 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{FtpAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::triage_scores_to_string;
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string};
+
+macro_rules! ftp_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Ftp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                FtpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                FtpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                FtpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                FtpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                FtpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                FtpAttr::User => AttrValue::String(&$event.user),
+                FtpAttr::Password => AttrValue::String(&$event.password),
+                FtpAttr::Command => AttrValue::String(&$event.command),
+                FtpAttr::ReplyCode => AttrValue::String(&$event.reply_code),
+                FtpAttr::ReplyMsg => AttrValue::String(&$event.reply_msg),
+                FtpAttr::DataPassive => AttrValue::Bool($event.data_passive),
+                FtpAttr::DataOrigAddr => AttrValue::Addr($event.data_orig_addr),
+                FtpAttr::DataRespAddr => AttrValue::Addr($event.data_resp_addr),
+                FtpAttr::DataRespPort => AttrValue::UInt($event.data_resp_port.into()),
+                FtpAttr::File => AttrValue::String(&$event.file),
+                FtpAttr::FileSize => AttrValue::UInt($event.file_size),
+                FtpAttr::FileId => AttrValue::String(&$event.file_id),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct FtpBruteForceFields {
@@ -132,8 +162,19 @@ impl Match for FtpBruteForce {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        if let RawEventAttrKind::Ftp(attr) = raw_event_attr {
+            match attr {
+                FtpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                FtpAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                FtpAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+                FtpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                FtpAttr::User => Some(AttrValue::VecString(&self.user_list)),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -318,8 +359,8 @@ impl Match for FtpPlainText {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        ftp_target_attr!(self, raw_event_attr)
     }
 }
 
@@ -452,7 +493,7 @@ impl Match for BlockListFtp {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        ftp_target_attr!(self, raw_event_attr)
     }
 }

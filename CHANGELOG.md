@@ -7,6 +7,24 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added triage functionality for scoring with attributes of each raw event.
+  - Used the attrievent crate. The kinds of raw events and their attributes
+    change as our software evolves. The purpose of attrievent is to provide a
+    comprehensive list of attributes for both review and the UI simultaneously.
+  - Added a new enum type `AttrValue`. This type is used to convert the
+    attribute value of each raw event to its corresponding type to perform
+    comparison operations.
+  - Added the `to_attr_value` to the `Match` trait to generate an `AttrValue`
+    from the field in all detection event.
+  - Implemented `score_by_attr` under `Match` trait.
+
+### Changed
+
+- Modified the `ValueKind` enum to support different types of input for packet
+  attribute triage.
+
 ## Fixed
 
 - Fixed learning method matches for the detected events. The previous
