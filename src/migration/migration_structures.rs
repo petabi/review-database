@@ -13,8 +13,10 @@ use crate::{
     BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
     ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
     HttpThreatFields, LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields,
-    NetworkThreat, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, TriageScore,
-    WindowsThreat,
+    NetworkThreat, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, Role,
+    TriageScore, WindowsThreat,
+    account::{PasswordHashAlgorithm, SaltedPassword},
+    types::Account,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -2101,4 +2103,65 @@ pub struct GigantoConfig {
     pub max_sub_compactions: u32,
 
     pub ack_transmission: u16,
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
+pub struct AccountBeforeV36 {
+    pub username: String,
+    pub(crate) password: SaltedPassword,
+    pub role: Role,
+    pub name: String,
+    pub department: String,
+    pub language: Option<String>,
+    pub theme: Option<String>,
+    pub(crate) creation_time: DateTime<Utc>,
+    pub(crate) last_signin_time: Option<DateTime<Utc>>,
+    pub allow_access_from: Option<Vec<IpAddr>>,
+    pub max_parallel_sessions: Option<u8>,
+    pub(crate) password_hash_algorithm: PasswordHashAlgorithm,
+    pub(crate) password_last_modified_at: DateTime<Utc>,
+}
+
+impl From<AccountBeforeV36> for Account {
+    fn from(input: AccountBeforeV36) -> Self {
+        Self {
+            username: input.username,
+            password: input.password,
+            role: input.role,
+            name: input.name,
+            department: input.department,
+            language: input.language,
+            theme: None,
+            creation_time: input.creation_time,
+            last_signin_time: input.last_signin_time,
+            allow_access_from: input.allow_access_from,
+            max_parallel_sessions: input.max_parallel_sessions,
+            password_hash_algorithm: input.password_hash_algorithm,
+            password_last_modified_at: input.password_last_modified_at,
+            customer_ids: match input.role {
+                Role::SystemAdministrator => None,
+                _ => Some(Vec::new()),
+            },
+        }
+    }
+}
+
+impl From<Account> for AccountBeforeV36 {
+    fn from(input: Account) -> Self {
+        Self {
+            username: input.username,
+            password: input.password,
+            role: input.role,
+            name: input.name,
+            department: input.department,
+            language: input.language,
+            theme: input.theme,
+            creation_time: input.creation_time,
+            last_signin_time: input.last_signin_time,
+            allow_access_from: input.allow_access_from,
+            max_parallel_sessions: input.max_parallel_sessions,
+            password_hash_algorithm: input.password_hash_algorithm,
+            password_last_modified_at: input.password_last_modified_at,
+        }
+    }
 }
