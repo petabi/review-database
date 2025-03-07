@@ -99,7 +99,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.34.0,<0.36.0";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.36.0-alpha.1,<0.36.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -202,6 +202,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.34.0")?,
             migrate_0_30_to_0_34_0,
         ),
+        (
+            VersionReq::parse(">=0.34.0,<0.36.0-alpha.1")?,
+            Version::parse("0.36.0-alpha.1")?,
+            migrate_0_34_0_to_0_36,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -277,6 +282,26 @@ fn read_version_file(path: &Path) -> Result<Version> {
     Version::parse(&ver).context("cannot parse VERSION")
 }
 
+fn migrate_0_34_0_to_0_36(store: &super::Store) -> Result<()> {
+    migrate_0_36_account(store)
+}
+
+fn migrate_0_36_account(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
+    use crate::{migration::migration_structures::AccountBeforeV36, types::Account};
+
+    let map = store.account_map();
+    let raw = map.raw();
+    for (key, old_value) in raw.iter_forward()? {
+        let old = bincode::DefaultOptions::new().deserialize::<AccountBeforeV36>(&old_value)?;
+        let new: Account = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<Account>(&new)?;
+        raw.update((&key, &old_value), (&key, &new_value))?;
+    }
+    Ok(())
+}
+
 fn migrate_0_30_to_0_34_0(store: &super::Store) -> Result<()> {
     migrate_0_34_account(store)?;
     migrate_0_34_events(store)
@@ -336,8 +361,10 @@ fn migrate_0_34_account(store: &super::Store) -> Result<()> {
     use bincode::Options;
     use chrono::{DateTime, Utc};
 
-    use crate::account::{PasswordHashAlgorithm, Role, SaltedPassword};
-    use crate::types::Account;
+    use crate::{
+        account::{PasswordHashAlgorithm, Role, SaltedPassword},
+        migration::migration_structures::AccountBeforeV36,
+    };
 
     #[derive(Deserialize, Serialize)]
     pub struct OldAccount {
@@ -355,7 +382,7 @@ fn migrate_0_34_account(store: &super::Store) -> Result<()> {
         password_last_modified_at: DateTime<Utc>,
     }
 
-    impl From<OldAccount> for Account {
+    impl From<OldAccount> for AccountBeforeV36 {
         fn from(input: OldAccount) -> Self {
             Self {
                 username: input.username,
@@ -381,8 +408,8 @@ fn migrate_0_34_account(store: &super::Store) -> Result<()> {
     let raw = map.raw();
     for (key, old_value) in raw.iter_forward()? {
         let old = bincode::DefaultOptions::new().deserialize::<OldAccount>(&old_value)?;
-        let new: Account = old.into();
-        let new_value = bincode::DefaultOptions::new().serialize::<Account>(&new)?;
+        let new: AccountBeforeV36 = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<AccountBeforeV36>(&new)?;
         raw.update((&key, &old_value), (&key, &new_value))?;
     }
     Ok(())
@@ -1594,7 +1621,7 @@ mod tests {
     use semver::{Version, VersionReq};
 
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::Store;
+    use crate::{Store, migration::migration_structures::AccountBeforeV36};
 
     #[allow(dead_code)]
     struct TestSchema {
@@ -3872,8 +3899,10 @@ mod tests {
         use chrono::{DateTime, Utc};
         use serde::{Deserialize, Serialize};
 
-        use crate::account::{PasswordHashAlgorithm, Role, SaltedPassword};
-        use crate::types::Account;
+        use crate::{
+            IterableMap,
+            account::{PasswordHashAlgorithm, Role, SaltedPassword},
+        };
 
         #[derive(Deserialize, Serialize)]
         pub struct OldAccount {
@@ -3891,7 +3920,7 @@ mod tests {
             password_last_modified_at: DateTime<Utc>,
         }
 
-        impl From<OldAccount> for Account {
+        impl From<OldAccount> for AccountBeforeV36 {
             fn from(input: OldAccount) -> Self {
                 Self {
                     username: input.username,
@@ -3913,8 +3942,8 @@ mod tests {
             }
         }
 
-        impl From<Account> for OldAccount {
-            fn from(input: Account) -> Self {
+        impl From<AccountBeforeV36> for OldAccount {
+            fn from(input: AccountBeforeV36) -> Self {
                 Self {
                     username: input.username,
                     password: input.password,
@@ -3936,20 +3965,28 @@ mod tests {
         let map = settings.store.account_map();
         let raw = map.raw();
 
-        let test = Account::new(
-            "test",
-            "password",
-            Role::SecurityAdministrator,
-            "name".to_string(),
-            "department".to_string(),
-            None,
-            None,
-            None,
-            None,
-        )
-        .unwrap();
+        let now = Utc::now();
+        let new_account = AccountBeforeV36 {
+            username: "test".to_string(),
+            password: SaltedPassword::new_with_hash_algorithm(
+                "password",
+                &PasswordHashAlgorithm::Argon2id,
+            )
+            .unwrap(),
+            role: Role::SecurityAdministrator,
+            name: "name".to_string(),
+            department: "department".to_string(),
+            language: None,
+            theme: None,
+            creation_time: now,
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
+            password_last_modified_at: now,
+        };
 
-        let old: OldAccount = test.clone().into();
+        let old: OldAccount = new_account.clone().into();
         let value = bincode::DefaultOptions::new()
             .serialize(&old)
             .expect("serializable");
@@ -3962,11 +3999,13 @@ mod tests {
         assert!(super::migrate_0_34_account(&settings.store).is_ok());
 
         let map = settings.store.account_map();
-        let res = map.get(&test.username);
-        assert!(res.is_ok());
-        let account = res.unwrap();
+        let raw = map.raw();
+        let (_, value) = raw.iter_forward().unwrap().next().unwrap();
+        let result_account = bincode::DefaultOptions::new()
+            .deserialize::<AccountBeforeV36>(&value)
+            .unwrap();
 
-        assert_eq!(account, Some(test));
+        assert_eq!(new_account, result_account);
     }
 
     #[test]
@@ -4108,5 +4147,49 @@ mod tests {
 
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
         assert!(super::migrate_0_30_to_0_34_0(&settings.store).is_ok());
+    }
+
+    #[test]
+    fn migrate_0_36_account() {
+        use bincode::Options;
+
+        use crate::{account::Role, types::Account};
+
+        let settings = TestSchema::new();
+        let map = settings.store.account_map();
+        let raw = map.raw();
+
+        let new_account = Account::new(
+            "test",
+            "password",
+            Role::SecurityAdministrator,
+            "name".to_string(),
+            "department".to_string(),
+            None,
+            None,
+            None,
+            None,
+            Some(Vec::new()),
+        )
+        .unwrap();
+
+        let old: AccountBeforeV36 = new_account.clone().into();
+        let value = bincode::DefaultOptions::new()
+            .serialize(&old)
+            .expect("serializable");
+
+        assert!(raw.put(old.username.as_bytes(), &value).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        assert!(super::migrate_0_36_account(&settings.store).is_ok());
+
+        let map = settings.store.account_map();
+        let res = map.get(&new_account.username);
+        assert!(res.is_ok());
+        let account = res.unwrap();
+
+        assert_eq!(account, Some(new_account));
     }
 }

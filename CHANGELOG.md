@@ -7,6 +7,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Added `Account::customer_ids` field to store the customer id that the user
+  belongs to.
+
 ## Fixed
 
 - Fixed learning method matches for the detected events. The previous

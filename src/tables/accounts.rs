@@ -80,6 +80,7 @@ impl<'d> Table<'d, Account> {
         theme: &Option<(Option<String>, Option<String>)>,
         allow_access_from: &Option<(Option<Vec<IpAddr>>, Option<Vec<IpAddr>>)>,
         max_parallel_sessions: &Option<(Option<u8>, Option<u8>)>,
+        customer_ids: &Option<(Option<Vec<u32>>, Option<Vec<u32>>)>,
     ) -> Result<(), anyhow::Error> {
         loop {
             let txn = self.map.db.transaction();
@@ -136,6 +137,12 @@ impl<'d> Table<'d, Account> {
                     }
                     account.max_parallel_sessions = *new;
                 }
+                if let Some((old, new)) = customer_ids {
+                    if account.customer_ids != *old {
+                        bail!("old value mismatch");
+                    }
+                    account.customer_ids.clone_from(new);
+                }
 
                 let value = bincode::DefaultOptions::new().serialize(&account)?;
                 txn.put_cf(self.map.cf, username, value)
@@ -185,6 +192,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap();
         table.put(&acc1).unwrap();
@@ -196,6 +204,7 @@ mod tests {
             Role::SystemAdministrator,
             "User 2".to_string(),
             "Department 2".to_string(),
+            None,
             None,
             None,
             None,
@@ -231,6 +240,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap();
         table.put(&acc1).unwrap();
@@ -246,6 +256,7 @@ mod tests {
             Role::SystemAdministrator,
             "User 2".to_string(),
             "Department 2".to_string(),
+            None,
             None,
             None,
             None,

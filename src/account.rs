@@ -43,6 +43,7 @@ pub struct Account {
     pub max_parallel_sessions: Option<u8>,
     pub(crate) password_hash_algorithm: PasswordHashAlgorithm,
     pub(crate) password_last_modified_at: DateTime<Utc>,
+    pub customer_ids: Option<Vec<u32>>,
 }
 
 impl Account {
@@ -64,6 +65,7 @@ impl Account {
         theme: Option<String>,
         allow_access_from: Option<Vec<IpAddr>>,
         max_parallel_sessions: Option<u8>,
+        customer_ids: Option<Vec<u32>>,
     ) -> Result<Self> {
         let password =
             SaltedPassword::new_with_hash_algorithm(password, &Self::DEFAULT_HASH_ALGORITHM)?;
@@ -82,6 +84,7 @@ impl Account {
             max_parallel_sessions,
             password_hash_algorithm: Self::DEFAULT_HASH_ALGORITHM,
             password_last_modified_at: now,
+            customer_ids,
         })
     }
 
@@ -296,6 +299,7 @@ mod tests {
             None,
             None,
             None,
+            Some(Vec::new()),
         );
         assert!(account.is_ok());
 
@@ -330,6 +334,7 @@ mod tests {
             max_parallel_sessions: None,
             password_hash_algorithm: PasswordHashAlgorithm::Pbkdf2HmacSha512,
             password_last_modified_at: Utc::now(),
+            customer_ids: Some(Vec::new()),
         };
         assert!(account.verify_password("password"));
         assert!(!account.verify_password("updated"));
