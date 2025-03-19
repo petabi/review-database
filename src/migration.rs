@@ -99,7 +99,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.36.0-alpha.1,<0.36.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.36.0,<0.37.0-alpha";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -203,8 +203,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_30_to_0_34_0,
         ),
         (
-            VersionReq::parse(">=0.34.0,<0.36.0-alpha.1")?,
-            Version::parse("0.36.0-alpha.1")?,
+            VersionReq::parse(">=0.34.0,<0.37.0-alpha")?,
+            Version::parse("0.36.0")?,
             migrate_0_34_0_to_0_36,
         ),
     ];
