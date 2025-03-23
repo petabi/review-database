@@ -1,10 +1,35 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{RawEventAttrKind, SmtpAttr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match};
-use crate::event::common::triage_scores_to_string;
+use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string};
+
+macro_rules! smtp_target_attr {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Smtp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                SmtpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                SmtpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                SmtpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                SmtpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                SmtpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                SmtpAttr::MailFrom => AttrValue::String(&$event.mailfrom),
+                SmtpAttr::Date => AttrValue::String(&$event.date),
+                SmtpAttr::From => AttrValue::String(&$event.from),
+                SmtpAttr::To => AttrValue::String(&$event.to),
+                SmtpAttr::Subject => AttrValue::String(&$event.subject),
+                SmtpAttr::Agent => AttrValue::String(&$event.agent),
+                SmtpAttr::State => AttrValue::String(&$event.state),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BlockListSmtpFields {
@@ -161,7 +186,7 @@ impl Match for BlockListSmtp {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn to_attr_value(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        smtp_target_attr!(self, raw_event_attr)
     }
 }
