@@ -104,16 +104,16 @@ impl BlockListNtlm {
 }
 
 impl Match for BlockListNtlm {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> Vec<IpAddr> {
+        vec![self.src_addr]
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> Vec<IpAddr> {
+        vec![self.dst_addr]
     }
 
     fn dst_port(&self) -> u16 {

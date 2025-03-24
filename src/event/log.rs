@@ -1,9 +1,5 @@
 #![allow(clippy::module_name_repetitions)]
-use std::{
-    fmt,
-    net::{IpAddr, Ipv4Addr},
-    num::NonZeroU8,
-};
+use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
@@ -47,17 +43,18 @@ impl fmt::Display for ExtraThreat {
     }
 }
 
+// Detection events of the log type cannot be filtered by address.
 impl Match for ExtraThreat {
-    fn src_addr(&self) -> IpAddr {
-        IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+    fn src_addrs(&self) -> Vec<IpAddr> {
+        Vec::new()
     }
 
     fn src_port(&self) -> u16 {
         0
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+    fn dst_addrs(&self) -> Vec<IpAddr> {
+        Vec::new()
     }
 
     fn dst_port(&self) -> u16 {
