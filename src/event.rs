@@ -4852,12 +4852,12 @@ mod tests {
         let suspicious_tls_traffic =
             SuspiciousTlsTraffic::new(Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(), fields);
         assert_eq!(
-            suspicious_tls_traffic.src_addr(),
-            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
+            suspicious_tls_traffic.src_addrs(),
+            vec![IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))]
         );
         assert_eq!(
-            suspicious_tls_traffic.dst_addr(),
-            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            suspicious_tls_traffic.dst_addrs(),
+            vec![IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))]
         );
         assert_eq!(suspicious_tls_traffic.category(), EventCategory::Unknown);
         assert_eq!(suspicious_tls_traffic.src_port(), 10000);

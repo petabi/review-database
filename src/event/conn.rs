@@ -1,8 +1,4 @@
-use std::{
-    fmt,
-    net::{IpAddr, Ipv4Addr},
-    num::NonZeroU8,
-};
+use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -82,16 +78,16 @@ impl PortScan {
 }
 
 impl Match for PortScan {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> Vec<IpAddr> {
+        vec![self.src_addr]
     }
 
     fn src_port(&self) -> u16 {
         0
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> Vec<IpAddr> {
+        vec![self.dst_addr]
     }
 
     fn dst_port(&self) -> u16 {
@@ -203,16 +199,16 @@ impl MultiHostPortScan {
 }
 
 impl Match for MultiHostPortScan {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> Vec<IpAddr> {
+        vec![self.src_addr]
     }
 
     fn src_port(&self) -> u16 {
         0
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+    fn dst_addrs(&self) -> Vec<IpAddr> {
+        self.dst_addrs.clone()
     }
 
     fn dst_port(&self) -> u16 {
@@ -319,16 +315,16 @@ impl ExternalDdos {
 }
 
 impl Match for ExternalDdos {
-    fn src_addr(&self) -> IpAddr {
-        IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+    fn src_addrs(&self) -> Vec<IpAddr> {
+        self.src_addrs.clone()
     }
 
     fn src_port(&self) -> u16 {
         0
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> Vec<IpAddr> {
+        vec![self.dst_addr]
     }
 
     fn dst_port(&self) -> u16 {
@@ -485,16 +481,16 @@ impl BlockListConn {
 }
 
 impl Match for BlockListConn {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> Vec<IpAddr> {
+        vec![self.src_addr]
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> Vec<IpAddr> {
+        vec![self.dst_addr]
     }
 
     fn dst_port(&self) -> u16 {

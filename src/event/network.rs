@@ -56,16 +56,16 @@ impl fmt::Display for NetworkThreat {
 }
 
 impl Match for NetworkThreat {
-    fn src_addr(&self) -> IpAddr {
-        self.orig_addr
+    fn src_addrs(&self) -> Vec<IpAddr> {
+        vec![self.orig_addr]
     }
 
     fn src_port(&self) -> u16 {
         self.orig_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.resp_addr
+    fn dst_addrs(&self) -> Vec<IpAddr> {
+        vec![self.resp_addr]
     }
 
     fn dst_port(&self) -> u16 {
