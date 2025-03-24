@@ -95,16 +95,16 @@ impl LdapBruteForce {
 }
 
 impl Match for LdapBruteForce {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         0
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -256,16 +256,16 @@ impl LdapPlainText {
 }
 
 impl Match for LdapPlainText {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -375,16 +375,16 @@ impl BlockListLdap {
 }
 
 impl Match for BlockListLdap {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {

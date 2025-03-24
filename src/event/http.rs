@@ -81,16 +81,16 @@ impl RepeatedHttpSessions {
 }
 
 impl Match for RepeatedHttpSessions {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -368,16 +368,16 @@ impl HttpThreat {
 }
 
 impl Match for HttpThreat {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -634,16 +634,16 @@ impl DomainGenerationAlgorithm {
 }
 
 impl Match for DomainGenerationAlgorithm {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -798,16 +798,16 @@ impl NonBrowser {
 }
 
 impl Match for NonBrowser {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -1035,16 +1035,16 @@ impl BlockListHttp {
 }
 
 impl Match for BlockListHttp {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {

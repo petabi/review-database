@@ -16,10 +16,10 @@ use super::{
 // TODO: Make new Match trait to support Windows Events
 
 pub(super) trait Match {
-    fn src_addr(&self) -> IpAddr;
+    fn src_addrs(&self) -> &[IpAddr];
     #[allow(dead_code)] // for future use
     fn src_port(&self) -> u16;
-    fn dst_addr(&self) -> IpAddr;
+    fn dst_addrs(&self) -> &[IpAddr];
     #[allow(dead_code)] // for future use
     fn dst_port(&self) -> u16;
     #[allow(dead_code)] // for future use
@@ -82,7 +82,13 @@ pub(super) trait Match {
     ) -> Result<(bool, Option<Vec<TriageScore>>)> {
         if let Some(customers) = &filter.customers {
             if customers.iter().all(|customer| {
-                !customer.contains(self.src_addr()) && !customer.contains(self.dst_addr())
+                self.src_addrs()
+                    .iter()
+                    .all(|&src_addr| !customer.contains(src_addr))
+                    && self
+                        .dst_addrs()
+                        .iter()
+                        .all(|&dst_addr| !customer.contains(dst_addr))
             }) {
                 return Ok((false, None));
             }
@@ -90,11 +96,22 @@ pub(super) trait Match {
 
         if let Some(endpoints) = &filter.endpoints {
             if endpoints.iter().all(|endpoint| match endpoint.direction {
-                Some(TrafficDirection::From) => !endpoint.network.contains(self.src_addr()),
-                Some(TrafficDirection::To) => !endpoint.network.contains(self.dst_addr()),
+                Some(TrafficDirection::From) => self
+                    .src_addrs()
+                    .iter()
+                    .all(|&src_addr| !endpoint.network.contains(src_addr)),
+                Some(TrafficDirection::To) => self
+                    .dst_addrs()
+                    .iter()
+                    .all(|&dst_addr| !endpoint.network.contains(dst_addr)),
                 None => {
-                    !endpoint.network.contains(self.src_addr())
-                        && !endpoint.network.contains(self.dst_addr())
+                    self.src_addrs()
+                        .iter()
+                        .all(|&src_addr| !endpoint.network.contains(src_addr))
+                        && self
+                            .dst_addrs()
+                            .iter()
+                            .all(|&dst_addr| !endpoint.network.contains(dst_addr))
                 }
             }) {
                 return Ok((false, None));
@@ -102,20 +119,28 @@ pub(super) trait Match {
         }
 
         if let Some(addr) = filter.source {
-            if self.src_addr() != addr {
+            if self.src_addrs().iter().all(|&src_addr| src_addr != addr) {
                 return Ok((false, None));
             }
         }
 
         if let Some(addr) = filter.destination {
-            if self.dst_addr() != addr {
+            if self.dst_addrs().iter().all(|&dst_addr| dst_addr != addr) {
                 return Ok((false, None));
             }
         }
 
         if let Some((kinds, internal)) = &filter.directions {
-            let internal_src = internal.iter().any(|net| net.contains(self.src_addr()));
-            let internal_dst = internal.iter().any(|net| net.contains(self.dst_addr()));
+            let internal_src = internal.iter().any(|net| {
+                self.src_addrs()
+                    .iter()
+                    .any(|&src_addr| net.contains(src_addr))
+            });
+            let internal_dst = internal.iter().any(|net| {
+                self.dst_addrs()
+                    .iter()
+                    .any(|&dst_addr| net.contains(dst_addr))
+            });
             match (internal_src, internal_dst) {
                 (true, true) => {
                     if !kinds.contains(&FlowKind::Internal) {
@@ -139,8 +164,13 @@ pub(super) trait Match {
         if let Some(countries) = &filter.countries {
             if let Some(locator) = locator {
                 if countries.iter().all(|country| {
-                    !eq_ip_country(locator, self.src_addr(), *country)
-                        && !eq_ip_country(locator, self.dst_addr(), *country)
+                    self.src_addrs()
+                        .iter()
+                        .all(|&src_addr| !eq_ip_country(locator, src_addr, *country))
+                        && self
+                            .dst_addrs()
+                            .iter()
+                            .all(|&dst_addr| !eq_ip_country(locator, dst_addr, *country))
                 }) {
                     return Ok((false, None));
                 }
@@ -303,14 +333,15 @@ mod tests {
         BlockListNfsFields, BlockListNtlm, BlockListNtlmFields, BlockListRdp, BlockListRdpFields,
         BlockListSmb, BlockListSmbFields, BlockListSmtp, BlockListSmtpFields, BlockListSsh,
         BlockListSshFields, BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool,
-        CryptocurrencyMiningPoolFields, DgaFields, DnsCovertChannel, DnsEventFields,
-        DomainGenerationAlgorithm, Event, EventCategory, EventFilter, ExternalDdos,
-        ExternalDdosFields, ExtraThreat, FtpBruteForce, FtpBruteForceFields, FtpEventFields,
-        FtpPlainText, HttpEventFields, HttpThreat, HttpThreatFields, LdapBruteForce,
-        LdapBruteForceFields, LdapEventFields, LdapPlainText, LearningMethod, LockyRansomware,
-        MultiHostPortScan, MultiHostPortScanFields, NetworkThreat, NonBrowser, PortScan,
-        PortScanFields, RdpBruteForce, RdpBruteForceFields, RecordType, RepeatedHttpSessions,
-        RepeatedHttpSessionsFields, SuspiciousTlsTraffic, TorConnection, WindowsThreat,
+        CryptocurrencyMiningPoolFields, Customer, CustomerNetwork, DgaFields, DnsCovertChannel,
+        DnsEventFields, DomainGenerationAlgorithm, Event, EventCategory, EventFilter, ExternalDdos,
+        ExternalDdosFields, ExtraThreat, FlowKind, FtpBruteForce, FtpBruteForceFields,
+        FtpEventFields, FtpPlainText, HostNetworkGroup, HttpEventFields, HttpThreat,
+        HttpThreatFields, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText,
+        LearningMethod, LockyRansomware, MultiHostPortScan, MultiHostPortScanFields, NetworkThreat,
+        NetworkType, NonBrowser, PortScan, PortScanFields, RdpBruteForce, RdpBruteForceFields,
+        RecordType, RepeatedHttpSessions, RepeatedHttpSessionsFields, SuspiciousTlsTraffic,
+        TorConnection, WindowsThreat, types::Endpoint,
     };
 
     #[test]
@@ -570,6 +601,385 @@ mod tests {
                 .iter()
                 .all(|event| event.matches(None, &filter).unwrap().0)
         );
+    }
+
+    #[test]
+    fn filter_events_by_address() {
+        let time = Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap();
+        let mut single_address_events = Vec::new();
+
+        let dns_event = Event::DnsCovertChannel(DnsCovertChannel::new(time, dns_event_fields()));
+        single_address_events.push(dns_event);
+
+        let port_scan_event = Event::PortScan(PortScan::new(time, &port_scan_fields()));
+        single_address_events.push(port_scan_event);
+
+        let locky_ransomware_event =
+            Event::LockyRansomware(LockyRansomware::new(time, dns_event_fields()));
+        single_address_events.push(locky_ransomware_event);
+
+        let crypto_mining_pool_event = Event::CryptocurrencyMiningPool(
+            CryptocurrencyMiningPool::new(time, crypto_miining_pool_fields()),
+        );
+        single_address_events.push(crypto_mining_pool_event);
+
+        let ftp_brute_force_event =
+            Event::FtpBruteForce(FtpBruteForce::new(time, &ftp_brute_force_fields()));
+        single_address_events.push(ftp_brute_force_event);
+
+        let ftp_plain_text_event = Event::FtpPlainText(FtpPlainText::new(time, ftp_event_fields()));
+        single_address_events.push(ftp_plain_text_event);
+
+        let repeated_http_sessions_event = Event::RepeatedHttpSessions(RepeatedHttpSessions::new(
+            time,
+            &repeated_http_sessions_fiedls(),
+        ));
+        single_address_events.push(repeated_http_sessions_event);
+
+        let dga_event =
+            Event::DomainGenerationAlgorithm(DomainGenerationAlgorithm::new(time, dga_fields()));
+        single_address_events.push(dga_event);
+
+        let non_browser_event = Event::NonBrowser(NonBrowser::new(time, &http_event_fields()));
+        single_address_events.push(non_browser_event);
+
+        let ldap_brute_force_event =
+            Event::LdapBruteForce(LdapBruteForce::new(time, &ldap_brute_force_fields()));
+        single_address_events.push(ldap_brute_force_event);
+
+        let ldap_plain_text_event =
+            Event::LdapPlainText(LdapPlainText::new(time, ldap_event_fields()));
+        single_address_events.push(ldap_plain_text_event);
+
+        let suspicious_tls_traffic_event =
+            Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, block_list_tls_fields()));
+        single_address_events.push(suspicious_tls_traffic_event);
+
+        let tor_connection_event =
+            Event::TorConnection(TorConnection::new(time, &http_event_fields()));
+        single_address_events.push(tor_connection_event);
+
+        let block_list_bootp_event = Event::BlockList(RecordType::Bootp(BlockListBootp::new(
+            time,
+            block_list_bootp_fields(),
+        )));
+        single_address_events.push(block_list_bootp_event);
+
+        let block_list_conn_event = Event::BlockList(RecordType::Conn(BlockListConn::new(
+            time,
+            block_list_conn_fields(),
+        )));
+        single_address_events.push(block_list_conn_event);
+
+        let block_list_dcerpc_event = Event::BlockList(RecordType::DceRpc(BlockListDceRpc::new(
+            time,
+            block_list_dcerpc_fields(),
+        )));
+        single_address_events.push(block_list_dcerpc_event);
+
+        let block_list_dhcp_event = Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(
+            time,
+            block_list_dhcp_fields(),
+        )));
+        single_address_events.push(block_list_dhcp_event);
+
+        let block_list_dns_event = Event::BlockList(RecordType::Dns(BlockListDns::new(
+            time,
+            block_list_dns_fields(),
+        )));
+        single_address_events.push(block_list_dns_event);
+
+        let block_list_ftp_event =
+            Event::BlockList(RecordType::Ftp(BlockListFtp::new(time, ftp_event_fields())));
+        single_address_events.push(block_list_ftp_event);
+
+        let block_list_http_event = Event::BlockList(RecordType::Http(BlockListHttp::new(
+            time,
+            block_list_http_fields(),
+        )));
+        single_address_events.push(block_list_http_event);
+
+        let block_list_kerberos_event = Event::BlockList(RecordType::Kerberos(
+            BlockListKerberos::new(time, block_list_kerberos_fields()),
+        ));
+        single_address_events.push(block_list_kerberos_event);
+
+        let block_list_ldap_event = Event::BlockList(RecordType::Ldap(BlockListLdap::new(
+            time,
+            ldap_event_fields(),
+        )));
+        single_address_events.push(block_list_ldap_event);
+
+        let block_list_mqtt_event = Event::BlockList(RecordType::Mqtt(BlockListMqtt::new(
+            time,
+            block_list_mqtt_fields(),
+        )));
+        single_address_events.push(block_list_mqtt_event);
+
+        let block_list_nfs_event = Event::BlockList(RecordType::Nfs(BlockListNfs::new(
+            time,
+            block_list_nfs_fields(),
+        )));
+        single_address_events.push(block_list_nfs_event);
+
+        let block_list_ntlm_event = Event::BlockList(RecordType::Ntlm(BlockListNtlm::new(
+            time,
+            block_list_ntlm_fields(),
+        )));
+        single_address_events.push(block_list_ntlm_event);
+
+        let block_list_rdp_event = Event::BlockList(RecordType::Rdp(BlockListRdp::new(
+            time,
+            block_list_rdp_fields(),
+        )));
+        single_address_events.push(block_list_rdp_event);
+
+        let block_list_smb_event = Event::BlockList(RecordType::Smb(BlockListSmb::new(
+            time,
+            block_list_smb_fields(),
+        )));
+        single_address_events.push(block_list_smb_event);
+
+        let block_list_smtp_event = Event::BlockList(RecordType::Smtp(BlockListSmtp::new(
+            time,
+            block_list_smtp_fields(),
+        )));
+        single_address_events.push(block_list_smtp_event);
+
+        let block_list_ssh_event = Event::BlockList(RecordType::Ssh(BlockListSsh::new(
+            time,
+            block_list_ssh_fields(),
+        )));
+        single_address_events.push(block_list_ssh_event);
+
+        let block_list_tls_event = Event::BlockList(RecordType::Tls(BlockListTls::new(
+            time,
+            block_list_tls_fields(),
+        )));
+        single_address_events.push(block_list_tls_event);
+
+        let http_threat_event = Event::HttpThreat(HttpThreat::new(time, http_threat_fields()));
+        single_address_events.push(http_threat_event);
+
+        let network_threat_event = Event::NetworkThreat(network_threat());
+        single_address_events.push(network_threat_event);
+
+        // Filtering success.
+        let mut success_filter = event_filter();
+        let src_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+        let dst_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2));
+        success_filter.customers = Some(vec![create_customer(src_addr)]);
+        success_filter.endpoints = Some(vec![create_endpoint(src_addr)]);
+        success_filter.source = Some(src_addr);
+        success_filter.destination = Some(dst_addr);
+        success_filter.directions = Some(create_directions(FlowKind::Outbound, src_addr));
+
+        assert!(
+            single_address_events
+                .iter()
+                .all(|event| event.matches(None, &success_filter).unwrap().0)
+        );
+
+        // Filtering fail.
+        let fail_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 10));
+
+        let mut fail_filter = event_filter();
+        fail_filter.customers = Some(vec![create_customer(fail_addr)]);
+        assert!(
+            single_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.endpoints = Some(vec![create_endpoint(fail_addr)]);
+        assert!(
+            single_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.source = Some(fail_addr);
+        assert!(
+            single_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.destination = Some(fail_addr);
+        assert!(
+            single_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.directions = Some(create_directions(FlowKind::Outbound, fail_addr));
+        assert!(
+            single_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut multi_address_events = Vec::new();
+
+        let multi_host_port_scan_event =
+            Event::MultiHostPortScan(MultiHostPortScan::new(time, &multi_host_port_scan_fields()));
+        multi_address_events.push(multi_host_port_scan_event);
+
+        let external_ddos_event =
+            Event::ExternalDdos(ExternalDdos::new(time, &external_ddos_fields()));
+        multi_address_events.push(external_ddos_event);
+
+        let rdp_brute_force_event =
+            Event::RdpBruteForce(RdpBruteForce::new(time, &rdp_brute_force_fields()));
+        multi_address_events.push(rdp_brute_force_event);
+
+        // Filtering success.
+        let mut success_filter = event_filter();
+        let src_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+        let dst_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2));
+        success_filter.customers = Some(vec![create_customer(src_addr)]);
+        success_filter.endpoints = Some(vec![create_endpoint(src_addr)]);
+        success_filter.source = Some(src_addr);
+        success_filter.destination = Some(dst_addr);
+        success_filter.directions = Some(create_directions(FlowKind::Outbound, src_addr));
+
+        assert!(
+            multi_address_events
+                .iter()
+                .all(|event| event.matches(None, &success_filter).unwrap().0)
+        );
+
+        // Filtering fail.
+        let fail_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 10));
+
+        let mut fail_filter = event_filter();
+        fail_filter.customers = Some(vec![create_customer(fail_addr)]);
+        assert!(
+            multi_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.endpoints = Some(vec![create_endpoint(fail_addr)]);
+        assert!(
+            multi_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.source = Some(fail_addr);
+        assert!(
+            multi_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.destination = Some(fail_addr);
+        assert!(
+            multi_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.directions = Some(create_directions(FlowKind::Outbound, fail_addr));
+        assert!(
+            multi_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut no_address_events = Vec::new();
+
+        let extra_threat_event = Event::ExtraThreat(extra_threat());
+        no_address_events.push(extra_threat_event);
+
+        let windows_threat_event = Event::WindowsThreat(windows_threat());
+        no_address_events.push(windows_threat_event);
+
+        // `ExtraThreat`, `WindowsThreat` always fails filtering by address.
+        let fail_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 10));
+
+        let mut fail_filter = event_filter();
+        fail_filter.customers = Some(vec![create_customer(fail_addr)]);
+        assert!(
+            no_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.endpoints = Some(vec![create_endpoint(fail_addr)]);
+        assert!(
+            no_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.source = Some(fail_addr);
+        assert!(
+            no_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.destination = Some(fail_addr);
+        assert!(
+            no_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+
+        let mut fail_filter = event_filter();
+        fail_filter.directions = Some(create_directions(FlowKind::Outbound, fail_addr));
+        assert!(
+            no_address_events
+                .iter()
+                .all(|event| !event.matches(None, &fail_filter).unwrap().0)
+        );
+    }
+
+    fn create_directions(kind: FlowKind, addr: IpAddr) -> (Vec<FlowKind>, Vec<HostNetworkGroup>) {
+        (vec![kind], vec![create_host_network_group(addr)])
+    }
+
+    fn create_endpoint(addr: IpAddr) -> Endpoint {
+        Endpoint {
+            direction: None,
+            network: create_host_network_group(addr),
+        }
+    }
+
+    fn create_customer(addr: IpAddr) -> Customer {
+        Customer {
+            id: u32::MAX,
+            name: "customer".to_string(),
+            description: "description".to_string(),
+            networks: vec![create_customer_network(addr)],
+            creation_time: chrono::Utc::now(),
+        }
+    }
+
+    fn create_customer_network(addr: IpAddr) -> CustomerNetwork {
+        CustomerNetwork {
+            name: "customer network".to_string(),
+            description: "description".to_string(),
+            network_type: NetworkType::Intranet,
+            network_group: create_host_network_group(addr),
+        }
+    }
+
+    fn create_host_network_group(addr: IpAddr) -> HostNetworkGroup {
+        HostNetworkGroup::new(vec![addr], Vec::new(), Vec::new())
     }
 
     fn event_filter() -> EventFilter {
@@ -1011,10 +1421,10 @@ mod tests {
     fn external_ddos_fields() -> ExternalDdosFields {
         ExternalDdosFields {
             src_addrs: vec![
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
             ],
-            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             last_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,

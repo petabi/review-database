@@ -12,6 +12,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `confidence` field to the `BlockListTlsFields`. This change affects the
   `BlockListTls` and `SuspiciousTlsTraffic` events.
 
+### Fixed
+
+- Fixed the ability to filtering detected events by ip address value to work
+  properly. This fix ensures that `ExternalDdos`, `MultiHostPortScan`, and
+  `RdpBruteForce` with multiple addresses are filtered correctly.
+  - Changed the return types of `src_addr` and `dst_addr` in the `Match` trait
+    from `IpAddr` to `&[IpAddr]` to support returning one or more IP addresses.
+  - Renamed the methods to `src_addrs` and `dst_addrs` to reflect the
+    updated functionality.
+
 ## [0.36.0] - 2025-03-18
 
 ### Changed
