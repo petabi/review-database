@@ -171,7 +171,7 @@ impl<'a> Iterator for KeyIndexIterator<'a> {
                 let id = u32::try_from(self.i).expect("not exceeding u32::MAX");
                 self.i += 1;
                 return Some((id, key.as_slice()));
-            };
+            }
             self.i += 1;
         }
     }

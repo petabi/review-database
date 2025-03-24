@@ -351,7 +351,7 @@ fn migrate_0_34_events(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            _ => continue,
+            _ => {}
         }
     }
     Ok(())
@@ -677,7 +677,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            _ => continue,
+            _ => {}
         }
     }
     Ok(())
@@ -761,7 +761,7 @@ fn migrate_event_struct(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            _ => continue,
+            _ => {}
         }
     }
     Ok(())
