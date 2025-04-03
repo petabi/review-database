@@ -149,7 +149,7 @@ impl<'d> Table<'d, Account> {
                     .context("failed to write new entry")?;
             } else {
                 bail!("no such entry");
-            };
+            }
 
             match txn.commit() {
                 Ok(()) => break,

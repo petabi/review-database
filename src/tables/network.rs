@@ -350,7 +350,7 @@ mod test {
 
         let ids: Vec<_> = table
             .iter(Direction::Reverse, None)
-            .filter_map(|res| if let Ok(e) = res { Some(e) } else { None })
+            .filter_map(std::result::Result::ok)
             .map(|e| e.id)
             .collect();
 
