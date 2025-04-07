@@ -1,5 +1,5 @@
 use std::{
-    fmt::{self, Formatter},
+    fmt::{self, Formatter, Write},
     net::IpAddr,
     num::NonZeroU8,
 };
@@ -279,12 +279,11 @@ pub fn to_hardware_address(chaddr: &[u8]) -> String {
     iter.fold(
         {
             let mut addr = String::with_capacity(chaddr.len() * 3 - 1);
-            addr.push_str(&format!("{first:02x}"));
+            let _ = write!(addr, "{first:02x}");
             addr
         },
         |mut addr, byte| {
-            addr.push(':');
-            addr.push_str(&format!("{byte:02x}"));
+            let _ = write!(addr, ":{byte:02x}");
             addr
         },
     )
@@ -931,8 +930,9 @@ mod tests {
             issuer_org_name: "org".to_string(),
             issuer_org_unit_name: "unit".to_string(),
             issuer_common_name: "common".to_string(),
-            category: EventCategory::InitialAccess,
             last_alert: 1,
+            confidence: 0.6,
+            category: EventCategory::InitialAccess,
         }
     }
 
