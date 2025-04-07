@@ -81,11 +81,14 @@ use super::{
 };
 
 // event levels (currently unused ones commented out)
-// const VERY_LOW: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(1) };
-const LOW: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(2) };
-const MEDIUM: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(3) };
-const HIGH: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(4) };
-// const VERY_HIGH: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(5) };
+// const VERY_LOW: NonZeroU8 =NonZeroU8::new(1).expect("eThe constant holds the nonzero value 1, which is always valid");
+const LOW: NonZeroU8 =
+    NonZeroU8::new(2).expect("The constant holds the nonzero value 2, which is always valid");
+const MEDIUM: NonZeroU8 =
+    NonZeroU8::new(3).expect("The constant holds the nonzero value 3, which is always valid");
+const HIGH: NonZeroU8 =
+    NonZeroU8::new(4).expect("The constant holds the nonzero value 4, which is always valid");
+// const VERY_HIGH: NonZeroU8 =NonZeroU8::new(5).expect("The constant holds the nonzero value 5, which is always valid");
 
 // event kind
 const DNS_COVERT_CHANNEL: &str = "DNS Covert Channel";
@@ -4855,12 +4858,12 @@ mod tests {
         let suspicious_tls_traffic =
             SuspiciousTlsTraffic::new(Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(), fields);
         assert_eq!(
-            suspicious_tls_traffic.src_addr(),
-            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
+            suspicious_tls_traffic.src_addrs(),
+            &[IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))]
         );
         assert_eq!(
-            suspicious_tls_traffic.dst_addr(),
-            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            suspicious_tls_traffic.dst_addrs(),
+            &[IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))]
         );
         assert_eq!(suspicious_tls_traffic.category(), EventCategory::Unknown);
         assert_eq!(suspicious_tls_traffic.src_port(), 10000);

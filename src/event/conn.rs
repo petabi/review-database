@@ -1,8 +1,4 @@
-use std::{
-    fmt,
-    net::{IpAddr, Ipv4Addr},
-    num::NonZeroU8,
-};
+use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -82,16 +78,16 @@ impl PortScan {
 }
 
 impl Match for PortScan {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         0
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -203,16 +199,16 @@ impl MultiHostPortScan {
 }
 
 impl Match for MultiHostPortScan {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         0
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+    fn dst_addrs(&self) -> &[IpAddr] {
+        &self.dst_addrs
     }
 
     fn dst_port(&self) -> u16 {
@@ -319,16 +315,16 @@ impl ExternalDdos {
 }
 
 impl Match for ExternalDdos {
-    fn src_addr(&self) -> IpAddr {
-        IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+    fn src_addrs(&self) -> &[IpAddr] {
+        &self.src_addrs
     }
 
     fn src_port(&self) -> u16 {
         0
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -485,16 +481,16 @@ impl BlockListConn {
 }
 
 impl Match for BlockListConn {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {

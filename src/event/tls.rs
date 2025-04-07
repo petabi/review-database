@@ -192,16 +192,16 @@ impl BlockListTls {
 }
 
 impl Match for BlockListTls {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
@@ -355,16 +355,16 @@ impl SuspiciousTlsTraffic {
 }
 
 impl Match for SuspiciousTlsTraffic {
-    fn src_addr(&self) -> IpAddr {
-        self.src_addr
+    fn src_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.src_addr)
     }
 
     fn src_port(&self) -> u16 {
         self.src_port
     }
 
-    fn dst_addr(&self) -> IpAddr {
-        self.dst_addr
+    fn dst_addrs(&self) -> &[IpAddr] {
+        std::slice::from_ref(&self.dst_addr)
     }
 
     fn dst_port(&self) -> u16 {
