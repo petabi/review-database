@@ -7,10 +7,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
+### Changed
 
-- Added `confidence` field to the `BlockListTlsFields` structure to match Hog's
-  structure. This change affects the `BlockListTls` and `SuspiciousTlsTraffic` events.
+- Added `confidence` field to the `BlockListTlsFields`. This change affects the
+  `BlockListTls` and `SuspiciousTlsTraffic` events.
 
 ## [0.36.0] - 2025-03-18
 
