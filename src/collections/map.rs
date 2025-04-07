@@ -126,7 +126,7 @@ impl<'a> Map<'a> {
                 }
             } else {
                 bail!("no such entry");
-            };
+            }
 
             if old.0 != new.0 {
                 txn.delete_cf(self.cf, old.0)

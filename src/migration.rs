@@ -99,7 +99,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.36.0,<0.37.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.37.0-alpha.1,<0.37.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -207,6 +207,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.36.0")?,
             migrate_0_34_0_to_0_36,
         ),
+        (
+            VersionReq::parse(">=0.36.0,<0.37.0-alpha.1")?,
+            Version::parse("0.37.0-alpha.1")?,
+            migrate_0_36_0_to_0_37,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -282,6 +287,43 @@ fn read_version_file(path: &Path) -> Result<Version> {
     Version::parse(&ver).context("cannot parse VERSION")
 }
 
+fn migrate_0_36_0_to_0_37(store: &super::Store) -> Result<()> {
+    migrate_0_37_event_struct(store)
+}
+
+fn migrate_0_37_event_struct(store: &super::Store) -> Result<()> {
+    use migration_structures::BlockListTlsFieldsBeforeV37;
+    use num_traits::FromPrimitive;
+
+    use crate::event::{BlockListTlsFields, EventKind};
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        match event_kind {
+            EventKind::SuspiciousTlsTraffic | EventKind::BlockListTls => {
+                update_event_db_with_new_event::<BlockListTlsFieldsBeforeV37, BlockListTlsFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 fn migrate_0_34_0_to_0_36(store: &super::Store) -> Result<()> {
     migrate_0_36_account(store)
 }
@@ -351,7 +393,7 @@ fn migrate_0_34_events(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            _ => continue,
+            _ => {}
         }
     }
     Ok(())
@@ -500,11 +542,12 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
         BlockListConnBeforeV30, BlockListDnsBeforeV30, BlockListFtpBeforeV30,
         BlockListHttpBeforeV30, BlockListKerberosBeforeV30, BlockListLdapBeforeV30,
         BlockListNtlmBeforeV30, BlockListRdpBeforeV30, BlockListSmtpBeforeV30,
-        BlockListSshBeforeV30, BlockListTlsBeforeV30, CryptocurrencyMiningPoolBeforeV30,
-        DgaBeforeV30, DnsCovertChannelBeforeV30, ExternalDdosBeforeV30, FtpBruteForceBeforeV30,
-        FtpPlainTextBeforeV30, HttpThreatBeforeV30, HttpThreatBeforeV34, LdapBruteForceBeforeV30,
-        LdapPlainTextBeforeV30, MultiHostPortScanBeforeV30, NetworkThreatBeforeV30,
-        NetworkThreatBeforeV34, NonBrowserBeforeV30, PortScanBeforeV30, RdpBruteForceBeforeV30,
+        BlockListSshBeforeV30, BlockListTlsBeforeV30, BlockListTlsFieldsBeforeV37,
+        CryptocurrencyMiningPoolBeforeV30, DgaBeforeV30, DnsCovertChannelBeforeV30,
+        ExternalDdosBeforeV30, FtpBruteForceBeforeV30, FtpPlainTextBeforeV30, HttpThreatBeforeV30,
+        HttpThreatBeforeV34, LdapBruteForceBeforeV30, LdapPlainTextBeforeV30,
+        MultiHostPortScanBeforeV30, NetworkThreatBeforeV30, NetworkThreatBeforeV34,
+        NonBrowserBeforeV30, PortScanBeforeV30, RdpBruteForceBeforeV30,
         RepeatedHttpSessionsBeforeV30, TorConnectionBeforeV30, WindowsThreatBeforeV30,
         WindowsThreatBeforeV34,
     };
@@ -513,10 +556,10 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
     use crate::event::{
         BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
         BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
-        BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventKind,
-        ExternalDdosFields, FtpBruteForceFields, FtpEventFields, HttpEventFields,
-        LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields, PortScanFields,
-        RdpBruteForceFields, RepeatedHttpSessionsFields,
+        CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventKind, ExternalDdosFields,
+        FtpBruteForceFields, FtpEventFields, HttpEventFields, LdapBruteForceFields,
+        LdapEventFields, MultiHostPortScanFields, PortScanFields, RdpBruteForceFields,
+        RepeatedHttpSessionsFields,
     };
 
     let event_db = store.events();
@@ -600,7 +643,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::BlockListTls => {
-                update_event_db_with_new_event::<BlockListTlsBeforeV30, BlockListTlsFields>(
+                update_event_db_with_new_event::<BlockListTlsBeforeV30, BlockListTlsFieldsBeforeV37>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -677,7 +720,7 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            _ => continue,
+            _ => {}
         }
     }
     Ok(())
@@ -761,7 +804,7 @@ fn migrate_event_struct(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            _ => continue,
+            _ => {}
         }
     }
     Ok(())
@@ -4191,5 +4234,97 @@ mod tests {
         let account = res.unwrap();
 
         assert_eq!(account, Some(new_account));
+    }
+
+    #[test]
+    fn migrate_0_36_0_to_0_37() {
+        use std::net::IpAddr;
+
+        use num_traits::FromPrimitive;
+
+        use crate::{EventKind, EventMessage, event::BlockListTlsFields};
+
+        let value = super::migration_structures::BlockListTlsFieldsBeforeV37 {
+            sensor: "sensor_1".to_string(),
+            src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            src_port: 46378,
+            dst_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            last_time: 1,
+            server_name: "server_name".to_string(),
+            alpn_protocol: "alpn_protocol".to_string(),
+            ja3: "ja3".to_string(),
+            version: "version".to_string(),
+            client_cipher_suites: vec![1, 2, 3],
+            client_extensions: vec![1, 2, 3],
+            cipher: 1,
+            extensions: vec![1, 2, 3],
+            ja3s: "ja3".to_string(),
+            serial: "serial".to_string(),
+            subject_country: "subject_country".to_string(),
+            subject_org_name: "subject_org_name".to_string(),
+            subject_common_name: "subject_common_name".to_string(),
+            validity_not_before: 1,
+            validity_not_after: 1,
+            subject_alt_name: "subject_alt_name".to_string(),
+            issuer_country: "issuer_country".to_string(),
+            issuer_org_name: "issuer_org_name".to_string(),
+            issuer_org_unit_name: "issuer_org_unit_name".to_string(),
+            issuer_common_name: "issuer_common_name".to_string(),
+            last_alert: 1,
+            category: crate::EventCategory::InitialAccess,
+        };
+        let message = EventMessage {
+            time: chrono::Utc::now(),
+            kind: EventKind::BlockListTls,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let settings = TestSchema::new();
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let message = EventMessage {
+            time: chrono::Utc::now(),
+            kind: EventKind::SuspiciousTlsTraffic,
+            fields: bincode::serialize(&value).unwrap_or_default(),
+        };
+
+        let settings = TestSchema::new();
+        let event_db = settings.store.events();
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_36_0_to_0_37(&settings.store).is_ok());
+
+        let event_db = settings.store.events();
+        let iter = event_db.raw_iter_forward();
+        for event in iter {
+            let kv = event;
+            assert!(kv.is_ok());
+            let (k, v) = kv.unwrap();
+            let key: [u8; 16] = k.as_ref().try_into().unwrap();
+            let key = i128::from_be_bytes(key);
+            let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+            let event_kind = EventKind::from_i128(kind);
+            assert!(event_kind.is_some());
+            let event_kind = event_kind.unwrap();
+
+            match event_kind {
+                EventKind::SuspiciousTlsTraffic | EventKind::BlockListTls => {
+                    let message = bincode::deserialize::<BlockListTlsFields>(v.as_ref());
+                    assert!(message.is_ok());
+                    let message = message.unwrap();
+                    assert_eq!(message.sensor, value.sensor);
+                    assert_eq!(message.src_addr, value.src_addr);
+                    assert_eq!(format!("{:.1}", message.confidence), "0.0".to_string());
+                    assert_eq!(message.category, value.category);
+                }
+                _ => {}
+            }
+        }
     }
 }

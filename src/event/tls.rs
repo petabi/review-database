@@ -36,13 +36,14 @@ pub struct BlockListTlsFields {
     pub issuer_org_unit_name: String,
     pub issuer_common_name: String,
     pub last_alert: u8,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 impl fmt::Display for BlockListTlsFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} confidence={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -71,6 +72,7 @@ impl fmt::Display for BlockListTlsFields {
             self.issuer_org_unit_name,
             self.issuer_common_name,
             self.last_alert.to_string(),
+            self.confidence.to_string(),
         )
     }
 }
@@ -106,6 +108,7 @@ pub struct BlockListTls {
     pub issuer_org_unit_name: String,
     pub issuer_common_name: String,
     pub last_alert: u8,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -114,7 +117,7 @@ impl fmt::Display for BlockListTls {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -143,6 +146,7 @@ impl fmt::Display for BlockListTls {
             self.issuer_org_unit_name,
             self.issuer_common_name,
             self.last_alert.to_string(),
+            self.confidence.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
@@ -180,6 +184,7 @@ impl BlockListTls {
             issuer_org_unit_name: fields.issuer_org_unit_name,
             issuer_common_name: fields.issuer_common_name,
             last_alert: fields.last_alert,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -224,7 +229,7 @@ impl Match for BlockListTls {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -266,6 +271,7 @@ pub struct SuspiciousTlsTraffic {
     pub issuer_org_unit_name: String,
     pub issuer_common_name: String,
     pub last_alert: u8,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -274,7 +280,7 @@ impl fmt::Display for SuspiciousTlsTraffic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -303,6 +309,7 @@ impl fmt::Display for SuspiciousTlsTraffic {
             self.issuer_org_unit_name,
             self.issuer_common_name,
             self.last_alert.to_string(),
+            self.confidence.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
@@ -340,6 +347,7 @@ impl SuspiciousTlsTraffic {
             issuer_org_unit_name: fields.issuer_org_unit_name,
             issuer_common_name: fields.issuer_common_name,
             last_alert: fields.last_alert,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -384,7 +392,7 @@ impl Match for SuspiciousTlsTraffic {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

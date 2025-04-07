@@ -1324,7 +1324,7 @@ pub struct BlockListTlsBeforeV30 {
     pub last_alert: u8,
 }
 
-impl From<BlockListTlsBeforeV30> for BlockListTlsFields {
+impl From<BlockListTlsBeforeV30> for BlockListTlsFieldsBeforeV37 {
     fn from(input: BlockListTlsBeforeV30) -> Self {
         Self {
             sensor: input.source,
@@ -1355,6 +1355,76 @@ impl From<BlockListTlsBeforeV30> for BlockListTlsFields {
             issuer_org_unit_name: input.issuer_org_unit_name,
             issuer_common_name: input.issuer_common_name,
             last_alert: input.last_alert,
+            category: EventCategory::InitialAccess,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BlockListTlsFieldsBeforeV37 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub last_time: i64,
+    pub server_name: String,
+    pub alpn_protocol: String,
+    pub ja3: String,
+    pub version: String,
+    pub client_cipher_suites: Vec<u16>,
+    pub client_extensions: Vec<u16>,
+    pub cipher: u16,
+    pub extensions: Vec<u16>,
+    pub ja3s: String,
+    pub serial: String,
+    pub subject_country: String,
+    pub subject_org_name: String,
+    pub subject_common_name: String,
+    pub validity_not_before: i64,
+    pub validity_not_after: i64,
+    pub subject_alt_name: String,
+    pub issuer_country: String,
+    pub issuer_org_name: String,
+    pub issuer_org_unit_name: String,
+    pub issuer_common_name: String,
+    pub last_alert: u8,
+    pub category: EventCategory,
+}
+
+impl From<BlockListTlsFieldsBeforeV37> for BlockListTlsFields {
+    fn from(input: BlockListTlsFieldsBeforeV37) -> Self {
+        Self {
+            sensor: input.sensor,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            last_time: input.last_time,
+            server_name: input.server_name,
+            alpn_protocol: input.alpn_protocol,
+            ja3: input.ja3,
+            version: input.version,
+            client_cipher_suites: input.client_cipher_suites,
+            client_extensions: input.client_extensions,
+            cipher: input.cipher,
+            extensions: input.extensions,
+            ja3s: input.ja3s,
+            serial: input.serial,
+            subject_country: input.subject_country,
+            subject_org_name: input.subject_org_name,
+            subject_common_name: input.subject_common_name,
+            validity_not_before: input.validity_not_before,
+            validity_not_after: input.validity_not_after,
+            subject_alt_name: input.subject_alt_name,
+            issuer_country: input.issuer_country,
+            issuer_org_name: input.issuer_org_name,
+            issuer_org_unit_name: input.issuer_org_unit_name,
+            issuer_common_name: input.issuer_common_name,
+            last_alert: input.last_alert,
+            confidence: 0.0,
             category: EventCategory::InitialAccess,
         }
     }
