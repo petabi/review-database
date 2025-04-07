@@ -203,12 +203,12 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_30_to_0_34_0,
         ),
         (
-            VersionReq::parse(">=0.34.0,<0.37.0-alpha")?,
+            VersionReq::parse(">=0.34.0,<0.36.0")?,
             Version::parse("0.36.0")?,
             migrate_0_34_0_to_0_36,
         ),
         (
-            VersionReq::parse(">=0.36.0,<0.37.0-alpha.1")?,
+            VersionReq::parse(">=0.36.0,<0.37.0-alpha")?,
             Version::parse("0.37.0-alpha.1")?,
             migrate_0_36_0_to_0_37,
         ),
