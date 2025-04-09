@@ -306,7 +306,7 @@ impl Match for LdapPlainText {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListLdap {
+pub struct BlocklistLdap {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -326,7 +326,7 @@ pub struct BlockListLdap {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for BlockListLdap {
+impl fmt::Display for BlocklistLdap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -350,7 +350,7 @@ impl fmt::Display for BlockListLdap {
     }
 }
 
-impl BlockListLdap {
+impl BlocklistLdap {
     pub(super) fn new(time: DateTime<Utc>, fields: LdapEventFields) -> Self {
         Self {
             time,
@@ -374,7 +374,7 @@ impl BlockListLdap {
     }
 }
 
-impl Match for BlockListLdap {
+impl Match for BlocklistLdap {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }

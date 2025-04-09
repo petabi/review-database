@@ -7,7 +7,7 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, co
 use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListSshFields {
+pub struct BlocklistSshFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -30,7 +30,7 @@ pub struct BlockListSshFields {
     pub server_shka: String,
     pub category: EventCategory,
 }
-impl fmt::Display for BlockListSshFields {
+impl fmt::Display for BlocklistSshFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -60,7 +60,7 @@ impl fmt::Display for BlockListSshFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListSsh {
+pub struct BlocklistSsh {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -85,7 +85,7 @@ pub struct BlockListSsh {
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-impl fmt::Display for BlockListSsh {
+impl fmt::Display for BlocklistSsh {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -115,8 +115,8 @@ impl fmt::Display for BlockListSsh {
     }
 }
 
-impl BlockListSsh {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListSshFields) -> Self {
+impl BlocklistSsh {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistSshFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -145,7 +145,7 @@ impl BlockListSsh {
     }
 }
 
-impl Match for BlockListSsh {
+impl Match for BlocklistSsh {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }

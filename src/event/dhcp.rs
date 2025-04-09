@@ -7,7 +7,7 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, co
 use crate::event::common::{to_hardware_address, triage_scores_to_string, vector_to_string};
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListDhcpFields {
+pub struct BlocklistDhcpFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -41,7 +41,7 @@ pub struct BlockListDhcpFields {
 //  - 01: MAC address
 //  - XX: Hexdecimal number
 
-impl fmt::Display for BlockListDhcpFields {
+impl fmt::Display for BlocklistDhcpFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -76,7 +76,7 @@ impl fmt::Display for BlockListDhcpFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListDhcp {
+pub struct BlocklistDhcp {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -106,7 +106,7 @@ pub struct BlockListDhcp {
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-impl fmt::Display for BlockListDhcp {
+impl fmt::Display for BlocklistDhcp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -141,8 +141,8 @@ impl fmt::Display for BlockListDhcp {
     }
 }
 
-impl BlockListDhcp {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListDhcpFields) -> Self {
+impl BlocklistDhcp {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistDhcpFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -176,7 +176,7 @@ impl BlockListDhcp {
     }
 }
 
-impl Match for BlockListDhcp {
+impl Match for BlocklistDhcp {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }

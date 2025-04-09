@@ -369,7 +369,7 @@ impl Match for ExternalDdos {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListConnFields {
+pub struct BlocklistConnFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -388,7 +388,7 @@ pub struct BlockListConnFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlockListConnFields {
+impl fmt::Display for BlocklistConnFields {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -413,7 +413,7 @@ impl fmt::Display for BlockListConnFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListConn {
+pub struct BlocklistConn {
     pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -434,7 +434,7 @@ pub struct BlockListConn {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for BlockListConn {
+impl fmt::Display for BlocklistConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -459,8 +459,8 @@ impl fmt::Display for BlockListConn {
     }
 }
 
-impl BlockListConn {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListConnFields) -> Self {
+impl BlocklistConn {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistConnFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -484,7 +484,7 @@ impl BlockListConn {
     }
 }
 
-impl Match for BlockListConn {
+impl Match for BlocklistConn {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }

@@ -9,8 +9,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Added `confidence` field to the `BlockListTlsFields`. This change affects the
-  `BlockListTls` and `SuspiciousTlsTraffic` events.
+- Added `confidence` field to the `BlocklistTlsFields`. This change affects the
+  `BlocklistTls` and `SuspiciousTlsTraffic` events.
 
 ## [0.36.0] - 2025-03-18
 
@@ -48,7 +48,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `Account::theme` field to represent user's selected screen color theme
   on the user interface.
 - Added kind keywords for detailed searching of `RepeatedHttpSessions`,
-  `NonBrowser`,`ExternalDdos`, `CryptocurrencyMiningPool`, `BlockListDceRpc`
+  `NonBrowser`,`ExternalDdos`, `CryptocurrencyMiningPool`, `BlocklistDceRpc`
   detection events.
 
 ### Changed
@@ -164,7 +164,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Added `BlockListBootp`, `BlockListDhcp`, `SuspiciousTlsTraffic` events.
+- Added `BlocklistBootp`, `BlocklistDhcp`, `SuspiciousTlsTraffic` events.
 
 ### Changed
 
@@ -175,7 +175,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Modified all the detected events to use its own category field value
   instead of statically assigned values.
 - Added fields to some detected event structures
-  - `BlockListConn`: `orig_l2_bytes`, `resp_l2_bytes`
+  - `BlocklistConn`: `orig_l2_bytes`, `resp_l2_bytes`
   - `TorConnection`: `orig_filenames`, `orig_mime_types`, `resp_filenames`,
     `resp_mime_types`, `post_body`, `state`
 - Added `update` method in `TrustedDomain`.
@@ -184,8 +184,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   successfully. Previously, the entire platform certificate loading process
   would fail if any certificate failed to load.
 - Combine the detected event structures that share the same fields.
-  - `FtpPlainTextFields`, `BlockListFtpFields` -> `FtpEventFields`
-  - `LdapPlainTextFields`, `BlockListLdapFields` -> `LdapEventFields`
+  - `FtpPlainTextFields`, `BlocklistFtpFields` -> `FtpEventFields`
+  - `LdapPlainTextFields`, `BlocklistLdapFields` -> `LdapEventFields`
   - `TorConnectionFields`, `NonBrowserFields` -> `HttpEventFields`
 
 ### Removed
@@ -728,7 +728,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 
 ### Added
 
-- Added a 'BlockList' event with `dcerpc`, `dns`, `http`, `kerberos`, `ldap`,
+- Added a 'Blocklist' event with `dcerpc`, `dns`, `http`, `kerberos`, `ldap`,
   `mqtt`, `nfs`, `ntlm`, `rdp`, `smb`, `smtp`, `ssh`, `tls` protocol.
 
 ### Fixed

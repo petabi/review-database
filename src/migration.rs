@@ -292,10 +292,10 @@ fn migrate_0_36_0_to_0_37(store: &super::Store) -> Result<()> {
 }
 
 fn migrate_0_37_event_struct(store: &super::Store) -> Result<()> {
-    use migration_structures::BlockListTlsFieldsBeforeV37;
+    use migration_structures::BlocklistTlsFieldsBeforeV37;
     use num_traits::FromPrimitive;
 
-    use crate::event::{BlockListTlsFields, EventKind};
+    use crate::event::{BlocklistTlsFields, EventKind};
 
     let event_db = store.events();
     let iter = event_db.raw_iter_forward();
@@ -313,8 +313,8 @@ fn migrate_0_37_event_struct(store: &super::Store) -> Result<()> {
         };
 
         match event_kind {
-            EventKind::SuspiciousTlsTraffic | EventKind::BlockListTls => {
-                update_event_db_with_new_event::<BlockListTlsFieldsBeforeV37, BlockListTlsFields>(
+            EventKind::SuspiciousTlsTraffic | EventKind::BlocklistTls => {
+                update_event_db_with_new_event::<BlocklistTlsFieldsBeforeV37, BlocklistTlsFields>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -539,10 +539,10 @@ fn migrate_0_30_tidb(store: &super::Store) -> Result<()> {
 
 fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        BlockListConnBeforeV30, BlockListDnsBeforeV30, BlockListFtpBeforeV30,
-        BlockListHttpBeforeV30, BlockListKerberosBeforeV30, BlockListLdapBeforeV30,
-        BlockListNtlmBeforeV30, BlockListRdpBeforeV30, BlockListSmtpBeforeV30,
-        BlockListSshBeforeV30, BlockListTlsBeforeV30, BlockListTlsFieldsBeforeV37,
+        BlocklistConnBeforeV30, BlocklistDnsBeforeV30, BlocklistFtpBeforeV30,
+        BlocklistHttpBeforeV30, BlocklistKerberosBeforeV30, BlocklistLdapBeforeV30,
+        BlocklistNtlmBeforeV30, BlocklistRdpBeforeV30, BlocklistSmtpBeforeV30,
+        BlocklistSshBeforeV30, BlocklistTlsBeforeV30, BlocklistTlsFieldsBeforeV37,
         CryptocurrencyMiningPoolBeforeV30, DgaBeforeV30, DnsCovertChannelBeforeV30,
         ExternalDdosBeforeV30, FtpBruteForceBeforeV30, FtpPlainTextBeforeV30, HttpThreatBeforeV30,
         HttpThreatBeforeV34, LdapBruteForceBeforeV30, LdapPlainTextBeforeV30,
@@ -554,8 +554,8 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
-        BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
+        BlocklistConnFields, BlocklistDnsFields, BlocklistHttpFields, BlocklistKerberosFields,
+        BlocklistNtlmFields, BlocklistRdpFields, BlocklistSmtpFields, BlocklistSshFields,
         CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventKind, ExternalDdosFields,
         FtpBruteForceFields, FtpEventFields, HttpEventFields, LdapBruteForceFields,
         LdapEventFields, MultiHostPortScanFields, PortScanFields, RdpBruteForceFields,
@@ -591,59 +591,59 @@ fn migrate_0_30_event_struct(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListConn => {
-                update_event_db_with_new_event::<BlockListConnBeforeV30, BlockListConnFields>(
+            EventKind::BlocklistConn => {
+                update_event_db_with_new_event::<BlocklistConnBeforeV30, BlocklistConnFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListDns => {
-                update_event_db_with_new_event::<BlockListDnsBeforeV30, BlockListDnsFields>(
+            EventKind::BlocklistDns => {
+                update_event_db_with_new_event::<BlocklistDnsBeforeV30, BlocklistDnsFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListFtp => {
-                update_event_db_with_new_event::<BlockListFtpBeforeV30, FtpEventFields>(
+            EventKind::BlocklistFtp => {
+                update_event_db_with_new_event::<BlocklistFtpBeforeV30, FtpEventFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListHttp => {
-                update_event_db_with_new_event::<BlockListHttpBeforeV30, BlockListHttpFields>(
+            EventKind::BlocklistHttp => {
+                update_event_db_with_new_event::<BlocklistHttpBeforeV30, BlocklistHttpFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListKerberos => {
+            EventKind::BlocklistKerberos => {
                 update_event_db_with_new_event::<
-                    BlockListKerberosBeforeV30,
-                    BlockListKerberosFields,
+                    BlocklistKerberosBeforeV30,
+                    BlocklistKerberosFields,
                 >(&k, &v, &event_db)?;
             }
-            EventKind::BlockListLdap => {
-                update_event_db_with_new_event::<BlockListLdapBeforeV30, LdapEventFields>(
+            EventKind::BlocklistLdap => {
+                update_event_db_with_new_event::<BlocklistLdapBeforeV30, LdapEventFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListNtlm => {
-                update_event_db_with_new_event::<BlockListNtlmBeforeV30, BlockListNtlmFields>(
+            EventKind::BlocklistNtlm => {
+                update_event_db_with_new_event::<BlocklistNtlmBeforeV30, BlocklistNtlmFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListRdp => {
-                update_event_db_with_new_event::<BlockListRdpBeforeV30, BlockListRdpFields>(
+            EventKind::BlocklistRdp => {
+                update_event_db_with_new_event::<BlocklistRdpBeforeV30, BlocklistRdpFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListSmtp => {
-                update_event_db_with_new_event::<BlockListSmtpBeforeV30, BlockListSmtpFields>(
+            EventKind::BlocklistSmtp => {
+                update_event_db_with_new_event::<BlocklistSmtpBeforeV30, BlocklistSmtpFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListSsh => {
-                update_event_db_with_new_event::<BlockListSshBeforeV30, BlockListSshFields>(
+            EventKind::BlocklistSsh => {
+                update_event_db_with_new_event::<BlocklistSshBeforeV30, BlocklistSshFields>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListTls => {
-                update_event_db_with_new_event::<BlockListTlsBeforeV30, BlockListTlsFieldsBeforeV37>(
+            EventKind::BlocklistTls => {
+                update_event_db_with_new_event::<BlocklistTlsBeforeV30, BlocklistTlsFieldsBeforeV37>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -734,10 +734,10 @@ fn migrate_0_28_to_0_29_0(store: &super::Store) -> Result<()> {
 
 fn migrate_event_struct(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        BlockListConnBeforeV29, BlockListConnBeforeV30, BlockListHttpBeforeV29,
-        BlockListHttpBeforeV30, BlockListNtlmBeforeV29, BlockListNtlmBeforeV30,
-        BlockListSmtpBeforeV29, BlockListSmtpBeforeV30, BlockListSshBeforeV29,
-        BlockListSshBeforeV30, BlockListTlsBeforeV29, BlockListTlsBeforeV30, DgaBeforeV29,
+        BlocklistConnBeforeV29, BlocklistConnBeforeV30, BlocklistHttpBeforeV29,
+        BlocklistHttpBeforeV30, BlocklistNtlmBeforeV29, BlocklistNtlmBeforeV30,
+        BlocklistSmtpBeforeV29, BlocklistSmtpBeforeV30, BlocklistSshBeforeV29,
+        BlocklistSshBeforeV30, BlocklistTlsBeforeV29, BlocklistTlsBeforeV30, DgaBeforeV29,
         DgaBeforeV30, HttpThreatBeforeV29, HttpThreatBeforeV30, NonBrowserBeforeV29,
         NonBrowserBeforeV30,
     };
@@ -774,33 +774,33 @@ fn migrate_event_struct(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListHttp => {
-                update_event_db_with_new_event::<BlockListHttpBeforeV29, BlockListHttpBeforeV30>(
+            EventKind::BlocklistHttp => {
+                update_event_db_with_new_event::<BlocklistHttpBeforeV29, BlocklistHttpBeforeV30>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListConn => {
-                update_event_db_with_new_event::<BlockListConnBeforeV29, BlockListConnBeforeV30>(
+            EventKind::BlocklistConn => {
+                update_event_db_with_new_event::<BlocklistConnBeforeV29, BlocklistConnBeforeV30>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListNtlm => {
-                update_event_db_with_new_event::<BlockListNtlmBeforeV29, BlockListNtlmBeforeV30>(
+            EventKind::BlocklistNtlm => {
+                update_event_db_with_new_event::<BlocklistNtlmBeforeV29, BlocklistNtlmBeforeV30>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListSmtp => {
-                update_event_db_with_new_event::<BlockListSmtpBeforeV29, BlockListSmtpBeforeV30>(
+            EventKind::BlocklistSmtp => {
+                update_event_db_with_new_event::<BlocklistSmtpBeforeV29, BlocklistSmtpBeforeV30>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListSsh => {
-                update_event_db_with_new_event::<BlockListSshBeforeV29, BlockListSshBeforeV30>(
+            EventKind::BlocklistSsh => {
+                update_event_db_with_new_event::<BlocklistSshBeforeV29, BlocklistSshBeforeV30>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::BlockListTls => {
-                update_event_db_with_new_event::<BlockListTlsBeforeV29, BlockListTlsBeforeV30>(
+            EventKind::BlocklistTls => {
+                update_event_db_with_new_event::<BlocklistTlsBeforeV29, BlocklistTlsBeforeV30>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -2084,10 +2084,10 @@ mod tests {
         assert_eq!(res.unwrap(), Some(time));
     }
 
-    fn block_list_conn_before_v29() -> super::migration_structures::BlockListConnBeforeV29 {
+    fn block_list_conn_before_v29() -> super::migration_structures::BlocklistConnBeforeV29 {
         use std::net::IpAddr;
 
-        super::migration_structures::BlockListConnBeforeV29 {
+        super::migration_structures::BlocklistConnBeforeV29 {
             source: "source_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -2112,7 +2112,7 @@ mod tests {
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListConn,
+            kind: EventKind::BlocklistConn,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2128,15 +2128,15 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_conn() {
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListConnBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistConnBeforeV30,
         };
 
         let settings = TestSchema::new();
-        let value: BlockListConnBeforeV30 = block_list_conn_before_v29().into();
+        let value: BlocklistConnBeforeV30 = block_list_conn_before_v29().into();
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListConn,
+            kind: EventKind::BlocklistConn,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2156,12 +2156,12 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListDnsBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistDnsBeforeV30,
         };
 
         let settings = TestSchema::new();
         let time = Utc::now();
-        let value = BlockListDnsBeforeV30 {
+        let value = BlocklistDnsBeforeV30 {
             source: "source_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -2185,7 +2185,7 @@ mod tests {
 
         let message = EventMessage {
             time,
-            kind: EventKind::BlockListDns,
+            kind: EventKind::BlocklistDns,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2361,12 +2361,12 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListFtpBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistFtpBeforeV30,
         };
 
         let settings = TestSchema::new();
         let time = Utc::now();
-        let value = BlockListFtpBeforeV30 {
+        let value = BlocklistFtpBeforeV30 {
             source: "source_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -2390,7 +2390,7 @@ mod tests {
 
         let message = EventMessage {
             time,
-            kind: EventKind::BlockListFtp,
+            kind: EventKind::BlocklistFtp,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2479,10 +2479,10 @@ mod tests {
         assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
     }
 
-    fn block_list_http_before_v29() -> super::migration_structures::BlockListHttpBeforeV29 {
+    fn block_list_http_before_v29() -> super::migration_structures::BlocklistHttpBeforeV29 {
         use std::net::IpAddr;
 
-        super::migration_structures::BlockListHttpBeforeV29 {
+        super::migration_structures::BlocklistHttpBeforeV29 {
             source: "source_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -2522,7 +2522,7 @@ mod tests {
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListHttp,
+            kind: EventKind::BlocklistHttp,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2538,15 +2538,15 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_http() {
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListHttpBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistHttpBeforeV30,
         };
 
         let settings = TestSchema::new();
-        let value: BlockListHttpBeforeV30 = block_list_http_before_v29().into();
+        let value: BlocklistHttpBeforeV30 = block_list_http_before_v29().into();
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListHttp,
+            kind: EventKind::BlocklistHttp,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2567,12 +2567,12 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListKerberosBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistKerberosBeforeV30,
         };
 
         let settings = TestSchema::new();
         let time = Utc::now();
-        let value = BlockListKerberosBeforeV30 {
+        let value = BlocklistKerberosBeforeV30 {
             source: "source_1".to_string(),
             src_addr: IpAddr::from_str("127.0.0.1").unwrap(),
             src_port: 46378,
@@ -2593,7 +2593,7 @@ mod tests {
 
         let message = EventMessage {
             time,
-            kind: EventKind::BlockListKerberos,
+            kind: EventKind::BlocklistKerberos,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2614,12 +2614,12 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListLdapBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistLdapBeforeV30,
         };
 
         let settings = TestSchema::new();
         let time = Utc::now();
-        let value = BlockListLdapBeforeV30 {
+        let value = BlocklistLdapBeforeV30 {
             source: "source_1".to_string(),
             src_addr: IpAddr::from_str("127.0.0.1").unwrap(),
             src_port: 46378,
@@ -2638,7 +2638,7 @@ mod tests {
 
         let message = EventMessage {
             time,
-            kind: EventKind::BlockListLdap,
+            kind: EventKind::BlocklistLdap,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2659,12 +2659,12 @@ mod tests {
         use chrono::Utc;
 
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListRdpBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistRdpBeforeV30,
         };
 
         let settings = TestSchema::new();
         let time = Utc::now();
-        let value = BlockListRdpBeforeV30 {
+        let value = BlocklistRdpBeforeV30 {
             source: "source_1".to_string(),
             src_addr: IpAddr::from_str("127.0.0.1").unwrap(),
             src_port: 46378,
@@ -2677,7 +2677,7 @@ mod tests {
 
         let message = EventMessage {
             time,
-            kind: EventKind::BlockListRdp,
+            kind: EventKind::BlocklistRdp,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2690,10 +2690,10 @@ mod tests {
         assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
     }
 
-    fn block_list_ntlm_before_v29() -> super::migration_structures::BlockListNtlmBeforeV29 {
+    fn block_list_ntlm_before_v29() -> super::migration_structures::BlocklistNtlmBeforeV29 {
         use std::net::IpAddr;
 
-        super::migration_structures::BlockListNtlmBeforeV29 {
+        super::migration_structures::BlocklistNtlmBeforeV29 {
             source: "source_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -2720,7 +2720,7 @@ mod tests {
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListNtlm,
+            kind: EventKind::BlocklistNtlm,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2736,15 +2736,15 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_ntlm() {
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListNtlmBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistNtlmBeforeV30,
         };
 
         let settings = TestSchema::new();
-        let value: BlockListNtlmBeforeV30 = block_list_ntlm_before_v29().into();
+        let value: BlocklistNtlmBeforeV30 = block_list_ntlm_before_v29().into();
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListNtlm,
+            kind: EventKind::BlocklistNtlm,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2757,10 +2757,10 @@ mod tests {
         assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
     }
 
-    fn block_list_smtp_before_v29() -> super::migration_structures::BlockListSmtpBeforeV29 {
+    fn block_list_smtp_before_v29() -> super::migration_structures::BlocklistSmtpBeforeV29 {
         use std::net::IpAddr;
 
-        super::migration_structures::BlockListSmtpBeforeV29 {
+        super::migration_structures::BlocklistSmtpBeforeV29 {
             source: "source_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -2786,7 +2786,7 @@ mod tests {
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListSmtp,
+            kind: EventKind::BlocklistSmtp,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2802,15 +2802,15 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_smtp() {
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListSmtpBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistSmtpBeforeV30,
         };
 
         let settings = TestSchema::new();
-        let value: BlockListSmtpBeforeV30 = block_list_smtp_before_v29().into();
+        let value: BlocklistSmtpBeforeV30 = block_list_smtp_before_v29().into();
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListSmtp,
+            kind: EventKind::BlocklistSmtp,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2823,10 +2823,10 @@ mod tests {
         assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
     }
 
-    fn block_list_ssh_before_v29() -> super::migration_structures::BlockListSshBeforeV29 {
+    fn block_list_ssh_before_v29() -> super::migration_structures::BlocklistSshBeforeV29 {
         use std::net::IpAddr;
 
-        super::migration_structures::BlockListSshBeforeV29 {
+        super::migration_structures::BlocklistSshBeforeV29 {
             source: "source_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -2858,7 +2858,7 @@ mod tests {
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListSsh,
+            kind: EventKind::BlocklistSsh,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2874,15 +2874,15 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_ssh() {
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListSshBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistSshBeforeV30,
         };
 
         let settings = TestSchema::new();
-        let value: BlockListSshBeforeV30 = block_list_ssh_before_v29().into();
+        let value: BlocklistSshBeforeV30 = block_list_ssh_before_v29().into();
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListSsh,
+            kind: EventKind::BlocklistSsh,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2895,10 +2895,10 @@ mod tests {
         assert!(super::migrate_0_29_to_0_30_0(&settings.store).is_ok());
     }
 
-    fn block_list_tls_before_v29() -> super::migration_structures::BlockListTlsBeforeV29 {
+    fn block_list_tls_before_v29() -> super::migration_structures::BlocklistTlsBeforeV29 {
         use std::net::IpAddr;
 
-        super::migration_structures::BlockListTlsBeforeV29 {
+        super::migration_structures::BlocklistTlsBeforeV29 {
             source: "source_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -2936,7 +2936,7 @@ mod tests {
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListTls,
+            kind: EventKind::BlocklistTls,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -2952,15 +2952,15 @@ mod tests {
     #[test]
     fn migrate_0_29_to_0_30_block_list_tls() {
         use crate::{
-            EventKind, EventMessage, migration::migration_structures::BlockListTlsBeforeV30,
+            EventKind, EventMessage, migration::migration_structures::BlocklistTlsBeforeV30,
         };
 
         let settings = TestSchema::new();
-        let value: BlockListTlsBeforeV30 = block_list_tls_before_v29().into();
+        let value: BlocklistTlsBeforeV30 = block_list_tls_before_v29().into();
 
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListTls,
+            kind: EventKind::BlocklistTls,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -4242,9 +4242,9 @@ mod tests {
 
         use num_traits::FromPrimitive;
 
-        use crate::{EventKind, EventMessage, event::BlockListTlsFields};
+        use crate::{EventKind, EventMessage, event::BlocklistTlsFields};
 
-        let value = super::migration_structures::BlockListTlsFieldsBeforeV37 {
+        let value = super::migration_structures::BlocklistTlsFieldsBeforeV37 {
             sensor: "sensor_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -4277,7 +4277,7 @@ mod tests {
         };
         let message = EventMessage {
             time: chrono::Utc::now(),
-            kind: EventKind::BlockListTls,
+            kind: EventKind::BlocklistTls,
             fields: bincode::serialize(&value).unwrap_or_default(),
         };
 
@@ -4314,8 +4314,8 @@ mod tests {
             let event_kind = event_kind.unwrap();
 
             match event_kind {
-                EventKind::SuspiciousTlsTraffic | EventKind::BlockListTls => {
-                    let message = bincode::deserialize::<BlockListTlsFields>(v.as_ref());
+                EventKind::SuspiciousTlsTraffic | EventKind::BlocklistTls => {
+                    let message = bincode::deserialize::<BlocklistTlsFields>(v.as_ref());
                     assert!(message.is_ok());
                     let message = message.unwrap();
                     assert_eq!(message.sensor, value.sensor);

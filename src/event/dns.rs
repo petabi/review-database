@@ -529,7 +529,7 @@ impl Match for CryptocurrencyMiningPool {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListDnsFields {
+pub struct BlocklistDnsFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -552,7 +552,7 @@ pub struct BlockListDnsFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlockListDnsFields {
+impl fmt::Display for BlocklistDnsFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -580,7 +580,7 @@ impl fmt::Display for BlockListDnsFields {
     }
 }
 
-pub struct BlockListDns {
+pub struct BlocklistDns {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -605,7 +605,7 @@ pub struct BlockListDns {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for BlockListDns {
+impl fmt::Display for BlocklistDns {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -634,8 +634,8 @@ impl fmt::Display for BlockListDns {
     }
 }
 
-impl BlockListDns {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListDnsFields) -> Self {
+impl BlocklistDns {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistDnsFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -663,7 +663,7 @@ impl BlockListDns {
     }
 }
 
-impl Match for BlockListDns {
+impl Match for BlocklistDns {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }

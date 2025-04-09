@@ -7,7 +7,7 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, co
 use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListNfsFields {
+pub struct BlocklistNfsFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -19,7 +19,7 @@ pub struct BlockListNfsFields {
     pub write_files: Vec<String>,
     pub category: EventCategory,
 }
-impl fmt::Display for BlockListNfsFields {
+impl fmt::Display for BlocklistNfsFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -38,7 +38,7 @@ impl fmt::Display for BlockListNfsFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListNfs {
+pub struct BlocklistNfs {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -52,7 +52,7 @@ pub struct BlockListNfs {
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-impl fmt::Display for BlockListNfs {
+impl fmt::Display for BlocklistNfs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -71,8 +71,8 @@ impl fmt::Display for BlockListNfs {
     }
 }
 
-impl BlockListNfs {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListNfsFields) -> Self {
+impl BlocklistNfs {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistNfsFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -90,7 +90,7 @@ impl BlockListNfs {
     }
 }
 
-impl Match for BlockListNfs {
+impl Match for BlocklistNfs {
     fn src_addr(&self) -> IpAddr {
         self.src_addr
     }

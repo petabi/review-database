@@ -43,36 +43,36 @@ use serde::{Deserialize, Serialize};
 
 use self::common::Match;
 pub use self::{
-    bootp::{BlockListBootp, BlockListBootpFields},
+    bootp::{BlocklistBootp, BlocklistBootpFields},
     common::TriageScore,
     conn::{
-        BlockListConn, BlockListConnFields, ExternalDdos, ExternalDdosFields, MultiHostPortScan,
+        BlocklistConn, BlocklistConnFields, ExternalDdos, ExternalDdosFields, MultiHostPortScan,
         MultiHostPortScanFields, PortScan, PortScanFields,
     },
-    dcerpc::{BlockListDceRpc, BlockListDceRpcFields},
-    dhcp::{BlockListDhcp, BlockListDhcpFields},
+    dcerpc::{BlocklistDceRpc, BlocklistDceRpcFields},
+    dhcp::{BlocklistDhcp, BlocklistDhcpFields},
     dns::{
-        BlockListDns, BlockListDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
+        BlocklistDns, BlocklistDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
         DnsCovertChannel, DnsEventFields, LockyRansomware,
     },
-    ftp::{BlockListFtp, FtpBruteForce, FtpBruteForceFields, FtpEventFields, FtpPlainText},
+    ftp::{BlocklistFtp, FtpBruteForce, FtpBruteForceFields, FtpEventFields, FtpPlainText},
     http::{
-        BlockListHttp, BlockListHttpFields, DgaFields, DomainGenerationAlgorithm, HttpThreat,
+        BlocklistHttp, BlocklistHttpFields, DgaFields, DomainGenerationAlgorithm, HttpThreat,
         HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
     },
-    kerberos::{BlockListKerberos, BlockListKerberosFields},
-    ldap::{BlockListLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
+    kerberos::{BlocklistKerberos, BlocklistKerberosFields},
+    ldap::{BlocklistLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
     log::ExtraThreat,
-    mqtt::{BlockListMqtt, BlockListMqttFields},
+    mqtt::{BlocklistMqtt, BlocklistMqttFields},
     network::NetworkThreat,
-    nfs::{BlockListNfs, BlockListNfsFields},
-    ntlm::{BlockListNtlm, BlockListNtlmFields},
-    rdp::{BlockListRdp, BlockListRdpFields, RdpBruteForce, RdpBruteForceFields},
-    smb::{BlockListSmb, BlockListSmbFields},
-    smtp::{BlockListSmtp, BlockListSmtpFields},
-    ssh::{BlockListSsh, BlockListSshFields},
+    nfs::{BlocklistNfs, BlocklistNfsFields},
+    ntlm::{BlocklistNtlm, BlocklistNtlmFields},
+    rdp::{BlocklistRdp, BlocklistRdpFields, RdpBruteForce, RdpBruteForceFields},
+    smb::{BlocklistSmb, BlocklistSmbFields},
+    smtp::{BlocklistSmtp, BlocklistSmtpFields},
+    ssh::{BlocklistSsh, BlocklistSshFields},
     sysmon::WindowsThreat,
-    tls::{BlockListTls, BlockListTlsFields, SuspiciousTlsTraffic},
+    tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
     tor::{HttpEventFields, TorConnection},
 };
 use super::{
@@ -158,7 +158,7 @@ pub enum Event {
     /// An event that occurs when it is determined that there is a connection to a cryptocurrency mining network
     CryptocurrencyMiningPool(CryptocurrencyMiningPool),
 
-    BlockList(RecordType),
+    Blocklist(RecordType),
 
     WindowsThreat(WindowsThreat),
 
@@ -283,7 +283,7 @@ impl fmt::Display for Event {
                     event.time.to_rfc3339(),
                 )
             }
-            Event::BlockList(record_type) => match record_type {
+            Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(event) => {
                     write!(
                         f,
@@ -444,23 +444,23 @@ impl fmt::Display for Event {
 }
 
 pub enum RecordType {
-    Conn(BlockListConn),
-    Dns(BlockListDns),
-    DceRpc(BlockListDceRpc),
-    Ftp(BlockListFtp),
-    Http(BlockListHttp),
-    Kerberos(BlockListKerberos),
-    Ldap(BlockListLdap),
-    Mqtt(BlockListMqtt),
-    Nfs(BlockListNfs),
-    Ntlm(BlockListNtlm),
-    Rdp(BlockListRdp),
-    Smb(BlockListSmb),
-    Smtp(BlockListSmtp),
-    Ssh(BlockListSsh),
-    Tls(BlockListTls),
-    Bootp(BlockListBootp),
-    Dhcp(BlockListDhcp),
+    Conn(BlocklistConn),
+    Dns(BlocklistDns),
+    DceRpc(BlocklistDceRpc),
+    Ftp(BlocklistFtp),
+    Http(BlocklistHttp),
+    Kerberos(BlocklistKerberos),
+    Ldap(BlocklistLdap),
+    Mqtt(BlocklistMqtt),
+    Nfs(BlocklistNfs),
+    Ntlm(BlocklistNtlm),
+    Rdp(BlocklistRdp),
+    Smb(BlocklistSmb),
+    Smtp(BlocklistSmtp),
+    Ssh(BlocklistSsh),
+    Tls(BlocklistTls),
+    Bootp(BlocklistBootp),
+    Dhcp(BlocklistDhcp),
 }
 
 impl Event {
@@ -492,7 +492,7 @@ impl Event {
             Event::LdapBruteForce(event) => event.matches(locator, filter),
             Event::LdapPlainText(event) => event.matches(locator, filter),
             Event::CryptocurrencyMiningPool(event) => event.matches(locator, filter),
-            Event::BlockList(record_type) => match record_type {
+            Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => bootp_event.matches(locator, filter),
                 RecordType::Conn(conn_event) => conn_event.matches(locator, filter),
                 RecordType::DceRpc(dcerpc_event) => dcerpc_event.matches(locator, filter),
@@ -601,7 +601,7 @@ impl Event {
                     addr_pair = (Some(event.src_addr), Some(event.dst_addr));
                 }
             }
-            Event::BlockList(record_type) => match record_type {
+            Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     if bootp_event.matches(locator, filter)?.0 {
                         addr_pair = (Some(bootp_event.src_addr), Some(bootp_event.dst_addr));
@@ -791,7 +791,7 @@ impl Event {
                     kind = Some(CRYPTOCURRENCY_MINING_POOL);
                 }
             }
-            Event::BlockList(record_type) => match record_type {
+            Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     if bootp_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCK_LIST);
@@ -928,24 +928,24 @@ impl Event {
             Event::CryptocurrencyMiningPool(e) => {
                 (EventKind::CryptocurrencyMiningPool, e.category())
             }
-            Event::BlockList(record_type) => match record_type {
-                RecordType::Bootp(e) => (EventKind::BlockListBootp, e.category()),
-                RecordType::Conn(e) => (EventKind::BlockListConn, e.category()),
-                RecordType::DceRpc(e) => (EventKind::BlockListDceRpc, e.category()),
-                RecordType::Dhcp(e) => (EventKind::BlockListDhcp, e.category()),
-                RecordType::Dns(e) => (EventKind::BlockListDns, e.category()),
-                RecordType::Ftp(e) => (EventKind::BlockListFtp, e.category()),
-                RecordType::Http(e) => (EventKind::BlockListHttp, e.category()),
-                RecordType::Kerberos(e) => (EventKind::BlockListKerberos, e.category()),
-                RecordType::Ldap(e) => (EventKind::BlockListLdap, e.category()),
-                RecordType::Mqtt(e) => (EventKind::BlockListMqtt, e.category()),
-                RecordType::Nfs(e) => (EventKind::BlockListNfs, e.category()),
-                RecordType::Ntlm(e) => (EventKind::BlockListNtlm, e.category()),
-                RecordType::Rdp(e) => (EventKind::BlockListRdp, e.category()),
-                RecordType::Smb(e) => (EventKind::BlockListSmb, e.category()),
-                RecordType::Smtp(e) => (EventKind::BlockListSmtp, e.category()),
-                RecordType::Ssh(e) => (EventKind::BlockListSsh, e.category()),
-                RecordType::Tls(e) => (EventKind::BlockListTls, e.category()),
+            Event::Blocklist(record_type) => match record_type {
+                RecordType::Bootp(e) => (EventKind::BlocklistBootp, e.category()),
+                RecordType::Conn(e) => (EventKind::BlocklistConn, e.category()),
+                RecordType::DceRpc(e) => (EventKind::BlocklistDceRpc, e.category()),
+                RecordType::Dhcp(e) => (EventKind::BlocklistDhcp, e.category()),
+                RecordType::Dns(e) => (EventKind::BlocklistDns, e.category()),
+                RecordType::Ftp(e) => (EventKind::BlocklistFtp, e.category()),
+                RecordType::Http(e) => (EventKind::BlocklistHttp, e.category()),
+                RecordType::Kerberos(e) => (EventKind::BlocklistKerberos, e.category()),
+                RecordType::Ldap(e) => (EventKind::BlocklistLdap, e.category()),
+                RecordType::Mqtt(e) => (EventKind::BlocklistMqtt, e.category()),
+                RecordType::Nfs(e) => (EventKind::BlocklistNfs, e.category()),
+                RecordType::Ntlm(e) => (EventKind::BlocklistNtlm, e.category()),
+                RecordType::Rdp(e) => (EventKind::BlocklistRdp, e.category()),
+                RecordType::Smb(e) => (EventKind::BlocklistSmb, e.category()),
+                RecordType::Smtp(e) => (EventKind::BlocklistSmtp, e.category()),
+                RecordType::Ssh(e) => (EventKind::BlocklistSsh, e.category()),
+                RecordType::Tls(e) => (EventKind::BlocklistTls, e.category()),
             },
             Event::WindowsThreat(e) => (EventKind::WindowsThreat, e.category()),
             Event::NetworkThreat(e) => (EventKind::NetworkThreat, e.category()),
@@ -1085,7 +1085,7 @@ impl Event {
                     category = Some(event.category());
                 }
             }
-            Event::BlockList(record_type) => match record_type {
+            Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     if bootp_event.matches(locator, filter)?.0 {
                         category = Some(bootp_event.category());
@@ -1438,7 +1438,7 @@ impl Event {
                     level = Some(MEDIUM);
                 }
             }
-            Event::BlockList(record_type) => match record_type {
+            Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     if bootp_event.matches(locator, filter)?.0 {
                         level = Some(MEDIUM);
@@ -1635,7 +1635,7 @@ impl Event {
             Event::CryptocurrencyMiningPool(event) => {
                 event.triage_scores = Some(triage_scores);
             }
-            Event::BlockList(record_type) => match record_type {
+            Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     bootp_event.triage_scores = Some(triage_scores);
                 }
@@ -1742,27 +1742,27 @@ pub enum EventKind {
     LdapPlainText,
     ExternalDdos,
     CryptocurrencyMiningPool,
-    BlockListConn,
-    BlockListDns,
-    BlockListDceRpc,
-    BlockListFtp,
-    BlockListHttp,
-    BlockListKerberos,
-    BlockListLdap,
-    BlockListMqtt,
-    BlockListNfs,
-    BlockListNtlm,
-    BlockListRdp,
-    BlockListSmb,
-    BlockListSmtp,
-    BlockListSsh,
-    BlockListTls,
+    BlocklistConn,
+    BlocklistDns,
+    BlocklistDceRpc,
+    BlocklistFtp,
+    BlocklistHttp,
+    BlocklistKerberos,
+    BlocklistLdap,
+    BlocklistMqtt,
+    BlocklistNfs,
+    BlocklistNtlm,
+    BlocklistRdp,
+    BlocklistSmb,
+    BlocklistSmtp,
+    BlocklistSsh,
+    BlocklistTls,
     WindowsThreat,
     NetworkThreat,
     LockyRansomware,
     SuspiciousTlsTraffic,
-    BlockListBootp,
-    BlockListDhcp,
+    BlocklistBootp,
+    BlocklistDhcp,
 }
 
 /// Machine Learning Method.
@@ -1977,43 +1977,43 @@ impl fmt::Display for EventMessage {
                 bincode::deserialize::<CryptocurrencyMiningPoolFields>(&self.fields)
                     .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
-            EventKind::BlockListBootp => bincode::deserialize::<BlockListBootpFields>(&self.fields)
+            EventKind::BlocklistBootp => bincode::deserialize::<BlocklistBootpFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListConn => bincode::deserialize::<BlockListConnFields>(&self.fields)
+            EventKind::BlocklistConn => bincode::deserialize::<BlocklistConnFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListDceRpc => {
-                bincode::deserialize::<BlockListDceRpcFields>(&self.fields)
+            EventKind::BlocklistDceRpc => {
+                bincode::deserialize::<BlocklistDceRpcFields>(&self.fields)
                     .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
-            EventKind::BlockListDhcp => bincode::deserialize::<BlockListDhcpFields>(&self.fields)
+            EventKind::BlocklistDhcp => bincode::deserialize::<BlocklistDhcpFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListDns => bincode::deserialize::<BlockListDnsFields>(&self.fields)
+            EventKind::BlocklistDns => bincode::deserialize::<BlocklistDnsFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListFtp => bincode::deserialize::<FtpEventFields>(&self.fields)
+            EventKind::BlocklistFtp => bincode::deserialize::<FtpEventFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListHttp => bincode::deserialize::<BlockListHttpFields>(&self.fields)
+            EventKind::BlocklistHttp => bincode::deserialize::<BlocklistHttpFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListKerberos => {
-                bincode::deserialize::<BlockListKerberosFields>(&self.fields)
+            EventKind::BlocklistKerberos => {
+                bincode::deserialize::<BlocklistKerberosFields>(&self.fields)
                     .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
-            EventKind::BlockListLdap => bincode::deserialize::<LdapEventFields>(&self.fields)
+            EventKind::BlocklistLdap => bincode::deserialize::<LdapEventFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListMqtt => bincode::deserialize::<BlockListMqttFields>(&self.fields)
+            EventKind::BlocklistMqtt => bincode::deserialize::<BlocklistMqttFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListNfs => bincode::deserialize::<BlockListNfsFields>(&self.fields)
+            EventKind::BlocklistNfs => bincode::deserialize::<BlocklistNfsFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListNtlm => bincode::deserialize::<BlockListNtlmFields>(&self.fields)
+            EventKind::BlocklistNtlm => bincode::deserialize::<BlocklistNtlmFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListRdp => bincode::deserialize::<BlockListRdpFields>(&self.fields)
+            EventKind::BlocklistRdp => bincode::deserialize::<BlocklistRdpFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListSmb => bincode::deserialize::<BlockListSmbFields>(&self.fields)
+            EventKind::BlocklistSmb => bincode::deserialize::<BlocklistSmbFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListSmtp => bincode::deserialize::<BlockListSmtpFields>(&self.fields)
+            EventKind::BlocklistSmtp => bincode::deserialize::<BlocklistSmtpFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListSsh => bincode::deserialize::<BlockListSshFields>(&self.fields)
+            EventKind::BlocklistSsh => bincode::deserialize::<BlocklistSshFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
-            EventKind::BlockListTls => bincode::deserialize::<BlockListTlsFields>(&self.fields)
+            EventKind::BlocklistTls => bincode::deserialize::<BlocklistTlsFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::WindowsThreat => bincode::deserialize::<WindowsThreat>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
@@ -2024,7 +2024,7 @@ impl fmt::Display for EventMessage {
             EventKind::LockyRansomware => bincode::deserialize::<DnsEventFields>(&self.fields)
                 .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
             EventKind::SuspiciousTlsTraffic => {
-                bincode::deserialize::<BlockListTlsFields>(&self.fields)
+                bincode::deserialize::<BlocklistTlsFields>(&self.fields)
                     .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
             }
         };
@@ -2311,157 +2311,157 @@ impl Iterator for EventIterator<'_> {
                     Event::CryptocurrencyMiningPool(CryptocurrencyMiningPool::new(time, fields)),
                 )))
             }
-            EventKind::BlockListBootp => {
-                let Ok(fields) = bincode::deserialize::<BlockListBootpFields>(v.as_ref()) else {
+            EventKind::BlocklistBootp => {
+                let Ok(fields) = bincode::deserialize::<BlocklistBootpFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Bootp(BlockListBootp::new(time, fields))),
+                    Event::Blocklist(RecordType::Bootp(BlocklistBootp::new(time, fields))),
                 )))
             }
-            EventKind::BlockListConn => {
-                let Ok(fields) = bincode::deserialize::<BlockListConnFields>(v.as_ref()) else {
+            EventKind::BlocklistConn => {
+                let Ok(fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Conn(BlockListConn::new(time, fields))),
+                    Event::Blocklist(RecordType::Conn(BlocklistConn::new(time, fields))),
                 )))
             }
-            EventKind::BlockListDceRpc => {
-                let Ok(fields) = bincode::deserialize::<BlockListDceRpcFields>(v.as_ref()) else {
+            EventKind::BlocklistDceRpc => {
+                let Ok(fields) = bincode::deserialize::<BlocklistDceRpcFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::DceRpc(BlockListDceRpc::new(time, fields))),
+                    Event::Blocklist(RecordType::DceRpc(BlocklistDceRpc::new(time, fields))),
                 )))
             }
-            EventKind::BlockListDhcp => {
-                let Ok(fields) = bincode::deserialize::<BlockListDhcpFields>(v.as_ref()) else {
+            EventKind::BlocklistDhcp => {
+                let Ok(fields) = bincode::deserialize::<BlocklistDhcpFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(time, fields))),
+                    Event::Blocklist(RecordType::Dhcp(BlocklistDhcp::new(time, fields))),
                 )))
             }
-            EventKind::BlockListDns => {
-                let Ok(fields) = bincode::deserialize::<BlockListDnsFields>(v.as_ref()) else {
+            EventKind::BlocklistDns => {
+                let Ok(fields) = bincode::deserialize::<BlocklistDnsFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Dns(BlockListDns::new(time, fields))),
+                    Event::Blocklist(RecordType::Dns(BlocklistDns::new(time, fields))),
                 )))
             }
-            EventKind::BlockListFtp => {
+            EventKind::BlocklistFtp => {
                 let Ok(fields) = bincode::deserialize::<FtpEventFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Ftp(BlockListFtp::new(time, fields))),
+                    Event::Blocklist(RecordType::Ftp(BlocklistFtp::new(time, fields))),
                 )))
             }
-            EventKind::BlockListHttp => {
-                let Ok(fields) = bincode::deserialize::<BlockListHttpFields>(v.as_ref()) else {
+            EventKind::BlocklistHttp => {
+                let Ok(fields) = bincode::deserialize::<BlocklistHttpFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Http(BlockListHttp::new(time, fields))),
+                    Event::Blocklist(RecordType::Http(BlocklistHttp::new(time, fields))),
                 )))
             }
-            EventKind::BlockListKerberos => {
-                let Ok(fields) = bincode::deserialize::<BlockListKerberosFields>(v.as_ref()) else {
+            EventKind::BlocklistKerberos => {
+                let Ok(fields) = bincode::deserialize::<BlocklistKerberosFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Kerberos(BlockListKerberos::new(time, fields))),
+                    Event::Blocklist(RecordType::Kerberos(BlocklistKerberos::new(time, fields))),
                 )))
             }
-            EventKind::BlockListLdap => {
+            EventKind::BlocklistLdap => {
                 let Ok(fields) = bincode::deserialize::<LdapEventFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Ldap(BlockListLdap::new(time, fields))),
+                    Event::Blocklist(RecordType::Ldap(BlocklistLdap::new(time, fields))),
                 )))
             }
-            EventKind::BlockListMqtt => {
-                let Ok(fields) = bincode::deserialize::<BlockListMqttFields>(v.as_ref()) else {
+            EventKind::BlocklistMqtt => {
+                let Ok(fields) = bincode::deserialize::<BlocklistMqttFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Mqtt(BlockListMqtt::new(time, fields))),
+                    Event::Blocklist(RecordType::Mqtt(BlocklistMqtt::new(time, fields))),
                 )))
             }
-            EventKind::BlockListNfs => {
-                let Ok(fields) = bincode::deserialize::<BlockListNfsFields>(v.as_ref()) else {
+            EventKind::BlocklistNfs => {
+                let Ok(fields) = bincode::deserialize::<BlocklistNfsFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Nfs(BlockListNfs::new(time, fields))),
+                    Event::Blocklist(RecordType::Nfs(BlocklistNfs::new(time, fields))),
                 )))
             }
-            EventKind::BlockListNtlm => {
-                let Ok(fields) = bincode::deserialize::<BlockListNtlmFields>(v.as_ref()) else {
+            EventKind::BlocklistNtlm => {
+                let Ok(fields) = bincode::deserialize::<BlocklistNtlmFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Ntlm(BlockListNtlm::new(time, fields))),
+                    Event::Blocklist(RecordType::Ntlm(BlocklistNtlm::new(time, fields))),
                 )))
             }
-            EventKind::BlockListRdp => {
-                let Ok(fields) = bincode::deserialize::<BlockListRdpFields>(v.as_ref()) else {
+            EventKind::BlocklistRdp => {
+                let Ok(fields) = bincode::deserialize::<BlocklistRdpFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Rdp(BlockListRdp::new(time, fields))),
+                    Event::Blocklist(RecordType::Rdp(BlocklistRdp::new(time, fields))),
                 )))
             }
-            EventKind::BlockListSmb => {
-                let Ok(fields) = bincode::deserialize::<BlockListSmbFields>(v.as_ref()) else {
+            EventKind::BlocklistSmb => {
+                let Ok(fields) = bincode::deserialize::<BlocklistSmbFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Smb(BlockListSmb::new(time, fields))),
+                    Event::Blocklist(RecordType::Smb(BlocklistSmb::new(time, fields))),
                 )))
             }
-            EventKind::BlockListSmtp => {
-                let Ok(fields) = bincode::deserialize::<BlockListSmtpFields>(v.as_ref()) else {
+            EventKind::BlocklistSmtp => {
+                let Ok(fields) = bincode::deserialize::<BlocklistSmtpFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Smtp(BlockListSmtp::new(time, fields))),
+                    Event::Blocklist(RecordType::Smtp(BlocklistSmtp::new(time, fields))),
                 )))
             }
-            EventKind::BlockListSsh => {
-                let Ok(fields) = bincode::deserialize::<BlockListSshFields>(v.as_ref()) else {
+            EventKind::BlocklistSsh => {
+                let Ok(fields) = bincode::deserialize::<BlocklistSshFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Ssh(BlockListSsh::new(time, fields))),
+                    Event::Blocklist(RecordType::Ssh(BlocklistSsh::new(time, fields))),
                 )))
             }
-            EventKind::BlockListTls => {
-                let Ok(fields) = bincode::deserialize::<BlockListTlsFields>(v.as_ref()) else {
+            EventKind::BlocklistTls => {
+                let Ok(fields) = bincode::deserialize::<BlocklistTlsFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
                     key,
-                    Event::BlockList(RecordType::Tls(BlockListTls::new(time, fields))),
+                    Event::Blocklist(RecordType::Tls(BlocklistTls::new(time, fields))),
                 )))
             }
             EventKind::WindowsThreat => {
@@ -2492,7 +2492,7 @@ impl Iterator for EventIterator<'_> {
                 )))
             }
             EventKind::SuspiciousTlsTraffic => {
-                let Ok(fields) = bincode::deserialize::<BlockListTlsFields>(v.as_ref()) else {
+                let Ok(fields) = bincode::deserialize::<BlocklistTlsFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((
@@ -2586,11 +2586,11 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use crate::{
-        BlockListBootp, BlockListBootpFields, BlockListConnFields, BlockListDceRpcFields,
-        BlockListDhcp, BlockListDhcpFields, BlockListDnsFields, BlockListHttp, BlockListHttpFields,
-        BlockListKerberosFields, BlockListMqttFields, BlockListNfsFields, BlockListNtlmFields,
-        BlockListRdpFields, BlockListSmbFields, BlockListSmtpFields, BlockListSshFields,
-        BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields,
+        BlocklistBootp, BlocklistBootpFields, BlocklistConnFields, BlocklistDceRpcFields,
+        BlocklistDhcp, BlocklistDhcpFields, BlocklistDnsFields, BlocklistHttp, BlocklistHttpFields,
+        BlocklistKerberosFields, BlocklistMqttFields, BlocklistNfsFields, BlocklistNtlmFields,
+        BlocklistRdpFields, BlocklistSmbFields, BlocklistSmtpFields, BlocklistSshFields,
+        BlocklistTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields,
         DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
         ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
         HttpThreat, HttpThreatFields, LdapBruteForceFields, LdapEventFields,
@@ -2967,7 +2967,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_http() {
-        let fields = BlockListHttpFields {
+        let fields = BlocklistHttpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -3002,17 +3002,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
-            kind: EventKind::BlockListHttp,
+            kind: EventKind::BlocklistHttp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlockListHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" last_time="600" method="GET" host="example.com" uri="/uri/path" referrer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlocklistHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" last_time="600" method="GET" host="example.com" uri="/uri/path" referrer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="""#
         );
 
-        let blocklist_http = Event::BlockList(RecordType::Http(BlockListHttp::new(
+        let blocklist_http = Event::Blocklist(RecordType::Http(BlocklistHttp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             fields,
         )))
@@ -3181,8 +3181,8 @@ mod tests {
         );
     }
 
-    fn blocklist_bootp_fields() -> BlockListBootpFields {
-        BlockListBootpFields {
+    fn blocklist_bootp_fields() -> BlocklistBootpFields {
+        BlocklistBootpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 68,
@@ -3211,16 +3211,16 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListBootp,
+            kind: EventKind::BlocklistBootp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name""#,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name""#,
         );
-        let block_list_bootp = Event::BlockList(RecordType::Bootp(BlockListBootp::new(
+        let block_list_bootp = Event::Blocklist(RecordType::Bootp(BlocklistBootp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -3228,7 +3228,7 @@ mod tests {
 
         assert_eq!(
             &block_list_bootp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" triage_scores="""#
         );
     }
 
@@ -3242,7 +3242,7 @@ mod tests {
         let fields = blocklist_bootp_fields();
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListBootp,
+            kind: EventKind::BlocklistBootp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
@@ -3302,7 +3302,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_conn() {
-        let fields = BlockListConnFields {
+        let fields = BlocklistConnFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -3323,30 +3323,30 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListConn,
+            kind: EventKind::BlocklistConn,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122""#
         );
 
-        let block_list_conn = Event::BlockList(RecordType::Conn(crate::BlockListConn::new(
+        let block_list_conn = Event::Blocklist(RecordType::Conn(crate::BlocklistConn::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
         .to_string();
         assert_eq!(
             &block_list_conn,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_dcerpc() {
-        let fields = BlockListDceRpcFields {
+        let fields = BlocklistDceRpcFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -3363,29 +3363,29 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListDceRpc,
+            kind: EventKind::BlocklistDceRpc,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" last_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" last_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind""#
         );
 
-        let block_list_dce_rpc = Event::BlockList(RecordType::DceRpc(crate::BlockListDceRpc::new(
+        let block_list_dce_rpc = Event::Blocklist(RecordType::DceRpc(crate::BlocklistDceRpc::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
         .to_string();
         assert_eq!(
             &block_list_dce_rpc,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" last_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" last_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" triage_scores="""#
         );
     }
 
-    fn blocklist_dhcp_fields() -> BlockListDhcpFields {
-        BlockListDhcpFields {
+    fn blocklist_dhcp_fields() -> BlocklistDhcpFields {
+        BlocklistDhcpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::from_str("127.0.0.1").unwrap(),
             src_port: 68,
@@ -3421,16 +3421,16 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListDhcp,
+            kind: EventKind::BlocklistDhcp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09""#,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09""#,
         );
 
-        let block_list_dhcp = Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(
+        let block_list_dhcp = Event::Blocklist(RecordType::Dhcp(BlocklistDhcp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -3438,7 +3438,7 @@ mod tests {
 
         assert_eq!(
             &block_list_dhcp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09" triage_scores="""#
         );
     }
 
@@ -3452,7 +3452,7 @@ mod tests {
         let fields = blocklist_dhcp_fields();
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListDhcp,
+            kind: EventKind::BlocklistDhcp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
@@ -3617,7 +3617,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_dns() {
-        let fields = BlockListDnsFields {
+        let fields = BlocklistDnsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -3642,23 +3642,23 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListDns,
+            kind: EventKind::BlocklistDns,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" last_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" last_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120""#
         );
-        let block_list_dns = Event::BlockList(RecordType::Dns(crate::BlockListDns::new(
+        let block_list_dns = Event::Blocklist(RecordType::Dns(crate::BlocklistDns::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
         .to_string();
         assert_eq!(
             &block_list_dns,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" last_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" last_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" triage_scores="""#
         );
     }
 
@@ -3779,17 +3779,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListFtp,
+            kind: EventKind::BlocklistFtp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123""#
         );
 
-        let block_list_ftp = Event::BlockList(RecordType::Ftp(crate::BlockListFtp::new(
+        let block_list_ftp = Event::Blocklist(RecordType::Ftp(crate::BlocklistFtp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -3797,7 +3797,7 @@ mod tests {
 
         assert_eq!(
             &block_list_ftp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" triage_scores="""#
         );
     }
 
@@ -3811,7 +3811,7 @@ mod tests {
         let fields = ftpeventfields();
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListFtp,
+            kind: EventKind::BlocklistFtp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
@@ -3905,7 +3905,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_kerberos() {
-        let fields = BlockListKerberosFields {
+        let fields = BlocklistKerberosFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -3927,18 +3927,18 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListKerberos,
+            kind: EventKind::BlocklistKerberos,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" last_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" last_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM""#
         );
 
         let block_list_kerberos =
-            Event::BlockList(RecordType::Kerberos(crate::BlockListKerberos::new(
+            Event::Blocklist(RecordType::Kerberos(crate::BlocklistKerberos::new(
                 Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
                 fields,
             )))
@@ -3946,7 +3946,7 @@ mod tests {
 
         assert_eq!(
             &block_list_kerberos,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" last_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" last_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" triage_scores="""#
         );
     }
 
@@ -4060,17 +4060,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListLdap,
+            kind: EventKind::BlocklistLdap,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument""#
         );
 
-        let block_list_ldap = Event::BlockList(RecordType::Ldap(crate::BlockListLdap::new(
+        let block_list_ldap = Event::Blocklist(RecordType::Ldap(crate::BlocklistLdap::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4078,7 +4078,7 @@ mod tests {
 
         assert_eq!(
             &block_list_ldap,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
         );
     }
 
@@ -4092,7 +4092,7 @@ mod tests {
         let fields = ldapeventfields();
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListLdap,
+            kind: EventKind::BlocklistLdap,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
@@ -4182,7 +4182,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_mqtt() {
-        let fields = BlockListMqttFields {
+        let fields = BlocklistMqttFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4201,17 +4201,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListMqtt,
+            kind: EventKind::BlocklistMqtt,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" last_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" last_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error""#
         );
 
-        let block_list_mqtt = Event::BlockList(RecordType::Mqtt(crate::BlockListMqtt::new(
+        let block_list_mqtt = Event::Blocklist(RecordType::Mqtt(crate::BlocklistMqtt::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4219,7 +4219,7 @@ mod tests {
 
         assert_eq!(
             &block_list_mqtt,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" last_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" last_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" triage_scores="""#
         );
     }
 
@@ -4261,7 +4261,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_nfs() {
-        let fields = BlockListNfsFields {
+        let fields = BlocklistNfsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4276,17 +4276,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListNfs,
+            kind: EventKind::BlocklistNfs,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" last_time="100" read_files="/etc/passwd" write_files="/etc/shadow""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" last_time="100" read_files="/etc/passwd" write_files="/etc/shadow""#
         );
 
-        let block_list_nfs = Event::BlockList(RecordType::Nfs(crate::BlockListNfs::new(
+        let block_list_nfs = Event::Blocklist(RecordType::Nfs(crate::BlocklistNfs::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4294,13 +4294,13 @@ mod tests {
 
         assert_eq!(
             &block_list_nfs,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" last_time="100" read_files="/etc/passwd" write_files="/etc/shadow" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" last_time="100" read_files="/etc/passwd" write_files="/etc/shadow" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_ntlm() {
-        let fields = BlockListNtlmFields {
+        let fields = BlocklistNtlmFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4318,17 +4318,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListNtlm,
+            kind: EventKind::BlocklistNtlm,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true""#
         );
 
-        let block_list_ntlm = Event::BlockList(RecordType::Ntlm(crate::BlockListNtlm::new(
+        let block_list_ntlm = Event::Blocklist(RecordType::Ntlm(crate::BlocklistNtlm::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4336,7 +4336,7 @@ mod tests {
 
         assert_eq!(
             &block_list_ntlm,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" triage_scores="""#
         );
     }
 
@@ -4380,7 +4380,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_rdp() {
-        let fields = BlockListRdpFields {
+        let fields = BlocklistRdpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4394,17 +4394,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListRdp,
+            kind: EventKind::BlocklistRdp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" last_time="100" cookie="cookie""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" last_time="100" cookie="cookie""#
         );
 
-        let block_list_rdp = Event::BlockList(RecordType::Rdp(crate::BlockListRdp::new(
+        let block_list_rdp = Event::Blocklist(RecordType::Rdp(crate::BlocklistRdp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4412,13 +4412,13 @@ mod tests {
 
         assert_eq!(
             &block_list_rdp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" last_time="100" cookie="cookie" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" last_time="100" cookie="cookie" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_smb() {
-        let fields = BlockListSmbFields {
+        let fields = BlocklistSmbFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4442,17 +4442,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListSmb,
+            kind: EventKind::BlocklistSmb,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400""#
         );
 
-        let block_list_smb = Event::BlockList(RecordType::Smb(crate::BlockListSmb::new(
+        let block_list_smb = Event::Blocklist(RecordType::Smb(crate::BlocklistSmb::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4460,13 +4460,13 @@ mod tests {
 
         assert_eq!(
             &block_list_smb,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_smtp() {
-        let fields = BlockListSmtpFields {
+        let fields = BlocklistSmtpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4486,17 +4486,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListSmtp,
+            kind: EventKind::BlocklistSmtp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" last_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" last_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state""#
         );
 
-        let block_list_smtp = Event::BlockList(RecordType::Smtp(crate::BlockListSmtp::new(
+        let block_list_smtp = Event::Blocklist(RecordType::Smtp(crate::BlocklistSmtp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4504,13 +4504,13 @@ mod tests {
 
         assert_eq!(
             &block_list_smtp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" last_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" last_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_ssh() {
-        let fields = BlockListSshFields {
+        let fields = BlocklistSshFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4536,17 +4536,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListSsh,
+            kind: EventKind::BlocklistSsh,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" last_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" last_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka""#
         );
 
-        let block_list_ssh = Event::BlockList(RecordType::Ssh(crate::BlockListSsh::new(
+        let block_list_ssh = Event::Blocklist(RecordType::Ssh(crate::BlocklistSsh::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4554,7 +4554,7 @@ mod tests {
 
         assert_eq!(
             &block_list_ssh,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" last_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" last_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" triage_scores="""#
         );
     }
 
@@ -4612,7 +4612,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_tls() {
-        let fields = BlockListTlsFields {
+        let fields = BlocklistTlsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -4647,17 +4647,17 @@ mod tests {
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlockListTls,
+            kind: EventKind::BlocklistTls,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
         let syslog_message = message.to_string();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
         );
 
-        let block_list_tls = Event::BlockList(RecordType::Tls(crate::BlockListTls::new(
+        let block_list_tls = Event::Blocklist(RecordType::Tls(crate::BlocklistTls::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4665,7 +4665,7 @@ mod tests {
 
         assert_eq!(
             &block_list_tls,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlockListTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
         );
     }
 
@@ -4800,8 +4800,8 @@ mod tests {
         );
     }
 
-    fn blocklist_tls_fields() -> BlockListTlsFields {
-        BlockListTlsFields {
+    fn blocklist_tls_fields() -> BlocklistTlsFields {
+        BlocklistTlsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
