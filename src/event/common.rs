@@ -326,13 +326,13 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use crate::{
-        BlockListBootp, BlockListBootpFields, BlockListConn, BlockListConnFields, BlockListDceRpc,
-        BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields, BlockListDns,
-        BlockListDnsFields, BlockListFtp, BlockListHttp, BlockListHttpFields, BlockListKerberos,
-        BlockListKerberosFields, BlockListLdap, BlockListMqtt, BlockListMqttFields, BlockListNfs,
-        BlockListNfsFields, BlockListNtlm, BlockListNtlmFields, BlockListRdp, BlockListRdpFields,
-        BlockListSmb, BlockListSmbFields, BlockListSmtp, BlockListSmtpFields, BlockListSsh,
-        BlockListSshFields, BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool,
+        BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields, BlocklistDceRpc,
+        BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields, BlocklistDns,
+        BlocklistDnsFields, BlocklistFtp, BlocklistHttp, BlocklistHttpFields, BlocklistKerberos,
+        BlocklistKerberosFields, BlocklistLdap, BlocklistMqtt, BlocklistMqttFields, BlocklistNfs,
+        BlocklistNfsFields, BlocklistNtlm, BlocklistNtlmFields, BlocklistRdp, BlocklistRdpFields,
+        BlocklistSmb, BlocklistSmbFields, BlocklistSmtp, BlocklistSmtpFields, BlocklistSsh,
+        BlocklistSshFields, BlocklistTls, BlocklistTlsFields, CryptocurrencyMiningPool,
         CryptocurrencyMiningPoolFields, Customer, CustomerNetwork, DgaFields, DnsCovertChannel,
         DnsEventFields, DomainGenerationAlgorithm, Event, EventCategory, EventFilter, ExternalDdos,
         ExternalDdosFields, ExtraThreat, FlowKind, FtpBruteForce, FtpBruteForceFields,
@@ -418,111 +418,111 @@ mod tests {
         semi_supervised_events.push(rdp_brute_force_event);
 
         let suspicious_tls_traffic_event =
-            Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, block_list_tls_fields()));
+            Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, blocklist_tls_fields()));
         semi_supervised_events.push(suspicious_tls_traffic_event);
 
         let tor_connection_event =
             Event::TorConnection(TorConnection::new(time, &http_event_fields()));
         semi_supervised_events.push(tor_connection_event);
 
-        let block_list_bootp_event = Event::BlockList(RecordType::Bootp(BlockListBootp::new(
+        let blocklist_bootp_event = Event::Blocklist(RecordType::Bootp(BlocklistBootp::new(
             time,
-            block_list_bootp_fields(),
+            blocklist_bootp_fields(),
         )));
-        semi_supervised_events.push(block_list_bootp_event);
+        semi_supervised_events.push(blocklist_bootp_event);
 
-        let block_list_conn_event = Event::BlockList(RecordType::Conn(BlockListConn::new(
+        let blocklist_conn_event = Event::Blocklist(RecordType::Conn(BlocklistConn::new(
             time,
-            block_list_conn_fields(),
+            blocklist_conn_fields(),
         )));
-        semi_supervised_events.push(block_list_conn_event);
+        semi_supervised_events.push(blocklist_conn_event);
 
-        let block_list_dcerpc_event = Event::BlockList(RecordType::DceRpc(BlockListDceRpc::new(
+        let blocklist_dcerpc_event = Event::Blocklist(RecordType::DceRpc(BlocklistDceRpc::new(
             time,
-            block_list_dcerpc_fields(),
+            blocklist_dcerpc_fields(),
         )));
-        semi_supervised_events.push(block_list_dcerpc_event);
+        semi_supervised_events.push(blocklist_dcerpc_event);
 
-        let block_list_dhcp_event = Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(
+        let blocklist_dhcp_event = Event::Blocklist(RecordType::Dhcp(BlocklistDhcp::new(
             time,
-            block_list_dhcp_fields(),
+            blocklist_dhcp_fields(),
         )));
-        semi_supervised_events.push(block_list_dhcp_event);
+        semi_supervised_events.push(blocklist_dhcp_event);
 
-        let block_list_dns_event = Event::BlockList(RecordType::Dns(BlockListDns::new(
+        let blocklist_dns_event = Event::Blocklist(RecordType::Dns(BlocklistDns::new(
             time,
-            block_list_dns_fields(),
+            blocklist_dns_fields(),
         )));
-        semi_supervised_events.push(block_list_dns_event);
+        semi_supervised_events.push(blocklist_dns_event);
 
-        let block_list_ftp_event =
-            Event::BlockList(RecordType::Ftp(BlockListFtp::new(time, ftp_event_fields())));
-        semi_supervised_events.push(block_list_ftp_event);
+        let blocklist_ftp_event =
+            Event::Blocklist(RecordType::Ftp(BlocklistFtp::new(time, ftp_event_fields())));
+        semi_supervised_events.push(blocklist_ftp_event);
 
-        let block_list_http_event = Event::BlockList(RecordType::Http(BlockListHttp::new(
+        let blocklist_http_event = Event::Blocklist(RecordType::Http(BlocklistHttp::new(
             time,
-            block_list_http_fields(),
+            blocklist_http_fields(),
         )));
-        semi_supervised_events.push(block_list_http_event);
+        semi_supervised_events.push(blocklist_http_event);
 
-        let block_list_kerberos_event = Event::BlockList(RecordType::Kerberos(
-            BlockListKerberos::new(time, block_list_kerberos_fields()),
+        let blocklist_kerberos_event = Event::Blocklist(RecordType::Kerberos(
+            BlocklistKerberos::new(time, blocklist_kerberos_fields()),
         ));
-        semi_supervised_events.push(block_list_kerberos_event);
+        semi_supervised_events.push(blocklist_kerberos_event);
 
-        let block_list_ldap_event = Event::BlockList(RecordType::Ldap(BlockListLdap::new(
+        let blocklist_ldap_event = Event::Blocklist(RecordType::Ldap(BlocklistLdap::new(
             time,
             ldap_event_fields(),
         )));
-        semi_supervised_events.push(block_list_ldap_event);
+        semi_supervised_events.push(blocklist_ldap_event);
 
-        let block_list_mqtt_event = Event::BlockList(RecordType::Mqtt(BlockListMqtt::new(
+        let blocklist_mqtt_event = Event::Blocklist(RecordType::Mqtt(BlocklistMqtt::new(
             time,
-            block_list_mqtt_fields(),
+            blocklist_mqtt_fields(),
         )));
-        semi_supervised_events.push(block_list_mqtt_event);
+        semi_supervised_events.push(blocklist_mqtt_event);
 
-        let block_list_nfs_event = Event::BlockList(RecordType::Nfs(BlockListNfs::new(
+        let blocklist_nfs_event = Event::Blocklist(RecordType::Nfs(BlocklistNfs::new(
             time,
-            block_list_nfs_fields(),
+            blocklist_nfs_fields(),
         )));
-        semi_supervised_events.push(block_list_nfs_event);
+        semi_supervised_events.push(blocklist_nfs_event);
 
-        let block_list_ntlm_event = Event::BlockList(RecordType::Ntlm(BlockListNtlm::new(
+        let blocklist_ntlm_event = Event::Blocklist(RecordType::Ntlm(BlocklistNtlm::new(
             time,
-            block_list_ntlm_fields(),
+            blocklist_ntlm_fields(),
         )));
-        semi_supervised_events.push(block_list_ntlm_event);
+        semi_supervised_events.push(blocklist_ntlm_event);
 
-        let block_list_rdp_event = Event::BlockList(RecordType::Rdp(BlockListRdp::new(
+        let blocklist_rdp_event = Event::Blocklist(RecordType::Rdp(BlocklistRdp::new(
             time,
-            block_list_rdp_fields(),
+            blocklist_rdp_fields(),
         )));
-        semi_supervised_events.push(block_list_rdp_event);
+        semi_supervised_events.push(blocklist_rdp_event);
 
-        let block_list_smb_event = Event::BlockList(RecordType::Smb(BlockListSmb::new(
+        let blocklist_smb_event = Event::Blocklist(RecordType::Smb(BlocklistSmb::new(
             time,
-            block_list_smb_fields(),
+            blocklist_smb_fields(),
         )));
-        semi_supervised_events.push(block_list_smb_event);
+        semi_supervised_events.push(blocklist_smb_event);
 
-        let block_list_smtp_event = Event::BlockList(RecordType::Smtp(BlockListSmtp::new(
+        let blocklist_smtp_event = Event::Blocklist(RecordType::Smtp(BlocklistSmtp::new(
             time,
-            block_list_smtp_fields(),
+            blocklist_smtp_fields(),
         )));
-        semi_supervised_events.push(block_list_smtp_event);
+        semi_supervised_events.push(blocklist_smtp_event);
 
-        let block_list_ssh_event = Event::BlockList(RecordType::Ssh(BlockListSsh::new(
+        let blocklist_ssh_event = Event::Blocklist(RecordType::Ssh(BlocklistSsh::new(
             time,
-            block_list_ssh_fields(),
+            blocklist_ssh_fields(),
         )));
-        semi_supervised_events.push(block_list_ssh_event);
+        semi_supervised_events.push(blocklist_ssh_event);
 
-        let block_list_tls_event = Event::BlockList(RecordType::Tls(BlockListTls::new(
+        let blocklist_tls_event = Event::Blocklist(RecordType::Tls(BlocklistTls::new(
             time,
-            block_list_tls_fields(),
+            blocklist_tls_fields(),
         )));
-        semi_supervised_events.push(block_list_tls_event);
+        semi_supervised_events.push(blocklist_tls_event);
 
         let mut filter = event_filter();
 
@@ -652,111 +652,111 @@ mod tests {
         single_address_events.push(ldap_plain_text_event);
 
         let suspicious_tls_traffic_event =
-            Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, block_list_tls_fields()));
+            Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, blocklist_tls_fields()));
         single_address_events.push(suspicious_tls_traffic_event);
 
         let tor_connection_event =
             Event::TorConnection(TorConnection::new(time, &http_event_fields()));
         single_address_events.push(tor_connection_event);
 
-        let block_list_bootp_event = Event::BlockList(RecordType::Bootp(BlockListBootp::new(
+        let blocklist_bootp_event = Event::Blocklist(RecordType::Bootp(BlocklistBootp::new(
             time,
-            block_list_bootp_fields(),
+            blocklist_bootp_fields(),
         )));
-        single_address_events.push(block_list_bootp_event);
+        single_address_events.push(blocklist_bootp_event);
 
-        let block_list_conn_event = Event::BlockList(RecordType::Conn(BlockListConn::new(
+        let blocklist_conn_event = Event::Blocklist(RecordType::Conn(BlocklistConn::new(
             time,
-            block_list_conn_fields(),
+            blocklist_conn_fields(),
         )));
-        single_address_events.push(block_list_conn_event);
+        single_address_events.push(blocklist_conn_event);
 
-        let block_list_dcerpc_event = Event::BlockList(RecordType::DceRpc(BlockListDceRpc::new(
+        let blocklist_dcerpc_event = Event::Blocklist(RecordType::DceRpc(BlocklistDceRpc::new(
             time,
-            block_list_dcerpc_fields(),
+            blocklist_dcerpc_fields(),
         )));
-        single_address_events.push(block_list_dcerpc_event);
+        single_address_events.push(blocklist_dcerpc_event);
 
-        let block_list_dhcp_event = Event::BlockList(RecordType::Dhcp(BlockListDhcp::new(
+        let blocklist_dhcp_event = Event::Blocklist(RecordType::Dhcp(BlocklistDhcp::new(
             time,
-            block_list_dhcp_fields(),
+            blocklist_dhcp_fields(),
         )));
-        single_address_events.push(block_list_dhcp_event);
+        single_address_events.push(blocklist_dhcp_event);
 
-        let block_list_dns_event = Event::BlockList(RecordType::Dns(BlockListDns::new(
+        let blocklist_dns_event = Event::Blocklist(RecordType::Dns(BlocklistDns::new(
             time,
-            block_list_dns_fields(),
+            blocklist_dns_fields(),
         )));
-        single_address_events.push(block_list_dns_event);
+        single_address_events.push(blocklist_dns_event);
 
-        let block_list_ftp_event =
-            Event::BlockList(RecordType::Ftp(BlockListFtp::new(time, ftp_event_fields())));
-        single_address_events.push(block_list_ftp_event);
+        let blocklist_ftp_event =
+            Event::Blocklist(RecordType::Ftp(BlocklistFtp::new(time, ftp_event_fields())));
+        single_address_events.push(blocklist_ftp_event);
 
-        let block_list_http_event = Event::BlockList(RecordType::Http(BlockListHttp::new(
+        let blocklist_http_event = Event::Blocklist(RecordType::Http(BlocklistHttp::new(
             time,
-            block_list_http_fields(),
+            blocklist_http_fields(),
         )));
-        single_address_events.push(block_list_http_event);
+        single_address_events.push(blocklist_http_event);
 
-        let block_list_kerberos_event = Event::BlockList(RecordType::Kerberos(
-            BlockListKerberos::new(time, block_list_kerberos_fields()),
+        let blocklist_kerberos_event = Event::Blocklist(RecordType::Kerberos(
+            BlocklistKerberos::new(time, blocklist_kerberos_fields()),
         ));
-        single_address_events.push(block_list_kerberos_event);
+        single_address_events.push(blocklist_kerberos_event);
 
-        let block_list_ldap_event = Event::BlockList(RecordType::Ldap(BlockListLdap::new(
+        let blocklist_ldap_event = Event::Blocklist(RecordType::Ldap(BlocklistLdap::new(
             time,
             ldap_event_fields(),
         )));
-        single_address_events.push(block_list_ldap_event);
+        single_address_events.push(blocklist_ldap_event);
 
-        let block_list_mqtt_event = Event::BlockList(RecordType::Mqtt(BlockListMqtt::new(
+        let blocklist_mqtt_event = Event::Blocklist(RecordType::Mqtt(BlocklistMqtt::new(
             time,
-            block_list_mqtt_fields(),
+            blocklist_mqtt_fields(),
         )));
-        single_address_events.push(block_list_mqtt_event);
+        single_address_events.push(blocklist_mqtt_event);
 
-        let block_list_nfs_event = Event::BlockList(RecordType::Nfs(BlockListNfs::new(
+        let blocklist_nfs_event = Event::Blocklist(RecordType::Nfs(BlocklistNfs::new(
             time,
-            block_list_nfs_fields(),
+            blocklist_nfs_fields(),
         )));
-        single_address_events.push(block_list_nfs_event);
+        single_address_events.push(blocklist_nfs_event);
 
-        let block_list_ntlm_event = Event::BlockList(RecordType::Ntlm(BlockListNtlm::new(
+        let blocklist_ntlm_event = Event::Blocklist(RecordType::Ntlm(BlocklistNtlm::new(
             time,
-            block_list_ntlm_fields(),
+            blocklist_ntlm_fields(),
         )));
-        single_address_events.push(block_list_ntlm_event);
+        single_address_events.push(blocklist_ntlm_event);
 
-        let block_list_rdp_event = Event::BlockList(RecordType::Rdp(BlockListRdp::new(
+        let blocklist_rdp_event = Event::Blocklist(RecordType::Rdp(BlocklistRdp::new(
             time,
-            block_list_rdp_fields(),
+            blocklist_rdp_fields(),
         )));
-        single_address_events.push(block_list_rdp_event);
+        single_address_events.push(blocklist_rdp_event);
 
-        let block_list_smb_event = Event::BlockList(RecordType::Smb(BlockListSmb::new(
+        let blocklist_smb_event = Event::Blocklist(RecordType::Smb(BlocklistSmb::new(
             time,
-            block_list_smb_fields(),
+            blocklist_smb_fields(),
         )));
-        single_address_events.push(block_list_smb_event);
+        single_address_events.push(blocklist_smb_event);
 
-        let block_list_smtp_event = Event::BlockList(RecordType::Smtp(BlockListSmtp::new(
+        let blocklist_smtp_event = Event::Blocklist(RecordType::Smtp(BlocklistSmtp::new(
             time,
-            block_list_smtp_fields(),
+            blocklist_smtp_fields(),
         )));
-        single_address_events.push(block_list_smtp_event);
+        single_address_events.push(blocklist_smtp_event);
 
-        let block_list_ssh_event = Event::BlockList(RecordType::Ssh(BlockListSsh::new(
+        let blocklist_ssh_event = Event::Blocklist(RecordType::Ssh(BlocklistSsh::new(
             time,
-            block_list_ssh_fields(),
+            blocklist_ssh_fields(),
         )));
-        single_address_events.push(block_list_ssh_event);
+        single_address_events.push(blocklist_ssh_event);
 
-        let block_list_tls_event = Event::BlockList(RecordType::Tls(BlockListTls::new(
+        let blocklist_tls_event = Event::Blocklist(RecordType::Tls(BlocklistTls::new(
             time,
-            block_list_tls_fields(),
+            blocklist_tls_fields(),
         )));
-        single_address_events.push(block_list_tls_event);
+        single_address_events.push(blocklist_tls_event);
 
         let http_threat_event = Event::HttpThreat(HttpThreat::new(time, http_threat_fields()));
         single_address_events.push(http_threat_event);
@@ -1000,8 +1000,8 @@ mod tests {
         }
     }
 
-    fn block_list_bootp_fields() -> BlockListBootpFields {
-        BlockListBootpFields {
+    fn blocklist_bootp_fields() -> BlocklistBootpFields {
+        BlocklistBootpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 68,
@@ -1024,8 +1024,8 @@ mod tests {
         }
     }
 
-    fn block_list_conn_fields() -> BlockListConnFields {
-        BlockListConnFields {
+    fn blocklist_conn_fields() -> BlocklistConnFields {
+        BlocklistConnFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1045,8 +1045,8 @@ mod tests {
         }
     }
 
-    fn block_list_dcerpc_fields() -> BlockListDceRpcFields {
-        BlockListDceRpcFields {
+    fn blocklist_dcerpc_fields() -> BlocklistDceRpcFields {
+        BlocklistDceRpcFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1062,8 +1062,8 @@ mod tests {
         }
     }
 
-    fn block_list_dhcp_fields() -> BlockListDhcpFields {
-        BlockListDhcpFields {
+    fn blocklist_dhcp_fields() -> BlocklistDhcpFields {
+        BlocklistDhcpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 68,
@@ -1093,8 +1093,8 @@ mod tests {
         }
     }
 
-    fn block_list_dns_fields() -> BlockListDnsFields {
-        BlockListDnsFields {
+    fn blocklist_dns_fields() -> BlocklistDnsFields {
+        BlocklistDnsFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1118,8 +1118,8 @@ mod tests {
         }
     }
 
-    fn block_list_http_fields() -> BlockListHttpFields {
-        BlockListHttpFields {
+    fn blocklist_http_fields() -> BlocklistHttpFields {
+        BlocklistHttpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1153,8 +1153,8 @@ mod tests {
         }
     }
 
-    fn block_list_kerberos_fields() -> BlockListKerberosFields {
-        BlockListKerberosFields {
+    fn blocklist_kerberos_fields() -> BlocklistKerberosFields {
+        BlocklistKerberosFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1175,8 +1175,8 @@ mod tests {
         }
     }
 
-    fn block_list_mqtt_fields() -> BlockListMqttFields {
-        BlockListMqttFields {
+    fn blocklist_mqtt_fields() -> BlocklistMqttFields {
+        BlocklistMqttFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1194,8 +1194,8 @@ mod tests {
         }
     }
 
-    fn block_list_nfs_fields() -> BlockListNfsFields {
-        BlockListNfsFields {
+    fn blocklist_nfs_fields() -> BlocklistNfsFields {
+        BlocklistNfsFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1209,8 +1209,8 @@ mod tests {
         }
     }
 
-    fn block_list_ntlm_fields() -> BlockListNtlmFields {
-        BlockListNtlmFields {
+    fn blocklist_ntlm_fields() -> BlocklistNtlmFields {
+        BlocklistNtlmFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1227,8 +1227,8 @@ mod tests {
         }
     }
 
-    fn block_list_rdp_fields() -> BlockListRdpFields {
-        BlockListRdpFields {
+    fn blocklist_rdp_fields() -> BlocklistRdpFields {
+        BlocklistRdpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1241,8 +1241,8 @@ mod tests {
         }
     }
 
-    fn block_list_smb_fields() -> BlockListSmbFields {
-        BlockListSmbFields {
+    fn blocklist_smb_fields() -> BlocklistSmbFields {
+        BlocklistSmbFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1265,8 +1265,8 @@ mod tests {
         }
     }
 
-    fn block_list_smtp_fields() -> BlockListSmtpFields {
-        BlockListSmtpFields {
+    fn blocklist_smtp_fields() -> BlocklistSmtpFields {
+        BlocklistSmtpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1285,8 +1285,8 @@ mod tests {
         }
     }
 
-    fn block_list_ssh_fields() -> BlockListSshFields {
-        BlockListSshFields {
+    fn blocklist_ssh_fields() -> BlocklistSshFields {
+        BlocklistSshFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,
@@ -1311,8 +1311,8 @@ mod tests {
         }
     }
 
-    fn block_list_tls_fields() -> BlockListTlsFields {
-        BlockListTlsFields {
+    fn blocklist_tls_fields() -> BlocklistTlsFields {
+        BlocklistTlsFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             src_port: 10000,

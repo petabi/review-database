@@ -848,7 +848,7 @@ impl Match for NonBrowser {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct BlockListHttpFields {
+pub struct BlocklistHttpFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -881,7 +881,7 @@ pub struct BlockListHttpFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlockListHttpFields {
+impl fmt::Display for BlocklistHttpFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -921,7 +921,7 @@ impl fmt::Display for BlockListHttpFields {
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize, Serialize)]
-pub struct BlockListHttp {
+pub struct BlocklistHttp {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -956,7 +956,7 @@ pub struct BlockListHttp {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for BlockListHttp {
+impl fmt::Display for BlocklistHttp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -995,8 +995,8 @@ impl fmt::Display for BlockListHttp {
     }
 }
 
-impl BlockListHttp {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListHttpFields) -> Self {
+impl BlocklistHttp {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistHttpFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -1034,7 +1034,7 @@ impl BlockListHttp {
     }
 }
 
-impl Match for BlockListHttp {
+impl Match for BlocklistHttp {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }

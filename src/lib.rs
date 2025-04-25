@@ -42,13 +42,13 @@ pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, IterableMap, Ma
 pub use self::column_statistics::*;
 pub use self::event::EventKind;
 pub use self::event::{
-    BlockListBootp, BlockListBootpFields, BlockListConn, BlockListConnFields, BlockListDceRpc,
-    BlockListDceRpcFields, BlockListDhcp, BlockListDhcpFields, BlockListDns, BlockListDnsFields,
-    BlockListFtp, BlockListHttp, BlockListHttpFields, BlockListKerberos, BlockListKerberosFields,
-    BlockListLdap, BlockListMqtt, BlockListMqttFields, BlockListNfs, BlockListNfsFields,
-    BlockListNtlm, BlockListNtlmFields, BlockListRdp, BlockListRdpFields, BlockListSmb,
-    BlockListSmbFields, BlockListSmtp, BlockListSmtpFields, BlockListSsh, BlockListSshFields,
-    BlockListTls, BlockListTlsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
+    BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields, BlocklistDceRpc,
+    BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields, BlocklistDns, BlocklistDnsFields,
+    BlocklistFtp, BlocklistHttp, BlocklistHttpFields, BlocklistKerberos, BlocklistKerberosFields,
+    BlocklistLdap, BlocklistMqtt, BlocklistMqttFields, BlocklistNfs, BlocklistNfsFields,
+    BlocklistNtlm, BlocklistNtlmFields, BlocklistRdp, BlocklistRdpFields, BlocklistSmb,
+    BlocklistSmbFields, BlocklistSmtp, BlocklistSmtpFields, BlocklistSsh, BlocklistSshFields,
+    BlocklistTls, BlocklistTlsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
     DgaFields, Direction, DnsCovertChannel, DnsEventFields, DomainGenerationAlgorithm, Event,
     EventDb, EventFilter, EventIterator, EventMessage, ExternalDdos, ExternalDdosFields,
     ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce, FtpBruteForceFields, FtpEventFields,

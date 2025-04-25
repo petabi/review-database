@@ -7,7 +7,7 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, co
 use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListKerberosFields {
+pub struct BlocklistKerberosFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -27,7 +27,7 @@ pub struct BlockListKerberosFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlockListKerberosFields {
+impl fmt::Display for BlocklistKerberosFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -53,7 +53,7 @@ impl fmt::Display for BlockListKerberosFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListKerberos {
+pub struct BlocklistKerberos {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -75,7 +75,7 @@ pub struct BlockListKerberos {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for BlockListKerberos {
+impl fmt::Display for BlocklistKerberos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -101,8 +101,8 @@ impl fmt::Display for BlockListKerberos {
     }
 }
 
-impl BlockListKerberos {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListKerberosFields) -> Self {
+impl BlocklistKerberos {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistKerberosFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -127,7 +127,7 @@ impl BlockListKerberos {
     }
 }
 
-impl Match for BlockListKerberos {
+impl Match for BlocklistKerberos {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }
