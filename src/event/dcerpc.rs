@@ -7,7 +7,7 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, co
 use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListDceRpcFields {
+pub struct BlocklistDceRpcFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -22,7 +22,7 @@ pub struct BlockListDceRpcFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlockListDceRpcFields {
+impl fmt::Display for BlocklistDceRpcFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -42,7 +42,7 @@ impl fmt::Display for BlockListDceRpcFields {
     }
 }
 
-pub struct BlockListDceRpc {
+pub struct BlocklistDceRpc {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -59,7 +59,7 @@ pub struct BlockListDceRpc {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for BlockListDceRpc {
+impl fmt::Display for BlocklistDceRpc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -80,8 +80,8 @@ impl fmt::Display for BlockListDceRpc {
     }
 }
 
-impl BlockListDceRpc {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListDceRpcFields) -> Self {
+impl BlocklistDceRpc {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistDceRpcFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -101,7 +101,7 @@ impl BlockListDceRpc {
     }
 }
 
-impl Match for BlockListDceRpc {
+impl Match for BlocklistDceRpc {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }

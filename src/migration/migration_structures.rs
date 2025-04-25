@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    BlockListConnFields, BlockListDnsFields, BlockListHttpFields, BlockListKerberosFields,
-    BlockListNtlmFields, BlockListRdpFields, BlockListSmtpFields, BlockListSshFields,
-    BlockListTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
+    BlocklistConnFields, BlocklistDnsFields, BlocklistHttpFields, BlocklistKerberosFields,
+    BlocklistNtlmFields, BlocklistRdpFields, BlocklistSmtpFields, BlocklistSshFields,
+    BlocklistTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
     ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
     HttpThreatFields, LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields,
     NetworkThreat, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, Role,
@@ -20,7 +20,7 @@ use crate::{
 };
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListConnBeforeV29 {
+pub struct BlocklistConnBeforeV29 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -35,8 +35,8 @@ pub struct BlockListConnBeforeV29 {
     pub resp_pkts: u64,
 }
 
-impl From<BlockListConnBeforeV29> for BlockListConnBeforeV30 {
-    fn from(input: BlockListConnBeforeV29) -> Self {
+impl From<BlocklistConnBeforeV29> for BlocklistConnBeforeV30 {
+    fn from(input: BlocklistConnBeforeV29) -> Self {
         Self {
             source: input.source,
             src_addr: input.src_addr,
@@ -58,7 +58,7 @@ impl From<BlockListConnBeforeV29> for BlockListConnBeforeV30 {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListConnBeforeV30 {
+pub struct BlocklistConnBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -76,8 +76,8 @@ pub struct BlockListConnBeforeV30 {
     pub resp_l2_bytes: u64,
 }
 
-impl From<BlockListConnBeforeV30> for BlockListConnFields {
-    fn from(input: BlockListConnBeforeV30) -> Self {
+impl From<BlocklistConnBeforeV30> for BlocklistConnFields {
+    fn from(input: BlocklistConnBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -627,7 +627,7 @@ impl From<NonBrowserBeforeV30> for HttpEventFields {
 
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct BlockListDnsBeforeV30 {
+pub struct BlocklistDnsBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -649,8 +649,8 @@ pub struct BlockListDnsBeforeV30 {
     pub ttl: Vec<i32>,
 }
 
-impl From<BlockListDnsBeforeV30> for BlockListDnsFields {
-    fn from(input: BlockListDnsBeforeV30) -> Self {
+impl From<BlocklistDnsBeforeV30> for BlocklistDnsFields {
+    fn from(input: BlocklistDnsBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -677,7 +677,7 @@ impl From<BlockListDnsBeforeV30> for BlockListDnsFields {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListFtpBeforeV30 {
+pub struct BlocklistFtpBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -699,8 +699,8 @@ pub struct BlockListFtpBeforeV30 {
     pub file_id: String,
 }
 
-impl From<BlockListFtpBeforeV30> for FtpEventFields {
-    fn from(input: BlockListFtpBeforeV30) -> Self {
+impl From<BlocklistFtpBeforeV30> for FtpEventFields {
+    fn from(input: BlocklistFtpBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -727,7 +727,7 @@ impl From<BlockListFtpBeforeV30> for FtpEventFields {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListHttpBeforeV29 {
+pub struct BlocklistHttpBeforeV29 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -757,8 +757,8 @@ pub struct BlockListHttpBeforeV29 {
     pub resp_mime_types: Vec<String>,
 }
 
-impl From<BlockListHttpBeforeV29> for BlockListHttpBeforeV30 {
-    fn from(input: BlockListHttpBeforeV29) -> Self {
+impl From<BlocklistHttpBeforeV29> for BlocklistHttpBeforeV30 {
+    fn from(input: BlocklistHttpBeforeV29) -> Self {
         Self {
             source: input.source,
             src_addr: input.src_addr,
@@ -794,7 +794,7 @@ impl From<BlockListHttpBeforeV29> for BlockListHttpBeforeV30 {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListHttpBeforeV30 {
+pub struct BlocklistHttpBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -826,8 +826,8 @@ pub struct BlockListHttpBeforeV30 {
     pub state: String,
 }
 
-impl From<BlockListHttpBeforeV30> for BlockListHttpFields {
-    fn from(input: BlockListHttpBeforeV30) -> Self {
+impl From<BlocklistHttpBeforeV30> for BlocklistHttpFields {
+    fn from(input: BlocklistHttpBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -864,7 +864,7 @@ impl From<BlockListHttpBeforeV30> for BlockListHttpFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListKerberosBeforeV30 {
+pub struct BlocklistKerberosBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -883,8 +883,8 @@ pub struct BlockListKerberosBeforeV30 {
     pub service_name: Vec<String>,
 }
 
-impl From<BlockListKerberosBeforeV30> for BlockListKerberosFields {
-    fn from(input: BlockListKerberosBeforeV30) -> Self {
+impl From<BlocklistKerberosBeforeV30> for BlocklistKerberosFields {
+    fn from(input: BlocklistKerberosBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -908,7 +908,7 @@ impl From<BlockListKerberosBeforeV30> for BlockListKerberosFields {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListLdapBeforeV30 {
+pub struct BlocklistLdapBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -925,8 +925,8 @@ pub struct BlockListLdapBeforeV30 {
     pub argument: Vec<String>,
 }
 
-impl From<BlockListLdapBeforeV30> for LdapEventFields {
-    fn from(input: BlockListLdapBeforeV30) -> Self {
+impl From<BlocklistLdapBeforeV30> for LdapEventFields {
+    fn from(input: BlocklistLdapBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -948,7 +948,7 @@ impl From<BlockListLdapBeforeV30> for LdapEventFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListNtlmBeforeV29 {
+pub struct BlocklistNtlmBeforeV29 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -965,8 +965,8 @@ pub struct BlockListNtlmBeforeV29 {
     pub success: String,
 }
 
-impl From<BlockListNtlmBeforeV29> for BlockListNtlmBeforeV30 {
-    fn from(input: BlockListNtlmBeforeV29) -> Self {
+impl From<BlocklistNtlmBeforeV29> for BlocklistNtlmBeforeV30 {
+    fn from(input: BlocklistNtlmBeforeV29) -> Self {
         Self {
             source: input.source,
             src_addr: input.src_addr,
@@ -985,7 +985,7 @@ impl From<BlockListNtlmBeforeV29> for BlockListNtlmBeforeV30 {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListNtlmBeforeV30 {
+pub struct BlocklistNtlmBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1000,8 +1000,8 @@ pub struct BlockListNtlmBeforeV30 {
     pub success: String,
 }
 
-impl From<BlockListNtlmBeforeV30> for BlockListNtlmFields {
-    fn from(input: BlockListNtlmBeforeV30) -> Self {
+impl From<BlocklistNtlmBeforeV30> for BlocklistNtlmFields {
+    fn from(input: BlocklistNtlmBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -1021,7 +1021,7 @@ impl From<BlockListNtlmBeforeV30> for BlockListNtlmFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListRdpBeforeV30 {
+pub struct BlocklistRdpBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1032,8 +1032,8 @@ pub struct BlockListRdpBeforeV30 {
     pub cookie: String,
 }
 
-impl From<BlockListRdpBeforeV30> for BlockListRdpFields {
-    fn from(input: BlockListRdpBeforeV30) -> Self {
+impl From<BlocklistRdpBeforeV30> for BlocklistRdpFields {
+    fn from(input: BlocklistRdpBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -1049,7 +1049,7 @@ impl From<BlockListRdpBeforeV30> for BlockListRdpFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListSmtpBeforeV29 {
+pub struct BlocklistSmtpBeforeV29 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1065,8 +1065,8 @@ pub struct BlockListSmtpBeforeV29 {
     pub agent: String,
 }
 
-impl From<BlockListSmtpBeforeV29> for BlockListSmtpBeforeV30 {
-    fn from(input: BlockListSmtpBeforeV29) -> Self {
+impl From<BlocklistSmtpBeforeV29> for BlocklistSmtpBeforeV30 {
+    fn from(input: BlocklistSmtpBeforeV29) -> Self {
         Self {
             source: input.source,
             src_addr: input.src_addr,
@@ -1087,7 +1087,7 @@ impl From<BlockListSmtpBeforeV29> for BlockListSmtpBeforeV30 {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListSmtpBeforeV30 {
+pub struct BlocklistSmtpBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1104,8 +1104,8 @@ pub struct BlockListSmtpBeforeV30 {
     pub state: String,
 }
 
-impl From<BlockListSmtpBeforeV30> for BlockListSmtpFields {
-    fn from(input: BlockListSmtpBeforeV30) -> Self {
+impl From<BlocklistSmtpBeforeV30> for BlocklistSmtpFields {
+    fn from(input: BlocklistSmtpBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -1127,7 +1127,7 @@ impl From<BlockListSmtpBeforeV30> for BlockListSmtpFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListSshBeforeV29 {
+pub struct BlocklistSshBeforeV29 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1149,8 +1149,8 @@ pub struct BlockListSshBeforeV29 {
     pub host_key: String,
 }
 
-impl From<BlockListSshBeforeV29> for BlockListSshBeforeV30 {
-    fn from(input: BlockListSshBeforeV29) -> Self {
+impl From<BlocklistSshBeforeV29> for BlocklistSshBeforeV30 {
+    fn from(input: BlocklistSshBeforeV29) -> Self {
         Self {
             source: input.source,
             src_addr: input.src_addr,
@@ -1177,7 +1177,7 @@ impl From<BlockListSshBeforeV29> for BlockListSshBeforeV30 {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListSshBeforeV30 {
+pub struct BlocklistSshBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1200,8 +1200,8 @@ pub struct BlockListSshBeforeV30 {
     pub server_shka: String,
 }
 
-impl From<BlockListSshBeforeV30> for BlockListSshFields {
-    fn from(input: BlockListSshBeforeV30) -> Self {
+impl From<BlocklistSshBeforeV30> for BlocklistSshFields {
+    fn from(input: BlocklistSshBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -1229,7 +1229,7 @@ impl From<BlockListSshBeforeV30> for BlockListSshFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListTlsBeforeV29 {
+pub struct BlocklistTlsBeforeV29 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1257,8 +1257,8 @@ pub struct BlockListTlsBeforeV29 {
     pub last_alert: u8,
 }
 
-impl From<BlockListTlsBeforeV29> for BlockListTlsBeforeV30 {
-    fn from(input: BlockListTlsBeforeV29) -> Self {
+impl From<BlocklistTlsBeforeV29> for BlocklistTlsBeforeV30 {
+    fn from(input: BlocklistTlsBeforeV29) -> Self {
         Self {
             source: input.source,
             src_addr: input.src_addr,
@@ -1293,7 +1293,7 @@ impl From<BlockListTlsBeforeV29> for BlockListTlsBeforeV30 {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListTlsBeforeV30 {
+pub struct BlocklistTlsBeforeV30 {
     pub source: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1324,8 +1324,8 @@ pub struct BlockListTlsBeforeV30 {
     pub last_alert: u8,
 }
 
-impl From<BlockListTlsBeforeV30> for BlockListTlsFieldsBeforeV37 {
-    fn from(input: BlockListTlsBeforeV30) -> Self {
+impl From<BlocklistTlsBeforeV30> for BlocklistTlsFieldsBeforeV37 {
+    fn from(input: BlocklistTlsBeforeV30) -> Self {
         Self {
             sensor: input.source,
             src_addr: input.src_addr,
@@ -1361,7 +1361,7 @@ impl From<BlockListTlsBeforeV30> for BlockListTlsFieldsBeforeV37 {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListTlsFieldsBeforeV37 {
+pub struct BlocklistTlsFieldsBeforeV37 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1393,8 +1393,8 @@ pub struct BlockListTlsFieldsBeforeV37 {
     pub category: EventCategory,
 }
 
-impl From<BlockListTlsFieldsBeforeV37> for BlockListTlsFields {
-    fn from(input: BlockListTlsFieldsBeforeV37) -> Self {
+impl From<BlocklistTlsFieldsBeforeV37> for BlocklistTlsFields {
+    fn from(input: BlocklistTlsFieldsBeforeV37) -> Self {
         Self {
             sensor: input.sensor,
             src_addr: input.src_addr,

@@ -324,7 +324,7 @@ impl Match for FtpPlainText {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct BlockListFtp {
+pub struct BlocklistFtp {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -349,7 +349,7 @@ pub struct BlockListFtp {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for BlockListFtp {
+impl fmt::Display for BlocklistFtp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -378,7 +378,7 @@ impl fmt::Display for BlockListFtp {
     }
 }
 
-impl BlockListFtp {
+impl BlocklistFtp {
     pub(super) fn new(time: DateTime<Utc>, fields: FtpEventFields) -> Self {
         Self {
             time,
@@ -407,7 +407,7 @@ impl BlockListFtp {
     }
 }
 
-impl Match for BlockListFtp {
+impl Match for BlocklistFtp {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }

@@ -127,7 +127,7 @@ impl Match for RdpBruteForce {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListRdpFields {
+pub struct BlocklistRdpFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -139,7 +139,7 @@ pub struct BlockListRdpFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlockListRdpFields {
+impl fmt::Display for BlocklistRdpFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -155,7 +155,7 @@ impl fmt::Display for BlockListRdpFields {
         )
     }
 }
-pub struct BlockListRdp {
+pub struct BlocklistRdp {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -168,7 +168,7 @@ pub struct BlockListRdp {
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-impl fmt::Display for BlockListRdp {
+impl fmt::Display for BlocklistRdp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -186,8 +186,8 @@ impl fmt::Display for BlockListRdp {
     }
 }
 
-impl BlockListRdp {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListRdpFields) -> Self {
+impl BlocklistRdp {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistRdpFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -204,7 +204,7 @@ impl BlockListRdp {
     }
 }
 
-impl Match for BlockListRdp {
+impl Match for BlocklistRdp {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }

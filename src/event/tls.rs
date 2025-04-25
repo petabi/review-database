@@ -7,7 +7,7 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, co
 use crate::event::common::{triage_scores_to_string, vector_to_string};
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListTlsFields {
+pub struct BlocklistTlsFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -39,7 +39,7 @@ pub struct BlockListTlsFields {
     pub confidence: f32,
     pub category: EventCategory,
 }
-impl fmt::Display for BlockListTlsFields {
+impl fmt::Display for BlocklistTlsFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -78,7 +78,7 @@ impl fmt::Display for BlockListTlsFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListTls {
+pub struct BlocklistTls {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -113,7 +113,7 @@ pub struct BlockListTls {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl fmt::Display for BlockListTls {
+impl fmt::Display for BlocklistTls {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -152,8 +152,8 @@ impl fmt::Display for BlockListTls {
     }
 }
 
-impl BlockListTls {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListTlsFields) -> Self {
+impl BlocklistTls {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistTlsFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -191,7 +191,7 @@ impl BlockListTls {
     }
 }
 
-impl Match for BlockListTls {
+impl Match for BlocklistTls {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }
@@ -316,7 +316,7 @@ impl fmt::Display for SuspiciousTlsTraffic {
 }
 
 impl SuspiciousTlsTraffic {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListTlsFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistTlsFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,

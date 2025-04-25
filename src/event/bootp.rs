@@ -7,7 +7,7 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, co
 use crate::event::common::{to_hardware_address, triage_scores_to_string};
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListBootpFields {
+pub struct BlocklistBootpFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -28,7 +28,7 @@ pub struct BlockListBootpFields {
     pub file: String,
     pub category: EventCategory,
 }
-impl fmt::Display for BlockListBootpFields {
+impl fmt::Display for BlocklistBootpFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -56,7 +56,7 @@ impl fmt::Display for BlockListBootpFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListBootp {
+pub struct BlocklistBootp {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -79,7 +79,7 @@ pub struct BlockListBootp {
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-impl fmt::Display for BlockListBootp {
+impl fmt::Display for BlocklistBootp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -107,8 +107,8 @@ impl fmt::Display for BlockListBootp {
     }
 }
 
-impl BlockListBootp {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListBootpFields) -> Self {
+impl BlocklistBootp {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistBootpFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -135,7 +135,7 @@ impl BlockListBootp {
     }
 }
 
-impl Match for BlockListBootp {
+impl Match for BlocklistBootp {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }

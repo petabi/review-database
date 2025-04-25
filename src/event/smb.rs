@@ -7,7 +7,7 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriagePolicy, TriageScore, co
 use crate::event::common::triage_scores_to_string;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockListSmbFields {
+pub struct BlocklistSmbFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -28,7 +28,7 @@ pub struct BlockListSmbFields {
     pub change_time: i64,
     pub category: EventCategory,
 }
-impl fmt::Display for BlockListSmbFields {
+impl fmt::Display for BlocklistSmbFields {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -56,7 +56,7 @@ impl fmt::Display for BlockListSmbFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct BlockListSmb {
+pub struct BlocklistSmb {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -79,7 +79,7 @@ pub struct BlockListSmb {
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-impl fmt::Display for BlockListSmb {
+impl fmt::Display for BlocklistSmb {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -106,8 +106,8 @@ impl fmt::Display for BlockListSmb {
         )
     }
 }
-impl BlockListSmb {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlockListSmbFields) -> Self {
+impl BlocklistSmb {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistSmbFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -134,7 +134,7 @@ impl BlockListSmb {
     }
 }
 
-impl Match for BlockListSmb {
+impl Match for BlocklistSmb {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }
