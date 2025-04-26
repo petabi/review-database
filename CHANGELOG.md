@@ -854,6 +854,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.37.0...main
 [0.37.0]: https://github.com/petabi/review-database/compare/0.36.0...0.37.0
 [0.36.0]: https://github.com/petabi/review-database/compare/0.35.0...0.36.0
 [0.35.0]: https://github.com/petabi/review-database/compare/0.34.0...0.35.0
