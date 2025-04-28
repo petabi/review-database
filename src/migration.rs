@@ -248,12 +248,7 @@ fn retrieve_or_create_version<P: AsRef<Path>>(path: P) -> Result<(PathBuf, Versi
     if !path.exists() {
         create_dir_all(path)?;
     }
-    if path
-        .read_dir()
-        .context("cannot read data dir")?
-        .next()
-        .is_none()
-    {
+    if !file.exists() {
         create_version_file(&file)?;
     }
 

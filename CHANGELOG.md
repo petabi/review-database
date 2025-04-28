@@ -12,6 +12,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Renamed `BlockList` to `Blocklist` and `block_list` to `blocklist` in line with
   the Rust API Guidelines for acronyms/compound words. Please note that this is
   a breaking change if you were using identifiers affected by this change.
+- Modified to create the VERSION file if the file does not exist, not if the
+  "data_dir" path does not exist.
 
 ## [0.37.0] - 2025-04-13
 
