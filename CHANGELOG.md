@@ -13,6 +13,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   the Rust API Guidelines for acronyms/compound words. Please note that this is
   a breaking change if you were using identifiers affected by this change.
 
+### Fixed
+
+- Corrected instances of `referrer` to `referer` for the HTTP header field name
+  to align with the official HTTP standard's spelling (Issue #427).
+
 ## [0.37.0] - 2025-04-13
 
 ### Changed
