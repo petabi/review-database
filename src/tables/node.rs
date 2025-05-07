@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
@@ -268,6 +268,49 @@ impl<'d> Table<'d> {
         };
 
         self.node.update(id, &old_inner, &new_inner)
+    }
+
+    /// Updates the status of an agent specified by `agent_key`, which belongs to the node whose
+    /// hostname matches the given `hostname`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - An error occurs while iterating over nodes.
+    /// - No node exists with a profile matching the given `hostname`.
+    /// - No agent exists with the given `agent_key`.
+    /// - The database operation fails.
+    pub fn update_agent_status_by_hostname(
+        &mut self,
+        hostname: &str,
+        agent_key: &str,
+        new_status: AgentStatus,
+    ) -> Result<()> {
+        let mut target_node = None;
+        for result in self.iter(Direction::Forward, None) {
+            let node = result.context("Failed to iterate over nodes")?;
+            if node
+                .profile
+                .as_ref()
+                .is_some_and(|p| p.hostname == hostname)
+            {
+                target_node = Some(node);
+                break;
+            }
+        }
+        let node =
+            target_node.ok_or_else(|| anyhow::anyhow!("No node found for hostname: {hostname}"))?;
+
+        let agent = node
+            .agents
+            .iter()
+            .find(|agent| agent.key == agent_key)
+            .ok_or_else(|| {
+                anyhow::anyhow!("No agent found with key: {agent_key} for hostname: {hostname}")
+            })?;
+        let mut updated_agent = agent.clone();
+        updated_agent.status = new_status;
+        self.agent.update(agent, &updated_agent)
     }
 }
 
@@ -772,5 +815,59 @@ mod test {
         assert!(invalid.is_empty());
 
         assert_eq!(updated.agents, update.agents);
+    }
+
+    #[test]
+    fn update_agent_status_by_hostname() {
+        let store = setup_store();
+        let kinds = vec![AgentKind::Sensor, AgentKind::SemiSupervised];
+        let configs: Vec<_> = create_configs(&kinds);
+
+        let profile = Profile {
+            hostname: "test-hostname".to_string(),
+            ..Default::default()
+        };
+
+        let agents = create_agents(456, &kinds, &configs, &configs);
+
+        let mut node = create_node(
+            456,
+            "test",
+            Some("test"),
+            Some(profile.clone()),
+            Some(profile.clone()),
+            agents.clone(),
+        );
+
+        let mut node_table = store.node_map();
+
+        let res = node_table.put(node.clone());
+        assert!(res.is_ok());
+
+        node.id = res.unwrap();
+        node.agents.iter_mut().for_each(|a| a.node = node.id);
+
+        let id = node.id;
+
+        assert!(
+            node_table
+                .update_agent_status_by_hostname(
+                    "test-hostname",
+                    "3", // The agent key of `AgentKind::SemiSupervised` was set to "3" in `create_agents`.
+                    AgentStatus::Disabled
+                )
+                .is_ok()
+        );
+
+        let updated = node_table.get_by_id(id).unwrap();
+        assert!(updated.is_some());
+        let (updated, invalid) = updated.unwrap();
+        assert!(invalid.is_empty());
+
+        // Check that the status of the `AgentKind::Sensor` agent was not updated.
+        assert_eq!(updated.agents[0].status, AgentStatus::Enabled);
+
+        // Check that the status of the `AgentKind::SemiSupervised` agent was updated.
+        assert_eq!(updated.agents[1].status, AgentStatus::Disabled);
     }
 }
