@@ -7,6 +7,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added `update_agent_status_by_hostname` public function to `Node` table. This
+  function allows updating an agent’s status using the node’s hostname and the
+  agent’s ID.
+
 ### Changed
 
 - Renamed `BlockList` to `Blocklist` and `block_list` to `blocklist` in line with
