@@ -12,6 +12,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Renamed `BlockList` to `Blocklist` and `block_list` to `blocklist` in line with
   the Rust API Guidelines for acronyms/compound words. Please note that this is
   a breaking change if you were using identifiers affected by this change.
+- Modify the syslog message generation procedure to use dedicated formatter
+  instead of Display trait.
 
 ### Fixed
 

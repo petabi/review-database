@@ -19,11 +19,12 @@ pub struct LdapBruteForceFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for LdapBruteForceFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} last_time={:?}",
+impl LdapBruteForceFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} last_time={:?}",
+            self.category.to_string(),
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
@@ -163,12 +164,13 @@ pub struct LdapEventFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for LdapEventFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
-            self.sensor,
+impl LdapEventFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
+            self.category.to_string(),
+            self.sensor.to_string(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),

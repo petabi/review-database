@@ -21,11 +21,12 @@ pub struct RdpBruteForceFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for RdpBruteForceFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "src_addr={:?} dst_addrs={:?} start_time={:?} last_time={:?} proto={:?}",
+impl RdpBruteForceFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} src_addr={:?} dst_addrs={:?} start_time={:?} last_time={:?} proto={:?}",
+            self.category.to_string(),
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.start_time.to_rfc3339(),
@@ -139,11 +140,12 @@ pub struct BlocklistRdpFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlocklistRdpFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} cookie={:?}",
+impl BlocklistRdpFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} cookie={:?}",
+            self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -155,6 +157,7 @@ impl fmt::Display for BlocklistRdpFields {
         )
     }
 }
+
 pub struct BlocklistRdp {
     pub time: DateTime<Utc>,
     pub sensor: String,

@@ -41,11 +41,12 @@ pub struct BlocklistDhcpFields {
 //  - 01: MAC address
 //  - XX: Hexdecimal number
 
-impl fmt::Display for BlocklistDhcpFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?}",
+impl BlocklistDhcpFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?}",
+            self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -65,7 +66,7 @@ impl fmt::Display for BlocklistDhcpFields {
             self.lease_time.to_string(),
             self.server_id.to_string(),
             vector_to_string(&self.param_req_list),
-            self.message.to_string(),
+            self.message,
             self.renewal_time.to_string(),
             self.rebinding_time.to_string(),
             to_hardware_address(&self.class_id),

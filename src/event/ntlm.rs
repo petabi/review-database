@@ -22,11 +22,13 @@ pub struct BlocklistNtlmFields {
     pub success: String,
     pub category: EventCategory,
 }
-impl fmt::Display for BlocklistNtlmFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?}",
+
+impl BlocklistNtlmFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?}",
+            self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -42,6 +44,7 @@ impl fmt::Display for BlocklistNtlmFields {
         )
     }
 }
+
 #[allow(clippy::module_name_repetitions)]
 pub struct BlocklistNtlm {
     pub time: DateTime<Utc>,
