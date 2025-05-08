@@ -25,11 +25,12 @@ pub struct BlocklistSmtpFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlocklistSmtpFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?}",
+impl BlocklistSmtpFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?}",
+            self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),

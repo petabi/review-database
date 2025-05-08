@@ -35,11 +35,12 @@ pub struct DnsEventFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for DnsEventFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
+impl DnsEventFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
+            self.category.to_string(),
             self.sensor,
             self.session_end_time.to_rfc3339(),
             self.src_addr.to_string(),
@@ -363,11 +364,12 @@ pub struct CryptocurrencyMiningPoolFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for CryptocurrencyMiningPoolFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?}",
+impl CryptocurrencyMiningPoolFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?}",
+            self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -552,11 +554,12 @@ pub struct BlocklistDnsFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlocklistDnsFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?}",
+impl BlocklistDnsFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?}",
+            self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),

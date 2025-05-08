@@ -34,7 +34,33 @@ pub struct WindowsThreat {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-// image, user, content field enclosed with double quotes(\") instead of "{:?}" because they may contain escape characters
+// image, user, content field enclosed with double quotes(\") instead of "{:?}"
+impl WindowsThreat {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} service={:?} agent_name={:?} agent_id={:?} process_guid={:?} process_id={:?} image=\"{}\" user=\"{}\" content=\"{}\" db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            self.category.to_string(),
+            self.sensor,
+            self.service,
+            self.agent_name,
+            self.agent_id,
+            self.process_guid,
+            self.process_id.to_string(),
+            self.image,
+            self.user,
+            self.content,
+            self.db_name,
+            self.rule_id.to_string(),
+            self.matched_to,
+            self.cluster_id.map_or("-".to_string(), |s| s.to_string()),
+            self.attack_kind,
+            self.confidence.to_string(),
+            triage_scores_to_string(self.triage_scores.as_ref())
+        )
+    }
+}
+
 impl fmt::Display for WindowsThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

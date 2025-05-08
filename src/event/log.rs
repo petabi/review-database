@@ -28,6 +28,26 @@ pub struct ExtraThreat {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
+impl ExtraThreat {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} service={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            self.category.to_string(),
+            self.sensor,
+            self.service,
+            self.content,
+            self.db_name,
+            self.rule_id.to_string(),
+            self.matched_to,
+            self.cluster_id.map_or("-".to_string(), |s| s.to_string()),
+            self.attack_kind,
+            self.confidence.to_string(),
+            triage_scores_to_string(self.triage_scores.as_ref())
+        )
+    }
+}
+
 impl fmt::Display for ExtraThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

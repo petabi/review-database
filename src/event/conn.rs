@@ -17,17 +17,18 @@ pub struct PortScanFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for PortScanFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} last_time={:?} proto={:?}",
+impl PortScanFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} last_time={:?} proto={:?}",
+            self.category.to_string(),
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             vector_to_string(&self.dst_ports),
             self.start_time.to_rfc3339(),
             self.last_time.to_rfc3339(),
-            self.proto.to_string(),
+            self.proto.to_string()
         )
     }
 }
@@ -138,11 +139,12 @@ pub struct MultiHostPortScanFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for MultiHostPortScanFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} last_time={:?}",
+impl MultiHostPortScanFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} last_time={:?}",
+            self.category.to_string(),
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.dst_port.to_string(),
@@ -258,11 +260,12 @@ pub struct ExternalDdosFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for ExternalDdosFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} last_time={:?}",
+impl ExternalDdosFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} last_time={:?}",
+            self.category.to_string(),
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
             self.proto.to_string(),
@@ -384,11 +387,12 @@ pub struct BlocklistConnFields {
     pub category: EventCategory,
 }
 
-impl fmt::Display for BlocklistConnFields {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?}",
+impl BlocklistConnFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?}",
+            self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),

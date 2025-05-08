@@ -30,6 +30,32 @@ pub struct NetworkThreat {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
+impl NetworkThreat {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} last_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            self.category.to_string(),
+            self.sensor,
+            self.orig_addr.to_string(),
+            self.orig_port.to_string(),
+            self.resp_addr.to_string(),
+            self.resp_port.to_string(),
+            self.proto.to_string(),
+            self.service,
+            self.last_time.to_string(),
+            self.content,
+            self.db_name,
+            self.rule_id.to_string(),
+            self.matched_to,
+            self.cluster_id.map_or("-".to_string(), |s| s.to_string()),
+            self.attack_kind,
+            self.confidence.to_string(),
+            triage_scores_to_string(self.triage_scores.as_ref())
+        )
+    }
+}
+
 impl fmt::Display for NetworkThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

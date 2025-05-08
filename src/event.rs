@@ -1925,113 +1925,115 @@ pub struct EventMessage {
 }
 
 impl EventMessage {
-    #[must_use]
-    pub fn syslog_message(&self) -> (String, String, String) {
-        (
-            "DETECT".to_string(),
-            format!("{:?}", self.kind),
-            format!("{self}"),
-        )
-    }
-}
-
-impl fmt::Display for EventMessage {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "time={:?} event_kind={:?} ",
-            self.time.to_rfc3339(),
-            format!("{:?}", self.kind),
-        )?;
-        let _r = match self.kind {
+    /// # Errors
+    ///
+    /// Returns an error if the deserialization of the event fields fails.
+    pub fn syslog_rfc5424(&self) -> Result<(String, String, String)> {
+        let msg = match self.kind {
             EventKind::DnsCovertChannel => bincode::deserialize::<DnsEventFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::HttpThreat => bincode::deserialize::<HttpThreatFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::RdpBruteForce => bincode::deserialize::<RdpBruteForceFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::RepeatedHttpSessions => {
                 bincode::deserialize::<RepeatedHttpSessionsFields>(&self.fields)
-                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
+                    .map(|fields| fields.syslog_rfc5424())
             }
             EventKind::TorConnection => bincode::deserialize::<HttpEventFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::DomainGenerationAlgorithm => bincode::deserialize::<DgaFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::FtpBruteForce => bincode::deserialize::<FtpBruteForceFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::FtpPlainText => bincode::deserialize::<FtpEventFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::PortScan => bincode::deserialize::<PortScanFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::MultiHostPortScan => {
                 bincode::deserialize::<MultiHostPortScanFields>(&self.fields)
-                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
+                    .map(|fields| fields.syslog_rfc5424())
             }
             EventKind::NonBrowser => bincode::deserialize::<HttpEventFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::LdapBruteForce => bincode::deserialize::<LdapBruteForceFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::LdapPlainText => bincode::deserialize::<LdapEventFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::ExternalDdos => bincode::deserialize::<ExternalDdosFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::CryptocurrencyMiningPool => {
                 bincode::deserialize::<CryptocurrencyMiningPoolFields>(&self.fields)
-                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
+                    .map(|fields| fields.syslog_rfc5424())
             }
             EventKind::BlocklistBootp => bincode::deserialize::<BlocklistBootpFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistConn => bincode::deserialize::<BlocklistConnFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistDceRpc => {
                 bincode::deserialize::<BlocklistDceRpcFields>(&self.fields)
-                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
+                    .map(|fields| fields.syslog_rfc5424())
             }
             EventKind::BlocklistDhcp => bincode::deserialize::<BlocklistDhcpFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistDns => bincode::deserialize::<BlocklistDnsFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistFtp => bincode::deserialize::<FtpEventFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistHttp => bincode::deserialize::<BlocklistHttpFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistKerberos => {
                 bincode::deserialize::<BlocklistKerberosFields>(&self.fields)
-                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
+                    .map(|fields| fields.syslog_rfc5424())
             }
             EventKind::BlocklistLdap => bincode::deserialize::<LdapEventFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistMqtt => bincode::deserialize::<BlocklistMqttFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistNfs => bincode::deserialize::<BlocklistNfsFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistNtlm => bincode::deserialize::<BlocklistNtlmFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistRdp => bincode::deserialize::<BlocklistRdpFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistSmb => bincode::deserialize::<BlocklistSmbFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistSmtp => bincode::deserialize::<BlocklistSmtpFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistSsh => bincode::deserialize::<BlocklistSshFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistTls => bincode::deserialize::<BlocklistTlsFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::WindowsThreat => bincode::deserialize::<WindowsThreat>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::NetworkThreat => bincode::deserialize::<NetworkThreat>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::ExtraThreat => bincode::deserialize::<ExtraThreat>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::LockyRansomware => bincode::deserialize::<DnsEventFields>(&self.fields)
-                .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string())),
+                .map(|fields| fields.syslog_rfc5424()),
             EventKind::SuspiciousTlsTraffic => {
                 bincode::deserialize::<BlocklistTlsFields>(&self.fields)
-                    .map(|fields| write!(f, "category={:?} {fields}", fields.category.to_string()))
+                    .map(|fields| fields.syslog_rfc5424())
             }
         };
-        Ok(())
+
+        match msg {
+            Ok(msg) => Ok((
+                "DETECT".to_string(),
+                format!("{:?}", self.kind),
+                format!(
+                    "time={:?} event_kind=\"{:?}\" {msg}",
+                    self.time.to_rfc3339(),
+                    self.kind
+                ),
+            )),
+            Err(e) => Err(anyhow::anyhow!(
+                "failed to deserialize event fields: {e}. time={:?}, event_kind={:?}",
+                self.time.to_rfc3339(),
+                self.kind
+            )),
+        }
     }
 }
 
@@ -2747,12 +2749,14 @@ mod tests {
             confidence: 0.8,
             category: EventCategory::CommandAndControl,
         };
-        let msg = EventMessage {
+        let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             kind: EventKind::DomainGenerationAlgorithm,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
-        let syslog_message = format!("{msg}");
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" duration="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="0.8""#
@@ -2893,12 +2897,14 @@ mod tests {
             confidence: 0.8,
             category: EventCategory::Reconnaissance,
         };
-        let msg = EventMessage {
+        let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             kind: EventKind::HttpThreat,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
-        let syslog_message = format!("{msg}");
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="HttpThreat" category="Reconnaissance" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" duration="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" db_name="db" rule_id="12000" matched_to="match" cluster_id="1111" attack_kind="attack" confidence="0.8""#
@@ -2953,7 +2959,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" session_end_time="1970-01-01T00:10:10+00:00" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="""#
@@ -3009,7 +3017,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="BlocklistHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" last_time="600" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="""#
@@ -3057,7 +3067,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="LockyRansomware" category="Impact" sensor="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.3" src_port="10000" dst_addr="127.0.0.4" dst_port="53" proto="17" query="locky.com" answer="1.1.1.100" trans_id="1100" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="true" rd_flag="false" ra_flag="false" ttl="120,120,120,120,120" confidence="0.8""#
@@ -3093,7 +3105,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" proto="6""#
@@ -3131,7 +3145,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00""#
@@ -3167,7 +3183,9 @@ mod tests {
             kind: EventKind::ExternalDdos,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00""#
@@ -3218,7 +3236,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name""#,
@@ -3330,7 +3350,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122""#
@@ -3370,7 +3392,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" last_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind""#
@@ -3427,7 +3451,9 @@ mod tests {
             kind: EventKind::BlocklistDhcp,
             fields: bincode::serialize(&fields).expect("serializable"),
         };
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" last_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="04:05:06" client_id_type="1" client_id="07:08:09""#,
@@ -3545,7 +3571,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="DnsCovertChannel" category="CommandAndControl" sensor="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="0.9""#
@@ -3600,7 +3628,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" session_end_time="1970-01-01T01:01:01+00:00" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero""#
@@ -3649,7 +3679,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" last_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120""#
@@ -3685,7 +3717,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00" is_internal="true""#
@@ -3734,7 +3768,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123""#
@@ -3786,7 +3822,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" last_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123""#
@@ -3890,7 +3928,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6""#
@@ -3934,7 +3974,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" last_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM""#
@@ -3975,7 +4017,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:01:02+00:00""#
@@ -4019,7 +4063,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument""#
@@ -4067,7 +4113,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" last_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument""#
@@ -4176,7 +4224,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="ExtraThreat" category="Reconnaissance" sensor="collector1" service="service" content="content" db_name="db_name" rule_id="1" matched_to="matched_to" cluster_id="1" attack_kind="attack_kind" confidence="0.9" triage_scores="""#
@@ -4208,7 +4258,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" last_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error""#
@@ -4255,7 +4307,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="NetworkThreat" category="Reconnaissance" sensor="collector1" orig_addr="127.0.0.1" orig_port="10000" resp_addr="127.0.0.2" resp_port="80" proto="6" service="http" last_time="100" content="content" db_name="db_name" rule_id="1" matched_to="matched_to" cluster_id="1" attack_kind="attack_kind" confidence="0.9" triage_scores="""#
@@ -4283,7 +4337,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" last_time="100" read_files="/etc/passwd" write_files="/etc/shadow""#
@@ -4325,7 +4381,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true""#
@@ -4363,7 +4421,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" last_time="1970-01-01T00:10:02+00:00" proto="6""#
@@ -4401,7 +4461,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" last_time="100" cookie="cookie""#
@@ -4449,7 +4511,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" last_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400""#
@@ -4493,7 +4557,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" last_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state""#
@@ -4543,7 +4609,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" last_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka""#
@@ -4590,7 +4658,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = format!("{message}");
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"WindowsThreat\" category=\"Impact\" sensor=\"collector1\" service=\"notepad\" agent_name=\"win64\" agent_id=\"e7e2386a-5485-4da9-b388-b3e50ee7cbb0\" process_guid=\"{bac98147-6b03-64d4-8200-000000000700}\" process_id=\"2972\" image=\"C:\\Users\\vboxuser\\Desktop\\mal_bazaar\\ransomware\\918504.exe\" user=\"WIN64\\vboxuser\" content=\"cmd /c \"vssadmin.exe Delete Shadows /all /quiet\"\" db_name=\"db\" rule_id=\"100\" matched_to=\"match\" cluster_id=\"900\" attack_kind=\"Ransomware_Alcatraz\" confidence=\"0.9\" triage_scores=\"\""
@@ -4654,7 +4724,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
@@ -4717,7 +4789,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" session_end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state""#
@@ -4849,7 +4923,9 @@ mod tests {
             fields: bincode::serialize(&fields).expect("serializable"),
         };
 
-        let syslog_message = message.to_string();
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" last_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
