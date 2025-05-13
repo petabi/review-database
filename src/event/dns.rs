@@ -1,13 +1,43 @@
 #![allow(clippy::module_name_repetitions, clippy::struct_excessive_bools)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
+use attrievent::attribute::{DnsAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{
-    EventCategory, HIGH, LearningMethod, MEDIUM, TriagePolicy, TriageScore, common::Match,
-};
-use crate::event::common::{triage_scores_to_string, vector_to_string};
+use super::{EventCategory, HIGH, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::event::common::{AttrValue, triage_scores_to_string, vector_to_string};
+
+macro_rules! find_dns_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Dns(attr) = $raw_event_attr {
+            let target_value = match attr {
+                DnsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                DnsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                DnsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                DnsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                DnsAttr::Proto => AttrValue::UInt($event.proto.into()),
+                DnsAttr::Query => AttrValue::String(&$event.query),
+                DnsAttr::Answer => AttrValue::VecString(&$event.answer),
+                DnsAttr::TransId => AttrValue::UInt($event.trans_id.into()),
+                DnsAttr::Rtt => AttrValue::SInt($event.rtt.into()),
+                DnsAttr::QClass => AttrValue::UInt($event.qclass.into()),
+                DnsAttr::QType => AttrValue::UInt($event.qtype.into()),
+                DnsAttr::RCode => AttrValue::UInt($event.rcode.into()),
+                DnsAttr::AA => AttrValue::Bool($event.aa_flag),
+                DnsAttr::TC => AttrValue::Bool($event.tc_flag),
+                DnsAttr::RD => AttrValue::Bool($event.rd_flag),
+                DnsAttr::RA => AttrValue::Bool($event.ra_flag),
+                DnsAttr::Ttl => {
+                    AttrValue::VecSInt($event.ttl.iter().map(|val| i64::from(*val)).collect())
+                }
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
 
 #[derive(Deserialize, Serialize)]
 pub struct DnsEventFields {
@@ -196,8 +226,8 @@ impl Match for DnsCovertChannel {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }
 
@@ -333,8 +363,8 @@ impl Match for LockyRansomware {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }
 
@@ -525,8 +555,8 @@ impl Match for CryptocurrencyMiningPool {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }
 
@@ -711,7 +741,7 @@ impl Match for BlocklistDns {
         LearningMethod::SemiSupervised
     }
 
-    fn score_by_packet_attr(&self, _triage: &TriagePolicy) -> f64 {
-        0.0
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+        find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }
