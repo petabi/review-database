@@ -31,7 +31,7 @@ struct ColumnDescriptionLoad {
 pub struct Statistics {
     batch_ts: NaiveDateTime,
     column_index: i32,
-    statistics: ColumnStatistics,
+    column_stats: ColumnStatistics,
 }
 
 trait ColumnIndex {
@@ -141,7 +141,7 @@ where
                 Some(Statistics {
                     batch_ts,
                     column_index,
-                    statistics: cs,
+                    column_stats: cs,
                 })
             } else {
                 None
