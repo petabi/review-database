@@ -1368,189 +1368,189 @@ impl Event {
         match self {
             Event::DnsCovertChannel(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::HttpThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(LOW);
+                    level = Some(event.level());
                 }
             }
             Event::RdpBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::RepeatedHttpSessions(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::TorConnection(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::DomainGenerationAlgorithm(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::FtpBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::FtpPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::PortScan(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::MultiHostPortScan(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::NonBrowser(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::LdapBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::LdapPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::CryptocurrencyMiningPool(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     if bootp_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(bootp_event.level());
                     }
                 }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(conn_event.level());
                     }
                 }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(dcerpc_event.level());
                     }
                 }
                 RecordType::Dhcp(dhcp_event) => {
                     if dhcp_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(dhcp_event.level());
                     }
                 }
                 RecordType::Dns(dns_event) => {
                     if dns_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(dns_event.level());
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
                     if ftp_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(ftp_event.level());
                     }
                 }
                 RecordType::Http(http_event) => {
                     if http_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(http_event.level());
                     }
                 }
                 RecordType::Kerberos(kerberos_event) => {
                     if kerberos_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(kerberos_event.level());
                     }
                 }
                 RecordType::Ldap(ldap_event) => {
                     if ldap_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(ldap_event.level());
                     }
                 }
                 RecordType::Mqtt(mqtt_event) => {
                     if mqtt_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(mqtt_event.level());
                     }
                 }
                 RecordType::Nfs(nfs_event) => {
                     if nfs_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(nfs_event.level());
                     }
                 }
                 RecordType::Ntlm(ntlm_event) => {
                     if ntlm_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(ntlm_event.level());
                     }
                 }
                 RecordType::Rdp(rdp_event) => {
                     if rdp_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(rdp_event.level());
                     }
                 }
                 RecordType::Smb(smb_event) => {
                     if smb_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(smb_event.level());
                     }
                 }
                 RecordType::Smtp(smtp_event) => {
                     if smtp_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(smtp_event.level());
                     }
                 }
                 RecordType::Ssh(ssh_event) => {
                     if ssh_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(ssh_event.level());
                     }
                 }
                 RecordType::Tls(tls_event) => {
                     if tls_event.matches(locator, filter)?.0 {
-                        level = Some(MEDIUM);
+                        level = Some(tls_event.level());
                     }
                 }
             },
             Event::WindowsThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::NetworkThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::ExtraThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
             Event::LockyRansomware(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(HIGH);
+                    level = Some(event.level());
                 }
             }
             Event::SuspiciousTlsTraffic(event) => {
                 if event.matches(locator, filter)?.0 {
-                    level = Some(MEDIUM);
+                    level = Some(event.level());
                 }
             }
         }
