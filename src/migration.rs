@@ -16,7 +16,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
-use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
+use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap, TriagePolicy};
 
 /// The range of versions that use the current database format.
 ///
@@ -99,7 +99,7 @@ use crate::{Agent, AgentStatus, Giganto, Indexed, IterableMap};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.37.0,<0.38.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.38.0-alpha.1,<0.38.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -208,9 +208,14 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_34_0_to_0_36,
         ),
         (
-            VersionReq::parse(">=0.36.0,<0.37.0-alpha")?,
+            VersionReq::parse(">=0.36.0,<0.37.0")?,
             Version::parse("0.37.0")?,
             migrate_0_36_0_to_0_37,
+        ),
+        (
+            VersionReq::parse(">=0.37.0,<0.38.0-alpha.1")?,
+            Version::parse("0.38.0-alpha.1")?,
+            migrate_0_37_0_to_0_38,
         ),
     ];
 
@@ -285,6 +290,27 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_37_0_to_0_38(store: &super::Store) -> Result<()> {
+    migrate_0_38_triage_policy(store)
+}
+
+fn migrate_0_38_triage_policy(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+    use migration_structures::TriagePolicyBeforeV38;
+
+    let triage_map = store.triage_policy_map();
+    let raw = triage_map.raw();
+    for (_key, value) in raw.iter_forward()? {
+        let old = bincode::DefaultOptions::new()
+            .deserialize::<TriagePolicyBeforeV38>(&value)
+            .context("Failed to migrate node database: invalid node value")?;
+        let new: TriagePolicy = old.into();
+        raw.overwrite(&new)?;
+    }
+
+    Ok(())
 }
 
 fn migrate_0_36_0_to_0_37(store: &super::Store) -> Result<()> {
@@ -1660,11 +1686,14 @@ fn migrate_0_25_to_0_26(store: &super::Store) -> Result<()> {
 mod tests {
     use std::borrow::Cow;
 
+    use attrievent::attribute::{ConnAttr, DnsAttr, HttpAttr, RawEventKind};
+    use bincode::Options;
     use rocksdb::Direction;
     use semver::{Version, VersionReq};
+    use serde::Serialize;
 
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::{Store, migration::migration_structures::AccountBeforeV36};
+    use crate::{Indexed, Store, ValueKind, migration::migration_structures::AccountBeforeV36};
 
     #[allow(dead_code)]
     struct TestSchema {
@@ -4326,5 +4355,135 @@ mod tests {
                 _ => {}
             }
         }
+    }
+
+    #[test]
+    fn migrate_0_37_0_to_0_38() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+
+        use super::migration_structures::{PacketAttrBeforeV38, ValueKindBeforeV38};
+        use crate::AttrCmpKind;
+
+        let first_addr_value = "127.0.0.1";
+        let attribute_string_to_addr = PacketAttrBeforeV38 {
+            attr_name: "conn-id.orig_h".to_string(),
+            value_kind: ValueKindBeforeV38::String,
+            cmp_kind: AttrCmpKind::Contain,
+            first_value: serialize(&first_addr_value).unwrap(),
+            second_value: None,
+            weight: Some(0.1),
+        };
+
+        let first_bool_value: i64 = 1;
+        let attribute_int_to_bool = PacketAttrBeforeV38 {
+            attr_name: "dns-RA".to_string(),
+            value_kind: ValueKindBeforeV38::Integer,
+            cmp_kind: AttrCmpKind::NotEqual,
+            first_value: serialize(&first_bool_value).unwrap(),
+            second_value: None,
+            weight: Some(0.1),
+        };
+
+        let first_uint_value: i64 = 80;
+        let second_uint_value: i64 = 82;
+        let attribute_int_to_uint = PacketAttrBeforeV38 {
+            attr_name: "http-id.resp_p".to_string(),
+            value_kind: ValueKindBeforeV38::Integer,
+            cmp_kind: AttrCmpKind::OpenRange,
+            first_value: serialize(&first_uint_value).unwrap(),
+            second_value: serialize(&second_uint_value),
+            weight: Some(0.1),
+        };
+
+        let packet_attr = vec![
+            attribute_string_to_addr,
+            attribute_int_to_bool,
+            attribute_int_to_uint,
+        ];
+
+        let triage_policy = super::migration_structures::TriagePolicyBeforeV38 {
+            id: 0,
+            name: "triage test".to_string(),
+            ti_db: Vec::new(),
+            packet_attr,
+            confidence: Vec::new(),
+            response: Vec::new(),
+            creation_time: Utc::now(),
+        };
+
+        let settings = TestSchema::new();
+        let map = settings.store.triage_policy_map();
+        let raw = map.raw();
+        let res = raw.insert(triage_policy);
+        assert!(res.is_ok());
+
+        let id: u32 = res.unwrap();
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+        assert!(super::migrate_0_38_triage_policy(&settings.store).is_ok());
+
+        let map = settings.store.triage_policy_map();
+        let triage_policy = map.get_by_id(id).unwrap().unwrap();
+
+        assert_eq!(
+            triage_policy.packet_attr[0].raw_event_kind,
+            RawEventKind::Conn
+        );
+        assert_eq!(
+            triage_policy.packet_attr[0].attr_name,
+            ConnAttr::SrcAddr.to_string()
+        );
+        assert_eq!(triage_policy.packet_attr[0].value_kind, ValueKind::IpAddr);
+
+        let first_value: IpAddr = first_addr_value.parse().unwrap();
+        assert_eq!(
+            triage_policy.packet_attr[0].first_value,
+            serialize(&first_value).unwrap()
+        );
+
+        assert_eq!(
+            triage_policy.packet_attr[1].raw_event_kind,
+            RawEventKind::Dns
+        );
+        assert_eq!(
+            triage_policy.packet_attr[1].attr_name,
+            DnsAttr::RA.to_string()
+        );
+        assert_eq!(triage_policy.packet_attr[1].value_kind, ValueKind::Bool);
+        assert_eq!(
+            triage_policy.packet_attr[1].first_value,
+            serialize(&true).unwrap()
+        );
+        assert_eq!(triage_policy.packet_attr[1].second_value, None);
+
+        assert_eq!(
+            triage_policy.packet_attr[2].raw_event_kind,
+            RawEventKind::Http
+        );
+        assert_eq!(
+            triage_policy.packet_attr[2].attr_name,
+            HttpAttr::DstPort.to_string()
+        );
+        assert_eq!(triage_policy.packet_attr[2].value_kind, ValueKind::UInteger);
+
+        let first_value: u64 = first_uint_value.try_into().unwrap();
+        let second_value: u64 = second_uint_value.try_into().unwrap();
+        assert_eq!(
+            triage_policy.packet_attr[2].first_value,
+            serialize(&first_value).unwrap()
+        );
+        assert_eq!(
+            triage_policy.packet_attr[2].second_value,
+            serialize(&second_value)
+        );
+    }
+
+    fn serialize<T>(v: &T) -> Option<Vec<u8>>
+    where
+        T: Serialize,
+    {
+        bincode::DefaultOptions::new().serialize(v).ok()
     }
 }

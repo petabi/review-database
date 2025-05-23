@@ -12,6 +12,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `update_agent_status_by_hostname` public function to `Node` table. This
   function allows updating an agent’s status using the node’s hostname and the
   agent’s ID.
+- Added triage functionality for scoring with attributes of each raw event.
+  Previously, all detection events always returned a score of 0.0. It now
+  compares the values against the provided attribute correctly and returns a
+  score.
 
 ### Changed
 
@@ -20,6 +24,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   a breaking change if you were using identifiers affected by this change.
 - Modify the syslog message generation procedure to use dedicated formatter
   instead of Display trait.
+- Modified the `ValueKind` enum to support different types of input for packet
+  attribute triage.
 
 ### Fixed
 
