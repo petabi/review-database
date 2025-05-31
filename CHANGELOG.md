@@ -20,6 +20,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   a breaking change if you were using identifiers affected by this change.
 - Modify the syslog message generation procedure to use dedicated formatter
   instead of Display trait.
+- `Filter::host_name` has been renamed to `Filter::hostname` to align with the
+  naming convention used in other parts of the codebase.
 
 ### Fixed
 
