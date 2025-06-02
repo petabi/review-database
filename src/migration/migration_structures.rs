@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     net::{IpAddr, SocketAddr},
     time::Duration,
 };
@@ -8,14 +9,15 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    BlocklistConnFields, BlocklistDnsFields, BlocklistHttpFields, BlocklistKerberosFields,
+    Agent, BlocklistConnFields, BlocklistDnsFields, BlocklistHttpFields, BlocklistKerberosFields,
     BlocklistNtlmFields, BlocklistRdpFields, BlocklistSmtpFields, BlocklistSshFields,
     BlocklistTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
     ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
-    HttpThreatFields, LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields,
-    NetworkThreat, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields, Role,
-    TriageScore, WindowsThreat,
+    HttpThreatFields, Indexable, LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields,
+    NetworkThreat, NodeProfile, PortScanFields, RdpBruteForceFields, RemoteConfig, RemoteStatus,
+    RepeatedHttpSessionsFields, Role, TriageScore, WindowsThreat,
     account::{PasswordHashAlgorithm, SaltedPassword},
+    tables::InnerNode,
     types::Account,
 };
 
@@ -2233,5 +2235,92 @@ impl From<Account> for AccountBeforeV36 {
             password_hash_algorithm: input.password_hash_algorithm,
             password_last_modified_at: input.password_last_modified_at,
         }
+    }
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Giganto {
+    pub status: RemoteStatus,
+    pub draft: Option<RemoteConfig>,
+}
+
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
+pub struct OldNodeFromV29BeforeV37 {
+    pub id: u32,
+    pub name: String,
+    pub name_draft: Option<String>,
+    pub profile: Option<NodeProfile>,
+    pub profile_draft: Option<NodeProfile>,
+    pub agents: Vec<Agent>,
+    pub giganto: Option<Giganto>,
+    pub creation_time: DateTime<Utc>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct OldInnerFromV29BeforeV37 {
+    pub id: u32,
+    pub name: String,
+    pub name_draft: Option<String>,
+    pub profile: Option<NodeProfile>,
+    pub profile_draft: Option<NodeProfile>,
+    pub creation_time: DateTime<Utc>,
+    pub agents: Vec<String>,
+    pub giganto: Option<Giganto>,
+}
+
+impl From<OldNodeFromV29BeforeV37> for OldInnerFromV29BeforeV37 {
+    fn from(input: OldNodeFromV29BeforeV37) -> Self {
+        Self {
+            id: input.id,
+            name: input.name,
+            name_draft: input.name_draft,
+            profile: input.profile,
+            profile_draft: input.profile_draft,
+            creation_time: input.creation_time,
+            agents: input.agents.iter().map(|a| a.key.clone()).collect(),
+            giganto: input.giganto,
+        }
+    }
+}
+
+impl From<OldInnerFromV29BeforeV37> for InnerNode {
+    fn from(input: OldInnerFromV29BeforeV37) -> Self {
+        Self {
+            id: input.id,
+            name: input.name,
+            name_draft: input.name_draft,
+            profile: input.profile,
+            profile_draft: input.profile_draft,
+            agents: input.agents,
+            remotes: input
+                .giganto
+                .map_or_else(Vec::new, |_| vec!["giganto".to_string()]),
+            creation_time: input.creation_time,
+        }
+    }
+}
+
+impl Indexable for OldInnerFromV29BeforeV37 {
+    fn key(&self) -> Cow<[u8]> {
+        Cow::from(self.name.as_bytes())
+    }
+
+    fn index(&self) -> u32 {
+        self.id
+    }
+
+    fn make_indexed_key(key: Cow<[u8]>, _index: u32) -> Cow<[u8]> {
+        key
+    }
+
+    fn value(&self) -> Vec<u8> {
+        use bincode::Options;
+        bincode::DefaultOptions::new()
+            .serialize(self)
+            .unwrap_or_default()
+    }
+
+    fn set_index(&mut self, index: u32) {
+        self.id = index;
     }
 }

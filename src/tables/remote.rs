@@ -1,4 +1,4 @@
-//! The agent table.
+//! The remote table.
 
 use std::mem::size_of;
 
@@ -6,45 +6,41 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use super::{AgentConfig, AgentKind, AgentStatus};
+use super::{RemoteConfig, RemoteKind, RemoteStatus};
 use crate::{Map, Table, UniqueKey, tables::Value as ValueTrait, types::FromKeyValue};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Agent {
+pub struct Remote {
     pub node: u32,
     pub key: String,
-    pub kind: AgentKind,
-    pub status: AgentStatus,
-    pub config: Option<AgentConfig>,
-    pub draft: Option<AgentConfig>,
+    pub kind: RemoteKind,
+    pub status: RemoteStatus,
+    pub draft: Option<RemoteConfig>,
 }
 
-impl Agent {
+impl Remote {
     /// # Errors
     ///
     /// Returns an error if `config` fails to be `validate`-ed.
     pub fn new(
         node: u32,
         key: String,
-        kind: AgentKind,
-        status: AgentStatus,
-        config: Option<String>,
+        kind: RemoteKind,
+        status: RemoteStatus,
         draft: Option<String>,
     ) -> Result<Self> {
-        let config = config.map(TryInto::try_into).transpose()?;
         let draft = draft.map(TryInto::try_into).transpose()?;
         Ok(Self {
             node,
             key,
             kind,
             status,
-            config,
             draft,
         })
     }
 }
 
-impl FromKeyValue for Agent {
+impl FromKeyValue for Remote {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
         let value: Value = super::deserialize(value)?;
 
@@ -59,13 +55,12 @@ impl FromKeyValue for Agent {
             key,
             kind: value.kind,
             status: value.status,
-            config: value.config,
             draft: value.draft,
         })
     }
 }
 
-impl UniqueKey for Agent {
+impl UniqueKey for Remote {
     type AsBytes<'a> = Vec<u8>;
 
     fn unique_key(&self) -> Vec<u8> {
@@ -75,14 +70,13 @@ impl UniqueKey for Agent {
     }
 }
 
-impl ValueTrait for Agent {
+impl ValueTrait for Remote {
     type AsBytes<'a> = Vec<u8>;
 
     fn value(&self) -> Vec<u8> {
         let value = Value {
             kind: self.kind,
             status: self.status,
-            config: self.config.clone(),
             draft: self.draft.clone(),
         };
         super::serialize(&value).expect("serializable")
@@ -91,40 +85,39 @@ impl ValueTrait for Agent {
 
 #[derive(Serialize, Deserialize)]
 struct Value {
-    kind: AgentKind,
-    status: AgentStatus,
-    config: Option<AgentConfig>,
-    draft: Option<AgentConfig>,
+    kind: RemoteKind,
+    status: RemoteStatus,
+    draft: Option<RemoteConfig>,
 }
 
-/// Functions for the agents table.
-impl<'d> Table<'d, Agent> {
-    /// Opens the agents table in the database.
+/// Functions for the remotes table.
+impl<'d> Table<'d, Remote> {
+    /// Opens the remotes table in the database.
     ///
     /// Returns `None` if the table does not exist.
     pub(super) fn open(db: &'d OptimisticTransactionDB) -> Option<Self> {
-        Map::open(db, super::AGENTS).map(Table::new)
+        Map::open(db, super::REMOTES).map(Table::new)
     }
 
     pub(crate) fn raw(&self) -> &Map<'_> {
         &self.map
     }
 
-    /// Returns an agent with the given `node` and `id`.
+    /// Returns an remote with the given `node` and `id`.
     ///
     /// # Errors
     ///
-    /// Returns an error if the agent does not exist or the database operation fails.
-    pub fn get(&self, node: u32, id: &str) -> Result<Option<Agent>> {
+    /// Returns an error if the remote does not exist or the database operation fails.
+    pub fn get(&self, node: u32, id: &str) -> Result<Option<Remote>> {
         let mut key = node.to_be_bytes().to_vec();
         key.extend(id.as_bytes());
         let Some(value) = self.map.get(&key)? else {
             return Ok(None);
         };
-        Ok(Some(Agent::from_key_value(&key, value.as_ref())?))
+        Ok(Some(Remote::from_key_value(&key, value.as_ref())?))
     }
 
-    /// Deletes the agent with given `node` and `id`.
+    /// Deletes the remote with given `node` and `id`.
     ///
     /// # Errors
     ///
@@ -135,12 +128,12 @@ impl<'d> Table<'d, Agent> {
         self.map.delete(&key)
     }
 
-    /// Updates the `Agent` in the database.
+    /// Updates the `Remote` in the database.
     ///
     /// # Errors
     ///
     /// Returns an error if the serialization fails or the database operation fails.
-    pub fn update(&self, old: &Agent, new: &Agent) -> Result<()> {
+    pub fn update(&self, old: &Remote, new: &Remote) -> Result<()> {
         let (ok, ov) = (old.unique_key(), old.value());
         let (nk, nv) = (new.unique_key(), new.value());
         self.map.update((&ok, &ov), (&nk, &nv))
@@ -160,47 +153,32 @@ mod test {
         Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap())
     }
 
-    fn create_agent(
-        node: u32,
-        key: &str,
-        kind: AgentKind,
-        config: Option<&str>,
-        draft: Option<&str>,
-    ) -> Agent {
-        Agent::new(
+    fn create_remote(node: u32, key: &str, kind: RemoteKind, draft: Option<&str>) -> Remote {
+        Remote::new(
             node,
             key.to_string(),
             kind,
-            AgentStatus::Enabled,
-            config.map(ToString::to_string),
+            RemoteStatus::Enabled,
             draft.map(ToString::to_string),
         )
         .unwrap()
     }
 
     #[test]
-    fn agent_creation() {
-        let agent = create_agent(
-            1,
-            "test_key",
-            AgentKind::Unsupervised,
-            Some(VALID_TOML),
-            Some(VALID_TOML),
-        );
-        assert_eq!(agent.node, 1);
-        assert_eq!(agent.key, "test_key");
-        assert_eq!(agent.kind, AgentKind::Unsupervised);
-        assert_eq!(agent.config.as_ref().unwrap().as_ref(), VALID_TOML);
-        assert_eq!(agent.draft.as_ref().unwrap().as_ref(), VALID_TOML);
+    fn remote_creation() {
+        let remote = create_remote(1, "test_key", RemoteKind::Datalake, Some(VALID_TOML));
+        assert_eq!(remote.node, 1);
+        assert_eq!(remote.key, "test_key");
+        assert_eq!(remote.kind, RemoteKind::Datalake);
+        assert_eq!(remote.draft.as_ref().unwrap().as_ref(), VALID_TOML);
 
         let invalid = "invalid";
         assert!(
-            Agent::new(
+            Remote::new(
                 1,
                 "test_key".to_string(),
-                AgentKind::Unsupervised,
-                AgentStatus::Enabled,
-                Some(invalid.to_string()),
+                RemoteKind::Datalake,
+                RemoteStatus::Enabled,
                 Some(invalid.to_string()),
             )
             .is_err()
@@ -209,56 +187,38 @@ mod test {
 
     #[test]
     fn config_try_from() {
-        let config = AgentConfig::try_from(VALID_TOML.to_string()).unwrap();
+        let config = RemoteConfig::try_from(VALID_TOML.to_string()).unwrap();
         assert_eq!(config.as_ref(), VALID_TOML);
     }
 
     #[test]
     fn serialization() {
-        let agent = create_agent(
-            1,
-            "test_key",
-            AgentKind::Unsupervised,
-            Some(VALID_TOML),
-            Some(VALID_TOML),
-        );
-        let serialized = agent.value();
-        let deserialized = Agent::from_key_value(&agent.unique_key(), &serialized).unwrap();
-        assert_eq!(agent, deserialized);
+        let remote = create_remote(1, "test_key", RemoteKind::TiContainer, Some(VALID_TOML));
+        let serialized = remote.value();
+        let deserialized = Remote::from_key_value(&remote.unique_key(), &serialized).unwrap();
+        assert_eq!(remote, deserialized);
     }
 
     #[test]
     fn operations() {
         let store = setup_store();
-        let table = store.agents_map();
+        let table = store.remotes_map();
 
-        let agent = create_agent(
-            1,
-            "test_key",
-            AgentKind::Unsupervised,
-            Some(VALID_TOML),
-            None,
-        );
+        let remote = create_remote(1, "test_key", RemoteKind::Datalake, None);
 
-        // Insert and retrieve agent
-        assert!(table.insert(&agent).is_ok());
-        let retrieved_agent = table.get(1, "test_key").unwrap().unwrap();
-        assert_eq!(agent, retrieved_agent);
+        // Insert and retrieve remote
+        assert!(table.insert(&remote).is_ok());
+        let retrieved_remote = table.get(1, "test_key").unwrap().unwrap();
+        assert_eq!(remote, retrieved_remote);
 
         let new_toml = r#"another_test = "abc""#;
-        // Update agent
-        let updated_agent = create_agent(
-            1,
-            "test_key",
-            AgentKind::Sensor,
-            Some(new_toml),
-            Some(new_toml),
-        );
-        table.update(&agent, &updated_agent).unwrap();
-        let retrieved_updated_agent = table.get(1, "test_key").unwrap().unwrap();
-        assert_eq!(updated_agent, retrieved_updated_agent);
+        // Update remote
+        let updated_remote = create_remote(1, "test_key", RemoteKind::TiContainer, Some(new_toml));
+        table.update(&remote, &updated_remote).unwrap();
+        let retrieved_updated_remote = table.get(1, "test_key").unwrap().unwrap();
+        assert_eq!(updated_remote, retrieved_updated_remote);
 
-        // Delete agent
+        // Delete remote
         table.delete(1, "test_key").unwrap();
         let result = table.get(1, "test_key").unwrap();
         assert!(result.is_none());
