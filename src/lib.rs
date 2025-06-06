@@ -68,12 +68,13 @@ pub use self::tables::{
     CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
     DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator, Network,
     NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey,
-    OutlierInfoValue, PacketAttr, ProtocolPorts, Remote, RemoteConfig, RemoteKind, RemoteStatus,
-    Response, ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
-    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, Ti,
-    TiCmpKind, Tidb, TidbKind, TidbRule, TorExitNode, TrafficFilter, TriagePolicy,
-    TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent,
-    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
+    OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval,
+    SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
+    StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
+    TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
+    TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, UnlinkedServer,
+    UnlinkedServerConfig, UnlinkedServerKind, UnlinkedServerStatus, Unstructured,
+    UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
@@ -264,12 +265,6 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn remotes_map(&self) -> Table<Remote> {
-        self.states.remotes()
-    }
-
-    #[must_use]
-    #[allow(clippy::missing_panics_doc)]
     pub fn sampling_policy_map(&self) -> IndexedTable<SamplingPolicy> {
         self.states.sampling_policies()
     }
@@ -338,6 +333,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn traffic_filter_map(&self) -> Table<TrafficFilter> {
         self.states.traffic_filters()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn unlinked_servers_map(&self) -> Table<UnlinkedServer> {
+        self.states.unlinked_servers()
     }
 
     /// Returns the tag set for workflow.

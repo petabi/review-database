@@ -41,7 +41,6 @@ mod private {
     impl Sealed for tables::Network {}
     impl Sealed for tables::OutlierInfo {}
     impl Sealed for types::Qualifier {}
-    impl Sealed for tables::Remote {}
     impl Sealed for tables::SamplingPolicy {}
     impl Sealed for types::Status {}
     impl Sealed for tables::Template {}
@@ -52,6 +51,7 @@ mod private {
     impl Sealed for tables::TriageResponse {}
     impl Sealed for tables::TrustedDomain {}
     impl Sealed for tables::TrustedUserAgent {}
+    impl Sealed for tables::UnlinkedServer {}
 }
 
 pub(crate) type Timestamp = i64;

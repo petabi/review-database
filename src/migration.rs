@@ -16,7 +16,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
-use crate::{Agent, Indexed, IterableMap, Remote};
+use crate::{Agent, Indexed, IterableMap, UnlinkedServer};
 
 /// The range of versions that use the current database format.
 ///
@@ -307,20 +307,23 @@ fn migrate_0_38_node(store: &super::Store) -> Result<()> {
 
     let map = store.node_map();
     let node_raw = map.raw();
-    let remote_raw = map.remote_raw();
+    let unlinked_server_raw = map.unlinked_server_raw();
     for (_key, old_value) in node_raw.iter_forward()? {
         let old_inner_node = bincode::DefaultOptions::new()
             .deserialize::<OldInnerFromV29BeforeV37>(&old_value)
             .context("Failed to migrate node database: invalid node value")?;
         if let Some(ref config) = old_inner_node.giganto {
-            let remote = Remote {
+            let unlinked_server = UnlinkedServer {
                 node: old_inner_node.id,
                 key: "giganto".to_string(),
-                kind: crate::RemoteKind::Datalake,
+                kind: crate::UnlinkedServerKind::Datalake,
                 status: config.status,
                 draft: config.draft.clone(),
             };
-            remote_raw.insert(remote.unique_key().as_ref(), remote.value().as_ref())?;
+            unlinked_server_raw.insert(
+                unlinked_server.unique_key().as_ref(),
+                unlinked_server.value().as_ref(),
+            )?;
         }
         let new_inner_node: InnerNode = old_inner_node.into();
         node_raw.overwrite(&new_inner_node)?;
@@ -950,7 +953,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
             let mut giganto = None;
             let mut agents = vec![None, None, None];
             let agent_status = crate::AgentStatus::Enabled;
-            let remote_status = crate::RemoteStatus::Enabled;
+            let unlinked_server_status = crate::UnlinkedServerStatus::Enabled;
 
             if let Some(s) = input.settings.as_ref() {
                 if s.hog {
@@ -1083,7 +1086,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
 
                 if s.giganto {
                     giganto = Some(Giganto {
-                        status: remote_status,
+                        status: unlinked_server_status,
                         draft: None,
                     });
                 }
@@ -1263,7 +1266,7 @@ fn migrate_0_29_node(store: &super::Store) -> Result<()> {
                     };
                     let draft = Some(toml::to_string(&draft)?.try_into()?);
                     giganto = Some(Giganto {
-                        status: remote_status,
+                        status: unlinked_server_status,
                         draft,
                     });
                 }
@@ -4421,7 +4424,7 @@ mod tests {
             tables::{UniqueKey, Value},
         };
         let agent_status = crate::AgentStatus::Enabled;
-        let remote_status = crate::RemoteStatus::Enabled;
+        let unlinked_server_status = crate::UnlinkedServerStatus::Enabled;
 
         let hog_config = HogConfig {
             active_protocols: Some(Vec::new()),
@@ -4499,7 +4502,7 @@ mod tests {
             }),
             agents: vec![hog_agent.clone(), piglet_agent.clone()],
             giganto: Some(Giganto {
-                status: remote_status,
+                status: unlinked_server_status,
                 draft: Some(
                     toml::to_string(&giganto_config)
                         .unwrap()
@@ -4533,10 +4536,11 @@ mod tests {
         assert!(super::migrate_0_38_node(&settings.store).is_ok());
 
         let map = settings.store.node_map();
-        let (new_node, invalid_agent, invalid_remotes) = map.get_by_id(id).unwrap().unwrap();
+        let (new_node, invalid_agent, invalid_unlinked_servers) =
+            map.get_by_id(id).unwrap().unwrap();
 
         assert!(invalid_agent.is_empty());
-        assert!(invalid_remotes.is_empty());
+        assert!(invalid_unlinked_servers.is_empty());
         assert_eq!(new_node.id, id);
         assert_eq!(new_node.name, "name");
         assert_eq!(new_node.agents.len(), 2);
@@ -4549,10 +4553,10 @@ mod tests {
         let piglet: PigletConfig = toml::from_str(draft.as_ref()).unwrap();
         assert!(piglet.dump_items.is_some());
         assert!(piglet.dump_http_content_types.is_some_and(|v| v.is_empty()));
-        assert_eq!(new_node.remotes.len(), 1);
-        assert_eq!(new_node.remotes[0].key, "giganto");
-        assert!(new_node.remotes[0].draft.is_some());
-        let draft = new_node.remotes[0].draft.clone().unwrap();
+        assert_eq!(new_node.unlinked_servers.len(), 1);
+        assert_eq!(new_node.unlinked_servers[0].key, "giganto");
+        assert!(new_node.unlinked_servers[0].draft.is_some());
+        let draft = new_node.unlinked_servers[0].draft.clone().unwrap();
         let giganto: GigantoConfig = toml::from_str(draft.as_ref()).unwrap();
         assert_eq!(
             giganto.retention,
