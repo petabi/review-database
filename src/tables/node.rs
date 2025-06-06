@@ -1,22 +1,94 @@
 //! The `network` table.
 
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Display};
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use num_derive::{FromPrimitive, ToPrimitive};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
 use super::TableIter as TI;
 use crate::{
-    Agent, AgentConfig, AgentStatus, Indexable, Indexed, IndexedMap, IndexedMapUpdate,
-    IndexedTable, Iterable, Map, Table as CrateTable, UniqueKey, types::FromKeyValue,
+    Agent, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, Iterable, Map,
+    Table as CrateTable, UniqueKey, UnlinkedServer, types::FromKeyValue,
 };
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Giganto {
-    pub status: AgentStatus,
-    pub draft: Option<AgentConfig>,
+#[derive(
+    Serialize,
+    Deserialize,
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    EnumString,
+    FromPrimitive,
+    ToPrimitive,
+)]
+#[repr(u32)]
+#[strum(serialize_all = "snake_case")]
+pub enum Kind {
+    Unsupervised = 1,
+    Sensor = 2,
+    SemiSupervised = 3,
+    TimeSeriesGenerator = 4,
+    Datalake = 5,
+    TiContainer = 6,
+}
+
+#[derive(
+    Serialize,
+    Default,
+    Deserialize,
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    EnumString,
+    FromPrimitive,
+    ToPrimitive,
+)]
+#[repr(u8)]
+#[strum(serialize_all = "snake_case")]
+pub enum Status {
+    Disabled = 0,
+    #[default]
+    Enabled = 1,
+    ReloadFailed = 2,
+    Unknown = u8::MAX,
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug, Default)]
+pub struct Config {
+    inner: String,
+}
+
+impl TryFrom<String> for Config {
+    type Error = anyhow::Error;
+
+    fn try_from(inner: String) -> Result<Self> {
+        let _ = &inner.parse::<toml::Table>()?;
+        Ok(Self { inner })
+    }
+}
+
+impl AsRef<str> for Config {
+    fn as_ref(&self) -> &str {
+        &self.inner
+    }
+}
+
+impl Display for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
@@ -27,7 +99,7 @@ pub struct Node {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<Agent>,
-    pub giganto: Option<Giganto>,
+    pub unlinked_servers: Vec<UnlinkedServer>,
     pub creation_time: DateTime<Utc>,
 }
 
@@ -38,7 +110,7 @@ pub struct Update {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<Agent>,
-    pub giganto: Option<Giganto>,
+    pub unlinked_servers: Vec<UnlinkedServer>,
 }
 
 impl UniqueKey for Node {
@@ -57,7 +129,7 @@ impl From<Node> for Update {
             profile: input.profile,
             profile_draft: input.profile_draft,
             agents: input.agents,
-            giganto: input.giganto,
+            unlinked_servers: input.unlinked_servers,
         }
     }
 }
@@ -70,6 +142,7 @@ where
         TableIter {
             node: self.node.iter(direction, from),
             agent: self.agent.clone(),
+            unlinked_server: self.unlinked_server.clone(),
         }
     }
 
@@ -83,6 +156,7 @@ where
         TableIter {
             node: iter,
             agent: self.agent.clone(),
+            unlinked_server: self.unlinked_server.clone(),
         }
     }
 }
@@ -90,7 +164,10 @@ where
 pub struct Table<'d> {
     node: IndexedTable<'d, Inner>,
     agent: CrateTable<'d, Agent>,
+    unlinked_server: CrateTable<'d, UnlinkedServer>,
 }
+
+type NodeWithInvalidAgentUnlinkedServer = (Node, Vec<String>, Vec<String>);
 
 impl<'d> Table<'d> {
     /// Opens the node table in the database.
@@ -105,11 +182,24 @@ impl<'d> Table<'d> {
             .map(IndexedTable::new)
             .expect("{super::NODES} must be present");
         let agent = Map::open(db, super::AGENTS).map(CrateTable::new)?;
-        Some(Self { node, agent })
+        let unlinked_server = Map::open(db, super::UNLINKED_SERVERS).map(CrateTable::new)?;
+        Some(Self {
+            node,
+            agent,
+            unlinked_server,
+        })
     }
 
     pub(crate) fn raw(&self) -> &IndexedMap<'_> {
         self.node.raw()
+    }
+
+    pub(crate) fn agent_raw(&self) -> &Map<'_> {
+        self.agent.raw()
+    }
+
+    pub(crate) fn unlinked_server_raw(&self) -> &Map<'_> {
+        self.unlinked_server.raw()
     }
 
     /// Returns the total count of nodes available.
@@ -121,12 +211,12 @@ impl<'d> Table<'d> {
         self.node.count()
     }
 
-    /// Returns a tuple of `(node, invalid_agents)` when node with `id` exists.
+    /// Returns a tuple of `(node, invalid_agents, invalid_unlinked_servers)` when node with `id` exists.
     ///
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn get_by_id(&self, id: u32) -> Result<Option<(Node, Vec<String>)>> {
+    pub fn get_by_id(&self, id: u32) -> Result<Option<NodeWithInvalidAgentUnlinkedServer>> {
         let Some(inner) = self.node.get_by_id(id)? else {
             return Ok(None);
         };
@@ -141,6 +231,16 @@ impl<'d> Table<'d> {
             }
         }
 
+        let mut unlinked_servers = vec![];
+        let mut invalid_unlinked_servers = vec![];
+        for rid in inner.unlinked_servers {
+            if let Some(unlinked_server) = self.unlinked_server.get(id, &rid)? {
+                unlinked_servers.push(unlinked_server);
+            } else {
+                invalid_unlinked_servers.push(rid);
+            }
+        }
+
         let node = Node {
             id: inner.id,
             name: inner.name,
@@ -148,10 +248,10 @@ impl<'d> Table<'d> {
             profile: inner.profile,
             profile_draft: inner.profile_draft,
             agents,
-            giganto: inner.giganto,
+            unlinked_servers,
             creation_time: inner.creation_time,
         };
-        Ok(Some((node, invalid_agents)))
+        Ok(Some((node, invalid_agents, invalid_unlinked_servers)))
     }
 
     /// Inserts a node entry, returns the `id` of the inserted node.
@@ -168,7 +268,11 @@ impl<'d> Table<'d> {
             profile_draft: entry.profile_draft,
             creation_time: entry.creation_time,
             agents: entry.agents.iter().map(|a| a.key.clone()).collect(),
-            giganto: entry.giganto,
+            unlinked_servers: entry
+                .unlinked_servers
+                .iter()
+                .map(|a| a.key.clone())
+                .collect(),
         };
 
         let node = self.node.put(inner)?;
@@ -177,24 +281,38 @@ impl<'d> Table<'d> {
             agent.node = node;
             self.agent.put(&agent)?;
         }
+
+        for mut server in entry.unlinked_servers {
+            server.node = node;
+            self.unlinked_server.put(&server)?;
+        }
         Ok(node)
     }
 
-    /// Removes a node with given `id`, returns `(key, invalid_agents)`.
+    /// Removes a node with given `id`, returns `(key, invalid_agents, invalid_unlinked_servers)`.
     ///
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn remove(&self, id: u32) -> Result<(Vec<u8>, Vec<String>)> {
+    pub fn remove(&self, id: u32) -> Result<(Vec<u8>, Vec<String>, Vec<String>)> {
         use anyhow::anyhow;
         let inner = self.node.get_by_id(id)?.ok_or(anyhow!("No such id"))?;
-        let mut invalids = vec![];
+        let mut invalid_agents = vec![];
         for agent in inner.agents {
             if self.agent.delete(id, &agent).is_err() {
-                invalids.push(agent);
+                invalid_agents.push(agent);
             }
         }
-        self.node.remove(id).map(|key| (key, invalids))
+
+        let mut invalid_unlinked_servers = vec![];
+        for server in inner.unlinked_servers {
+            if self.unlinked_server.delete(id, &server).is_err() {
+                invalid_unlinked_servers.push(server);
+            }
+        }
+        self.node
+            .remove(id)
+            .map(|key| (key, invalid_agents, invalid_unlinked_servers))
     }
 
     #[must_use]
@@ -202,12 +320,14 @@ impl<'d> Table<'d> {
         TableIter {
             node: self.node.iter(direction, from),
             agent: self.agent.clone(),
+            unlinked_server: self.unlinked_server.clone(),
         }
     }
 
-    /// Updates the `Node` from `old` to `new` using the specified `id`. The `id` is used
-    /// for the `Agent::node` field, meaning the `node` field of each agent in both `old.agents`
-    /// and `new.agents` will be disregarded.
+    /// Updates the `Node` from `old` to `new` using the specified `id`. The `id` is used for both
+    /// the `Agent::node` and `UnlinkedServer::node` fields, meaning the `node` field of each agent
+    /// in both `old.agents` and `new.agents`, as well as each unlinked server in both `old.unlinked_servers`
+    /// and `new.unlinked_servers`, will be disregarded.
     ///
     /// # Errors
     ///
@@ -215,6 +335,7 @@ impl<'d> Table<'d> {
     pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
         use std::collections::HashMap;
 
+        // Update Agent
         let mut old_agents: HashMap<_, _> = old.agents.iter().map(|a| (&a.key, a)).collect();
         let mut new_agents: HashMap<_, _> = new.agents.iter().map(|a| (&a.key, a)).collect();
 
@@ -249,13 +370,54 @@ impl<'d> Table<'d> {
             self.agent.update(&old, &new)?;
         }
 
+        // Update UnlinkedServer
+        let mut old_unlinked_servers: HashMap<_, _> =
+            old.unlinked_servers.iter().map(|a| (&a.key, a)).collect();
+        let mut new_unlinked_servers: HashMap<_, _> =
+            new.unlinked_servers.iter().map(|a| (&a.key, a)).collect();
+
+        for to_remove in old_unlinked_servers
+            .keys()
+            .filter(|k| !new_unlinked_servers.contains_key(*k))
+        {
+            self.unlinked_server.delete(id, to_remove)?;
+        }
+        old_unlinked_servers.retain(|&k, _| new_unlinked_servers.contains_key(k));
+
+        for (_k, to_insert) in new_unlinked_servers
+            .iter()
+            .filter(|(k, _v)| !old_unlinked_servers.contains_key(*k))
+        {
+            let mut to_insert: UnlinkedServer = (*to_insert).clone();
+            to_insert.node = id;
+            self.unlinked_server.put(&to_insert)?;
+        }
+        new_unlinked_servers.retain(|&k, _| old_unlinked_servers.contains_key(k));
+
+        let mut old_unlinked_servers: Vec<_> = old_unlinked_servers.values().collect();
+        old_unlinked_servers.sort_unstable_by_key(|a| a.key.clone());
+        let mut new_unlinked_servers: Vec<_> = new_unlinked_servers.values().collect();
+        new_unlinked_servers.sort_unstable_by_key(|a| a.key.clone());
+        for (old, new) in old_unlinked_servers
+            .into_iter()
+            .zip(new_unlinked_servers)
+            .filter(|(o, n)| **o != **n)
+        {
+            let mut old = (*old).clone();
+            old.node = id;
+            let mut new = (*new).clone();
+            new.node = id;
+            self.unlinked_server.update(&old, &new)?;
+        }
+
+        // Update Node
         let old_inner = InnerUpdate {
             name: old.name.clone(),
             name_draft: old.name_draft.clone(),
             profile: old.profile.clone(),
             profile_draft: old.profile_draft.clone(),
             agents: old.agents.iter().map(|a| a.key.clone()).collect(),
-            giganto: old.giganto.clone(),
+            unlinked_servers: old.unlinked_servers.iter().map(|a| a.key.clone()).collect(),
         };
 
         let new_inner = InnerUpdate {
@@ -264,7 +426,7 @@ impl<'d> Table<'d> {
             profile: new.profile.clone(),
             profile_draft: new.profile_draft.clone(),
             agents: new.agents.iter().map(|a| a.key.clone()).collect(),
-            giganto: new.giganto.clone(),
+            unlinked_servers: new.unlinked_servers.iter().map(|a| a.key.clone()).collect(),
         };
 
         self.node.update(id, &old_inner, &new_inner)
@@ -284,7 +446,7 @@ impl<'d> Table<'d> {
         &mut self,
         hostname: &str,
         agent_key: &str,
-        new_status: AgentStatus,
+        new_status: Status,
     ) -> Result<()> {
         let mut target_node = None;
         for result in self.iter(Direction::Forward, None) {
@@ -317,6 +479,7 @@ impl<'d> Table<'d> {
 pub struct TableIter<'d> {
     node: TI<'d, Inner>,
     agent: CrateTable<'d, Agent>,
+    unlinked_server: CrateTable<'d, UnlinkedServer>,
 }
 
 impl Iterator for TableIter<'_> {
@@ -332,6 +495,13 @@ impl Iterator for TableIter<'_> {
                     }
                 }
 
+                let mut unlinked_servers = vec![];
+                for rid in inner.unlinked_servers {
+                    if let Ok(Some(unlinked_server)) = self.unlinked_server.get(inner.id, &rid) {
+                        unlinked_servers.push(unlinked_server);
+                    }
+                }
+
                 Node {
                     id: inner.id,
                     name: inner.name,
@@ -339,7 +509,7 @@ impl Iterator for TableIter<'_> {
                     profile: inner.profile,
                     profile_draft: inner.profile_draft,
                     agents,
-                    giganto: inner.giganto,
+                    unlinked_servers,
                     creation_time: inner.creation_time,
                 }
             })
@@ -356,15 +526,14 @@ pub struct Profile {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub(crate) struct Inner {
-    id: u32,
-    name: String,
-    name_draft: Option<String>,
-    profile: Option<Profile>,
-    profile_draft: Option<Profile>,
-    creation_time: DateTime<Utc>,
-
-    agents: Vec<String>,
-    giganto: Option<Giganto>,
+    pub id: u32,
+    pub name: String,
+    pub name_draft: Option<String>,
+    pub profile: Option<Profile>,
+    pub profile_draft: Option<Profile>,
+    pub creation_time: DateTime<Utc>,
+    pub agents: Vec<String>,
+    pub unlinked_servers: Vec<String>,
 }
 
 impl FromKeyValue for Inner {
@@ -417,7 +586,7 @@ struct InnerUpdate {
     pub profile: Option<Profile>,
     pub profile_draft: Option<Profile>,
     pub agents: Vec<String>,
-    pub giganto: Option<Giganto>,
+    pub unlinked_servers: Vec<String>,
 }
 
 impl From<Inner> for InnerUpdate {
@@ -428,7 +597,7 @@ impl From<Inner> for InnerUpdate {
             profile: input.profile,
             profile_draft: input.profile_draft,
             agents: input.agents,
-            giganto: input.giganto,
+            unlinked_servers: input.unlinked_servers,
         }
     }
 }
@@ -448,7 +617,7 @@ impl IndexedMapUpdate for InnerUpdate {
         value.profile.clone_from(&self.profile);
         value.profile_draft.clone_from(&self.profile_draft);
         value.agents.clone_from(&self.agents);
-        value.giganto.clone_from(&self.giganto);
+        value.unlinked_servers.clone_from(&self.unlinked_servers);
         Ok(value)
     }
 
@@ -470,30 +639,29 @@ impl IndexedMapUpdate for InnerUpdate {
         if self.agents != value.agents {
             return false;
         }
-        self.giganto == value.giganto
+        self.unlinked_servers == value.unlinked_servers
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::net::IpAddr;
-    use std::sync::Arc;
+    use std::{
+        net::{IpAddr, SocketAddr},
+        sync::Arc,
+    };
 
     use num_traits::ToPrimitive;
 
     use super::*;
-    use crate::AgentKind;
-    use crate::AgentStatus;
     use crate::Store;
-    use crate::tables::agent::Config;
 
     type PortNumber = u16;
 
     #[allow(clippy::struct_excessive_bools)]
     #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
     struct Piglet {
-        pub giganto_ip: Option<IpAddr>,
-        pub giganto_port: Option<PortNumber>,
+        pub datalake_ip: Option<IpAddr>,
+        pub datalake_port: Option<PortNumber>,
         pub save_packets: bool,
         pub http: bool,
         pub office: bool,
@@ -507,11 +675,22 @@ mod test {
 
     #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
     struct Hog {
-        pub giganto_ip: Option<IpAddr>,
-        pub giganto_port: Option<PortNumber>,
+        pub datalake_ip: Option<IpAddr>,
+        pub datalake_port: Option<PortNumber>,
         pub protocols: Option<Vec<String>>,
 
         pub sensors: Option<Vec<String>>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    struct Datalake {
+        pub datalake_addr: SocketAddr,
+        pub ack_transmission: u16,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    struct TiContainer {
+        pub ti_container_graphql_addr: SocketAddr,
     }
 
     fn setup_store() -> Arc<Store> {
@@ -527,6 +706,7 @@ mod test {
         profile: Option<Profile>,
         profile_draft: Option<Profile>,
         agents: Vec<Agent>,
+        unlinked_servers: Vec<UnlinkedServer>,
     ) -> Node {
         let creation_time = Utc::now();
         Node {
@@ -536,14 +716,14 @@ mod test {
             profile,
             profile_draft,
             agents,
+            unlinked_servers,
             creation_time,
-            giganto: None,
         }
     }
 
     fn create_agents(
         node: u32,
-        kinds: &[AgentKind],
+        kinds: &[Kind],
         configs: &[Option<Config>],
         drafts: &[Option<Config>],
     ) -> Vec<Agent> {
@@ -555,37 +735,70 @@ mod test {
                 node,
                 key: kind.to_u32().unwrap().to_string(),
                 kind: *kind,
-                status: AgentStatus::Enabled,
+                status: Status::Enabled,
                 config: config.clone(),
                 draft: draft.clone(),
             })
             .collect()
     }
 
-    fn create_configs(agents: &[AgentKind]) -> Vec<Option<Config>> {
-        let ip = Some("127.0.0.1".parse::<IpAddr>().unwrap());
-        let port = Some(1234);
-        agents
+    fn create_unlinked_servers(
+        node: u32,
+        kinds: &[Kind],
+        drafts: &[Option<Config>],
+    ) -> Vec<UnlinkedServer> {
+        kinds
             .iter()
-            .map(|agent| match agent {
-                AgentKind::SemiSupervised => {
+            .zip(drafts)
+            .map(|(kind, draft)| UnlinkedServer {
+                node,
+                key: kind.to_u32().unwrap().to_string(),
+                kind: *kind,
+                status: Status::Enabled,
+                draft: draft.clone(),
+            })
+            .collect()
+    }
+
+    fn create_configs(kinds: &[Kind]) -> Vec<Option<Config>> {
+        let ip = "127.0.0.1".parse::<IpAddr>().unwrap();
+        let datalake_port = 1234;
+        let ti_container_port = 4567;
+
+        kinds
+            .iter()
+            .map(|kind| match kind {
+                Kind::SemiSupervised => {
                     let config = Hog {
-                        giganto_ip: ip,
-                        giganto_port: port,
+                        datalake_ip: Some(ip),
+                        datalake_port: Some(datalake_port),
                         ..Default::default()
                     };
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
-                AgentKind::Sensor => {
+                Kind::Sensor => {
                     let config = Piglet {
-                        giganto_ip: ip,
-                        giganto_port: port,
+                        datalake_ip: Some(ip),
+                        datalake_port: Some(datalake_port),
                         ..Default::default()
                     };
                     Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
-                AgentKind::TimeSeriesGenerator | AgentKind::Unsupervised => {
+                Kind::TimeSeriesGenerator | Kind::Unsupervised => {
                     Some(String::new().try_into().unwrap())
+                }
+                Kind::Datalake => {
+                    let config = Datalake {
+                        datalake_addr: SocketAddr::new(ip, datalake_port),
+                        ack_transmission: 1000,
+                    };
+                    Some(toml::to_string(&config).unwrap().try_into().unwrap())
+                }
+                Kind::TiContainer => {
+                    let config = TiContainer {
+                        ti_container_graphql_addr: SocketAddr::new(ip, ti_container_port),
+                    };
+                    Some(toml::to_string(&config).unwrap().try_into().unwrap())
                 }
             })
             .collect()
@@ -593,23 +806,44 @@ mod test {
 
     #[test]
     fn node_creation() {
-        let kinds = vec![
-            AgentKind::Unsupervised,
-            AgentKind::Sensor,
-            AgentKind::SemiSupervised,
-            AgentKind::TimeSeriesGenerator,
+        let agent_kinds = vec![
+            Kind::Unsupervised,
+            Kind::Sensor,
+            Kind::SemiSupervised,
+            Kind::TimeSeriesGenerator,
         ];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None, None];
-
+        let agent_configs1 = create_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(1, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(1, &kinds, &configs1, &configs2);
+        let unlinked_server_kinds = vec![Kind::Datalake, Kind::TiContainer];
+        let unlinked_server_config = create_configs(&unlinked_server_kinds);
+        let unlinked_servers =
+            create_unlinked_servers(1, &unlinked_server_kinds, &unlinked_server_config);
 
-        let node = create_node(1, "test", None, Some(profile), None, agents);
+        let node = create_node(
+            1,
+            "test",
+            None,
+            Some(profile),
+            None,
+            agents,
+            unlinked_servers,
+        );
         assert_eq!(
             node.agents.into_iter().map(|a| a.key).collect::<Vec<_>>(),
-            kinds
+            agent_kinds
+                .into_iter()
+                .map(|k| k.to_u32().unwrap().to_string())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            node.unlinked_servers
+                .into_iter()
+                .map(|a| a.key)
+                .collect::<Vec<_>>(),
+            unlinked_server_kinds
                 .into_iter()
                 .map(|k| k.to_u32().unwrap().to_string())
                 .collect::<Vec<_>>()
@@ -620,19 +854,26 @@ mod test {
     fn put_and_get() {
         let store = setup_store();
 
-        let kinds = vec![
-            AgentKind::Unsupervised,
-            AgentKind::Sensor,
-            AgentKind::SemiSupervised,
-        ];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
-
+        let agent_kinds = vec![Kind::Unsupervised, Kind::Sensor, Kind::SemiSupervised];
+        let agent_configs1: Vec<_> = create_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(456, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(456, &kinds, &configs1, &configs2);
+        let unlinked_server_kinds = vec![Kind::Datalake, Kind::TiContainer];
+        let unlinked_server_config = create_configs(&unlinked_server_kinds);
+        let unlinked_servers =
+            create_unlinked_servers(456, &unlinked_server_kinds, &unlinked_server_config);
 
-        let mut node = create_node(123, "test", None, Some(profile), None, agents);
+        let mut node = create_node(
+            123,
+            "test",
+            None,
+            Some(profile),
+            None,
+            agents,
+            unlinked_servers,
+        );
         let node_table = store.node_map();
         assert_eq!(node_table.count().unwrap(), 0);
         let res = node_table.put(node.clone());
@@ -641,12 +882,16 @@ mod test {
         // update node id to the actual id in database.
         node.id = res.unwrap();
         node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.unlinked_servers
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
 
         let res = node_table.get_by_id(node.id).unwrap();
         assert!(res.is_some());
 
-        let (returned, invalid_agents) = res.unwrap();
+        let (returned, invalid_agents, invalid_unlinked_servers) = res.unwrap();
         assert!(invalid_agents.is_empty());
+        assert!(invalid_unlinked_servers.is_empty());
         assert_eq!(returned, node);
     }
 
@@ -654,54 +899,85 @@ mod test {
     fn remove() {
         let store = setup_store();
 
-        let kinds = vec![
-            AgentKind::Unsupervised,
-            AgentKind::Sensor,
-            AgentKind::SemiSupervised,
-        ];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
-
+        let agent_kinds = vec![Kind::Unsupervised, Kind::Sensor, Kind::SemiSupervised];
+        let agent_configs1: Vec<_> = create_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(1, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(1, &kinds, &configs1, &configs2);
+        let unlinked_server_kinds = vec![Kind::Datalake, Kind::TiContainer];
+        let unlinked_server_config = create_configs(&unlinked_server_kinds);
+        let unlinked_servers =
+            create_unlinked_servers(1, &unlinked_server_kinds, &unlinked_server_config);
 
-        let mut node = create_node(1, "test", None, None, Some(profile), agents);
+        let mut node = create_node(
+            1,
+            "test",
+            None,
+            None,
+            Some(profile),
+            agents,
+            unlinked_servers,
+        );
 
         let node_table = store.node_map();
         assert_eq!(node_table.count().unwrap(), 0);
         assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 0);
+        assert_eq!(
+            store
+                .unlinked_servers_map()
+                .iter(Direction::Forward, None)
+                .count(),
+            0
+        );
         let res = node_table.put(node.clone());
         assert!(res.is_ok());
 
         // update node id to the actual id in database.
         node.id = res.unwrap();
         node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.unlinked_servers
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
 
         assert_eq!(node_table.count().unwrap(), 1);
         assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 3);
+        assert_eq!(
+            store
+                .unlinked_servers_map()
+                .iter(Direction::Forward, None)
+                .count(),
+            2
+        );
 
         assert!(node_table.remove(node.id).is_ok());
         let res = node_table.get_by_id(node.id).unwrap();
         assert!(res.is_none());
 
         assert_eq!(store.agents_map().iter(Direction::Forward, None).count(), 0);
+        assert_eq!(
+            store
+                .unlinked_servers_map()
+                .iter(Direction::Forward, None)
+                .count(),
+            0
+        );
     }
 
     #[test]
     fn update() {
         let store = setup_store();
-        let kinds = vec![
-            AgentKind::Unsupervised,
-            AgentKind::Sensor,
-            AgentKind::SemiSupervised,
-        ];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
 
+        let agent_kinds = vec![Kind::Unsupervised, Kind::Sensor, Kind::SemiSupervised];
+        let agent_configs1: Vec<_> = create_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(123, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(123, &kinds, &configs1, &configs2);
+        let unlinked_server_kinds = vec![Kind::Datalake, Kind::TiContainer];
+        let unlinked_server_config = create_configs(&unlinked_server_kinds);
+        let unlinked_servers =
+            create_unlinked_servers(123, &unlinked_server_kinds, &unlinked_server_config);
 
         let mut node = create_node(
             456,
@@ -710,8 +986,8 @@ mod test {
             None,
             Some(profile.clone()),
             agents.clone(),
+            unlinked_servers.clone(),
         );
-
         let mut node_table = store.node_map();
 
         let res = node_table.put(node.clone());
@@ -720,6 +996,9 @@ mod test {
         // update node id to the actual id in database.
         node.id = res.unwrap();
         node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.unlinked_servers
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
 
         let id = node.id;
 
@@ -729,7 +1008,7 @@ mod test {
             profile: Some(profile.clone()),
             profile_draft: Some(profile.clone()),
             agents: agents[1..].to_vec(),
-            giganto: Some(Giganto::default()),
+            unlinked_servers: unlinked_servers[1..].to_vec(),
         };
         let old = node.clone().into();
 
@@ -737,15 +1016,16 @@ mod test {
 
         let updated = node_table.get_by_id(id).unwrap();
         assert!(updated.is_some());
-        let (updated, invalid) = updated.unwrap();
+        let (updated, invalid_agents, invalid_unlinked_servers) = updated.unwrap();
 
-        assert!(invalid.is_empty());
+        assert!(invalid_agents.is_empty());
+        assert!(invalid_unlinked_servers.is_empty());
 
         node.name_draft = Some("update".to_string());
         node.profile = Some(profile.clone());
         node.profile_draft = Some(profile.clone());
         node.agents = node.agents.into_iter().skip(1).collect();
-        node.giganto = Some(Giganto::default());
+        node.unlinked_servers = node.unlinked_servers.into_iter().skip(1).collect();
 
         assert_eq!(updated, node);
     }
@@ -753,13 +1033,17 @@ mod test {
     #[test]
     fn update_agents_drafts_only() {
         let store: Arc<Store> = setup_store();
-        let kinds = vec![AgentKind::Unsupervised, AgentKind::SemiSupervised];
-        let configs1: Vec<_> = create_configs(&kinds);
-        let configs2 = vec![None, None, None];
 
+        let agent_kinds = vec![Kind::Unsupervised, Kind::SemiSupervised];
+        let agent_configs1: Vec<_> = create_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
         let profile = Profile::default();
+        let agents = create_agents(123, &agent_kinds, &agent_configs1, &agent_configs2);
 
-        let agents = create_agents(123, &kinds, &configs1, &configs2);
+        let unlinked_server_kinds = vec![Kind::Datalake, Kind::TiContainer];
+        let unlinked_server_config = create_configs(&unlinked_server_kinds);
+        let unlinked_servers =
+            create_unlinked_servers(123, &unlinked_server_kinds, &unlinked_server_config);
 
         let mut node = create_node(
             456,
@@ -768,6 +1052,7 @@ mod test {
             None,
             Some(profile.clone()),
             agents.clone(),
+            unlinked_servers.clone(),
         );
 
         let mut node_table = store.node_map();
@@ -778,6 +1063,9 @@ mod test {
         // update node id to the actual id in database.
         node.id = res.unwrap();
         node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.unlinked_servers
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
 
         let id = node.id;
 
@@ -795,7 +1083,7 @@ mod test {
             .collect();
         update_agents.extend(create_agents(
             id,
-            &[AgentKind::Sensor],
+            &[Kind::Sensor],
             &[Some(
                 toml::to_string(&Piglet::default())
                     .unwrap()
@@ -811,8 +1099,9 @@ mod test {
 
         let updated = node_table.get_by_id(id).unwrap();
         assert!(updated.is_some());
-        let (updated, invalid) = updated.unwrap();
-        assert!(invalid.is_empty());
+        let (updated, invalid_agents, invalid_unlinked_servers) = updated.unwrap();
+        assert!(invalid_agents.is_empty());
+        assert!(invalid_unlinked_servers.is_empty());
 
         assert_eq!(updated.agents, update.agents);
     }
@@ -820,7 +1109,7 @@ mod test {
     #[test]
     fn update_agent_status_by_hostname() {
         let store = setup_store();
-        let kinds = vec![AgentKind::Sensor, AgentKind::SemiSupervised];
+        let kinds = vec![Kind::Sensor, Kind::SemiSupervised];
         let configs: Vec<_> = create_configs(&kinds);
 
         let profile = Profile {
@@ -837,6 +1126,7 @@ mod test {
             Some(profile.clone()),
             Some(profile.clone()),
             agents.clone(),
+            vec![],
         );
 
         let mut node_table = store.node_map();
@@ -853,21 +1143,86 @@ mod test {
             node_table
                 .update_agent_status_by_hostname(
                     "test-hostname",
-                    "3", // The agent key of `AgentKind::SemiSupervised` was set to "3" in `create_agents`.
-                    AgentStatus::Disabled
+                    "3", // The agent key of `Kind::SemiSupervised` was set to "3" in `create_agents`.
+                    Status::Disabled
                 )
                 .is_ok()
         );
 
         let updated = node_table.get_by_id(id).unwrap();
         assert!(updated.is_some());
-        let (updated, invalid) = updated.unwrap();
+        let (updated, invalid, _) = updated.unwrap();
         assert!(invalid.is_empty());
 
-        // Check that the status of the `AgentKind::Sensor` agent was not updated.
-        assert_eq!(updated.agents[0].status, AgentStatus::Enabled);
+        // Check that the status of the `Kind::Sensor` agent was not updated.
+        assert_eq!(updated.agents[0].status, Status::Enabled);
 
-        // Check that the status of the `AgentKind::SemiSupervised` agent was updated.
-        assert_eq!(updated.agents[1].status, AgentStatus::Disabled);
+        // Check that the status of the `Kind::SemiSupervised` agent was updated.
+        assert_eq!(updated.agents[1].status, Status::Disabled);
+    }
+
+    #[test]
+    fn update_unlinked_servers_draft() {
+        let store: Arc<Store> = setup_store();
+
+        let agent_kinds = vec![Kind::Unsupervised, Kind::SemiSupervised];
+        let agent_configs1: Vec<_> = create_configs(&agent_kinds);
+        let agent_configs2 = vec![None, None, None];
+        let profile = Profile::default();
+        let agents = create_agents(123, &agent_kinds, &agent_configs1, &agent_configs2);
+
+        let unlinked_server_kinds = vec![Kind::Datalake, Kind::TiContainer];
+        let unlinked_server_config = create_configs(&unlinked_server_kinds);
+        let unlinked_servers =
+            create_unlinked_servers(123, &unlinked_server_kinds, &unlinked_server_config);
+
+        let mut node = create_node(
+            456,
+            "test",
+            None,
+            None,
+            Some(profile.clone()),
+            agents.clone(),
+            unlinked_servers.clone(),
+        );
+
+        let mut node_table = store.node_map();
+
+        let res = node_table.put(node.clone());
+        assert!(res.is_ok());
+
+        // update node id to the actual id in database.
+        node.id = res.unwrap();
+        node.agents.iter_mut().for_each(|a| a.node = node.id);
+        node.unlinked_servers
+            .iter_mut()
+            .for_each(|a| a.node = node.id);
+
+        let id = node.id;
+
+        let old = node.clone().into();
+        let mut update = node.clone();
+        let update_unlinked_servers: Vec<_> = update
+            .unlinked_servers
+            .into_iter()
+            .skip(1) // remove Reconverge
+            .map(|mut a| {
+                // update draft of ti container
+                a.draft = Some("my_key=10".to_string().try_into().unwrap());
+                a
+            })
+            .collect();
+        update.unlinked_servers = update_unlinked_servers;
+
+        let update = update.into();
+        assert!(node_table.update(id, &old, &update).is_ok());
+
+        let updated = node_table.get_by_id(id).unwrap();
+        assert!(updated.is_some());
+        let (updated, invalid_agents, invalid_unlinked_servers) = updated.unwrap();
+        assert!(invalid_agents.is_empty());
+        assert!(invalid_unlinked_servers.is_empty());
+
+        assert_eq!(updated.unlinked_servers, update.unlinked_servers);
     }
 }

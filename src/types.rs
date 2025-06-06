@@ -51,6 +51,7 @@ mod private {
     impl Sealed for tables::TriageResponse {}
     impl Sealed for tables::TrustedDomain {}
     impl Sealed for tables::TrustedUserAgent {}
+    impl Sealed for tables::UnlinkedServer {}
 }
 
 pub(crate) type Timestamp = i64;

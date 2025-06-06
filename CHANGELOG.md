@@ -22,6 +22,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   instead of Display trait.
 - `Filter::host_name` has been renamed to `Filter::hostname` to align with the
   naming convention used in other parts of the codebase.
+- Modified the `Node` structure to allow you to manage the configuration drafts
+  of all unlinked servers.
+  - Introduced `UnlinkedServer`, a new structure that stores only configuration
+    drafts for unlinked servers.
+  - Introduced `UnlinkedServerConfig`, `UnlinkedServerStatus`, and `UnlinkedServerKind`
+    as internal types used by the new `UnlinkedServer` structure.
+  - Added a `unlinked_servers` field of type `Vec<UnlinkedServer>` within the `Node`
+    structure to store the all unlinked server configuration drafts.
+  - Added a `Datalake`, `TiContainer` field inside `node::kind`.
 
 ### Fixed
 

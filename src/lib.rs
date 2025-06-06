@@ -66,13 +66,14 @@ pub use self::tables::{
     AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
     AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Confidence,
     CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
-    DataSourceUpdate, DataType, Filter, Giganto, IndexedTable, Iterable, ModelIndicator, Network,
+    DataSourceUpdate, DataType, Filter, IndexedTable, Iterable, ModelIndicator, Network,
     NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey,
     OutlierInfoValue, PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval,
     SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
     StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
     TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
-    TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
+    TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, UnlinkedServer,
+    UnlinkedServerConfig, UnlinkedServerKind, UnlinkedServerStatus, Unstructured,
     UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::time_series::*;
@@ -332,6 +333,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn traffic_filter_map(&self) -> Table<TrafficFilter> {
         self.states.traffic_filters()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn unlinked_servers_map(&self) -> Table<UnlinkedServer> {
+        self.states.unlinked_servers()
     }
 
     /// Returns the tag set for workflow.

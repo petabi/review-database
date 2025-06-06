@@ -26,6 +26,7 @@ mod triage_policy;
 mod triage_response;
 mod trusted_domain;
 mod trusted_user_agent;
+mod unlinked_server;
 
 use std::path::{Path, PathBuf};
 
@@ -34,7 +35,7 @@ use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
 pub use self::account_policy::AccountPolicy;
-pub use self::agent::{Agent, Config as AgentConfig, Kind as AgentKind, Status as AgentStatus};
+pub use self::agent::Agent;
 pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::csv_column_extra::CsvColumnExtra;
@@ -45,7 +46,9 @@ pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
 pub(crate) use self::node::Inner as InnerNode;
 pub use self::node::{
-    Giganto, Node, Profile as NodeProfile, Table as NodeTable, Update as NodeUpdate,
+    Config as AgentConfig, Config as UnlinkedServerConfig, Kind as AgentKind,
+    Kind as UnlinkedServerKind, Node, Profile as NodeProfile, Status as AgentStatus,
+    Status as UnlinkedServerStatus, Table as NodeTable, Update as NodeUpdate,
 };
 pub use self::outlier_info::{Key as OutlierInfoKey, OutlierInfo, Value as OutlierInfoValue};
 pub use self::sampling_policy::{
@@ -66,6 +69,7 @@ pub use self::triage_policy::{
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 pub use self::trusted_domain::TrustedDomain;
 pub use self::trusted_user_agent::TrustedUserAgent;
+pub use self::unlinked_server::UnlinkedServer;
 use super::{Indexed, IndexedMap, Map, event};
 use crate::{
     Direction, Indexable,
@@ -106,8 +110,9 @@ pub(super) const TRIAGE_POLICY: &str = "triage policy";
 pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
+pub(super) const UNLINKED_SERVERS: &str = "unlinked servers";
 
-const MAP_NAMES: [&str; 29] = [
+const MAP_NAMES: [&str; 30] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -137,6 +142,7 @@ const MAP_NAMES: [&str; 29] = [
     TRIAGE_RESPONSE,
     TRUSTED_DNS_SERVERS,
     TRUSTED_USER_AGENTS,
+    UNLINKED_SERVERS,
 ];
 
 // Keys for the meta map.
@@ -182,6 +188,12 @@ impl StateDb {
     pub(crate) fn agents(&self) -> Table<Agent> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Agent>::open(inner).expect("{AGENTS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn unlinked_servers(&self) -> Table<UnlinkedServer> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<UnlinkedServer>::open(inner).expect("{UNLINKED_SERVERS} table must be present")
     }
 
     #[must_use]
