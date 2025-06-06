@@ -15,7 +15,6 @@ mod network;
 mod node;
 mod outlier_info;
 mod qualifier;
-mod remote;
 mod sampling_policy;
 mod scores;
 mod status;
@@ -27,6 +26,7 @@ mod triage_policy;
 mod triage_response;
 mod trusted_domain;
 mod trusted_user_agent;
+mod unlinked_server;
 
 use std::path::{Path, PathBuf};
 
@@ -46,12 +46,11 @@ pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
 pub(crate) use self::node::Inner as InnerNode;
 pub use self::node::{
-    Config as AgentConfig, Config as RemoteConfig, Kind as AgentKind, Kind as RemoteKind, Node,
-    Profile as NodeProfile, Status as AgentStatus, Status as RemoteStatus, Table as NodeTable,
-    Update as NodeUpdate,
+    Config as AgentConfig, Config as UnlinkedServerConfig, Kind as AgentKind,
+    Kind as UnlinkedServerKind, Node, Profile as NodeProfile, Status as AgentStatus,
+    Status as UnlinkedServerStatus, Table as NodeTable, Update as NodeUpdate,
 };
 pub use self::outlier_info::{Key as OutlierInfoKey, OutlierInfo, Value as OutlierInfoValue};
-pub use self::remote::Remote;
 pub use self::sampling_policy::{
     Interval as SamplingInterval, Kind as SamplingKind, Period as SamplingPeriod, SamplingPolicy,
     Update as SamplingPolicyUpdate,
@@ -70,6 +69,7 @@ pub use self::triage_policy::{
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 pub use self::trusted_domain::TrustedDomain;
 pub use self::trusted_user_agent::TrustedUserAgent;
+pub use self::unlinked_server::UnlinkedServer;
 use super::{Indexed, IndexedMap, Map, event};
 use crate::{
     Direction, Indexable,
@@ -99,7 +99,6 @@ pub(super) const NETWORKS: &str = "networks";
 pub(super) const NODES: &str = "nodes";
 pub(super) const OUTLIERS: &str = "outliers";
 pub(super) const QUALIFIERS: &str = "qualifiers";
-pub(super) const REMOTES: &str = "remotes";
 pub(super) const SAMPLING_POLICY: &str = "sampling policy";
 pub(super) const SCORES: &str = "scores";
 pub(super) const STATUSES: &str = "statuses";
@@ -111,6 +110,7 @@ pub(super) const TRIAGE_POLICY: &str = "triage policy";
 pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
+pub(super) const UNLINKED_SERVERS: &str = "unlinked servers";
 
 const MAP_NAMES: [&str; 30] = [
     ACCESS_TOKENS,
@@ -131,7 +131,6 @@ const MAP_NAMES: [&str; 30] = [
     NODES,
     OUTLIERS,
     QUALIFIERS,
-    REMOTES,
     SAMPLING_POLICY,
     SCORES,
     STATUSES,
@@ -143,6 +142,7 @@ const MAP_NAMES: [&str; 30] = [
     TRIAGE_RESPONSE,
     TRUSTED_DNS_SERVERS,
     TRUSTED_USER_AGENTS,
+    UNLINKED_SERVERS,
 ];
 
 // Keys for the meta map.
@@ -191,9 +191,9 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn remotes(&self) -> Table<Remote> {
+    pub(crate) fn unlinked_servers(&self) -> Table<UnlinkedServer> {
         let inner = self.inner.as_ref().expect("database must be open");
-        Table::<Remote>::open(inner).expect("{REMOTES} table must be present")
+        Table::<UnlinkedServer>::open(inner).expect("{UNLINKED_SERVERS} table must be present")
     }
 
     #[must_use]

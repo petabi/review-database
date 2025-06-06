@@ -14,8 +14,8 @@ use crate::{
     BlocklistTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields, EventCategory,
     ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
     HttpThreatFields, Indexable, LdapBruteForceFields, LdapEventFields, MultiHostPortScanFields,
-    NetworkThreat, NodeProfile, PortScanFields, RdpBruteForceFields, RemoteConfig, RemoteStatus,
-    RepeatedHttpSessionsFields, Role, TriageScore, WindowsThreat,
+    NetworkThreat, NodeProfile, PortScanFields, RdpBruteForceFields, RepeatedHttpSessionsFields,
+    Role, TriageScore, UnlinkedServerConfig, UnlinkedServerStatus, WindowsThreat,
     account::{PasswordHashAlgorithm, SaltedPassword},
     tables::InnerNode,
     types::Account,
@@ -2240,8 +2240,8 @@ impl From<Account> for AccountBeforeV36 {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Giganto {
-    pub status: RemoteStatus,
-    pub draft: Option<RemoteConfig>,
+    pub status: UnlinkedServerStatus,
+    pub draft: Option<UnlinkedServerConfig>,
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
@@ -2292,7 +2292,7 @@ impl From<OldInnerFromV29BeforeV37> for InnerNode {
             profile: input.profile,
             profile_draft: input.profile_draft,
             agents: input.agents,
-            remotes: input
+            unlinked_servers: input
                 .giganto
                 .map_or_else(Vec::new, |_| vec!["giganto".to_string()]),
             creation_time: input.creation_time,

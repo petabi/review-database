@@ -28,14 +28,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   naming convention used in other parts of the codebase.
 - Modified the `ValueKind` enum to support different types of input for packet
   attribute triage.
-- Modified the `Node` structure to allow you to manage the configuration of all
-  remote servers that communicate with the REview.
-  - Introduced `Remote`, a new structure that stores only configuration drafts
-    for remote servers.
-  - Introduced `RemoteConfig`, `RemoteStatus`, and `RemoteKind` as internal
-    types used by the new `Remote` structure.
-  - Added a `remotes` field of type `Vec<Remote>` within the `Node` structure to
-    store the all remote server configuration.
+- Modified the `Node` structure to allow you to manage the configuration drafts
+  of all unlinked servers.
+  - Introduced `UnlinkedServer`, a new structure that stores only configuration
+    drafts for unlinked servers.
+  - Introduced `UnlinkedServerConfig`, `UnlinkedServerStatus`, and `UnlinkedServerKind`
+    as internal types used by the new `UnlinkedServer` structure.
+  - Added a `unlinked_servers` field of type `Vec<UnlinkedServer>` within the `Node`
+    structure to store all unlinked server configuration drafts.
   - Added a `Datalake`, `TiContainer` field inside `node::kind`.
 
 ### Fixed
