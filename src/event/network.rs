@@ -39,7 +39,7 @@ pub struct NetworkThreat {
     pub resp_port: u16,
     pub proto: u8,
     pub service: String,
-    pub last_time: i64,
+    pub end_time: i64,
     pub content: String,
     pub db_name: String,
     pub rule_id: u32,
@@ -55,7 +55,7 @@ impl NetworkThreat {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} last_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} end_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.category.to_string(),
             self.sensor,
             self.orig_addr.to_string(),
@@ -64,7 +64,7 @@ impl NetworkThreat {
             self.resp_port.to_string(),
             self.proto.to_string(),
             self.service,
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.content,
             self.db_name,
             self.rule_id.to_string(),
@@ -81,7 +81,7 @@ impl fmt::Display for NetworkThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} last_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} end_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.orig_addr.to_string(),
             self.orig_port.to_string(),
@@ -89,7 +89,7 @@ impl fmt::Display for NetworkThreat {
             self.resp_port.to_string(),
             self.proto.to_string(),
             self.service,
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.content,
             self.db_name,
             self.rule_id.to_string(),

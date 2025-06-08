@@ -45,7 +45,7 @@ pub struct FtpBruteForceFields {
     pub proto: u8,
     pub user_list: Vec<String>,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub category: EventCategory,
 }
@@ -54,7 +54,7 @@ impl FtpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} last_time={:?} is_internal={:?}",
+            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -62,7 +62,7 @@ impl FtpBruteForceFields {
             self.proto.to_string(),
             self.user_list.join(","),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.is_internal.to_string()
         )
     }
@@ -76,7 +76,7 @@ pub struct FtpBruteForce {
     pub proto: u8,
     pub user_list: Vec<String>,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -86,14 +86,14 @@ impl fmt::Display for FtpBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} last_time={:?} is_internal={:?} triage_scores={:?}",
+            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} triage_scores={:?}",
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.user_list.join(","),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.is_internal.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref()),
         )
@@ -110,7 +110,7 @@ impl FtpBruteForce {
             proto: fields.proto,
             user_list: fields.user_list.clone(),
             start_time: fields.start_time,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             is_internal: fields.is_internal,
             category: fields.category,
             triage_scores: None,
@@ -187,7 +187,7 @@ pub struct FtpEventFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub user: String,
     pub password: String,
     pub command: String,
@@ -207,7 +207,7 @@ impl FtpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -215,7 +215,7 @@ impl FtpEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.user,
             self.password,
             self.command,
@@ -241,7 +241,7 @@ pub struct FtpPlainText {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub user: String,
     pub password: String,
     pub command: String,
@@ -262,14 +262,14 @@ impl fmt::Display for FtpPlainText {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.user,
             self.password,
             self.command,
@@ -297,7 +297,7 @@ impl FtpPlainText {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             user: fields.user,
             password: fields.password,
             command: fields.command,
@@ -375,7 +375,7 @@ pub struct BlocklistFtp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub user: String,
     pub password: String,
     pub command: String,
@@ -396,14 +396,14 @@ impl fmt::Display for BlocklistFtp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.user,
             self.password,
             self.command,
@@ -431,7 +431,7 @@ impl BlocklistFtp {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             user: fields.user,
             password: fields.password,
             command: fields.command,

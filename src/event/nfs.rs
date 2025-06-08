@@ -34,7 +34,7 @@ pub struct BlocklistNfsFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
     pub category: EventCategory,
@@ -44,7 +44,7 @@ impl BlocklistNfsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} read_files={:?} write_files={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} read_files={:?} write_files={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -52,7 +52,7 @@ impl BlocklistNfsFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.read_files.join(","),
             self.write_files.join(",")
         )
@@ -68,7 +68,7 @@ pub struct BlocklistNfs {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
     pub category: EventCategory,
@@ -78,14 +78,14 @@ impl fmt::Display for BlocklistNfs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} read_files={:?} write_files={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} read_files={:?} write_files={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.read_files.join(","),
             self.write_files.join(","),
             triage_scores_to_string(self.triage_scores.as_ref())
@@ -103,7 +103,7 @@ impl BlocklistNfs {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             read_files: fields.read_files,
             write_files: fields.write_files,
             category: fields.category,

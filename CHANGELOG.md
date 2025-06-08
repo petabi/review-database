@@ -19,6 +19,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Renamed `last_time` to `end_time` in event structs within `src/event/*.rs`.
+  This is a breaking API change.
 - Renamed `BlockList` to `Blocklist` and `block_list` to `blocklist` in line with
   the Rust API Guidelines for acronyms/compound words. Please note that this is
   a breaking change if you were using identifiers affected by this change.

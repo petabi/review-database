@@ -39,7 +39,7 @@ pub struct PortScanFields {
     pub dst_addr: IpAddr,
     pub dst_ports: Vec<u16>,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub category: EventCategory,
 }
@@ -48,13 +48,13 @@ impl PortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} last_time={:?} proto={:?}",
+            "category={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             vector_to_string(&self.dst_ports),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.proto.to_string()
         )
     }
@@ -67,7 +67,7 @@ pub struct PortScan {
     pub dst_addr: IpAddr,
     pub dst_ports: Vec<u16>,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -77,12 +77,12 @@ impl fmt::Display for PortScan {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} last_time={:?} proto={:?} triage_scores={:?}",
+            "src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} triage_scores={:?}",
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             vector_to_string(&self.dst_ports),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.proto.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
@@ -98,7 +98,7 @@ impl PortScan {
             dst_ports: fields.dst_ports.clone(),
             proto: fields.proto,
             start_time: fields.start_time,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             category: fields.category,
             triage_scores: None,
         }
@@ -174,7 +174,7 @@ pub struct MultiHostPortScanFields {
     pub dst_addrs: Vec<IpAddr>,
     pub proto: u8,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub category: EventCategory,
 }
 
@@ -182,14 +182,14 @@ impl MultiHostPortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} last_time={:?}",
+            "category={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
         )
     }
 }
@@ -202,7 +202,7 @@ pub struct MultiHostPortScan {
     pub dst_addrs: Vec<IpAddr>,
     pub proto: u8,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -211,13 +211,13 @@ impl fmt::Display for MultiHostPortScan {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} last_time={:?} triage_scores={:?}",
+            "src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} triage_scores={:?}",
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
@@ -232,7 +232,7 @@ impl MultiHostPortScan {
             dst_addrs: fields.dst_addrs.clone(),
             proto: fields.proto,
             start_time: fields.start_time,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             category: fields.category,
             triage_scores: None,
         }
@@ -305,7 +305,7 @@ pub struct ExternalDdosFields {
     pub dst_addr: IpAddr,
     pub proto: u8,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub category: EventCategory,
 }
 
@@ -313,13 +313,13 @@ impl ExternalDdosFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} last_time={:?}",
+            "category={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?}",
             self.category.to_string(),
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
         )
     }
 }
@@ -331,7 +331,7 @@ pub struct ExternalDdos {
     pub dst_addr: IpAddr,
     pub proto: u8,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -340,12 +340,12 @@ impl fmt::Display for ExternalDdos {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} last_time={:?} triage_scores={:?}",
+            "src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} triage_scores={:?}",
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
@@ -359,7 +359,7 @@ impl ExternalDdos {
             dst_addr: fields.dst_addr,
             proto: fields.proto,
             start_time: fields.start_time,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             category: fields.category,
             triage_scores: None,
         }
