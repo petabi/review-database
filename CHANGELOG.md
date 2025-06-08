@@ -36,7 +36,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
     as internal types used by the new `UnlinkedServer` structure.
   - Added a `unlinked_servers` field of type `Vec<UnlinkedServer>` within the `Node`
     structure to store all unlinked server configuration drafts.
-  - Added a `Datalake`, `TiContainer` field inside `node::kind`.
+  - Added `Datalake` and `TiContainer` variants inside `node::Kind`.
 
 ### Fixed
 
