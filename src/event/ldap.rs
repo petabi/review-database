@@ -40,7 +40,7 @@ pub struct LdapBruteForceFields {
     pub proto: u8,
     pub user_pw_list: Vec<(String, String)>,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub category: EventCategory,
 }
 
@@ -48,7 +48,7 @@ impl LdapBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} last_time={:?}",
+            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -56,7 +56,7 @@ impl LdapBruteForceFields {
             self.proto.to_string(),
             get_user_pw_list(&self.user_pw_list),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339()
+            self.end_time.to_rfc3339()
         )
     }
 }
@@ -81,7 +81,7 @@ pub struct LdapBruteForce {
     pub proto: u8,
     pub user_pw_list: Vec<(String, String)>,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -90,14 +90,14 @@ impl fmt::Display for LdapBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} last_time={:?} triage_scores={:?}",
+            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} triage_scores={:?}",
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
             get_user_pw_list(&self.user_pw_list),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
@@ -113,7 +113,7 @@ impl LdapBruteForce {
             proto: fields.proto,
             user_pw_list: fields.user_pw_list.clone(),
             start_time: fields.start_time,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             category: fields.category,
             triage_scores: None,
         }
@@ -188,7 +188,7 @@ pub struct LdapEventFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub message_id: u32,
     pub version: u8,
     pub opcode: Vec<String>,
@@ -203,7 +203,7 @@ impl LdapEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
             self.category.to_string(),
             self.sensor.to_string(),
             self.src_addr.to_string(),
@@ -211,7 +211,7 @@ impl LdapEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -232,7 +232,7 @@ pub struct LdapPlainText {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub message_id: u32,
     pub version: u8,
     pub opcode: Vec<String>,
@@ -248,14 +248,14 @@ impl fmt::Display for LdapPlainText {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -278,7 +278,7 @@ impl LdapPlainText {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             message_id: fields.message_id,
             version: fields.version,
             opcode: fields.opcode,
@@ -351,7 +351,7 @@ pub struct BlocklistLdap {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub message_id: u32,
     pub version: u8,
     pub opcode: Vec<String>,
@@ -367,14 +367,14 @@ impl fmt::Display for BlocklistLdap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -397,7 +397,7 @@ impl BlocklistLdap {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             message_id: fields.message_id,
             version: fields.version,
             opcode: fields.opcode,

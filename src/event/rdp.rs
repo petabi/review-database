@@ -34,7 +34,7 @@ pub struct RdpBruteForceFields {
     pub src_addr: IpAddr,
     pub dst_addrs: Vec<IpAddr>,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub category: EventCategory,
 }
@@ -43,12 +43,12 @@ impl RdpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addrs={:?} start_time={:?} last_time={:?} proto={:?}",
+            "category={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.proto.to_string()
         )
     }
@@ -59,7 +59,7 @@ pub struct RdpBruteForce {
     pub src_addr: IpAddr,
     pub dst_addrs: Vec<IpAddr>,
     pub start_time: DateTime<Utc>,
-    pub last_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -69,11 +69,11 @@ impl fmt::Display for RdpBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addrs={:?} start_time={:?} last_time={:?} proto={:?} triage_scores={:?}",
+            "src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} triage_scores={:?}",
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.start_time.to_rfc3339(),
-            self.last_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.proto.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
@@ -87,7 +87,7 @@ impl RdpBruteForce {
             src_addr: fields.src_addr,
             dst_addrs: fields.dst_addrs.clone(),
             start_time: fields.start_time,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             proto: fields.proto,
             category: fields.category,
             triage_scores: None,
@@ -162,7 +162,7 @@ pub struct BlocklistRdpFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub cookie: String,
     pub category: EventCategory,
 }
@@ -171,7 +171,7 @@ impl BlocklistRdpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} cookie={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} cookie={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -179,7 +179,7 @@ impl BlocklistRdpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.cookie
         )
     }
@@ -193,7 +193,7 @@ pub struct BlocklistRdp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub last_time: i64,
+    pub end_time: i64,
     pub cookie: String,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -202,14 +202,14 @@ impl fmt::Display for BlocklistRdp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} last_time={:?} cookie={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} cookie={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.last_time.to_string(),
+            self.end_time.to_string(),
             self.cookie,
             triage_scores_to_string(self.triage_scores.as_ref())
         )
@@ -226,7 +226,7 @@ impl BlocklistRdp {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            last_time: fields.last_time,
+            end_time: fields.end_time,
             cookie: fields.cookie,
             category: fields.category,
             triage_scores: None,
