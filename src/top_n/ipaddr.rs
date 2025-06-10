@@ -3,7 +3,7 @@ use std::{cmp::Reverse, collections::HashMap};
 use chrono::NaiveDateTime;
 use cluster::dsl as c_d;
 use column_description::dsl as col_d;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use num_traits::ToPrimitive;
 use top_n_ipaddr::dsl as top_d;
@@ -23,37 +23,71 @@ async fn get_top_n_of_multiple_clusters(
     cluster_ids: &[i32],
     time: Option<NaiveDateTime>,
 ) -> Result<Vec<TopNOfMultipleCluster>, database::Error> {
-    let top_n_of_multiple_clusters = if let Some(time) = time {
-        c_d::cluster
-            .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
-            .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
+    // First, get column descriptions for the specified clusters
+    let column_descriptions = if let Some(time) = time {
+        col_d::column_description
             .select((
-                c_d::id,
-                col_d::column_index,
                 col_d::id,
-                top_d::value,
-                top_d::count,
+                col_d::cluster_id,
+                col_d::column_index,
+                col_d::batch_ts,
             ))
-            .filter(col_d::batch_ts.eq(time).and(c_d::id.eq_any(cluster_ids)))
-            .load::<TopNOfMultipleCluster>(conn)
+            .filter(
+                col_d::cluster_id
+                    .eq_any(cluster_ids)
+                    .and(col_d::batch_ts.eq(time)),
+            )
+            .load::<(i32, i32, i32, NaiveDateTime)>(conn)
             .await?
     } else {
-        c_d::cluster
-            .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
-            .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
+        col_d::column_description
             .select((
-                c_d::id,
-                col_d::column_index,
                 col_d::id,
-                top_d::value,
-                top_d::count,
+                col_d::cluster_id,
+                col_d::column_index,
+                col_d::batch_ts,
             ))
-            .filter(c_d::id.eq_any(cluster_ids))
-            .load::<TopNOfMultipleCluster>(conn)
+            .filter(col_d::cluster_id.eq_any(cluster_ids))
+            .load::<(i32, i32, i32, NaiveDateTime)>(conn)
             .await?
     };
 
-    Ok(top_n_of_multiple_clusters)
+    let description_ids: Vec<i32> = column_descriptions
+        .iter()
+        .map(|(id, _, _, _)| *id)
+        .collect();
+
+    if description_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Then, get top_n_ipaddr data for those description IDs
+    let top_n_data = top_d::top_n_ipaddr
+        .select((top_d::description_id, top_d::value, top_d::count))
+        .filter(top_d::description_id.eq_any(&description_ids))
+        .load::<(i32, String, i64)>(conn)
+        .await?;
+
+    // Combine the results in memory
+    let mut result = Vec::new();
+    let description_map: std::collections::HashMap<i32, (i32, i32)> = column_descriptions
+        .into_iter()
+        .map(|(desc_id, cluster_id, column_index, _)| (desc_id, (cluster_id, column_index)))
+        .collect();
+
+    for (description_id, value, count) in top_n_data {
+        if let Some((cluster_id, column_index)) = description_map.get(&description_id) {
+            result.push(TopNOfMultipleCluster {
+                cluster_id: *cluster_id,
+                column_index: *column_index,
+                _description_id: description_id,
+                value,
+                count,
+            });
+        }
+    }
+
+    Ok(result)
 }
 
 impl Database {
@@ -69,17 +103,61 @@ impl Database {
         size: usize,
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
         let mut conn = self.pool.get().await?;
-        let values = c_d::cluster
-            .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
-            .inner_join(top_d::top_n_ipaddr.on(top_d::description_id.eq(col_d::id)))
-            .select((col_d::column_index, col_d::id, top_d::value, top_d::count))
+
+        // First, get clusters for the model and cluster_id
+        let clusters = c_d::cluster
+            .select((c_d::id, c_d::cluster_id))
             .filter(
                 c_d::model_id
                     .eq(model_id)
                     .and(c_d::cluster_id.eq(cluster_id)),
             )
-            .load::<TopNOfCluster>(&mut conn)
+            .load::<(i32, String)>(&mut conn)
             .await?;
+
+        if clusters.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let cluster_ids: Vec<i32> = clusters.iter().map(|(id, _)| *id).collect();
+
+        // Then, get column descriptions for these clusters
+        let column_descriptions = col_d::column_description
+            .select((col_d::id, col_d::cluster_id, col_d::column_index))
+            .filter(col_d::cluster_id.eq_any(&cluster_ids))
+            .load::<(i32, i32, i32)>(&mut conn)
+            .await?;
+
+        let description_ids: Vec<i32> = column_descriptions.iter().map(|(id, _, _)| *id).collect();
+
+        if description_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Finally, get top_n_ipaddr data for those description IDs
+        let top_n_data = top_d::top_n_ipaddr
+            .select((top_d::description_id, top_d::value, top_d::count))
+            .filter(top_d::description_id.eq_any(&description_ids))
+            .load::<(i32, String, i64)>(&mut conn)
+            .await?;
+
+        // Combine results in memory
+        let description_map: std::collections::HashMap<i32, i32> = column_descriptions
+            .into_iter()
+            .map(|(desc_id, _, column_index)| (desc_id, column_index))
+            .collect();
+
+        let mut values = Vec::new();
+        for (description_id, value, count) in top_n_data {
+            if let Some(column_index) = description_map.get(&description_id) {
+                values.push(TopNOfCluster {
+                    column_index: *column_index,
+                    _description_id: description_id,
+                    value,
+                    count,
+                });
+            }
+        }
 
         let mut top_n: HashMap<usize, HashMap<String, i64>> = HashMap::new(); // String: Ip Address
         for v in values {
