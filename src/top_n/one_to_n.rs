@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, sql_query,
+    BoolExpressionMethods, ExpressionMethods, QueryDsl,
     sql_types::{BigInt, Integer, Text, Timestamp},
 };
 use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
@@ -14,8 +14,8 @@ use super::{ElementCount, StructuredColumnType, TopElementCountsByColumn};
 use crate::{
     self as database, Database, Error,
     schema::{
-        cluster, column_description, csv_column_extra, model, top_n_binary, top_n_datetime,
-        top_n_enum, top_n_float, top_n_int, top_n_ipaddr, top_n_text,
+        cluster, column_description, csv_column_extra, top_n_binary, top_n_datetime, top_n_enum,
+        top_n_float, top_n_int, top_n_ipaddr, top_n_text,
     },
 };
 
@@ -47,118 +47,82 @@ pub struct TopMultimaps {
     pub selected: Vec<TopColumnsOfCluster>,
 }
 
-#[derive(Debug, Queryable)]
-struct TopNIntRound {
-    cluster_id: String,
-    _batch_ts: NaiveDateTime,
-    _description_id: i32,
-    value: i64,
-    count: i64,
-}
-
-#[derive(Debug, Queryable)]
-struct TopNEnumRound {
-    cluster_id: String,
-    _batch_ts: NaiveDateTime,
-    _description_id: i32,
-    value: String,
-    count: i64,
-}
-
-#[derive(Debug, Queryable)]
-struct TopNFloatRound {
-    cluster_id: String,
-    _batch_ts: NaiveDateTime,
-    _description_id: i32,
-    value_smallest: f64,
-    value_largest: f64,
-    count: i64,
-}
-
-#[derive(Debug, Queryable)]
-struct TopNTextRound {
-    cluster_id: String,
-    _batch_ts: NaiveDateTime,
-    _description_id: i32,
-    value: String,
-    count: i64,
-}
-
-#[derive(Debug, Queryable)]
-struct TopNBinaryRound {
-    cluster_id: String,
-    _batch_ts: NaiveDateTime,
-    _description_id: i32,
-    value: Vec<u8>,
-    count: i64,
-}
-
-#[derive(Debug, Queryable)]
-struct TopNIpAddrRound {
-    cluster_id: String,
-    _batch_ts: NaiveDateTime,
-    _description_id: i32,
-    value: String,
-    count: i64,
-}
-
-#[derive(Debug, Queryable)]
-struct TopNDateTimeRound {
-    cluster_id: String,
-    _batch_ts: NaiveDateTime,
-    _description_id: i32,
-    value: NaiveDateTime,
-    count: i64,
-}
-
 use cluster::dsl as c_d;
 use column_description::dsl as cd_d;
 use csv_column_extra::dsl as column_d;
-use model::dsl as m_d;
 
 macro_rules! get_top_n_of_column_by_round {
     ($conn:expr, $top_d:ident, $top_table:ident, $load_type:ty, $d:expr, $c:expr, $b_ts:expr, $index:expr, $func:tt, $top_n:expr) => {{
-        let top_n = $top_d::$top_table
-            .inner_join(cd_d::column_description.on(cd_d::id.eq($top_d::description_id)))
-            .inner_join(c_d::cluster.on(c_d::id.eq(cd_d::cluster_id)))
-            .inner_join(m_d::model.on(m_d::id.eq(c_d::model_id)))
-            .filter(
-                m_d::id
-                    .eq($d)
-                    .and(c_d::cluster_id.eq_any($c))
-                    .and(cd_d::batch_ts.eq_any($b_ts))
-                    .and(cd_d::column_index.eq($index)),
-            )
-            .select((
-                c_d::cluster_id,
-                cd_d::batch_ts,
-                $top_d::description_id,
-                $top_d::value,
-                $top_d::count,
-            ))
-            .load::<$load_type>($conn)
+        // First, get clusters for the model
+        let clusters = c_d::cluster
+            .select((c_d::id, c_d::cluster_id))
+            .filter(c_d::model_id.eq($d).and(c_d::cluster_id.eq_any($c)))
+            .load::<(i32, String)>($conn)
             .await?;
 
-        let mut top_n_by_cluster: HashMap<String, Vec<ElementCount>> = HashMap::new();
-        for t in &top_n {
-            let value;
-            $func!(value, &t.value);
+        let cluster_db_ids: Vec<i32> = clusters.iter().map(|(id, _)| *id).collect();
+        let cluster_id_map: std::collections::HashMap<i32, String> = clusters.into_iter().collect();
 
-            top_n_by_cluster
-                .entry(t.cluster_id.clone())
-                .or_insert_with(Vec::<ElementCount>::new)
-                .push(ElementCount {
-                    value,
-                    count: t.count,
-                });
+        if cluster_db_ids.is_empty() {
+            $top_n = Ok(std::collections::HashMap::new());
+        } else {
+            // Then, get column descriptions
+            let column_descriptions = cd_d::column_description
+                .select((cd_d::id, cd_d::cluster_id, cd_d::batch_ts))
+                .filter(
+                    cd_d::cluster_id
+                        .eq_any(&cluster_db_ids)
+                        .and(cd_d::batch_ts.eq_any($b_ts))
+                        .and(cd_d::column_index.eq($index)),
+                )
+                .load::<(i32, i32, NaiveDateTime)>($conn)
+                .await?;
+
+            let description_ids: Vec<i32> =
+                column_descriptions.iter().map(|(id, _, _)| *id).collect();
+            let desc_to_cluster: std::collections::HashMap<i32, String> = column_descriptions
+                .into_iter()
+                .filter_map(|(desc_id, cluster_db_id, _batch_ts)| {
+                    cluster_id_map
+                        .get(&cluster_db_id)
+                        .map(|cluster_id| (desc_id, cluster_id.clone()))
+                })
+                .collect();
+
+            if description_ids.is_empty() {
+                $top_n = Ok(std::collections::HashMap::new());
+            } else {
+                // Finally, get top_n data
+                let top_n_data = $top_d::$top_table
+                    .select(($top_d::description_id, $top_d::value, $top_d::count))
+                    .filter($top_d::description_id.eq_any(&description_ids))
+                    .load::<(i32, $load_type, i64)>($conn)
+                    .await?;
+
+                let mut top_n_by_cluster: HashMap<String, Vec<ElementCount>> = HashMap::new();
+                for (description_id, raw_value, count) in &top_n_data {
+                    if let Some(cluster_id) = desc_to_cluster.get(description_id) {
+                        let value;
+                        $func!(value, raw_value);
+
+                        top_n_by_cluster
+                            .entry(cluster_id.clone())
+                            .or_insert_with(Vec::<ElementCount>::new)
+                            .push(ElementCount {
+                                value,
+                                count: *count,
+                            });
+                    }
+                }
+
+                for (_, top_n) in top_n_by_cluster.iter_mut() {
+                    top_n.sort_by(|a, b| a.value.cmp(&b.value));
+                    top_n.sort_by(|a, b| b.count.cmp(&a.count));
+                }
+
+                $top_n = Ok(top_n_by_cluster);
+            }
         }
-
-        for (_, top_n) in top_n_by_cluster.iter_mut() {
-            top_n.sort_by(|a, b| a.value.cmp(&b.value));
-            top_n.sort_by(|a, b| b.count.cmp(&a.count));
-        }
-
-        $top_n = Ok(top_n_by_cluster);
     }};
 }
 
@@ -197,7 +161,7 @@ async fn get_top_n(
                 conn,
                 ti_d,
                 top_n_int,
-                TopNIntRound,
+                i64,
                 model_id,
                 cluster_ids,
                 batch_ts,
@@ -214,7 +178,7 @@ async fn get_top_n(
                 conn,
                 ti_d,
                 top_n_enum,
-                TopNEnumRound,
+                String,
                 model_id,
                 cluster_ids,
                 batch_ts,
@@ -226,40 +190,80 @@ async fn get_top_n(
         }
         "float64" => {
             use top_n_float::dsl as ti_d;
-            let top_n = ti_d::top_n_float
-                .inner_join(cd_d::column_description.on(cd_d::id.eq(ti_d::description_id)))
-                .inner_join(c_d::cluster.on(c_d::id.eq(cd_d::cluster_id)))
-                .inner_join(m_d::model.on(m_d::id.eq(c_d::model_id)))
+
+            // Get clusters for the model
+            let clusters = c_d::cluster
+                .select((c_d::id, c_d::cluster_id))
                 .filter(
-                    m_d::id
+                    c_d::model_id
                         .eq(model_id)
-                        .and(c_d::cluster_id.eq_any(cluster_ids))
+                        .and(c_d::cluster_id.eq_any(cluster_ids)),
+                )
+                .load::<(i32, String)>(conn)
+                .await?;
+
+            let cluster_db_ids: Vec<i32> = clusters.iter().map(|(id, _)| *id).collect();
+            let cluster_id_map: std::collections::HashMap<i32, String> =
+                clusters.into_iter().collect();
+
+            if cluster_db_ids.is_empty() {
+                return Ok(std::collections::HashMap::new());
+            }
+
+            // Get column descriptions
+            let column_descriptions = cd_d::column_description
+                .select((cd_d::id, cd_d::cluster_id, cd_d::batch_ts))
+                .filter(
+                    cd_d::cluster_id
+                        .eq_any(&cluster_db_ids)
                         .and(cd_d::batch_ts.eq_any(batch_ts))
                         .and(cd_d::column_index.eq(&column_index)),
                 )
+                .load::<(i32, i32, NaiveDateTime)>(conn)
+                .await?;
+
+            let description_ids: Vec<i32> =
+                column_descriptions.iter().map(|(id, _, _)| *id).collect();
+            let desc_to_cluster: std::collections::HashMap<i32, String> = column_descriptions
+                .into_iter()
+                .filter_map(|(desc_id, cluster_db_id, _batch_ts)| {
+                    cluster_id_map
+                        .get(&cluster_db_id)
+                        .map(|cluster_id| (desc_id, cluster_id.clone()))
+                })
+                .collect();
+
+            if description_ids.is_empty() {
+                return Ok(std::collections::HashMap::new());
+            }
+
+            // Get top_n_float data
+            let top_n = ti_d::top_n_float
                 .select((
-                    c_d::cluster_id,
-                    cd_d::batch_ts,
                     ti_d::description_id,
                     ti_d::value_smallest,
                     ti_d::value_largest,
                     ti_d::count,
                 ))
-                .load::<TopNFloatRound>(conn)
+                .filter(ti_d::description_id.eq_any(&description_ids))
+                .load::<(i32, f64, f64, i64)>(conn)
                 .await?;
 
             let mut top_n_by_cluster: HashMap<String, Vec<ElementCount>> = HashMap::new();
-            for t in &top_n {
-                let smallest = t.value_smallest;
-                let largest = t.value_largest;
+            for (description_id, value_smallest, value_largest, count) in &top_n {
+                if let Some(cluster_id) = desc_to_cluster.get(description_id) {
+                    let smallest = *value_smallest;
+                    let largest = *value_largest;
 
-                top_n_by_cluster
-                    .entry(t.cluster_id.clone())
-                    .or_default()
-                    .push(ElementCount {
-                        value: Element::FloatRange(FloatRange { smallest, largest }).to_string(),
-                        count: t.count,
-                    });
+                    top_n_by_cluster
+                        .entry(cluster_id.clone())
+                        .or_default()
+                        .push(ElementCount {
+                            value: Element::FloatRange(FloatRange { smallest, largest })
+                                .to_string(),
+                            count: *count,
+                        });
+                }
             }
 
             for top_n in top_n_by_cluster.values_mut() {
@@ -276,7 +280,7 @@ async fn get_top_n(
                 conn,
                 ti_d,
                 top_n_text,
-                TopNTextRound,
+                String,
                 model_id,
                 cluster_ids,
                 batch_ts,
@@ -293,7 +297,7 @@ async fn get_top_n(
                 conn,
                 ti_d,
                 top_n_ipaddr,
-                TopNIpAddrRound,
+                String,
                 model_id,
                 cluster_ids,
                 batch_ts,
@@ -310,7 +314,7 @@ async fn get_top_n(
                 conn,
                 ti_d,
                 top_n_datetime,
-                TopNDateTimeRound,
+                NaiveDateTime,
                 model_id,
                 cluster_ids,
                 batch_ts,
@@ -327,7 +331,7 @@ async fn get_top_n(
                 conn,
                 ti_d,
                 top_n_binary,
-                TopNBinaryRound,
+                Vec<u8>,
                 model_id,
                 cluster_ids,
                 batch_ts,
@@ -352,6 +356,8 @@ impl Database {
     ///
     /// Returns an error if an underlying database error occurs.
     #[allow(clippy::too_many_lines)]
+    #[allow(clippy::cast_possible_wrap)]
+    #[allow(clippy::cast_possible_truncation)]
     pub async fn get_top_multimaps_of_model(
         &self,
         model_id: i32,
@@ -405,7 +411,7 @@ impl Database {
             } else {
                 return Ok(Vec::<TopMultimaps>::new());
             };
-            let top_table = match column_type {
+            let _top_table = match column_type {
                 "int64" => "top_n_int",
                 "enum" => "top_n_enum",
                 "float64" => "top_n_float",
@@ -416,33 +422,224 @@ impl Database {
                 _ => unreachable!(),
             };
 
-            let q = if let Some(time) = time {
-                format!(
-                    r"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
-                        FROM {} AS top
-                        INNER JOIN column_description AS col ON top.description_id = col.id
-                        INNER JOIN cluster ON cluster.id = col.cluster_id
-                        INNER JOIN model ON cluster.model_id = model.id
-                        GROUP BY model.id, cluster.cluster_id, col.column_index, top.description_id, cluster.category_id, col.batch_ts
-                        HAVING COUNT(top.id) > {} AND model.id = {} AND col.column_index = {} AND cluster.category_id != 2 AND col.batch_ts = '{}'
-                        ORDER BY COUNT(top.id) DESC",
-                    top_table, min_top_n_of_1_to_n, model_id, *column_n, time
-                )
-            } else {
-                format!(
-                    r"SELECT model.id as model_id, col.column_index, cluster.cluster_id, col.batch_ts, top.description_id, COUNT(top.id) as count
-                        FROM {} AS top
-                        INNER JOIN column_description AS col ON top.description_id = col.id
-                        INNER JOIN cluster ON cluster.id = col.cluster_id
-                        INNER JOIN model ON cluster.model_id = model.id
-                        GROUP BY model.id, cluster.cluster_id, col.column_index, top.description_id, cluster.category_id, col.time
-                        HAVING COUNT(top.id) > {} AND model.id = {} AND col.column_index = {} AND cluster.category_id != 2
-                        ORDER BY COUNT(top.id) DESC",
-                    top_table, min_top_n_of_1_to_n, model_id, *column_n
-                )
+            // Instead of complex SQL JOIN, break it down into separate queries
+
+            // 1. Get clusters for the model (excluding category_id = 2)
+            let clusters = c_d::cluster
+                .select((c_d::id, c_d::cluster_id, c_d::model_id, c_d::category_id))
+                .filter(c_d::model_id.eq(model_id).and(c_d::category_id.ne(2)))
+                .load::<(i32, String, i32, i32)>(&mut conn)
+                .await?;
+
+            let cluster_db_ids: Vec<i32> = clusters.iter().map(|(id, _, _, _)| *id).collect();
+            let cluster_info: std::collections::HashMap<i32, String> = clusters
+                .into_iter()
+                .map(|(id, cluster_id, _, _)| (id, cluster_id))
+                .collect();
+
+            if cluster_db_ids.is_empty() {
+                continue;
+            }
+
+            // 2. Get column descriptions for these clusters
+            let column_descriptions =
+                if let Some(time) = time {
+                    cd_d::column_description
+                        .select((
+                            cd_d::id,
+                            cd_d::cluster_id,
+                            cd_d::column_index,
+                            cd_d::batch_ts,
+                        ))
+                        .filter(
+                            cd_d::cluster_id
+                                .eq_any(&cluster_db_ids)
+                                .and(cd_d::column_index.eq(i32::try_from(*column_n).map_err(
+                                    |_| Error::InvalidInput("column index too large".to_string()),
+                                )?))
+                                .and(cd_d::batch_ts.eq(time)),
+                        )
+                        .load::<(i32, i32, i32, NaiveDateTime)>(&mut conn)
+                        .await?
+                } else {
+                    cd_d::column_description
+                        .select((
+                            cd_d::id,
+                            cd_d::cluster_id,
+                            cd_d::column_index,
+                            cd_d::batch_ts,
+                        ))
+                        .filter(cd_d::cluster_id.eq_any(&cluster_db_ids).and(
+                            cd_d::column_index.eq(i32::try_from(*column_n).map_err(|_| {
+                                Error::InvalidInput("column index too large".to_string())
+                            })?),
+                        ))
+                        .load::<(i32, i32, i32, NaiveDateTime)>(&mut conn)
+                        .await?
+                };
+
+            let description_ids: Vec<i32> = column_descriptions
+                .iter()
+                .map(|(id, _, _, _)| *id)
+                .collect();
+
+            if description_ids.is_empty() {
+                continue;
+            }
+
+            // 3. Count top_n entries per description_id using the appropriate table
+            let top_n_counts = match column_type {
+                "int64" => {
+                    use top_n_int::dsl as top_d;
+                    let raw_data = top_d::top_n_int
+                        .select((top_d::description_id, top_d::id))
+                        .filter(top_d::description_id.eq_any(&description_ids))
+                        .load::<(i32, i32)>(&mut conn)
+                        .await?;
+
+                    let mut counts: HashMap<i32, i64> = HashMap::new();
+                    for (desc_id, _) in raw_data {
+                        *counts.entry(desc_id).or_insert(0) += 1;
+                    }
+                    counts
+                        .into_iter()
+                        .filter(|(_, count)| *count > min_top_n_of_1_to_n as i64)
+                        .collect::<Vec<(i32, i64)>>()
+                }
+                "enum" => {
+                    use top_n_enum::dsl as top_d;
+                    let raw_data = top_d::top_n_enum
+                        .select((top_d::description_id, top_d::id))
+                        .filter(top_d::description_id.eq_any(&description_ids))
+                        .load::<(i32, i32)>(&mut conn)
+                        .await?;
+
+                    let mut counts: HashMap<i32, i64> = HashMap::new();
+                    for (desc_id, _) in raw_data {
+                        *counts.entry(desc_id).or_insert(0) += 1;
+                    }
+                    counts
+                        .into_iter()
+                        .filter(|(_, count)| *count > min_top_n_of_1_to_n as i64)
+                        .collect::<Vec<(i32, i64)>>()
+                }
+                "float64" => {
+                    use top_n_float::dsl as top_d;
+                    let raw_data = top_d::top_n_float
+                        .select((top_d::description_id, top_d::id))
+                        .filter(top_d::description_id.eq_any(&description_ids))
+                        .load::<(i32, i32)>(&mut conn)
+                        .await?;
+
+                    let mut counts: HashMap<i32, i64> = HashMap::new();
+                    for (desc_id, _) in raw_data {
+                        *counts.entry(desc_id).or_insert(0) += 1;
+                    }
+                    counts
+                        .into_iter()
+                        .filter(|(_, count)| *count > min_top_n_of_1_to_n as i64)
+                        .collect::<Vec<(i32, i64)>>()
+                }
+                "utf8" => {
+                    use top_n_text::dsl as top_d;
+                    let raw_data = top_d::top_n_text
+                        .select((top_d::description_id, top_d::id))
+                        .filter(top_d::description_id.eq_any(&description_ids))
+                        .load::<(i32, i32)>(&mut conn)
+                        .await?;
+
+                    let mut counts: HashMap<i32, i64> = HashMap::new();
+                    for (desc_id, _) in raw_data {
+                        *counts.entry(desc_id).or_insert(0) += 1;
+                    }
+                    counts
+                        .into_iter()
+                        .filter(|(_, count)| *count > min_top_n_of_1_to_n as i64)
+                        .collect::<Vec<(i32, i64)>>()
+                }
+                "ipaddr" => {
+                    use top_n_ipaddr::dsl as top_d;
+                    let raw_data = top_d::top_n_ipaddr
+                        .select((top_d::description_id, top_d::id))
+                        .filter(top_d::description_id.eq_any(&description_ids))
+                        .load::<(i32, i32)>(&mut conn)
+                        .await?;
+
+                    let mut counts: HashMap<i32, i64> = HashMap::new();
+                    for (desc_id, _) in raw_data {
+                        *counts.entry(desc_id).or_insert(0) += 1;
+                    }
+                    counts
+                        .into_iter()
+                        .filter(|(_, count)| *count > min_top_n_of_1_to_n as i64)
+                        .collect::<Vec<(i32, i64)>>()
+                }
+                "datetime" => {
+                    use top_n_datetime::dsl as top_d;
+                    let raw_data = top_d::top_n_datetime
+                        .select((top_d::description_id, top_d::id))
+                        .filter(top_d::description_id.eq_any(&description_ids))
+                        .load::<(i32, i32)>(&mut conn)
+                        .await?;
+
+                    let mut counts: HashMap<i32, i64> = HashMap::new();
+                    for (desc_id, _) in raw_data {
+                        *counts.entry(desc_id).or_insert(0) += 1;
+                    }
+                    counts
+                        .into_iter()
+                        .filter(|(_, count)| *count > min_top_n_of_1_to_n as i64)
+                        .collect::<Vec<(i32, i64)>>()
+                }
+                "binary" => {
+                    use top_n_binary::dsl as top_d;
+                    let raw_data = top_d::top_n_binary
+                        .select((top_d::description_id, top_d::id))
+                        .filter(top_d::description_id.eq_any(&description_ids))
+                        .load::<(i32, i32)>(&mut conn)
+                        .await?;
+
+                    let mut counts: HashMap<i32, i64> = HashMap::new();
+                    for (desc_id, _) in raw_data {
+                        *counts.entry(desc_id).or_insert(0) += 1;
+                    }
+                    counts
+                        .into_iter()
+                        .filter(|(_, count)| *count > min_top_n_of_1_to_n as i64)
+                        .collect::<Vec<(i32, i64)>>()
+                }
+                _ => unreachable!(),
             };
 
-            let selected_clusters = sql_query(q).load::<SelectedCluster>(&mut conn).await?;
+            // 4. Build SelectedCluster results by combining the data in memory
+            let desc_count_map: std::collections::HashMap<i32, i64> =
+                top_n_counts.into_iter().collect();
+            let desc_info_map: std::collections::HashMap<i32, (i32, NaiveDateTime)> =
+                column_descriptions
+                    .into_iter()
+                    .map(|(desc_id, cluster_db_id, _, batch_ts)| {
+                        (desc_id, (cluster_db_id, batch_ts))
+                    })
+                    .collect();
+
+            let mut selected_clusters = Vec::new();
+            for (description_id, count) in &desc_count_map {
+                if let Some((cluster_db_id, batch_ts)) = desc_info_map.get(description_id) {
+                    if let Some(cluster_id) = cluster_info.get(cluster_db_id) {
+                        selected_clusters.push(SelectedCluster {
+                            model_id,
+                            column_index: *column_n as i32,
+                            cluster_id: cluster_id.clone(),
+                            batch_ts: *batch_ts,
+                            description_id: *description_id,
+                            count: *count,
+                        });
+                    }
+                }
+            }
+
+            // Sort by count descending (equivalent to ORDER BY COUNT(top.id) DESC)
+            selected_clusters.sort_by(|a, b| b.count.cmp(&a.count));
 
             let mut sorted_clusters: HashMap<String, Vec<(NaiveDateTime, i64)>> = HashMap::new();
             for cluster in selected_clusters {
