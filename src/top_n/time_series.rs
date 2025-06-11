@@ -1,7 +1,7 @@
 use std::{cmp::Reverse, collections::HashMap};
 
 use chrono::{NaiveDateTime, TimeDelta, Utc};
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, dsl::max};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, dsl::max};
 use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use num_traits::ToPrimitive;
 use serde::Deserialize;
@@ -132,18 +132,33 @@ async fn get_time_series_of_clusters(
     start: Option<i64>,
     end: Option<i64>,
 ) -> Result<Vec<TimeSeriesLoadByCluster>, database::Error> {
-    let series = if let Some(time) = time {
-        c_d::cluster
-            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
-            .select((c_d::cluster_id, t_d::count_index, t_d::value, t_d::count))
-            .filter(c_d::model_id.eq(model_id).and(t_d::time.eq(time)))
-            .load::<TimeSeriesLoadByCluster>(conn)
+    // First, get clusters for the model
+    let clusters = c_d::cluster
+        .select((c_d::id, c_d::cluster_id))
+        .filter(c_d::model_id.eq(model_id))
+        .load::<(i32, String)>(conn)
+        .await?;
+
+    let cluster_db_ids: Vec<i32> = clusters.iter().map(|(id, _)| *id).collect();
+    let cluster_id_map: std::collections::HashMap<i32, String> = clusters
+        .into_iter()
+        .collect();
+
+    if cluster_db_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Then, get time series data for those clusters
+    let time_series_data = if let Some(time) = time {
+        t_d::time_series
+            .select((t_d::cluster_id, t_d::count_index, t_d::value, t_d::count))
+            .filter(t_d::cluster_id.eq_any(&cluster_db_ids).and(t_d::time.eq(time)))
+            .load::<(i32, Option<i32>, NaiveDateTime, i64)>(conn)
             .await?
     } else {
-        let latest = c_d::cluster
-            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
+        let latest = t_d::time_series
             .select(max(t_d::value))
-            .filter(c_d::model_id.eq(model_id))
+            .filter(t_d::cluster_id.eq_any(&cluster_db_ids))
             .first::<Option<NaiveDateTime>>(conn)
             .await?;
 
@@ -167,18 +182,31 @@ async fn get_time_series_of_clusters(
             )
         };
 
-        c_d::cluster
-            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
-            .select((c_d::cluster_id, t_d::count_index, t_d::value, t_d::count))
+        t_d::time_series
+            .select((t_d::cluster_id, t_d::count_index, t_d::value, t_d::count))
             .filter(
-                c_d::model_id
-                    .eq(model_id)
+                t_d::cluster_id.eq_any(&cluster_db_ids)
                     .and(t_d::value.gt(start)) // HIGHLIGHT: first and last items should not be included because they might have insufficient counts.
                     .and(t_d::value.lt(end)),
             )
-            .load::<TimeSeriesLoadByCluster>(conn)
+            .load::<(i32, Option<i32>, NaiveDateTime, i64)>(conn)
             .await?
     };
 
-    Ok(series)
+    // Combine results in memory
+    let result = time_series_data
+        .into_iter()
+        .filter_map(|(cluster_db_id, count_index, value, count)| {
+            cluster_id_map.get(&cluster_db_id).map(|cluster_id| {
+                TimeSeriesLoadByCluster {
+                    cluster_id: cluster_id.clone(),
+                    count_index,
+                    value,
+                    count,
+                }
+            })
+        })
+        .collect();
+
+    Ok(result)
 }
