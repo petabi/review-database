@@ -50,6 +50,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
       `DataStore` and `TiContainer`.
   - Added an `external_services` field of type `Vec<ExternalService>` to the
     `Node` structure to store all external service configurations.
+- Modified `EventCategory` to include all MITRE categories.
+  `Collection`, `DefenseEvasion`, `Persistence`, `PrivilegeEscalation`,
+  `ResourceDevelopment` are added. And the deprecated member `HttpThreat` is removed.
 
 ### Fixed
 
