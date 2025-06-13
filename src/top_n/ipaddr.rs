@@ -26,36 +26,23 @@ async fn get_top_n_of_multiple_clusters(
     // First, get column descriptions for the specified clusters
     let column_descriptions = if let Some(time) = time {
         col_d::column_description
-            .select((
-                col_d::id,
-                col_d::cluster_id,
-                col_d::column_index,
-                col_d::batch_ts,
-            ))
+            .select((col_d::id, col_d::cluster_id, col_d::column_index))
             .filter(
                 col_d::cluster_id
                     .eq_any(cluster_ids)
                     .and(col_d::batch_ts.eq(time)),
             )
-            .load::<(i32, i32, i32, NaiveDateTime)>(conn)
+            .load::<(i32, i32, i32)>(conn)
             .await?
     } else {
         col_d::column_description
-            .select((
-                col_d::id,
-                col_d::cluster_id,
-                col_d::column_index,
-                col_d::batch_ts,
-            ))
+            .select((col_d::id, col_d::cluster_id, col_d::column_index))
             .filter(col_d::cluster_id.eq_any(cluster_ids))
-            .load::<(i32, i32, i32, NaiveDateTime)>(conn)
+            .load::<(i32, i32, i32)>(conn)
             .await?
     };
 
-    let description_ids: Vec<i32> = column_descriptions
-        .iter()
-        .map(|(id, _, _, _)| *id)
-        .collect();
+    let description_ids: Vec<i32> = column_descriptions.iter().map(|(id, _, _)| *id).collect();
 
     if description_ids.is_empty() {
         return Ok(Vec::new());
@@ -72,7 +59,7 @@ async fn get_top_n_of_multiple_clusters(
     let mut result = Vec::new();
     let description_map: std::collections::HashMap<i32, (i32, i32)> = column_descriptions
         .into_iter()
-        .map(|(desc_id, cluster_id, column_index, _)| (desc_id, (cluster_id, column_index)))
+        .map(|(desc_id, cluster_id, column_index)| (desc_id, (cluster_id, column_index)))
         .collect();
 
     for (description_id, value, count) in top_n_data {
@@ -104,22 +91,20 @@ impl Database {
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
         let mut conn = self.pool.get().await?;
 
-        // First, get clusters for the model and cluster_id
-        let clusters = c_d::cluster
-            .select((c_d::id, c_d::cluster_id))
+        // First, get cluster IDs for the model and cluster_id
+        let cluster_ids = c_d::cluster
+            .select(c_d::id)
             .filter(
                 c_d::model_id
                     .eq(model_id)
                     .and(c_d::cluster_id.eq(cluster_id)),
             )
-            .load::<(i32, String)>(&mut conn)
+            .load::<i32>(&mut conn)
             .await?;
 
-        if clusters.is_empty() {
+        if cluster_ids.is_empty() {
             return Ok(Vec::new());
         }
-
-        let cluster_ids: Vec<i32> = clusters.iter().map(|(id, _)| *id).collect();
 
         // Then, get column descriptions for these clusters
         let column_descriptions = col_d::column_description
