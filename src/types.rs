@@ -87,8 +87,11 @@ pub enum EventCategory {
     CommandAndControl,
     Exfiltration,
     Impact,
-    #[deprecated(note = "Users should use `EventCategory::Reconnaissance` instead")]
-    HttpThreat,
+    Collection,
+    DefenseEvasion,
+    Persistence,
+    PrivilegeEscalation,
+    ResourceDevelopment,
 }
 
 #[derive(Deserialize)]
