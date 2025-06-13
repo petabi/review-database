@@ -140,9 +140,7 @@ async fn get_time_series_of_clusters(
         .await?;
 
     let cluster_db_ids: Vec<i32> = clusters.iter().map(|(id, _)| *id).collect();
-    let cluster_id_map: std::collections::HashMap<i32, String> = clusters
-        .into_iter()
-        .collect();
+    let cluster_id_map: std::collections::HashMap<i32, String> = clusters.into_iter().collect();
 
     if cluster_db_ids.is_empty() {
         return Ok(Vec::new());
@@ -152,7 +150,11 @@ async fn get_time_series_of_clusters(
     let time_series_data = if let Some(time) = time {
         t_d::time_series
             .select((t_d::cluster_id, t_d::count_index, t_d::value, t_d::count))
-            .filter(t_d::cluster_id.eq_any(&cluster_db_ids).and(t_d::time.eq(time)))
+            .filter(
+                t_d::cluster_id
+                    .eq_any(&cluster_db_ids)
+                    .and(t_d::time.eq(time)),
+            )
             .load::<(i32, Option<i32>, NaiveDateTime, i64)>(conn)
             .await?
     } else {
@@ -185,7 +187,8 @@ async fn get_time_series_of_clusters(
         t_d::time_series
             .select((t_d::cluster_id, t_d::count_index, t_d::value, t_d::count))
             .filter(
-                t_d::cluster_id.eq_any(&cluster_db_ids)
+                t_d::cluster_id
+                    .eq_any(&cluster_db_ids)
                     .and(t_d::value.gt(start)) // HIGHLIGHT: first and last items should not be included because they might have insufficient counts.
                     .and(t_d::value.lt(end)),
             )
@@ -197,14 +200,14 @@ async fn get_time_series_of_clusters(
     let result = time_series_data
         .into_iter()
         .filter_map(|(cluster_db_id, count_index, value, count)| {
-            cluster_id_map.get(&cluster_db_id).map(|cluster_id| {
-                TimeSeriesLoadByCluster {
+            cluster_id_map
+                .get(&cluster_db_id)
+                .map(|cluster_id| TimeSeriesLoadByCluster {
                     cluster_id: cluster_id.clone(),
                     count_index,
                     value,
                     count,
-                }
-            })
+                })
         })
         .collect();
 
