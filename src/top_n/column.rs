@@ -1,9 +1,8 @@
 use std::collections::HashSet;
 
 use chrono::NaiveDateTime;
-use cluster::dsl as c_d;
 use column_description::dsl as col_d;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use num_traits::ToPrimitive;
 use structured::{Element, FloatRange};
@@ -16,55 +15,65 @@ use super::{
 use crate::{
     Database, Error,
     schema::{
-        cluster, column_description, csv_column_extra, top_n_binary, top_n_datetime, top_n_enum,
+        column_description, csv_column_extra, top_n_binary, top_n_datetime, top_n_enum,
         top_n_float, top_n_int, top_n_ipaddr, top_n_text,
     },
 };
 
 macro_rules! get_top_n_of_column {
     ($conn:expr, $top_d:ident, $top_table:ident, $value_type:ty, $c:expr, $i:expr, $tc:expr, $time:expr) => {{
-        let query = c_d::cluster
-            .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
-            .inner_join($top_d::$top_table.on(top_d::description_id.eq(col_d::id)))
-            .select((
-                col_d::cluster_id,
-                col_d::column_index,
-                col_d::id,
-                top_d::value,
-                top_d::count,
-            ));
-
-        let top_n = if let Some(time) = $time {
-            query
+        // First, get column descriptions for the clusters
+        let column_descriptions = if let Some(time) = $time {
+            col_d::column_description
+                .select((col_d::id, col_d::cluster_id, col_d::column_index))
                 .filter(
-                    c_d::id
+                    col_d::cluster_id
                         .eq_any($c)
                         .and(col_d::batch_ts.eq(time))
                         .and(col_d::column_index.eq($i)),
                 )
-                .load::<(i32, i32, i32, $value_type, i64)>($conn)
+                .load::<(i32, i32, i32)>($conn)
                 .await?
         } else {
-            query
-                .filter(c_d::id.eq_any($c).and(col_d::column_index.eq($i)))
-                .load::<(i32, i32, i32, $value_type, i64)>($conn)
+            col_d::column_description
+                .select((col_d::id, col_d::cluster_id, col_d::column_index))
+                .filter(col_d::cluster_id.eq_any($c).and(col_d::column_index.eq($i)))
+                .load::<(i32, i32, i32)>($conn)
                 .await?
         };
 
-        let mut top_n: Vec<TopNOfMultipleCluster> = top_n
+        let description_ids: Vec<i32> = column_descriptions.iter().map(|(id, _, _)| *id).collect();
+        let desc_to_cluster: std::collections::HashMap<i32, i32> = column_descriptions
             .into_iter()
-            .map(|t| {
-                let value = ValueType::into_string(t.3);
-                TopNOfMultipleCluster {
-                    cluster_id: t.0,
-                    column_index: t.1,
-                    _description_id: t.2,
-                    value,
-                    count: t.4,
-                }
-            })
+            .map(|(desc_id, cluster_id, _)| (desc_id, cluster_id))
             .collect();
-        $tc.append(&mut top_n);
+
+        if !description_ids.is_empty() {
+            // Then, get top_n data for those description IDs
+            let top_n_data = $top_d::$top_table
+                .select(($top_d::description_id, $top_d::value, $top_d::count))
+                .filter($top_d::description_id.eq_any(&description_ids))
+                .load::<(i32, $value_type, i64)>($conn)
+                .await?;
+
+            // Combine results in memory
+            let mut top_n: Vec<TopNOfMultipleCluster> = top_n_data
+                .into_iter()
+                .filter_map(|(desc_id, value, count)| {
+                    desc_to_cluster.get(&desc_id).map(|cluster_id| {
+                        let value = ValueType::into_string(value);
+                        TopNOfMultipleCluster {
+                            cluster_id: *cluster_id,
+                            column_index: $i,
+                            _description_id: desc_id,
+                            value,
+                            count,
+                        }
+                    })
+                })
+                .collect();
+            $tc.append(&mut top_n);
+        }
     }};
 }
 
@@ -106,38 +115,72 @@ async fn top_n_of_float(
 ) -> Result<Vec<(i32, i32, i32, f64, f64, i64)>, diesel::result::Error> {
     use top_n_float::dsl as top_d;
 
-    let query = c_d::cluster
-        .inner_join(col_d::column_description.on(c_d::id.eq(col_d::cluster_id)))
-        .inner_join(top_d::top_n_float.on(top_d::description_id.eq(col_d::id)))
-        .select((
-            col_d::cluster_id,
-            col_d::column_index,
-            col_d::id,
-            top_d::value_smallest,
-            top_d::value_largest,
-            top_d::count,
-        ));
-
-    if let Some(time) = time {
-        query
+    // First, get column descriptions for the clusters
+    let column_descriptions = if let Some(time) = time {
+        col_d::column_description
+            .select((col_d::id, col_d::cluster_id, col_d::column_index))
             .filter(
-                c_d::id
+                col_d::cluster_id
                     .eq_any(cluster_ids)
                     .and(col_d::batch_ts.eq(time))
                     .and(col_d::column_index.eq(&index)),
             )
-            .load::<(i32, i32, i32, f64, f64, i64)>(conn)
-            .await
+            .load::<(i32, i32, i32)>(conn)
+            .await?
     } else {
-        query
+        col_d::column_description
+            .select((col_d::id, col_d::cluster_id, col_d::column_index))
             .filter(
-                c_d::id
+                col_d::cluster_id
                     .eq_any(cluster_ids)
                     .and(col_d::column_index.eq(&index)),
             )
-            .load::<(i32, i32, i32, f64, f64, i64)>(conn)
-            .await
+            .load::<(i32, i32, i32)>(conn)
+            .await?
+    };
+
+    let description_ids: Vec<i32> = column_descriptions.iter().map(|(id, _, _)| *id).collect();
+    let desc_to_cluster: std::collections::HashMap<i32, (i32, i32)> = column_descriptions
+        .into_iter()
+        .map(|(desc_id, cluster_id, column_index)| (desc_id, (cluster_id, column_index)))
+        .collect();
+
+    if description_ids.is_empty() {
+        return Ok(Vec::new());
     }
+
+    // Then, get top_n_float data for those description IDs
+    let top_n_data = top_d::top_n_float
+        .select((
+            top_d::description_id,
+            top_d::value_smallest,
+            top_d::value_largest,
+            top_d::count,
+        ))
+        .filter(top_d::description_id.eq_any(&description_ids))
+        .load::<(i32, f64, f64, i64)>(conn)
+        .await?;
+
+    // Combine results in memory
+    let result = top_n_data
+        .into_iter()
+        .filter_map(|(desc_id, value_smallest, value_largest, count)| {
+            desc_to_cluster
+                .get(&desc_id)
+                .map(|(cluster_id, column_index)| {
+                    (
+                        *cluster_id,
+                        *column_index,
+                        desc_id,
+                        value_smallest,
+                        value_largest,
+                        count,
+                    )
+                })
+        })
+        .collect();
+
+    Ok(result)
 }
 
 impl Database {
@@ -180,7 +223,7 @@ impl Database {
                         top_n_int,
                         i64,
                         &cluster_ids,
-                        &index,
+                        index,
                         top_n_of_cluster,
                         time
                     );
@@ -193,7 +236,7 @@ impl Database {
                         top_n_enum,
                         String,
                         &cluster_ids,
-                        &index,
+                        index,
                         top_n_of_cluster,
                         time
                     );
@@ -227,7 +270,7 @@ impl Database {
                         top_n_text,
                         String,
                         &cluster_ids,
-                        &index,
+                        index,
                         top_n_of_cluster,
                         time
                     );
@@ -240,7 +283,7 @@ impl Database {
                         top_n_ipaddr,
                         String,
                         &cluster_ids,
-                        &index,
+                        index,
                         top_n_of_cluster,
                         time
                     );
@@ -253,7 +296,7 @@ impl Database {
                         top_n_datetime,
                         NaiveDateTime,
                         &cluster_ids,
-                        &index,
+                        index,
                         top_n_of_cluster,
                         time
                     );
@@ -266,7 +309,7 @@ impl Database {
                         top_n_binary,
                         Vec<u8>,
                         &cluster_ids,
-                        &index,
+                        index,
                         top_n_of_cluster,
                         time
                     );
