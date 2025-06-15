@@ -1120,7 +1120,7 @@ impl Match for BlocklistHttp {
     }
 
     fn kind(&self) -> &'static str {
-        "block list http"
+        "blocklist http"
     }
 
     fn sensor(&self) -> &str {

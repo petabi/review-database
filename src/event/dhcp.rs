@@ -256,7 +256,7 @@ impl Match for BlocklistDhcp {
     }
 
     fn kind(&self) -> &'static str {
-        "block list dhcp"
+        "blocklist dhcp"
     }
 
     fn sensor(&self) -> &str {

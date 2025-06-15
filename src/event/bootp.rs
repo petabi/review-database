@@ -196,7 +196,7 @@ impl Match for BlocklistBootp {
     }
 
     fn kind(&self) -> &'static str {
-        "block list bootp"
+        "blocklist bootp"
     }
 
     fn sensor(&self) -> &str {

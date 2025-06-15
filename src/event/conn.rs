@@ -572,7 +572,7 @@ impl Match for BlocklistConn {
     }
 
     fn kind(&self) -> &'static str {
-        "block list conn"
+        "blocklist conn"
     }
 
     fn sensor(&self) -> &str {

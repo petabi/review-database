@@ -441,7 +441,7 @@ impl Match for BlocklistLdap {
     }
 
     fn kind(&self) -> &'static str {
-        "block list ldap"
+        "blocklist ldap"
     }
 
     fn sensor(&self) -> &str {

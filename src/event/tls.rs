@@ -280,7 +280,7 @@ impl Match for BlocklistTls {
     }
 
     fn kind(&self) -> &'static str {
-        "block list tls"
+        "blocklist tls"
     }
 
     fn sensor(&self) -> &str {

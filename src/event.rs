@@ -106,7 +106,7 @@ const NON_BROWSER: &str = "Non Browser";
 const LDAP_BRUTE_FORCE: &str = "LDAP Brute Force";
 const LDAP_PLAIN_TEXT: &str = "LDAP Plain Text";
 const CRYPTOCURRENCY_MINING_POOL: &str = "Cryptocurrency Mining Pool";
-const BLOCK_LIST: &str = "Block List";
+const BLOCKLIST: &str = "Blocklist";
 const WINDOWS_THREAT_EVENT: &str = "Windows Threat Events";
 const NETWORK_THREAT_EVENT: &str = "Network Threat Events";
 const MISC_LOG_THREAT: &str = "Log Threat";
@@ -797,87 +797,87 @@ impl Event {
             Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     if bootp_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Dhcp(dhcp_event) => {
                     if dhcp_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Dns(dns_event) => {
                     if dns_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
                     if ftp_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Http(http_event) => {
                     if http_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Kerberos(kerberos_event) => {
                     if kerberos_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Ldap(ldap_event) => {
                     if ldap_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Mqtt(mqtt_event) => {
                     if mqtt_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Nfs(nfs_event) => {
                     if nfs_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Ntlm(ntlm_event) => {
                     if ntlm_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Rdp(rdp_event) => {
                     if rdp_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Smb(smb_event) => {
                     if smb_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Smtp(smtp_event) => {
                     if smtp_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Ssh(ssh_event) => {
                     if ssh_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
                 RecordType::Tls(tls_event) => {
                     if tls_event.matches(locator, filter)?.0 {
-                        kind = Some(BLOCK_LIST);
+                        kind = Some(BLOCKLIST);
                     }
                 }
             },
@@ -1864,27 +1864,91 @@ impl EventFilter {
                 &["cryptocurrency", "mining", "pool", "network", "connection"],
                 "cryptocurrency mining pool",
             );
-            moderate_kinds_by(kinds, &["block", "list", "bootp"], "block list bootp");
-            moderate_kinds_by(kinds, &["block", "list", "conn"], "block list conn");
             moderate_kinds_by(
                 kinds,
-                &["block", "list", "dcerpc", "dce/rpc"],
-                "block list dcerpc",
+                &["block", "list", "blocklist", "bootp"],
+                "blocklist bootp",
             );
-            moderate_kinds_by(kinds, &["block", "list", "dhcp"], "block list dhcp");
-            moderate_kinds_by(kinds, &["block", "list", "dns"], "block list dns");
-            moderate_kinds_by(kinds, &["block", "list", "ftp"], "block list ftp");
-            moderate_kinds_by(kinds, &["block", "list", "http"], "block list http");
-            moderate_kinds_by(kinds, &["block", "list", "kerberos"], "block list kerberos");
-            moderate_kinds_by(kinds, &["block", "list", "ldap"], "block list ldap");
-            moderate_kinds_by(kinds, &["block", "list", "mqtt"], "block list mqtt");
-            moderate_kinds_by(kinds, &["block", "list", "nfs"], "block list nfs");
-            moderate_kinds_by(kinds, &["block", "list", "ntlm"], "block list ntlm");
-            moderate_kinds_by(kinds, &["block", "list", "rdp"], "block list rdp");
-            moderate_kinds_by(kinds, &["block", "list", "smb"], "block list smb");
-            moderate_kinds_by(kinds, &["block", "list", "smtp"], "block list stmp");
-            moderate_kinds_by(kinds, &["block", "list", "ssh"], "block list ssh");
-            moderate_kinds_by(kinds, &["block", "list", "tls"], "block list tls");
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "conn"],
+                "blocklist conn",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "dcerpc", "dce/rpc"],
+                "blocklist dcerpc",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "dhcp"],
+                "blocklist dhcp",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "dns"],
+                "blocklist dns",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "ftp"],
+                "blocklist ftp",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "http"],
+                "blocklist http",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "kerberos"],
+                "blocklist kerberos",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "ldap"],
+                "blocklist ldap",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "mqtt"],
+                "blocklist mqtt",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "nfs"],
+                "blocklist nfs",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "ntlm"],
+                "blocklist ntlm",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "rdp"],
+                "blocklist rdp",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "smb"],
+                "blocklist smb",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "smtp"],
+                "blocklist smtp",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "ssh"],
+                "blocklist ssh",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "tls"],
+                "blocklist tls",
+            );
             moderate_kinds_by(kinds, &["windows", "threat"], "windows threat");
             moderate_kinds_by(kinds, &["network", "threat"], "network threat");
             moderate_kinds_by(kinds, &["extra", "threat"], "extra threat");
@@ -3257,7 +3321,7 @@ mod tests {
 
     #[tokio::test]
     async fn event_blocklist_bootp() {
-        use super::{BLOCK_LIST, MEDIUM};
+        use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
@@ -3284,7 +3348,7 @@ mod tests {
             countries: None,
             categories: None,
             levels: Some(vec![MEDIUM]),
-            kinds: Some(vec!["block list bootp".to_string()]),
+            kinds: Some(vec!["blocklist bootp".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
             confidence: None,
@@ -3297,14 +3361,14 @@ mod tests {
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
-        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCK_LIST));
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCKLIST));
         let mut counter = HashMap::new();
         event.count_level(&mut counter, None, &filter).unwrap();
         assert_eq!(counter.len(), 1);
 
         let mut counter = HashMap::new();
         event.count_kind(&mut counter, None, &filter).unwrap();
-        assert_eq!(counter.get(BLOCK_LIST), Some(&1));
+        assert_eq!(counter.get(BLOCKLIST), Some(&1));
 
         let mut counter = HashMap::new();
         event.count_category(&mut counter, None, &filter).unwrap();
@@ -3473,7 +3537,7 @@ mod tests {
 
     #[tokio::test]
     async fn event_blocklist_dhcp() {
-        use super::{BLOCK_LIST, MEDIUM};
+        use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
@@ -3500,7 +3564,7 @@ mod tests {
             countries: None,
             categories: None,
             levels: Some(vec![MEDIUM]),
-            kinds: Some(vec!["block list dhcp".to_string()]),
+            kinds: Some(vec!["blocklist dhcp".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
             confidence: None,
@@ -3513,14 +3577,14 @@ mod tests {
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
-        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCK_LIST));
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCKLIST));
         let mut counter = HashMap::new();
         event.count_level(&mut counter, None, &filter).unwrap();
         assert_eq!(counter.len(), 1);
 
         let mut counter = HashMap::new();
         event.count_kind(&mut counter, None, &filter).unwrap();
-        assert_eq!(counter.get(BLOCK_LIST), Some(&1));
+        assert_eq!(counter.get(BLOCKLIST), Some(&1));
 
         let mut counter = HashMap::new();
         event.count_category(&mut counter, None, &filter).unwrap();
@@ -3844,7 +3908,7 @@ mod tests {
 
     #[tokio::test]
     async fn event_blocklist_ftp() {
-        use super::{BLOCK_LIST, MEDIUM};
+        use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
@@ -3871,7 +3935,7 @@ mod tests {
             countries: None,
             categories: None,
             levels: Some(vec![MEDIUM]),
-            kinds: Some(vec!["block list ftp".to_string()]),
+            kinds: Some(vec!["blocklist ftp".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
             confidence: Some(0.5),
@@ -3884,14 +3948,14 @@ mod tests {
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
-        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCK_LIST));
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCKLIST));
         let mut counter = HashMap::new();
         event.count_level(&mut counter, None, &filter).unwrap();
         assert_eq!(counter.len(), 1);
 
         let mut counter = HashMap::new();
         event.count_kind(&mut counter, None, &filter).unwrap();
-        assert_eq!(counter.get(BLOCK_LIST), Some(&1));
+        assert_eq!(counter.get(BLOCKLIST), Some(&1));
 
         let mut counter = HashMap::new();
         event.count_category(&mut counter, None, &filter).unwrap();
@@ -4135,7 +4199,7 @@ mod tests {
 
     #[tokio::test]
     async fn event_blocklist_ldap() {
-        use super::{BLOCK_LIST, MEDIUM};
+        use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
@@ -4162,7 +4226,7 @@ mod tests {
             countries: None,
             categories: None,
             levels: Some(vec![MEDIUM]),
-            kinds: Some(vec!["block list ldap".to_string()]),
+            kinds: Some(vec!["blocklist ldap".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
             confidence: Some(0.5),
@@ -4175,14 +4239,14 @@ mod tests {
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
-        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCK_LIST));
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCKLIST));
         let mut counter = HashMap::new();
         event.count_level(&mut counter, None, &filter).unwrap();
         assert_eq!(counter.len(), 1);
 
         let mut counter = HashMap::new();
         event.count_kind(&mut counter, None, &filter).unwrap();
-        assert_eq!(counter.get(BLOCK_LIST), Some(&1));
+        assert_eq!(counter.get(BLOCKLIST), Some(&1));
 
         let mut counter = HashMap::new();
         event.count_category(&mut counter, None, &filter).unwrap();

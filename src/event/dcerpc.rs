@@ -133,7 +133,7 @@ impl Match for BlocklistDceRpc {
     }
 
     fn kind(&self) -> &'static str {
-        "block list dcerpc"
+        "blocklist dcerpc"
     }
 
     fn sensor(&self) -> &str {

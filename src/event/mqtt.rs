@@ -173,7 +173,7 @@ impl Match for BlocklistMqtt {
     }
 
     fn kind(&self) -> &'static str {
-        "block list mqtt"
+        "blocklist mqtt"
     }
 
     fn sensor(&self) -> &str {

@@ -185,7 +185,7 @@ impl Match for BlocklistKerberos {
     }
 
     fn kind(&self) -> &'static str {
-        "block list kerberos"
+        "blocklist kerberos"
     }
 
     fn sensor(&self) -> &str {

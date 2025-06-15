@@ -142,7 +142,7 @@ impl Match for BlocklistNfs {
     }
 
     fn kind(&self) -> &'static str {
-        "block list nfs"
+        "blocklist nfs"
     }
 
     fn sensor(&self) -> &str {
