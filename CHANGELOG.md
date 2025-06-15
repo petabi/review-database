@@ -24,6 +24,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Renamed `BlockList` to `Blocklist` and `block_list` to `blocklist` in line with
   the Rust API Guidelines for acronyms/compound words. Please note that this is
   a breaking change if you were using identifiers affected by this change.
+- Completed comprehensive terminology consolidation for blocklist-related terms:
+  - Updated all instances of `BLOCK_LIST` constant to `BLOCKLIST`
+  - Updated all instances of "Block List" string literals to "Blocklist"
+  - Updated all instances of "block list" string literals to "blocklist"
+  - Enhanced search arrays by adding "blocklist" as an additional searchable term
+    alongside existing "block" and "list" terms for improved discoverability
 - Modify the syslog message generation procedure to use dedicated formatter
   instead of Display trait.
 - `Filter::host_name` has been renamed to `Filter::hostname` to align with the

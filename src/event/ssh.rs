@@ -210,7 +210,7 @@ impl Match for BlocklistSsh {
     }
 
     fn kind(&self) -> &'static str {
-        "block list ssh"
+        "blocklist ssh"
     }
 
     fn sensor(&self) -> &str {

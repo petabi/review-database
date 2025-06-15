@@ -159,7 +159,7 @@ impl Match for BlocklistNtlm {
     }
 
     fn kind(&self) -> &'static str {
-        "block list ntlm"
+        "blocklist ntlm"
     }
 
     fn sensor(&self) -> &str {

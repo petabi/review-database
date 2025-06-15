@@ -195,7 +195,7 @@ impl Match for BlocklistSmb {
     }
 
     fn kind(&self) -> &'static str {
-        "block list smb"
+        "blocklist smb"
     }
 
     fn sensor(&self) -> &str {

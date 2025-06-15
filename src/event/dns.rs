@@ -726,7 +726,7 @@ impl Match for BlocklistDns {
     }
 
     fn kind(&self) -> &'static str {
-        "block list dns"
+        "blocklist dns"
     }
 
     fn sensor(&self) -> &str {

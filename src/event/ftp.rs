@@ -480,7 +480,7 @@ impl Match for BlocklistFtp {
     }
 
     fn kind(&self) -> &'static str {
-        "block list ftp"
+        "blocklist ftp"
     }
 
     fn sensor(&self) -> &str {

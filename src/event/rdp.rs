@@ -264,7 +264,7 @@ impl Match for BlocklistRdp {
     }
 
     fn kind(&self) -> &'static str {
-        "block list rdp"
+        "blocklist rdp"
     }
 
     fn sensor(&self) -> &str {
