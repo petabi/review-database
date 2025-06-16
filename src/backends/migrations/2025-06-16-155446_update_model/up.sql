@@ -1,0 +1,2 @@
+ALTER TABLE model
+    ALTER COLUMN classifier DROP NOT NULL;
