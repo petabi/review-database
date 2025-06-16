@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use structured::{Description, Element, ElementCount, FloatRange, NLargestCount};
 
@@ -99,14 +101,22 @@ pub(super) async fn get_float_statistics(
     mut conn: AsyncPgConnection,
     description_ids: &[i32],
 ) -> Result<Vec<Statistics>, Error> {
-    let column_descriptions = desc::description_float
-        .inner_join(cd::column_description.on(cd::id.eq(desc::description_id)))
+    let column_descriptions = cd::column_description
         .select((
             cd::id,
             cd::column_index,
             cd::batch_ts,
             cd::count,
             cd::unique_count,
+        ))
+        .filter(cd::id.eq_any(description_ids))
+        .order_by((cd::id.asc(), cd::column_index.asc(), cd::count.desc()))
+        .load::<(i32, i32, NaiveDateTime, i64, i64)>(&mut conn)
+        .await?;
+
+    let modes: HashMap<_, _> = desc::description_float
+        .select((
+            desc::description_id,
             desc::mode_smallest,
             desc::mode_largest,
             desc::min,
@@ -114,10 +124,48 @@ pub(super) async fn get_float_statistics(
             desc::mean,
             desc::s_deviation,
         ))
-        .filter(cd::id.eq_any(description_ids))
-        .order_by((cd::id.asc(), cd::column_index.asc(), cd::count.desc()))
-        .load::<DescriptionFloat>(&mut conn)
-        .await?;
+        .filter(desc::description_id.eq_any(description_ids))
+        .load::<(
+            i32,
+            f64,
+            f64,
+            Option<f64>,
+            Option<f64>,
+            Option<f64>,
+            Option<f64>,
+        )>(&mut conn)
+        .await?
+        .into_iter()
+        .map(
+            |(id, mode_smallest, mode_largest, min, max, mean, s_deviation)| {
+                (
+                    id,
+                    (mode_smallest, mode_largest, min, max, mean, s_deviation),
+                )
+            },
+        )
+        .collect();
+
+    let column_descriptions: Vec<DescriptionFloat> = column_descriptions
+        .into_iter()
+        .filter_map(|(id, column_index, batch_ts, count, unique_count)| {
+            modes.get(&id).map(
+                |(mode_smallest, mode_largest, min, max, mean, s_deviation)| DescriptionFloat {
+                    id,
+                    column_index,
+                    batch_ts,
+                    count,
+                    unique_count,
+                    mode_smallest: *mode_smallest,
+                    mode_largest: *mode_largest,
+                    min: *min,
+                    max: *max,
+                    mean: *mean,
+                    s_deviation: *s_deviation,
+                },
+            )
+        })
+        .collect();
 
     let top_n = top_n::top_n_float
         .select((

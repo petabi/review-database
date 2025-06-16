@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use structured::{Description, Element, ElementCount, NLargestCount};
 
@@ -87,20 +89,40 @@ pub(super) async fn get_text_statistics(
     mut conn: AsyncPgConnection,
     description_ids: &[i32],
 ) -> Result<Vec<Statistics>, Error> {
-    let column_descriptions = desc::description_text
-        .inner_join(cd::column_description.on(cd::id.eq(desc::description_id)))
+    let column_descriptions = cd::column_description
         .select((
             cd::id,
             cd::column_index,
             cd::batch_ts,
             cd::count,
             cd::unique_count,
-            desc::mode,
         ))
         .filter(cd::id.eq_any(description_ids))
-        .order_by((cd::id, cd::column_index.asc(), cd::count.desc()))
-        .load::<DescriptionText>(&mut conn)
+        .order_by((cd::id.asc(), cd::column_index.asc(), cd::count.desc()))
+        .load::<(i32, i32, NaiveDateTime, i64, i64)>(&mut conn)
         .await?;
+
+    let modes: HashMap<_, _> = desc::description_text
+        .select((desc::description_id, desc::mode))
+        .filter(desc::description_id.eq_any(description_ids))
+        .load::<(i32, String)>(&mut conn)
+        .await?
+        .into_iter()
+        .collect();
+
+    let column_descriptions: Vec<DescriptionText> = column_descriptions
+        .into_iter()
+        .filter_map(|(id, column_index, batch_ts, count, unique_count)| {
+            modes.get(&id).map(|mode| DescriptionText {
+                id,
+                column_index,
+                batch_ts,
+                count,
+                unique_count,
+                mode: mode.clone(),
+            })
+        })
+        .collect();
 
     let top_n = top_n::top_n_text
         .select((top_n::description_id, top_n::value, top_n::count))
