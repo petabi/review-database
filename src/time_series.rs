@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
+    BoolExpressionMethods, ExpressionMethods, QueryDsl,
     dsl::{max, min},
 };
 use diesel_async::RunQueryDsl;
@@ -194,10 +194,14 @@ impl Database {
         model_id: i32,
     ) -> Result<(Option<NaiveDateTime>, Option<NaiveDateTime>), Error> {
         let mut conn = self.pool.get().await?;
-        Ok(c_d::cluster
-            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
-            .select((min(t_d::value), max(t_d::value)))
+        let cluster_ids = c_d::cluster
+            .select(c_d::id)
             .filter(c_d::model_id.eq(model_id))
+            .load::<i32>(&mut conn)
+            .await?;
+        Ok(t_d::time_series
+            .select((min(t_d::value), max(t_d::value)))
+            .filter(t_d::cluster_id.eq_any(cluster_ids))
             .get_result(&mut conn)
             .await?)
     }
@@ -219,15 +223,25 @@ impl Database {
         end: Option<i64>,
     ) -> Result<TimeSeriesResult, Error> {
         let mut conn = self.pool.get().await?;
-        let (earliest, latest) = c_d::cluster
-            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
-            .select((min(t_d::value), max(t_d::value)))
+        let cluster_ids = c_d::cluster
+            .select(c_d::id)
             .filter(
                 c_d::model_id
                     .eq(model_id)
                     .and(c_d::cluster_id.eq(cluster_id)),
             )
-            .get_result::<(Option<NaiveDateTime>, Option<NaiveDateTime>)>(&mut conn)
+            .load::<i32>(&mut conn)
+            .await?;
+        if cluster_ids.is_empty() {
+            return Err(Error::InvalidInput(format!(
+                "cluster_id {cluster_id} not found in model {model_id}"
+            )));
+        }
+
+        let (earliest, latest): (Option<NaiveDateTime>, Option<NaiveDateTime>) = t_d::time_series
+            .select((min(t_d::value), max(t_d::value)))
+            .filter(t_d::cluster_id.eq_any(cluster_ids.clone()))
+            .get_result(&mut conn)
             .await?;
         let recent: NaiveDateTime = latest.unwrap_or_else(|| Utc::now().naive_utc());
 
@@ -250,16 +264,11 @@ impl Database {
             )
         };
 
-        let values = c_d::cluster
-            .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
+        let values = t_d::time_series
             .select((t_d::time, t_d::count_index, t_d::value, t_d::count))
-            .filter(
-                c_d::model_id
-                    .eq(model_id)
-                    .and(c_d::cluster_id.eq(cluster_id))
-                    .and(t_d::value.gt(start)) // HIGHLIGHT: first and last items should not be included because they might have insufficient counts.
-                    .and(t_d::value.lt(end)),
-            )
+            .filter(t_d::cluster_id.eq_any(cluster_ids))
+            .filter(t_d::value.gt(start)) // HIGHLIGHT: first and last items should not be included because they might have insufficient counts.
+            .filter(t_d::value.lt(end))
             .load::<TimeSeriesLoad>(&mut conn)
             .await?;
 

@@ -1,5 +1,4 @@
 #![allow(clippy::too_many_lines)]
-#![allow(clippy::useless_nonzero_new_unchecked)]
 mod bootp;
 mod common;
 mod conn;
