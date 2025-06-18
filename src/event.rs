@@ -957,6 +957,13 @@ impl Event {
         }
     }
 
+    /// Returns all MITRE ATT&CK categories that this event can match based on its kind.
+    #[must_use]
+    pub fn categories(&self) -> &'static [EventCategory] {
+        let (kind, _) = self.kind_and_category();
+        kind.categories()
+    }
+
     // TODO: Need to implement country counting for `WindowsThreat`.
     // 1. for Network Connection: count country via ip
     // 2. for other Sysmon events: count the country by KR because the event does not have ip address.
@@ -1765,6 +1772,58 @@ pub enum EventKind {
     SuspiciousTlsTraffic,
     BlocklistBootp,
     BlocklistDhcp,
+}
+
+impl EventKind {
+    /// Returns the MITRE ATT&CK categories that this event kind can match.
+    ///
+    /// Some event kinds like `DnsCovertChannel` can match multiple categories
+    /// such as both `CommandAndControl` and `Exfiltration`.
+    #[must_use]
+    #[allow(clippy::match_same_arms)]
+    pub fn categories(&self) -> &'static [EventCategory] {
+        use EventCategory::*;
+
+        match self {
+            Self::DnsCovertChannel => &[CommandAndControl, Exfiltration],
+            Self::HttpThreat => &[Reconnaissance],
+            Self::RdpBruteForce => &[Discovery],
+            Self::RepeatedHttpSessions => &[Exfiltration],
+            Self::ExtraThreat => &[Reconnaissance],
+            Self::TorConnection => &[CommandAndControl],
+            Self::DomainGenerationAlgorithm => &[CommandAndControl],
+            Self::FtpBruteForce => &[CredentialAccess],
+            Self::FtpPlainText => &[LateralMovement],
+            Self::PortScan => &[Reconnaissance],
+            Self::MultiHostPortScan => &[Reconnaissance],
+            Self::NonBrowser => &[CommandAndControl],
+            Self::LdapBruteForce => &[CredentialAccess],
+            Self::LdapPlainText => &[LateralMovement],
+            Self::ExternalDdos => &[Impact],
+            Self::CryptocurrencyMiningPool => &[CommandAndControl],
+            Self::BlocklistConn => &[InitialAccess],
+            Self::BlocklistDns => &[InitialAccess],
+            Self::BlocklistDceRpc => &[InitialAccess],
+            Self::BlocklistFtp => &[InitialAccess],
+            Self::BlocklistHttp => &[InitialAccess],
+            Self::BlocklistKerberos => &[InitialAccess],
+            Self::BlocklistLdap => &[InitialAccess],
+            Self::BlocklistMqtt => &[InitialAccess],
+            Self::BlocklistNfs => &[InitialAccess],
+            Self::BlocklistNtlm => &[InitialAccess],
+            Self::BlocklistRdp => &[InitialAccess],
+            Self::BlocklistSmb => &[InitialAccess],
+            Self::BlocklistSmtp => &[InitialAccess],
+            Self::BlocklistSsh => &[InitialAccess],
+            Self::BlocklistTls => &[InitialAccess],
+            Self::WindowsThreat => &[Reconnaissance],
+            Self::NetworkThreat => &[Reconnaissance],
+            Self::LockyRansomware => &[Impact],
+            Self::SuspiciousTlsTraffic => &[CommandAndControl],
+            Self::BlocklistBootp => &[InitialAccess],
+            Self::BlocklistDhcp => &[InitialAccess],
+        }
+    }
 }
 
 /// Machine Learning Method.
@@ -5086,5 +5145,54 @@ mod tests {
             )),
             Some(&1)
         );
+    }
+
+    #[test]
+    fn event_kind_categories() {
+        use crate::types::EventCategory;
+
+        // Test that DnsCovertChannel matches multiple categories
+        let dns_categories = EventKind::DnsCovertChannel.categories();
+        assert_eq!(dns_categories.len(), 2);
+        assert!(dns_categories.contains(&EventCategory::CommandAndControl));
+        assert!(dns_categories.contains(&EventCategory::Exfiltration));
+
+        // Test that other events still work
+        let port_scan_categories = EventKind::PortScan.categories();
+        assert_eq!(port_scan_categories.len(), 1);
+        assert!(port_scan_categories.contains(&EventCategory::Reconnaissance));
+
+        // Test blocklist events
+        let blocklist_categories = EventKind::BlocklistHttp.categories();
+        assert_eq!(blocklist_categories.len(), 1);
+        assert!(blocklist_categories.contains(&EventCategory::InitialAccess));
+    }
+
+    #[tokio::test]
+    async fn event_categories_method() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+
+        // Create and store a DnsCovertChannel event
+        let msg = example_message(
+            EventKind::DnsCovertChannel,
+            EventCategory::CommandAndControl,
+        );
+        db.put(&msg).unwrap();
+
+        // Retrieve the event
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+
+        // Test that the event's categories method returns multiple categories
+        let categories = event.categories();
+        assert_eq!(categories.len(), 2);
+        assert!(categories.contains(&EventCategory::CommandAndControl));
+        assert!(categories.contains(&EventCategory::Exfiltration));
     }
 }
