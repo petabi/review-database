@@ -16,6 +16,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   Previously, all detection events always returned a score of 0.0. It now
   compares the values against the provided attribute correctly and returns a
   score.
+- Added new MITRE categories to `EventCategory` enum: `Collection`,
+  `DefenseEvasion`, `Persistence`, `PrivilegeEscalation`, and
+  `ResourceDevelopment`. These additions expand the available categorization
+  options for detected events.
 
 ### Changed
 
