@@ -277,4 +277,70 @@ mod tests {
         let acc = iter.next().unwrap().unwrap();
         assert_eq!(acc.username, "user1");
     }
+
+    #[test]
+    fn put_duplicate_key() {
+        use crate::Iterable;
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.account_map();
+
+        // Insert first account
+        let acc1 = Account::new(
+            "user1",
+            "password1",
+            Role::SystemAdministrator,
+            "User 1".to_string(),
+            "Department 1".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        table.put(&acc1).unwrap();
+        assert!(table.contains("user1").unwrap());
+
+        // Get the first account to verify it was stored
+        let retrieved_acc1 = table.get("user1").unwrap().unwrap();
+        assert_eq!(retrieved_acc1.username, "user1");
+        assert_eq!(retrieved_acc1.name, "User 1");
+        assert_eq!(retrieved_acc1.department, "Department 1");
+
+        // Insert second account with same username but different data
+        let acc2 = Account::new(
+            "user1",     // Same username
+            "password2", // Different password
+            Role::SystemAdministrator,
+            "User 1 Updated".to_string(), // Different name
+            "Department 2".to_string(),   // Different department
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        table.put(&acc2).unwrap();
+
+        // Verify the account was overwritten with new data
+        let retrieved_acc2 = table.get("user1").unwrap().unwrap();
+        assert_eq!(retrieved_acc2.username, "user1");
+        assert_eq!(retrieved_acc2.name, "User 1 Updated");
+        assert_eq!(retrieved_acc2.department, "Department 2");
+
+        // Verify password was updated by checking the passwords match the respective accounts
+        assert!(!retrieved_acc2.verify_password("password1")); // Old password should not work
+        assert!(retrieved_acc2.verify_password("password2")); // New password should work
+
+        // Verify there's only one entry in the table (the duplicate key overwrote the original)
+        let mut iter = table.iter(Direction::Forward, None);
+        let first_entry = iter.next().unwrap().unwrap();
+        assert_eq!(first_entry.username, "user1");
+        assert_eq!(first_entry.name, "User 1 Updated"); // Should have the updated data
+        assert!(iter.next().is_none()); // Should be no more entries
+    }
 }

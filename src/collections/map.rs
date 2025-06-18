@@ -36,7 +36,7 @@ impl<'a> Map<'a> {
             .map_err(|e| anyhow!("database error: {}", e))
     }
 
-    /// Puts a key-value pair.
+    /// Puts a key-value pair, overwriting any existing value for the key.
     ///
     /// # Errors
     ///
