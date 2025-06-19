@@ -1782,7 +1782,10 @@ impl EventKind {
     #[must_use]
     #[allow(clippy::match_same_arms)]
     pub fn categories(&self) -> &'static [EventCategory] {
-        use EventCategory::*;
+        use EventCategory::{
+            CommandAndControl, CredentialAccess, Discovery, Exfiltration, Impact, InitialAccess,
+            LateralMovement, Reconnaissance,
+        };
 
         match self {
             Self::DnsCovertChannel => &[CommandAndControl, Exfiltration],
