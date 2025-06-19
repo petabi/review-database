@@ -26,6 +26,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
+pub use attrievent::attribute::RawEventKind;
 use bb8_postgres::{bb8, tokio_postgres};
 pub use rocksdb::backup::BackupEngineInfo;
 pub use tags::TagSet;
