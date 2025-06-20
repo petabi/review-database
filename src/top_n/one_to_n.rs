@@ -14,8 +14,8 @@ use super::{ElementCount, StructuredColumnType, TopElementCountsByColumn};
 use crate::{
     self as database, Database, Error,
     schema::{
-        cluster, column_description, csv_column_extra, top_n_binary, top_n_datetime, top_n_enum,
-        top_n_float, top_n_int, top_n_ipaddr, top_n_text,
+        cluster, column_description, top_n_binary, top_n_datetime, top_n_enum, top_n_float,
+        top_n_int, top_n_ipaddr, top_n_text,
     },
 };
 
@@ -49,7 +49,6 @@ pub struct TopMultimaps {
 
 use cluster::dsl as c_d;
 use column_description::dsl as cd_d;
-use csv_column_extra::dsl as column_d;
 
 macro_rules! get_top_n_of_column_by_round {
     ($conn:expr, $top_d:ident, $top_table:ident, $load_type:ty, $d:expr, $c:expr, $b_ts:expr, $index:expr, $func:tt, $top_n:expr) => {{
@@ -360,6 +359,7 @@ impl Database {
     #[allow(clippy::cast_possible_truncation)]
     pub async fn get_top_multimaps_of_model(
         &self,
+        store: &crate::Store,
         model_id: i32,
         number_of_top_n: usize,
         min_top_n_of_1_to_n: usize,
@@ -372,35 +372,28 @@ impl Database {
             .map(|c| (c.column_index.to_usize().expect("safe"), c.data_type))
             .collect();
 
-        let columns_for_1_to_n = column_d::csv_column_extra
-            .select((column_d::column_1, column_d::column_n))
-            .filter(column_d::model_id.eq(model_id))
-            .first::<(Option<Vec<Option<bool>>>, Option<Vec<Option<bool>>>)>(&mut conn)
-            .await?;
+        let csv_column_extra_map = store.csv_column_extra_map();
+        let csv_extra = csv_column_extra_map
+            .get_by_model(model_id)
+            .map_err(|e| Error::InvalidInput(format!("Failed to get csv column extra: {e}")))?;
+
+        let columns_for_1_to_n = if let Some(csv_extra) = csv_extra {
+            (csv_extra.column_1, csv_extra.column_n)
+        } else {
+            (None, None)
+        };
 
         let columns_for_1: Vec<usize> = columns_for_1_to_n.0.map_or_else(Vec::new, |c| {
             c.iter()
                 .enumerate()
-                .filter_map(|(index, is)| {
-                    if let Some(true) = *is {
-                        Some(index)
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(index, is)| if *is { Some(index) } else { None })
                 .collect()
         });
 
         let columns_for_n: Vec<usize> = columns_for_1_to_n.1.map_or_else(Vec::new, |c| {
             c.iter()
                 .enumerate()
-                .filter_map(|(index, is)| {
-                    if let Some(true) = *is {
-                        Some(index)
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(index, is)| if *is { Some(index) } else { None })
                 .collect()
         });
 
