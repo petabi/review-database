@@ -29,9 +29,9 @@ struct ColumnDescriptionLoad {
 
 #[derive(Serialize)]
 pub struct Statistics {
-    batch_ts: NaiveDateTime,
-    column_index: i32,
-    column_stats: ColumnStatistics,
+    pub(crate) batch_ts: NaiveDateTime,
+    pub(crate) column_index: i32,
+    pub(crate) column_stats: ColumnStatistics,
 }
 
 trait ColumnIndex {

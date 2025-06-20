@@ -65,7 +65,7 @@ pub use self::model::{Digest as ModelDigest, Model};
 use self::tables::StateDb;
 pub use self::tables::{
     AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
-    AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Confidence,
+    AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, ColumnStats, Confidence,
     CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
     DataSourceUpdate, DataType, ExternalService, ExternalServiceConfig, ExternalServiceKind,
     ExternalServiceStatus, Filter, IndexedTable, Iterable, ModelIndicator, Network, NetworkUpdate,
@@ -186,6 +186,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn category_map(&self) -> IndexedTable<category::Category> {
         self.states.categories()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn column_stats_map(&self) -> Table<ColumnStats> {
+        self.states.column_stats()
     }
 
     #[must_use]
