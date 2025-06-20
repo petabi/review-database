@@ -66,6 +66,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Updated `csv_column_extra` data retrieval to use RocksDB instead of PostgreSQL.
+  Modified `get_columns_for_top_n` and `get_top_multimaps_of_model` methods to
+  retrieve `csv_column_extra` data from the RocksDB store, preparing for the
+  eventual removal of the `csv_column_extra` table from PostgreSQL. This change
+  requires passing a `Store` reference to `get_top_columns_of_model` and
+  `get_top_multimaps_of_model` methods.
 - Renamed `last_time` to `end_time` in event structs within `src/event/*.rs`.
   This is a breaking API change.
 - Renamed `BlockList` to `Blocklist` and `block_list` to `blocklist` in line with
