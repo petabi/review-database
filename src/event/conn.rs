@@ -442,6 +442,7 @@ pub struct BlocklistConnFields {
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -449,7 +450,7 @@ impl BlocklistConnFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -466,6 +467,7 @@ impl BlocklistConnFields {
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
             self.resp_l2_bytes.to_string(),
+            self.confidence.to_string(),
         )
     }
 }
@@ -488,6 +490,7 @@ pub struct BlocklistConn {
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -536,6 +539,7 @@ impl BlocklistConn {
             resp_pkts: fields.resp_pkts,
             orig_l2_bytes: fields.orig_l2_bytes,
             resp_l2_bytes: fields.resp_l2_bytes,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -580,7 +584,7 @@ impl Match for BlocklistConn {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

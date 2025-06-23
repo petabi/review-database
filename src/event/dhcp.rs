@@ -78,6 +78,7 @@ pub struct BlocklistDhcpFields {
     pub class_id: Vec<u8>,
     pub client_id_type: u8,
     pub client_id: Vec<u8>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -90,7 +91,7 @@ impl BlocklistDhcpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -119,6 +120,7 @@ impl BlocklistDhcpFields {
                 .to_string(),
             self.client_id_type.to_string(),
             to_hardware_address(&self.client_id),
+            self.confidence.to_string(),
         )
     }
 }
@@ -151,6 +153,7 @@ pub struct BlocklistDhcp {
     pub class_id: Vec<u8>,
     pub client_id_type: u8,
     pub client_id: Vec<u8>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -220,6 +223,7 @@ impl BlocklistDhcp {
             class_id: fields.class_id,
             client_id_type: fields.client_id_type,
             client_id: fields.client_id,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -264,7 +268,7 @@ impl Match for BlocklistDhcp {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

@@ -51,6 +51,7 @@ pub struct BlocklistMqttFields {
     pub connack_reason: u8,
     pub subscribe: Vec<String>,
     pub suback_reason: Vec<u8>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -58,7 +59,7 @@ impl BlocklistMqttFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -72,7 +73,8 @@ impl BlocklistMqttFields {
             self.client_id,
             self.connack_reason.to_string(),
             self.subscribe.join(","),
-            String::from_utf8_lossy(&self.suback_reason)
+            String::from_utf8_lossy(&self.suback_reason),
+            self.confidence.to_string(),
         )
     }
 }
@@ -93,6 +95,7 @@ pub struct BlocklistMqtt {
     pub connack_reason: u8,
     pub subscribe: Vec<String>,
     pub suback_reason: Vec<u8>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -137,6 +140,7 @@ impl BlocklistMqtt {
             connack_reason: fields.connack_reason,
             subscribe: fields.subscribe,
             suback_reason: fields.suback_reason,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -181,7 +185,7 @@ impl Match for BlocklistMqtt {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

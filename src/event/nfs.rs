@@ -37,6 +37,7 @@ pub struct BlocklistNfsFields {
     pub end_time: i64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -44,7 +45,7 @@ impl BlocklistNfsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} read_files={:?} write_files={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} read_files={:?} write_files={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -54,7 +55,8 @@ impl BlocklistNfsFields {
             self.proto.to_string(),
             self.end_time.to_string(),
             self.read_files.join(","),
-            self.write_files.join(",")
+            self.write_files.join(","),
+            self.confidence.to_string()
         )
     }
 }
@@ -71,6 +73,7 @@ pub struct BlocklistNfs {
     pub end_time: i64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -106,6 +109,7 @@ impl BlocklistNfs {
             end_time: fields.end_time,
             read_files: fields.read_files,
             write_files: fields.write_files,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -150,7 +154,7 @@ impl Match for BlocklistNfs {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

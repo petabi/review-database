@@ -3133,6 +3133,7 @@ mod tests {
             resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
             post_body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -3147,7 +3148,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlocklistHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="600" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlocklistHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="600" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="1""#
         );
 
         let blocklist_http = Event::Blocklist(RecordType::Http(BlocklistHttp::new(
@@ -3347,6 +3348,7 @@ mod tests {
             chaddr: vec![1, 2, 3, 4, 5, 6],
             sname: "server_name".to_string(),
             file: "boot_file_name".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -3366,7 +3368,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" end_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name""#,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" end_time="100" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" confidence="1""#,
         );
         let blocklist_bootp = Event::Blocklist(RecordType::Bootp(BlocklistBootp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -3466,6 +3468,7 @@ mod tests {
             resp_pkts: 1,
             orig_l2_bytes: 122,
             resp_l2_bytes: 122,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -3480,7 +3483,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" confidence="1""#
         );
 
         let blocklist_conn = Event::Blocklist(RecordType::Conn(crate::BlocklistConn::new(
@@ -3508,6 +3511,7 @@ mod tests {
             named_pipe: "svcctl".to_string(),
             endpoint: "epmapper".to_string(),
             operation: "bind".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -3522,7 +3526,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" end_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" end_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" confidence="1""#
         );
 
         let blocklist_dce_rpc = Event::Blocklist(RecordType::DceRpc(crate::BlocklistDceRpc::new(
@@ -3563,6 +3567,7 @@ mod tests {
             class_id: "MSFT 5.0".as_bytes().to_vec(),
             client_id_type: 1,
             client_id: vec![7, 8, 9],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -3581,7 +3586,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" end_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09""#,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" end_time="100" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" confidence="1""#,
         );
 
         let blocklist_dhcp = Event::Blocklist(RecordType::Dhcp(BlocklistDhcp::new(
@@ -3795,6 +3800,7 @@ mod tests {
             rd_flag: false,
             ra_flag: true,
             ttl: vec![120; 5],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -3809,7 +3815,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" end_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" end_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="1""#
         );
         let blocklist_dns = Event::Blocklist(RecordType::Dns(crate::BlocklistDns::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -4090,6 +4096,7 @@ mod tests {
             realm: "EXAMPLE.COM".to_string(),
             sname_type: 1,
             service_name: vec!["krbtgt/EXAMPLE.COM".to_string()],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -4104,7 +4111,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" end_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" end_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" confidence="1""#
         );
 
         let blocklist_kerberos =
@@ -4374,6 +4381,7 @@ mod tests {
             connack_reason: 0,
             subscribe: vec!["topic".to_string()],
             suback_reason: "error".to_string().into_bytes(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -4388,7 +4396,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" end_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" end_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" confidence="1""#
         );
 
         let blocklist_mqtt = Event::Blocklist(RecordType::Mqtt(crate::BlocklistMqtt::new(
@@ -4453,6 +4461,7 @@ mod tests {
             end_time: 100,
             read_files: vec!["/etc/passwd".to_string()],
             write_files: vec!["/etc/shadow".to_string()],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -4467,7 +4476,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" end_time="100" read_files="/etc/passwd" write_files="/etc/shadow""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" end_time="100" read_files="/etc/passwd" write_files="/etc/shadow" confidence="1""#
         );
 
         let blocklist_nfs = Event::Blocklist(RecordType::Nfs(crate::BlocklistNfs::new(
@@ -4497,6 +4506,7 @@ mod tests {
             hostname: "host1".to_string(),
             domainname: "domain1".to_string(),
             success: "true".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -4511,7 +4521,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" end_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" end_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" confidence="1""#
         );
 
         let blocklist_ntlm = Event::Blocklist(RecordType::Ntlm(crate::BlocklistNtlm::new(
@@ -4577,6 +4587,7 @@ mod tests {
             proto: 6,
             end_time: 100,
             cookie: "cookie".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -4591,7 +4602,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" end_time="100" cookie="cookie""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" end_time="100" cookie="cookie" confidence="1""#
         );
 
         let blocklist_rdp = Event::Blocklist(RecordType::Rdp(crate::BlocklistRdp::new(
@@ -4627,6 +4638,7 @@ mod tests {
             access_time: 200,
             write_time: 300,
             change_time: 400,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -4641,7 +4653,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" end_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" end_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" confidence="1""#
         );
 
         let blocklist_smb = Event::Blocklist(RecordType::Smb(crate::BlocklistSmb::new(
@@ -4673,6 +4685,7 @@ mod tests {
             subject: "subject".to_string(),
             agent: "agent".to_string(),
             state: "state".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -4687,7 +4700,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" end_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" end_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" confidence="1""#
         );
 
         let blocklist_smtp = Event::Blocklist(RecordType::Smtp(crate::BlocklistSmtp::new(
@@ -4725,6 +4738,7 @@ mod tests {
             hassh_server: "hassh_server".to_string(),
             client_shka: "client_shka".to_string(),
             server_shka: "server_shka".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         };
 
@@ -4739,7 +4753,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" end_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" end_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" confidence="1""#
         );
 
         let blocklist_ssh = Event::Blocklist(RecordType::Ssh(crate::BlocklistSsh::new(

@@ -55,6 +55,7 @@ pub struct BlocklistBootpFields {
     pub chaddr: Vec<u8>,
     pub sname: String,
     pub file: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -62,7 +63,7 @@ impl BlocklistBootpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} op={:?} htype={:?} hops={:?} xid={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} chaddr={:?} sname={:?} file={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} op={:?} htype={:?} hops={:?} xid={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} chaddr={:?} sname={:?} file={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -82,6 +83,7 @@ impl BlocklistBootpFields {
             to_hardware_address(&self.chaddr),
             self.sname.to_string(),
             self.file.to_string(),
+            self.confidence.to_string(),
         )
     }
 }
@@ -107,6 +109,7 @@ pub struct BlocklistBootp {
     pub chaddr: Vec<u8>,
     pub sname: String,
     pub file: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -160,6 +163,7 @@ impl BlocklistBootp {
             chaddr: fields.chaddr,
             sname: fields.sname,
             file: fields.file,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -204,7 +208,7 @@ impl Match for BlocklistBootp {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

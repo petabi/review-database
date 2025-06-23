@@ -1373,6 +1373,7 @@ mod tests {
             chaddr: vec![1, 2, 3, 4, 5, 6],
             sname: "server_name".to_string(),
             file: "boot_file_name".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1394,6 +1395,7 @@ mod tests {
             resp_pkts: 1,
             orig_l2_bytes: 122,
             resp_l2_bytes: 122,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1411,6 +1413,7 @@ mod tests {
             named_pipe: "svcctl".to_string(),
             endpoint: "epmapper".to_string(),
             operation: "bind".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1442,6 +1445,7 @@ mod tests {
             class_id: "MSFT 5.0".as_bytes().to_vec(),
             client_id_type: 1,
             client_id: vec![7, 8, 9],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1467,6 +1471,7 @@ mod tests {
             rd_flag: false,
             ra_flag: true,
             ttl: vec![120; 5],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1502,6 +1507,7 @@ mod tests {
             resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
             post_body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1524,6 +1530,7 @@ mod tests {
             realm: "EXAMPLE.COM".to_string(),
             sname_type: 1,
             service_name: vec!["krbtgt/EXAMPLE.COM".to_string()],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1543,6 +1550,7 @@ mod tests {
             connack_reason: 0,
             subscribe: vec!["topic".to_string()],
             suback_reason: "error".to_string().into_bytes(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1558,6 +1566,7 @@ mod tests {
             end_time: 100,
             read_files: vec!["/etc/passwd".to_string()],
             write_files: vec!["/etc/shadow".to_string()],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1576,6 +1585,7 @@ mod tests {
             hostname: "host1".to_string(),
             domainname: "domain1".to_string(),
             success: "true".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1590,6 +1600,7 @@ mod tests {
             proto: 6,
             end_time: 100,
             cookie: "cookie".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1614,6 +1625,7 @@ mod tests {
             access_time: 200,
             write_time: 300,
             change_time: 400,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1634,6 +1646,7 @@ mod tests {
             subject: "subject".to_string(),
             agent: "agent".to_string(),
             state: "state".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1660,6 +1673,7 @@ mod tests {
             hassh_server: "hassh_server".to_string(),
             client_shka: "client_shka".to_string(),
             server_shka: "server_shka".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
