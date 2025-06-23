@@ -36,6 +36,7 @@ impl Model {
         self,
     ) -> (
         SqlModel,
+        Vec<u8>,
         Vec<crate::batch_info::BatchInfo>,
         crate::scores::Scores,
     ) {
@@ -44,7 +45,6 @@ impl Model {
             name: self.name,
             version: self.version,
             kind: self.kind,
-            classifier: self.serialized_classifier,
             max_event_id_num: self.max_event_id_num,
             data_source_id: self.data_source_id,
             classification_id: Some(self.classification_id),
@@ -55,17 +55,17 @@ impl Model {
             .map(|b| crate::batch_info::BatchInfo::new(self.id, b))
             .collect();
         let scores = crate::scores::Scores::new(self.id, self.scores);
-        (sql, batch_info, scores)
+        (sql, self.serialized_classifier, batch_info, scores)
     }
 
     #[must_use]
-    pub fn from_storage(model: SqlModel) -> Self {
+    pub fn from_storage(model: SqlModel, serialized_classifier: Vec<u8>) -> Self {
         Self {
             id: model.id,
             name: model.name,
             version: model.version,
             kind: model.kind,
-            serialized_classifier: model.classifier,
+            serialized_classifier,
             max_event_id_num: model.max_event_id_num,
             data_source_id: model.data_source_id,
             classification_id: model.classification_id.unwrap_or_default(),
@@ -232,7 +232,6 @@ pub struct SqlModel {
     name: String,
     version: i32,
     kind: String,
-    classifier: Vec<u8>,
     max_event_id_num: i32,
     data_source_id: i32,
     classification_id: Option<i64>,
@@ -251,7 +250,6 @@ impl Database {
                 dsl::name.eq(&model.name),
                 dsl::version.eq(model.version),
                 dsl::kind.eq(&model.kind),
-                dsl::classifier.eq(&model.classifier),
                 dsl::max_event_id_num.eq(model.max_event_id_num),
                 dsl::data_source_id.eq(model.data_source_id),
                 dsl::classification_id.eq(model.classification_id),
@@ -431,7 +429,6 @@ impl Database {
                 dsl::name,
                 dsl::version,
                 dsl::kind,
-                dsl::classifier,
                 dsl::max_event_id_num,
                 dsl::data_source_id,
                 dsl::classification_id,
@@ -512,7 +509,6 @@ impl Database {
                 dsl::name.eq(&model.name),
                 dsl::version.eq(model.version),
                 dsl::kind.eq(&model.kind),
-                dsl::classifier.eq(&model.classifier),
                 dsl::max_event_id_num.eq(model.max_event_id_num),
                 dsl::data_source_id.eq(model.data_source_id),
                 dsl::classification_id.eq(model.classification_id),
@@ -597,6 +593,5 @@ mod tests {
         let d_model = super::Model::from_serialized(&serialized).unwrap();
         let (model, _body) = example();
         assert_eq!(d_model.id, model.id);
-        assert_eq!(d_model.serialized_classifier, model.serialized_classifier);
     }
 }
