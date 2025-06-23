@@ -933,6 +933,7 @@ pub struct BlocklistHttpFields {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -940,7 +941,7 @@ impl BlocklistHttpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -971,6 +972,7 @@ impl BlocklistHttpFields {
             self.resp_mime_types.join(","),
             get_post_body(&self.post_body),
             self.state,
+            self.confidence.to_string(),
         )
     }
 }
@@ -1008,6 +1010,7 @@ pub struct BlocklistHttp {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -1084,6 +1087,7 @@ impl BlocklistHttp {
             resp_mime_types: fields.resp_mime_types.clone(),
             post_body: fields.post_body.clone(),
             state: fields.state.clone(),
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -1128,7 +1132,7 @@ impl Match for BlocklistHttp {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

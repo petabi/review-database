@@ -581,6 +581,7 @@ pub struct BlocklistDnsFields {
     pub rd_flag: bool,
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -588,7 +589,7 @@ impl BlocklistDnsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -609,6 +610,7 @@ impl BlocklistDnsFields {
             self.rd_flag.to_string(),
             self.ra_flag.to_string(),
             vector_to_string(&self.ttl),
+            self.confidence.to_string(),
         )
     }
 }
@@ -634,6 +636,7 @@ pub struct BlocklistDns {
     pub rd_flag: bool,
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -690,6 +693,7 @@ impl BlocklistDns {
             rd_flag: fields.rd_flag,
             ra_flag: fields.ra_flag,
             ttl: fields.ttl,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -734,7 +738,7 @@ impl Match for BlocklistDns {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

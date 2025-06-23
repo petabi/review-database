@@ -61,6 +61,7 @@ pub struct BlocklistSshFields {
     pub hassh_server: String,
     pub client_shka: String,
     pub server_shka: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -68,7 +69,7 @@ impl BlocklistSshFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} client={:?} server={:?} cipher_alg={:?} mac_alg={:?} compression_alg={:?} kex_alg={:?} host_key_alg={:?} hassh_algorithms={:?} hassh={:?} hassh_server_algorithms={:?} hassh_server={:?} client_shka={:?} server_shka={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} client={:?} server={:?} cipher_alg={:?} mac_alg={:?} compression_alg={:?} kex_alg={:?} host_key_alg={:?} hassh_algorithms={:?} hassh={:?} hassh_server_algorithms={:?} hassh_server={:?} client_shka={:?} server_shka={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -89,7 +90,8 @@ impl BlocklistSshFields {
             self.hassh_server_algorithms,
             self.hassh_server,
             self.client_shka,
-            self.server_shka
+            self.server_shka,
+            self.confidence.to_string()
         )
     }
 }
@@ -117,6 +119,7 @@ pub struct BlocklistSsh {
     pub hassh_server: String,
     pub client_shka: String,
     pub server_shka: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -174,6 +177,7 @@ impl BlocklistSsh {
             hassh_server: fields.hassh_server,
             client_shka: fields.client_shka,
             server_shka: fields.server_shka,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -218,7 +222,7 @@ impl Match for BlocklistSsh {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

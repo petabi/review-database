@@ -164,6 +164,7 @@ pub struct BlocklistRdpFields {
     pub proto: u8,
     pub end_time: i64,
     pub cookie: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -171,7 +172,7 @@ impl BlocklistRdpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} cookie={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} cookie={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -180,7 +181,8 @@ impl BlocklistRdpFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.end_time.to_string(),
-            self.cookie
+            self.cookie,
+            self.confidence.to_string()
         )
     }
 }
@@ -195,6 +197,7 @@ pub struct BlocklistRdp {
     pub proto: u8,
     pub end_time: i64,
     pub cookie: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -228,6 +231,7 @@ impl BlocklistRdp {
             proto: fields.proto,
             end_time: fields.end_time,
             cookie: fields.cookie,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -272,7 +276,7 @@ impl Match for BlocklistRdp {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

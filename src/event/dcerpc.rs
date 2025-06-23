@@ -20,6 +20,7 @@ pub struct BlocklistDceRpcFields {
     pub named_pipe: String,
     pub endpoint: String,
     pub operation: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -27,7 +28,7 @@ impl BlocklistDceRpcFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} rtt={:?} named_pipe={:?} endpoint={:?} operation={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} rtt={:?} named_pipe={:?} endpoint={:?} operation={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -39,7 +40,8 @@ impl BlocklistDceRpcFields {
             self.rtt.to_string(),
             self.named_pipe,
             self.endpoint,
-            self.operation
+            self.operation,
+            self.confidence.to_string()
         )
     }
 }
@@ -57,6 +59,7 @@ pub struct BlocklistDceRpc {
     pub named_pipe: String,
     pub endpoint: String,
     pub operation: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -97,6 +100,7 @@ impl BlocklistDceRpc {
             named_pipe: fields.named_pipe,
             endpoint: fields.endpoint,
             operation: fields.operation,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -141,7 +145,7 @@ impl Match for BlocklistDceRpc {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

@@ -97,6 +97,7 @@ impl From<BlocklistConnBeforeV30> for BlocklistConnFields {
             resp_pkts: input.resp_pkts,
             orig_l2_bytes: input.orig_l2_bytes,
             resp_l2_bytes: input.resp_l2_bytes,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -674,6 +675,7 @@ impl From<BlocklistDnsBeforeV30> for BlocklistDnsFields {
             rd_flag: input.rd_flag,
             ra_flag: input.ra_flag,
             ttl: input.ttl,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -861,6 +863,7 @@ impl From<BlocklistHttpBeforeV30> for BlocklistHttpFields {
             resp_mime_types: input.resp_mime_types,
             post_body: input.post_body,
             state: input.state,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -905,6 +908,7 @@ impl From<BlocklistKerberosBeforeV30> for BlocklistKerberosFields {
             realm: input.realm,
             sname_type: input.sname_type,
             service_name: input.service_name,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1018,6 +1022,7 @@ impl From<BlocklistNtlmBeforeV30> for BlocklistNtlmFields {
             hostname: input.hostname,
             domainname: input.domainname,
             success: input.success,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1046,6 +1051,7 @@ impl From<BlocklistRdpBeforeV30> for BlocklistRdpFields {
             proto: input.proto,
             end_time: input.last_time,
             cookie: input.cookie,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1124,6 +1130,7 @@ impl From<BlocklistSmtpBeforeV30> for BlocklistSmtpFields {
             subject: input.subject,
             agent: input.agent,
             state: input.state,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -1226,6 +1233,7 @@ impl From<BlocklistSshBeforeV30> for BlocklistSshFields {
             hassh_server: input.hassh_server,
             client_shka: input.client_shka,
             server_shka: input.server_shka,
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }

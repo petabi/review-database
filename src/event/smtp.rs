@@ -47,6 +47,7 @@ pub struct BlocklistSmtpFields {
     pub subject: String,
     pub agent: String,
     pub state: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -54,7 +55,7 @@ impl BlocklistSmtpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -69,7 +70,8 @@ impl BlocklistSmtpFields {
             self.to,
             self.subject,
             self.agent,
-            self.state
+            self.state,
+            self.confidence.to_string()
         )
     }
 }
@@ -91,6 +93,7 @@ pub struct BlocklistSmtp {
     pub subject: String,
     pub agent: String,
     pub state: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -136,6 +139,7 @@ impl BlocklistSmtp {
             subject: fields.subject,
             agent: fields.agent,
             state: fields.state,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -180,7 +184,7 @@ impl Match for BlocklistSmtp {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

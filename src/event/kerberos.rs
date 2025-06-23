@@ -51,6 +51,7 @@ pub struct BlocklistKerberosFields {
     pub realm: String,
     pub sname_type: u8,
     pub service_name: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -58,7 +59,7 @@ impl BlocklistKerberosFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} client_time={:?} server_time={:?} error_code={:?} client_realm={:?} cname_type={:?} client_name={:?} realm={:?} sname_type={:?} service_name={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} client_time={:?} server_time={:?} error_code={:?} client_realm={:?} cname_type={:?} client_name={:?} realm={:?} sname_type={:?} service_name={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -75,7 +76,8 @@ impl BlocklistKerberosFields {
             self.client_name.join(","),
             self.realm,
             self.sname_type.to_string(),
-            self.service_name.join(",")
+            self.service_name.join(","),
+            self.confidence.to_string()
         )
     }
 }
@@ -99,6 +101,7 @@ pub struct BlocklistKerberos {
     pub realm: String,
     pub sname_type: u8,
     pub service_name: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -149,6 +152,7 @@ impl BlocklistKerberos {
             realm: fields.realm,
             sname_type: fields.sname_type,
             service_name: fields.service_name,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -193,7 +197,7 @@ impl Match for BlocklistKerberos {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

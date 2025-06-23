@@ -55,6 +55,7 @@ pub struct BlocklistSmbFields {
     pub access_time: i64,
     pub write_time: i64,
     pub change_time: i64,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -62,7 +63,7 @@ impl BlocklistSmbFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} command={:?} path={:?} service={:?} file_name={:?} file_size={:?} resource_type={:?} fid={:?} create_time={:?} access_time={:?} write_time={:?} change_time={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} command={:?} path={:?} service={:?} file_name={:?} file_size={:?} resource_type={:?} fid={:?} create_time={:?} access_time={:?} write_time={:?} change_time={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -81,7 +82,8 @@ impl BlocklistSmbFields {
             self.create_time.to_string(),
             self.access_time.to_string(),
             self.write_time.to_string(),
-            self.change_time.to_string()
+            self.change_time.to_string(),
+            self.confidence.to_string(),
         )
     }
 }
@@ -107,6 +109,7 @@ pub struct BlocklistSmb {
     pub access_time: i64,
     pub write_time: i64,
     pub change_time: i64,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -159,6 +162,7 @@ impl BlocklistSmb {
             access_time: fields.access_time,
             write_time: fields.write_time,
             change_time: fields.change_time,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -203,7 +207,7 @@ impl Match for BlocklistSmb {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

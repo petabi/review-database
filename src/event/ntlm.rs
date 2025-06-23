@@ -43,6 +43,7 @@ pub struct BlocklistNtlmFields {
     pub hostname: String,
     pub domainname: String,
     pub success: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -50,7 +51,7 @@ impl BlocklistNtlmFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -63,7 +64,8 @@ impl BlocklistNtlmFields {
             self.username,
             self.hostname,
             self.domainname,
-            self.success
+            self.success,
+            self.confidence.to_string(),
         )
     }
 }
@@ -83,6 +85,7 @@ pub struct BlocklistNtlm {
     pub hostname: String,
     pub domainname: String,
     pub success: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -123,6 +126,7 @@ impl BlocklistNtlm {
             hostname: fields.hostname,
             domainname: fields.domainname,
             success: fields.success,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -167,7 +171,7 @@ impl Match for BlocklistNtlm {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

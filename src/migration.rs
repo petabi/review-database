@@ -217,6 +217,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.38.0")?,
             migrate_0_37_to_0_38_0,
         ),
+        (
+            VersionReq::parse(">=0.38.0,<0.39.0")?,
+            Version::parse("0.39.0")?,
+            migrate_0_38_to_0_39_0,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -294,6 +299,12 @@ fn read_version_file(path: &Path) -> Result<Version> {
 
 fn migrate_0_37_to_0_38_0(store: &super::Store) -> Result<()> {
     migrate_0_38_node(store)
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn migrate_0_38_to_0_39_0(_store: &super::Store) -> Result<()> {
+    // No migration needed for 0.39.0 - Blocklist events are not generated in production
+    Ok(())
 }
 
 fn migrate_0_38_node(store: &super::Store) -> Result<()> {
