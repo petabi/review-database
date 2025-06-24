@@ -146,3 +146,139 @@ impl ClassifierFileManager {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_new_creates_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let base_path = temp_dir.path().join("test_base");
+
+        assert!(!base_path.exists());
+
+        let manager = ClassifierFileManager::new(&base_path).unwrap();
+
+        assert!(base_path.exists());
+        assert_eq!(manager.base_dir, base_path);
+    }
+
+    #[test]
+    fn test_new_with_existing_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let base_path = temp_dir.path();
+
+        assert!(base_path.exists());
+
+        let manager = ClassifierFileManager::new(base_path).unwrap();
+
+        assert_eq!(manager.base_dir, base_path);
+    }
+
+    #[test]
+    fn test_create_classifier_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
+
+        let path = manager.create_classifier_path(123, "test_classifier");
+        let expected = temp_dir
+            .path()
+            .join("classifiers")
+            .join("model_123")
+            .join("classifier_test_classifier.bin");
+
+        assert_eq!(path, expected);
+    }
+
+    #[tokio::test]
+    async fn test_store_and_load_classifier() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
+
+        let test_data = b"test classifier data";
+        let model_id = 456;
+        let name = "test_model";
+
+        manager
+            .store_classifier(model_id, name, test_data)
+            .await
+            .unwrap();
+
+        let loaded_data = manager.load_classifier(model_id, name).await.unwrap();
+        assert_eq!(loaded_data, test_data);
+    }
+
+    #[tokio::test]
+    async fn test_load_nonexistent_classifier() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
+
+        let loaded_data = manager.load_classifier(999, "nonexistent").await.unwrap();
+        assert!(loaded_data.is_empty());
+    }
+
+    #[test]
+    fn test_classifier_exists() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
+
+        assert!(!manager.classifier_exists(123, "test"));
+
+        let path = manager.create_classifier_path(123, "test");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, b"test data").unwrap();
+
+        assert!(manager.classifier_exists(123, "test"));
+    }
+
+    #[tokio::test]
+    async fn test_delete_classifier() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
+
+        let model_id = 789;
+        let name = "delete_test";
+        let test_data = b"data to delete";
+
+        manager
+            .store_classifier(model_id, name, test_data)
+            .await
+            .unwrap();
+        assert!(manager.classifier_exists(model_id, name));
+
+        manager.delete_classifier(model_id, name).await.unwrap();
+        assert!(!manager.classifier_exists(model_id, name));
+    }
+
+    #[tokio::test]
+    async fn test_delete_nonexistent_classifier() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
+
+        let result = manager.delete_classifier(999, "nonexistent").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_store_creates_parent_directories() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
+
+        let model_id = 111;
+        let name = "nested_test";
+        let test_data = b"nested data";
+
+        manager
+            .store_classifier(model_id, name, test_data)
+            .await
+            .unwrap();
+
+        let expected_parent = temp_dir.path().join("classifiers").join("model_111");
+        assert!(expected_parent.exists());
+
+        let loaded_data = manager.load_classifier(model_id, name).await.unwrap();
+        assert_eq!(loaded_data, test_data);
+    }
+}
