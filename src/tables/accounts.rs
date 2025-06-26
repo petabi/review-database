@@ -4,16 +4,70 @@ use std::net::IpAddr;
 
 use anyhow::{Context, bail};
 use bincode::Options;
+use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     EXCLUSIVE, Map, Role, Table,
+    account::{PasswordHashAlgorithm, SaltedPassword},
     types::{Account, FromKeyValue},
 };
 
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
+pub(crate) struct LegacyAccount {
+    pub username: String,
+    pub password: SaltedPassword,
+    pub role: Role,
+    pub name: String,
+    pub department: String,
+    pub language: Option<String>,
+    pub theme: Option<String>,
+    pub creation_time: DateTime<Utc>,
+    pub last_signin_time: Option<DateTime<Utc>>,
+    pub allow_access_from: Option<Vec<IpAddr>>,
+    pub max_parallel_sessions: Option<u8>,
+    pub password_hash_algorithm: PasswordHashAlgorithm,
+    pub password_last_modified_at: DateTime<Utc>,
+    pub customer_ids: Option<Vec<u32>>,
+}
+
+impl From<LegacyAccount> for Account {
+    fn from(legacy: LegacyAccount) -> Self {
+        Self {
+            username: legacy.username,
+            password: legacy.password,
+            role: legacy.role,
+            name: legacy.name,
+            department: legacy.department,
+            language: legacy.language,
+            theme: legacy.theme,
+            creation_time: legacy.creation_time,
+            last_signin_time: legacy.last_signin_time,
+            allow_access_from: legacy.allow_access_from,
+            max_parallel_sessions: legacy.max_parallel_sessions,
+            password_hash_algorithm: legacy.password_hash_algorithm,
+            password_last_modified_at: legacy.password_last_modified_at,
+            customer_ids: legacy.customer_ids,
+            failed_login_attempts: 0,
+            is_locked_out: false,
+            locked_out_until: None,
+            is_suspended: false,
+        }
+    }
+}
+
 impl FromKeyValue for Account {
     fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
-        super::deserialize(value)
+        let options = bincode::DefaultOptions::new();
+
+        if let Ok(account) = options.deserialize::<Account>(value) {
+            Ok(account)
+        } else if let Ok(legacy_account) = options.deserialize::<LegacyAccount>(value) {
+            Ok(legacy_account.into())
+        } else {
+            Err(anyhow::anyhow!("Failed to deserialize account data"))
+        }
     }
 }
 
@@ -53,9 +107,17 @@ impl<'d> Table<'d, Account> {
         let Some(value) = self.map.get(username.as_bytes())? else {
             return Ok(None);
         };
-        Ok(Some(
-            bincode::DefaultOptions::new().deserialize::<Account>(value.as_ref())?,
-        ))
+
+        let options = bincode::DefaultOptions::new();
+        let account = if let Ok(account) = options.deserialize::<Account>(value.as_ref()) {
+            account
+        } else if let Ok(legacy_account) = options.deserialize::<LegacyAccount>(value.as_ref()) {
+            legacy_account.into()
+        } else {
+            return Err(anyhow::anyhow!("Failed to deserialize account data"));
+        };
+
+        Ok(Some(account))
     }
 
     /// Updates an entry in account map.
@@ -88,8 +150,17 @@ impl<'d> Table<'d, Account> {
                 .get_for_update_cf(self.map.cf, username, EXCLUSIVE)
                 .context("cannot read old entry")?
             {
+                let options = bincode::DefaultOptions::new();
                 let mut account =
-                    bincode::DefaultOptions::new().deserialize::<Account>(old_value.as_ref())?;
+                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
+                        account
+                    } else if let Ok(legacy_account) =
+                        options.deserialize::<LegacyAccount>(old_value.as_ref())
+                    {
+                        legacy_account.into()
+                    } else {
+                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                    };
 
                 if let Some(password) = &new_password {
                     account.update_password(password)?;
@@ -161,6 +232,242 @@ impl<'d> Table<'d, Account> {
             }
         }
         Ok(())
+    }
+
+    /// Increments the failed login attempts for an account with the given username.
+    /// If the account reaches the lockout threshold, it will be locked out.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account does not exist or the database operation fails.
+    pub fn increment_failed_login(&self, username: &str) -> Result<(), anyhow::Error> {
+        const LOCKOUT_THRESHOLD: u8 = 5;
+        const LOCKOUT_DURATION_MINUTES: i64 = 30;
+
+        loop {
+            let txn = self.map.db.transaction();
+            if let Some(old_value) = txn
+                .get_for_update_cf(self.map.cf, username.as_bytes(), EXCLUSIVE)
+                .context("cannot read old entry")?
+            {
+                let options = bincode::DefaultOptions::new();
+                let mut account =
+                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
+                        account
+                    } else if let Ok(legacy_account) =
+                        options.deserialize::<LegacyAccount>(old_value.as_ref())
+                    {
+                        legacy_account.into()
+                    } else {
+                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                    };
+
+                account.failed_login_attempts = account.failed_login_attempts.saturating_add(1);
+
+                if account.failed_login_attempts >= LOCKOUT_THRESHOLD {
+                    account.is_locked_out = true;
+                    account.locked_out_until =
+                        Some(Utc::now() + chrono::Duration::minutes(LOCKOUT_DURATION_MINUTES));
+                }
+
+                let value = bincode::DefaultOptions::new().serialize(&account)?;
+                txn.put_cf(self.map.cf, username.as_bytes(), value)
+                    .context("failed to write updated entry")?;
+            } else {
+                bail!("no such entry");
+            }
+
+            match txn.commit() {
+                Ok(()) => break,
+                Err(e) => {
+                    if !e.as_ref().starts_with("Resource busy:") {
+                        return Err(e).context("failed to increment failed login");
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Clears the failed login attempts for an account with the given username.
+    /// Also unlocks the account if it was locked out.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account does not exist or the database operation fails.
+    pub fn clear_failed_logins(&self, username: &str) -> Result<(), anyhow::Error> {
+        loop {
+            let txn = self.map.db.transaction();
+            if let Some(old_value) = txn
+                .get_for_update_cf(self.map.cf, username.as_bytes(), EXCLUSIVE)
+                .context("cannot read old entry")?
+            {
+                let options = bincode::DefaultOptions::new();
+                let mut account =
+                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
+                        account
+                    } else if let Ok(legacy_account) =
+                        options.deserialize::<LegacyAccount>(old_value.as_ref())
+                    {
+                        legacy_account.into()
+                    } else {
+                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                    };
+
+                account.failed_login_attempts = 0;
+                account.is_locked_out = false;
+                account.locked_out_until = None;
+
+                let value = bincode::DefaultOptions::new().serialize(&account)?;
+                txn.put_cf(self.map.cf, username.as_bytes(), value)
+                    .context("failed to write updated entry")?;
+            } else {
+                bail!("no such entry");
+            }
+
+            match txn.commit() {
+                Ok(()) => break,
+                Err(e) => {
+                    if !e.as_ref().starts_with("Resource busy:") {
+                        return Err(e).context("failed to clear failed logins");
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Checks if an account is currently locked out.
+    /// Automatically unlocks accounts whose lockout period has expired.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account does not exist or the database operation fails.
+    pub fn is_account_locked(&self, username: &str) -> Result<bool, anyhow::Error> {
+        let Some(account) = self.get(username)? else {
+            bail!("no such entry");
+        };
+
+        if account.is_locked_out {
+            if let Some(locked_until) = account.locked_out_until {
+                if Utc::now() >= locked_until {
+                    self.clear_failed_logins(username)?;
+                    return Ok(false);
+                }
+            }
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// Suspends an account with the given username.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account does not exist or the database operation fails.
+    pub fn suspend_account(&self, username: &str) -> Result<(), anyhow::Error> {
+        loop {
+            let txn = self.map.db.transaction();
+            if let Some(old_value) = txn
+                .get_for_update_cf(self.map.cf, username.as_bytes(), EXCLUSIVE)
+                .context("cannot read old entry")?
+            {
+                let options = bincode::DefaultOptions::new();
+                let mut account =
+                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
+                        account
+                    } else if let Ok(legacy_account) =
+                        options.deserialize::<LegacyAccount>(old_value.as_ref())
+                    {
+                        legacy_account.into()
+                    } else {
+                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                    };
+
+                account.is_suspended = true;
+
+                let value = bincode::DefaultOptions::new().serialize(&account)?;
+                txn.put_cf(self.map.cf, username.as_bytes(), value)
+                    .context("failed to write updated entry")?;
+            } else {
+                bail!("no such entry");
+            }
+
+            match txn.commit() {
+                Ok(()) => break,
+                Err(e) => {
+                    if !e.as_ref().starts_with("Resource busy:") {
+                        return Err(e).context("failed to suspend account");
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Unsuspends an account with the given username.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the account does not exist or the database operation fails.
+    pub fn unsuspend_account(&self, username: &str) -> Result<(), anyhow::Error> {
+        loop {
+            let txn = self.map.db.transaction();
+            if let Some(old_value) = txn
+                .get_for_update_cf(self.map.cf, username.as_bytes(), EXCLUSIVE)
+                .context("cannot read old entry")?
+            {
+                let options = bincode::DefaultOptions::new();
+                let mut account =
+                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
+                        account
+                    } else if let Ok(legacy_account) =
+                        options.deserialize::<LegacyAccount>(old_value.as_ref())
+                    {
+                        legacy_account.into()
+                    } else {
+                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                    };
+
+                account.is_suspended = false;
+
+                let value = bincode::DefaultOptions::new().serialize(&account)?;
+                txn.put_cf(self.map.cf, username.as_bytes(), value)
+                    .context("failed to write updated entry")?;
+            } else {
+                bail!("no such entry");
+            }
+
+            match txn.commit() {
+                Ok(()) => break,
+                Err(e) => {
+                    if !e.as_ref().starts_with("Resource busy:") {
+                        return Err(e).context("failed to unsuspend account");
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Returns all accounts with their security status information.
+    /// This method is useful for administrative dashboards showing user security states.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn get_accounts_with_security_status(&self) -> Result<Vec<Account>, anyhow::Error> {
+        use crate::Iterable;
+
+        let mut accounts = Vec::new();
+        let iter = self.iter(crate::Direction::Forward, None);
+
+        for account in iter {
+            accounts.push(account?);
+        }
+
+        Ok(accounts)
     }
 
     pub(crate) fn raw(&self) -> &Map<'_> {
@@ -342,5 +649,235 @@ mod tests {
         assert_eq!(first_entry.username, "user1");
         assert_eq!(first_entry.name, "User 1 Updated"); // Should have the updated data
         assert!(iter.next().is_none()); // Should be no more entries
+    }
+
+    #[test]
+    fn test_failed_login_attempts() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.account_map();
+
+        let account = Account::new(
+            "user1",
+            "password",
+            Role::SystemAdministrator,
+            "User 1".to_string(),
+            "Department 1".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        table.put(&account).unwrap();
+
+        assert!(!table.is_account_locked("user1").unwrap());
+
+        table.increment_failed_login("user1").unwrap();
+        let retrieved = table.get("user1").unwrap().unwrap();
+        assert_eq!(retrieved.failed_login_attempts, 1);
+        assert!(!retrieved.is_locked_out);
+
+        for _ in 0..4 {
+            table.increment_failed_login("user1").unwrap();
+        }
+
+        let locked_account = table.get("user1").unwrap().unwrap();
+        assert_eq!(locked_account.failed_login_attempts, 5);
+        assert!(locked_account.is_locked_out);
+        assert!(locked_account.locked_out_until.is_some());
+        assert!(table.is_account_locked("user1").unwrap());
+
+        table.clear_failed_logins("user1").unwrap();
+        let cleared_account = table.get("user1").unwrap().unwrap();
+        assert_eq!(cleared_account.failed_login_attempts, 0);
+        assert!(!cleared_account.is_locked_out);
+        assert!(cleared_account.locked_out_until.is_none());
+        assert!(!table.is_account_locked("user1").unwrap());
+    }
+
+    #[test]
+    fn test_account_suspension() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.account_map();
+
+        let account = Account::new(
+            "user1",
+            "password",
+            Role::SystemAdministrator,
+            "User 1".to_string(),
+            "Department 1".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        table.put(&account).unwrap();
+
+        let initial_account = table.get("user1").unwrap().unwrap();
+        assert!(!initial_account.is_suspended);
+
+        table.suspend_account("user1").unwrap();
+        let suspended_account = table.get("user1").unwrap().unwrap();
+        assert!(suspended_account.is_suspended);
+
+        table.unsuspend_account("user1").unwrap();
+        let unsuspended_account = table.get("user1").unwrap().unwrap();
+        assert!(!unsuspended_account.is_suspended);
+    }
+
+    #[test]
+    fn test_get_accounts_with_security_status() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.account_map();
+
+        let account1 = Account::new(
+            "user1",
+            "password",
+            Role::SystemAdministrator,
+            "User 1".to_string(),
+            "Department 1".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        table.put(&account1).unwrap();
+
+        let account2 = Account::new(
+            "user2",
+            "password",
+            Role::SecurityMonitor,
+            "User 2".to_string(),
+            "Department 2".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        table.put(&account2).unwrap();
+
+        table.suspend_account("user1").unwrap();
+        table.increment_failed_login("user2").unwrap();
+
+        let security_accounts = table.get_accounts_with_security_status().unwrap();
+        assert_eq!(security_accounts.len(), 2);
+
+        let user1 = security_accounts
+            .iter()
+            .find(|a| a.username == "user1")
+            .unwrap();
+        assert!(user1.is_suspended);
+        assert_eq!(user1.failed_login_attempts, 0);
+
+        let user2 = security_accounts
+            .iter()
+            .find(|a| a.username == "user2")
+            .unwrap();
+        assert!(!user2.is_suspended);
+        assert_eq!(user2.failed_login_attempts, 1);
+    }
+
+    #[test]
+    fn test_version_aware_deserialization() {
+        use bincode::Options;
+
+        use super::LegacyAccount;
+        use crate::account::{PasswordHashAlgorithm, SaltedPassword};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.account_map();
+
+        let legacy_account = LegacyAccount {
+            username: "legacy_user".to_string(),
+            password: SaltedPassword::new_with_hash_algorithm(
+                "password",
+                &PasswordHashAlgorithm::Argon2id,
+            )
+            .unwrap(),
+            role: Role::SecurityAdministrator,
+            name: "Legacy User".to_string(),
+            department: "Legacy Dept".to_string(),
+            language: None,
+            theme: None,
+            creation_time: chrono::Utc::now(),
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
+            password_last_modified_at: chrono::Utc::now(),
+            customer_ids: None,
+        };
+
+        let serialized_legacy = bincode::DefaultOptions::new()
+            .serialize(&legacy_account)
+            .unwrap();
+
+        table
+            .raw()
+            .put("legacy_user".as_bytes(), &serialized_legacy)
+            .unwrap();
+
+        let retrieved_account = table.get("legacy_user").unwrap().unwrap();
+        assert_eq!(retrieved_account.username, "legacy_user");
+        assert_eq!(retrieved_account.name, "Legacy User");
+        assert_eq!(retrieved_account.failed_login_attempts, 0);
+        assert!(!retrieved_account.is_locked_out);
+        assert!(retrieved_account.locked_out_until.is_none());
+        assert!(!retrieved_account.is_suspended);
+    }
+
+    #[test]
+    fn test_lockout_expiration() {
+        use std::{thread, time::Duration};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let table = store.account_map();
+
+        let mut account = Account::new(
+            "user1",
+            "password",
+            Role::SystemAdministrator,
+            "User 1".to_string(),
+            "Department 1".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        account.failed_login_attempts = 5;
+        account.is_locked_out = true;
+        account.locked_out_until = Some(chrono::Utc::now() + chrono::Duration::milliseconds(100));
+        table.put(&account).unwrap();
+
+        assert!(table.is_account_locked("user1").unwrap());
+
+        thread::sleep(Duration::from_millis(200));
+
+        assert!(!table.is_account_locked("user1").unwrap());
+
+        let unlocked_account = table.get("user1").unwrap().unwrap();
+        assert_eq!(unlocked_account.failed_login_attempts, 0);
+        assert!(!unlocked_account.is_locked_out);
+        assert!(unlocked_account.locked_out_until.is_none());
     }
 }

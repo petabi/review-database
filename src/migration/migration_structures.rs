@@ -2223,6 +2223,10 @@ impl From<AccountBeforeV36> for Account {
                 Role::SystemAdministrator => None,
                 _ => Some(Vec::new()),
             },
+            failed_login_attempts: 0,
+            is_locked_out: false,
+            locked_out_until: None,
+            is_suspended: false,
         }
     }
 }
