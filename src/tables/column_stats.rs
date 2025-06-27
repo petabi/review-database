@@ -1,15 +1,22 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 use chrono::NaiveDateTime;
+use num_traits::{FromPrimitive, ToPrimitive};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 use structured::{Description, Element, NLargestCount};
 
 use crate::tables::TableIter;
 use crate::types::FromKeyValue;
-use crate::{ColumnStatisticsUpdate, Map, Statistics, Table, TopMultimaps};
+use crate::{
+    ColumnStatisticsUpdate, ElementCount, Map, Statistics, Table, TopElementCountsByColumn,
+    TopMultimaps,
+};
 use crate::{Iterable, UniqueKey, tables::Value as ValueTrait};
+
+const DEFAULT_NUMBER_OF_COLUMN: u32 = 30;
+const DEFAULT_PORTION_OF_TOP_N: f64 = 1.0;
 
 impl<'d> Table<'d, ColumnStats> {
     /// Opens the `column_stats` table in the database.
@@ -125,19 +132,243 @@ impl<'d> Table<'d, ColumnStats> {
     }
 
     /// Gets the top N multimaps of a model.
+    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
+    ///     cluster `category_id` != 2
+    ///     limited by `get_limited_cluster_ids(..portion_of_clusters..)`
+    /// `column_1`: the `CsvColumnExtra::column_1` value of the model,
+    ///     default to `vec![]`.
+    /// `column_n`: the `CsvColumnExtra::column_n` value of the model,
+    ///     default to `vec![]`.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `column_1` or `column_n` is not a valid slice of booleans,
+    /// or if `number_of_top_n` is larger than `usize::MAX`.
+    /// Will panic if `cluster_ids` contains invalid `i32` values.
+    /// Will panic if `column_1` or `column_n` contains indices that are out of bounds for `u32`.
     ///
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
     pub fn get_top_multimaps_of_model(
         &self,
-        _model_id: i32,
-        _number_of_top_n: usize,
-        _min_top_n_of_1_to_n: usize,
-        _time: Option<NaiveDateTime>,
+        model_id: i32,
+        cluster_ids: Vec<(u32, String)>,
+        (column_1, column_n): (&[bool], &[bool]),
+        number_of_top_n: usize,
+        min_top_n_of_1_to_n: usize,
+        time: Option<NaiveDateTime>,
     ) -> Result<Vec<TopMultimaps>> {
-        todo!("Implement get_top_multimaps_of_model");
-        // This function is not implemented yet.
+        let time = time.map(from_naive_utc);
+        let column_1: HashSet<_> = get_selected_column_index(column_1).into_iter().collect();
+        let column_n: HashSet<_> = get_selected_column_index(column_n).into_iter().collect();
+        let cluster_ids: HashMap<_, _> = cluster_ids.into_iter().collect();
+        let mut top_n_stats = vec![];
+        for id in cluster_ids.keys() {
+            let mut prefix = id.to_be_bytes().to_vec();
+            if let Some(ts) = time {
+                prefix.extend(ts.to_be_bytes());
+            }
+            let iter = self.prefix_iter(Direction::Forward, None, &prefix);
+            for result in iter {
+                let column_stats = result?;
+                if column_stats.model_id != model_id {
+                    continue;
+                }
+                if column_n.contains(&column_stats.column_index)
+                    || column_1.contains(&column_stats.column_index)
+                {
+                    top_n_stats.push(column_stats);
+                }
+            }
+        }
+
+        let mut result = Vec::new();
+        for col_n in column_n {
+            let candidates: Vec<_> = top_n_stats
+                .iter()
+                .filter(|s| {
+                    s.column_index == col_n && s.n_largest_count.top_n().len() > min_top_n_of_1_to_n
+                })
+                .map(|s| (s.cluster_id, s.batch_ts, s.n_largest_count.top_n().len()))
+                .collect();
+
+            let mut clusters = candidates.into_iter().fold(
+                HashMap::new(),
+                |mut acc: HashMap<_, Vec<_>>, (cluster_id, batch_ts, count)| {
+                    let e = acc.entry(cluster_id).or_default();
+                    e.push((batch_ts, count));
+                    acc
+                },
+            );
+
+            for counts in clusters.values_mut() {
+                counts.sort_unstable_by(|a, b| b.0.cmp(&a.0));
+                counts.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+            }
+
+            let mut clusters: Vec<_> = clusters.into_iter().map(|(k, val)| (k, val[0])).collect();
+            clusters.sort_unstable_by(|a, b| {
+                let a = cluster_ids
+                    .get(&a.0)
+                    .expect("Cluster ID not found in cluster_ids map");
+                let b = cluster_ids
+                    .get(&b.0)
+                    .expect("Cluster ID not found in cluster_ids map");
+                a.cmp(b)
+            });
+            clusters.sort_unstable_by_key(|(_, (batch_ts, _))| *batch_ts);
+            clusters.truncate(number_of_top_n);
+
+            let selected: HashSet<_> = clusters.iter().map(|(c, _)| *c).collect();
+            let batches: HashSet<_> = clusters
+                .into_iter()
+                .map(|(_, (batch_ts, _))| batch_ts)
+                .collect();
+            let selected = top_n_stats
+                .iter()
+                .filter(|s| selected.contains(&s.cluster_id) && batches.contains(&s.batch_ts))
+                .fold(
+                    HashMap::new(),
+                    |mut acc: HashMap<_, HashMap<_, Vec<&[_]>>>, s| {
+                        let entry = acc.entry(s.cluster_id).or_default();
+                        let e = entry.entry(s.column_index).or_default();
+                        e.push(s.n_largest_count.top_n());
+                        acc
+                    },
+                );
+
+            result.push(to_multi_maps(col_n, &cluster_ids, selected));
+        }
+
+        Ok(result)
+    }
+
+    /// Gets the top N columns of a model.
+    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
+    ///     limited by `get_limited_cluster_ids(..portion_of_clusters..)`
+    /// `top_n`: the `CsvColumnExtra::column_top_n` value of the model.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `top_n` is not a valid slice of booleans or if `number_of_top_n` is larger than `usize::MAX`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database error occurs.
+    pub fn get_top_columns_of_model(
+        &self,
+        model_id: i32,
+        cluster_ids: Vec<u32>,
+        top_n: &[bool],
+        number_of_top_n: usize,
+        time: Option<NaiveDateTime>,
+        portion_of_top_n: Option<f64>,
+    ) -> Result<Vec<TopElementCountsByColumn>> {
+        let columns = get_columns_for_top_n(top_n);
+        let time = time.map(from_naive_utc);
+        let mut total_of_top_n: HashMap<_, HashMap<_, HashMap<String, i64>>> = HashMap::new();
+        for cluster_id in cluster_ids {
+            let mut prefix = cluster_id.to_be_bytes().to_vec();
+            if let Some(ts) = time {
+                prefix.extend(ts.to_be_bytes());
+            }
+            let iter = self.prefix_iter(Direction::Forward, None, &prefix);
+            for result in iter {
+                let column_stats = result?;
+                if column_stats.model_id != model_id {
+                    continue;
+                }
+                if !columns.contains(&i32::try_from(column_stats.column_index)?) {
+                    continue;
+                }
+                let entry = total_of_top_n
+                    .entry(cluster_id)
+                    .or_default()
+                    .entry(column_stats.column_index)
+                    .or_default();
+                for (value, count) in column_stats.n_largest_count.top_n().iter().map(|ec| {
+                    (
+                        ec.value.to_string(),
+                        ec.count.to_i64().expect("Count is not a valid i64"),
+                    )
+                }) {
+                    *entry.entry(value).or_insert(0) += count;
+                }
+            }
+        }
+        let limited_top_n = limited_top_n_of_clusters(
+            total_of_top_n,
+            portion_of_top_n.unwrap_or(DEFAULT_PORTION_OF_TOP_N),
+        );
+
+        Ok(to_element_counts(limited_top_n, number_of_top_n))
+    }
+
+    /// Gets top N IP addresses of a cluster.
+    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
+    ///     limited by `cluster_id: &str`.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `usize` is smaller than 4 bytes or if `cluster_ids` is empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
+    pub fn get_top_ip_addresses_of_cluster(
+        &self,
+        model_id: i32,
+        cluster_ids: &[i32],
+        size: usize,
+    ) -> Result<Vec<TopElementCountsByColumn>> {
+        use std::cmp::Reverse;
+
+        if cluster_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut top_n: HashMap<u32, HashMap<String, i64>> = HashMap::new();
+        for cluster_id in cluster_ids {
+            let prefix = cluster_id.to_be_bytes();
+            let iter = self.prefix_iter(Direction::Forward, None, &prefix);
+            for result in iter {
+                let column_stats = result?;
+                if column_stats.model_id != model_id {
+                    continue;
+                }
+                match column_stats.n_largest_count.mode().as_ref() {
+                    Some(Element::IpAddr(_)) => {}
+                    // Only process IP addresses.
+                    _ => continue,
+                }
+                let entry: &mut _ = top_n.entry(column_stats.column_index).or_default();
+                for ec in column_stats.n_largest_count.top_n() {
+                    *entry.entry(ec.value.to_string()).or_insert(0) +=
+                        ec.count.to_i64().expect("Count is not a valid i64");
+                }
+            }
+        }
+
+        let mut top_n: Vec<TopElementCountsByColumn> = top_n
+            .into_iter()
+            .map(|t| {
+                let mut top_n: Vec<ElementCount> =
+                    t.1.into_iter()
+                        .map(|t| ElementCount {
+                            value: t.0,
+                            count: t.1,
+                        })
+                        .collect();
+                top_n.sort_by_key(|v| Reverse(v.count));
+                top_n.truncate(size);
+                TopElementCountsByColumn {
+                    column_index: t.0.to_usize().expect("column index < usize::max"),
+                    counts: top_n,
+                }
+            })
+            .collect();
+        top_n.sort_by_key(|v| v.column_index);
+        Ok(top_n)
     }
 
     /// Returns the number of rounds in the given cluster.
@@ -145,7 +376,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn count_rounds_by_cluster(&self, cluster_id: i32) -> Result<i64> {
+    pub fn count_rounds_by_cluster(&self, cluster_id: u32) -> Result<i64> {
         let prefix = cluster_id.to_be_bytes();
         let iter = self.prefix_iter(Direction::Forward, None, &prefix);
         i64::try_from(
@@ -166,7 +397,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn load_rounds_by_cluster(
         &self,
-        cluster_id: i32,
+        cluster_id: u32,
         after: &Option<NaiveDateTime>,
         before: &Option<NaiveDateTime>,
         is_first: bool,
@@ -253,6 +484,24 @@ impl<'d> Table<'d, ColumnStats> {
     }
 }
 
+/// #Panics
+///
+/// Panics if the indices of selected columns are not valid `u32` values.
+fn get_selected_column_index(columns: &[bool]) -> Vec<u32> {
+    // Collect the indices of columns that are marked as selected.
+    columns
+        .iter()
+        .enumerate()
+        .filter_map(|(index, &is_selected)| {
+            if is_selected {
+                Some(index.to_u32().expect("column index < u32::max"))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 fn get_column_type(column_stats: &ColumnStats) -> Option<i32> {
     // Determine the column type based on the mode of n_largest_count.
     // This is a simplified mapping; adjust as necessary for your application.
@@ -268,12 +517,89 @@ fn get_column_type(column_stats: &ColumnStats) -> Option<i32> {
     }
 }
 
+fn get_columns_for_top_n(top_n: &[bool]) -> HashSet<i32> {
+    // Collect the indices of columns that are marked for top N.
+    top_n
+        .iter()
+        .enumerate()
+        .filter_map(|(index, &is_top_n)| {
+            if is_top_n {
+                Some(index.to_i32().expect("column index < i32::max"))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn limited_top_n_of_clusters(
+    top_n_of_clusters: HashMap<u32, HashMap<u32, HashMap<String, i64>>>,
+    limit_rate: f64,
+) -> HashMap<u32, HashMap<String, i64>> {
+    use std::cmp::Reverse;
+
+    let mut top_n_total: HashMap<u32, HashMap<String, i64>> = HashMap::new(); // (usize, (String, BigDecimal)) = (column_index, (Ip Address, size))
+    for (_, top_n) in top_n_of_clusters {
+        for (column_index, t) in top_n {
+            let total_sizes: i64 = t.iter().map(|v| v.1).sum();
+            let mut top_n: Vec<(String, i64)> = t.into_iter().collect();
+            top_n.sort_by_key(|v| Reverse(v.1));
+
+            let size_including_ips =
+                i64::from_f64((total_sizes.to_f64().unwrap_or(0.0) * limit_rate).trunc())
+                    .unwrap_or_else(|| i64::from_u32(DEFAULT_NUMBER_OF_COLUMN).unwrap_or(i64::MAX));
+
+            let mut sum_sizes = 0;
+            for (ip, size) in top_n {
+                sum_sizes += size;
+                *top_n_total
+                    .entry(column_index)
+                    .or_default()
+                    .entry(ip)
+                    .or_insert(0) += size;
+                if sum_sizes > size_including_ips {
+                    break;
+                }
+            }
+        }
+    }
+
+    top_n_total
+}
+
+fn to_element_counts(
+    top_n_total: HashMap<u32, HashMap<String, i64>>,
+    number_of_top_n: usize,
+) -> Vec<TopElementCountsByColumn> {
+    let mut top_n: Vec<TopElementCountsByColumn> = top_n_total
+        .into_iter()
+        .map(|(column_index, map)| {
+            let mut top_n: Vec<ElementCount> = map
+                .into_iter()
+                .map(|(dsc, size)| ElementCount {
+                    value: dsc,
+                    count: size,
+                })
+                .collect();
+            top_n
+                .sort_unstable_by(|a, b| b.count.cmp(&a.count).then_with(|| a.value.cmp(&b.value)));
+            top_n.truncate(number_of_top_n);
+            TopElementCountsByColumn {
+                column_index: usize::try_from(column_index).expect("column index < usize::max"),
+                counts: top_n,
+            }
+        })
+        .collect();
+    top_n.sort_by_key(|v| v.column_index);
+
+    top_n
+}
+
 fn from_timestamp(timestamp: i64) -> Result<NaiveDateTime> {
     // Convert the timestamp to a NaiveDateTime.
     const A_BILLION: i64 = 1_000_000_000;
-
-    let s = timestamp / A_BILLION;
-    let nanos = u32::try_from(timestamp % A_BILLION)?;
+    let s = timestamp.div_euclid(A_BILLION);
+    let nanos = u32::try_from(timestamp.rem_euclid(A_BILLION))?;
     chrono::DateTime::from_timestamp(s, nanos)
         .map(|t| t.naive_utc())
         .ok_or(anyhow::anyhow!("Invalid timestamp: {}", timestamp))
@@ -286,6 +612,43 @@ fn from_naive_utc(date: NaiveDateTime) -> i64 {
     let seconds = date.and_utc().timestamp();
     let nanos = i64::from(date.and_utc().timestamp_subsec_nanos());
     seconds * A_BILLION + nanos
+}
+
+fn to_multi_maps(
+    column: u32,
+    cluster_ids: &HashMap<u32, String>,
+    selected: HashMap<u32, HashMap<u32, Vec<&[structured::ElementCount]>>>,
+) -> TopMultimaps {
+    TopMultimaps {
+        n_index: column.to_usize().expect("column index < usize::max"),
+        selected: selected
+            .into_iter()
+            .map(|(cluster, v)| {
+                let cluster_id = cluster_ids
+                    .get(&cluster)
+                    .expect("Cluster ID not found in cluster_ids map")
+                    .clone();
+                crate::TopColumnsOfCluster {
+                    cluster_id,
+                    columns: v
+                        .into_iter()
+                        .map(|(col, top_n)| TopElementCountsByColumn {
+                            column_index: col.to_usize().expect("column index < usize::max"),
+                            counts: top_n
+                                .into_iter()
+                                .flat_map(|ecs| {
+                                    ecs.iter().map(|ec| ElementCount {
+                                        value: ec.value.to_string(),
+                                        count: ec.count.to_i64().expect("Count is not a valid i64"),
+                                    })
+                                })
+                                .collect(),
+                        })
+                        .collect(),
+                }
+            })
+            .collect(),
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -397,10 +760,14 @@ struct Value {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::sync::Arc;
 
-    use structured::ElementCount;
+    use chrono::NaiveDate;
+    use structured::{Description, Element, NLargestCount};
+    use structured::{ElementCount, FloatRange};
 
+    use super::*;
     use crate::Store;
 
     #[test]
@@ -548,7 +915,7 @@ mod tests {
             )
             .unwrap();
 
-        let count = table.count_rounds_by_cluster(cluster_id as i32).unwrap();
+        let count = table.count_rounds_by_cluster(cluster_id).unwrap();
         assert_eq!(count, 2);
     }
 
@@ -601,7 +968,7 @@ mod tests {
         }
 
         let (retrieved_model_id, rounds) = table
-            .load_rounds_by_cluster(cluster_id as i32, &None, &None, true, 10)
+            .load_rounds_by_cluster(cluster_id, &None, &None, true, 10)
             .unwrap();
 
         assert_eq!(retrieved_model_id, model_id);
@@ -654,6 +1021,148 @@ mod tests {
         let column_types = table.get_column_types_of_model(model_id).unwrap();
         assert_eq!(column_types.len(), 1);
         assert_eq!(column_types[0].column_index, 0);
+    }
+    #[test]
+    fn test_get_selected_column_index() {
+        let columns = vec![false, true, false, true];
+        let indices = get_selected_column_index(&columns);
+        assert_eq!(indices, vec![1, 3]);
+    }
+
+    #[test]
+    fn test_get_columns_for_top_n() {
+        let top_n = vec![true, false, true];
+        let indices = get_columns_for_top_n(&top_n);
+        assert!(indices.contains(&0));
+        assert!(indices.contains(&2));
+        assert!(!indices.contains(&1));
+    }
+
+    #[test]
+    fn test_get_column_type_variants() {
+        let mut column_stats = ColumnStats {
+            cluster_id: 0,
+            batch_ts: 0,
+            column_index: 0,
+            model_id: 0,
+            description: Description::default(),
+            n_largest_count: NLargestCount::default(),
+        };
+
+        let variants = vec![
+            (Element::Int(1), 1),
+            (Element::Enum("abc".into()), 2),
+            (
+                Element::FloatRange(FloatRange {
+                    smallest: 1.0,
+                    largest: 2.0,
+                }),
+                3,
+            ),
+            (Element::Text("text".into()), 4),
+            (Element::IpAddr("127.0.0.1".parse().unwrap()), 5),
+            (
+                Element::DateTime(
+                    NaiveDate::from_ymd_opt(2024, 1, 1)
+                        .unwrap()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap(),
+                ),
+                6,
+            ),
+            (Element::Binary(vec![1, 2, 3]), 7),
+        ];
+
+        for (element, expected_type) in variants {
+            column_stats.n_largest_count = NLargestCount::new(1, vec![], Some(element));
+            assert_eq!(get_column_type(&column_stats), Some(expected_type));
+        }
+    }
+
+    #[test]
+    fn test_from_and_to_timestamp() {
+        let now = NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(12, 0, 0)
+            .unwrap();
+        let ts = from_naive_utc(now);
+        let restored = from_timestamp(ts).unwrap();
+        assert_eq!(restored, now);
+    }
+
+    #[test]
+    fn test_key_to_and_from_bytes() {
+        let original = Key {
+            cluster_id: 42,
+            batch_ts: 123_456_789,
+            column_index: 7,
+            model_id: 99,
+        };
+        let bytes = original.to_bytes();
+        let parsed = Key::from_be_bytes(&bytes);
+        assert_eq!(parsed.cluster_id, original.cluster_id);
+        assert_eq!(parsed.batch_ts, original.batch_ts);
+        assert_eq!(parsed.column_index, original.column_index);
+        assert_eq!(parsed.model_id, original.model_id);
+    }
+
+    #[test]
+    fn test_limited_top_n_of_clusters() {
+        let mut input: HashMap<u32, HashMap<u32, HashMap<String, i64>>> = HashMap::new();
+        input.insert(
+            1,
+            vec![
+                (0, vec![("a".to_string(), 10), ("b".to_string(), 5)]),
+                (1, vec![("c".to_string(), 20), ("d".to_string(), 10)]),
+            ]
+            .into_iter()
+            .map(|(col, data)| (col, data.into_iter().collect()))
+            .collect(),
+        );
+
+        let limited = limited_top_n_of_clusters(input, 0.5);
+        assert!(limited.contains_key(&0));
+        assert!(limited.contains_key(&1));
+    }
+
+    #[test]
+    fn test_to_element_counts() {
+        let mut map = HashMap::new();
+        map.insert(
+            0,
+            vec![("x".to_string(), 100), ("y".to_string(), 50)]
+                .into_iter()
+                .collect(),
+        );
+        let result = to_element_counts(map, 1);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].counts.len(), 1);
+        assert_eq!(result[0].counts[0].value, "x");
+    }
+
+    #[test]
+    fn test_to_multi_maps_basic() {
+        let mut selected: HashMap<u32, HashMap<u32, Vec<&[ElementCount]>>> = HashMap::new();
+        let cluster_id = 1u32;
+        let column_index = 0u32;
+        let data = vec![ElementCount {
+            value: Element::Int(1),
+            count: 42,
+        }];
+
+        selected
+            .entry(cluster_id)
+            .or_default()
+            .insert(column_index, vec![&data]);
+
+        let mut cluster_ids = HashMap::new();
+        cluster_ids.insert(1, "cluster-one".to_string());
+
+        let result = to_multi_maps(0, &cluster_ids, selected);
+        assert_eq!(result.n_index, 0);
+        assert_eq!(result.selected.len(), 1);
+        assert_eq!(result.selected[0].cluster_id, "cluster-one");
+        assert_eq!(result.selected[0].columns[0].counts[0].count, 42);
     }
 
     fn setup_store() -> Arc<Store> {
