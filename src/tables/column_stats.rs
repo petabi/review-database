@@ -1,15 +1,22 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 use chrono::NaiveDateTime;
+use num_traits::{FromPrimitive, ToPrimitive};
 use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 use structured::{Description, Element, NLargestCount};
 
 use crate::tables::TableIter;
 use crate::types::FromKeyValue;
-use crate::{ColumnStatisticsUpdate, Map, Statistics, Table, TopMultimaps};
+use crate::{
+    ColumnStatisticsUpdate, ElementCount, Map, Statistics, Table, TopElementCountsByColumn,
+    TopMultimaps, TopTrendsByColumn,
+};
 use crate::{Iterable, UniqueKey, tables::Value as ValueTrait};
+
+const DEFAULT_NUMBER_OF_COLUMN: u32 = 30;
+const DEFAULT_PORTION_OF_TOP_N: f64 = 1.0;
 
 impl<'d> Table<'d, ColumnStats> {
     /// Opens the `column_stats` table in the database.
@@ -125,6 +132,12 @@ impl<'d> Table<'d, ColumnStats> {
     }
 
     /// Gets the top N multimaps of a model.
+    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
+    ///     limited by `get_limited_cluster_ids(..portion_of_clusters..)`
+    /// `column_1`: the `CsvColumnExtra::column_1` value of the model,
+    ///     default to `vec![]`.
+    /// `column_n`: the `CsvColumnExtra::column_n` value of the model,
+    ///     default to `vec![]`.
     ///
     /// # Errors
     ///
@@ -132,12 +145,162 @@ impl<'d> Table<'d, ColumnStats> {
     pub fn get_top_multimaps_of_model(
         &self,
         _model_id: i32,
+        _cluster_ids: Vec<i32>,
+        (column_1, column_n): (&[bool], &[bool]),
         _number_of_top_n: usize,
         _min_top_n_of_1_to_n: usize,
         _time: Option<NaiveDateTime>,
     ) -> Result<Vec<TopMultimaps>> {
-        todo!("Implement get_top_multimaps_of_model");
+        let _column_1 = get_selected_column_index(column_1);
+        let _column_n = get_selected_column_index(column_n);
+        Ok(vec![])
+    }
+
+    /// Gets the top N columns of a model.
+    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
+    ///     limited by `get_limited_cluster_ids(..portion_of_clusters..)`
+    /// `top_n`: the `CsvColumnExtra::column_top_n` value of the model.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `top_n` is not a valid slice of booleans or if `number_of_top_n` is larger than `usize::MAX`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database error occurs.
+    pub fn get_top_columns_of_model(
+        &self,
+        model_id: i32,
+        cluster_ids: Vec<i32>,
+        top_n: &[bool],
+        number_of_top_n: usize,
+        time: Option<NaiveDateTime>,
+        portion_of_top_n: Option<f64>,
+    ) -> Result<Vec<TopElementCountsByColumn>> {
+        let columns = get_columns_for_top_n(top_n);
+        let time = time.map(from_naive_utc);
+        let mut total_of_top_n: HashMap<_, HashMap<_, HashMap<String, i64>>> = HashMap::new();
+        for cluster_id in cluster_ids {
+            let mut prefix = cluster_id.to_be_bytes().to_vec();
+            if let Some(ts) = time {
+                prefix.extend(ts.to_be_bytes());
+            }
+            let iter = self.prefix_iter(Direction::Forward, None, &prefix);
+            for result in iter {
+                let column_stats = result?;
+                if column_stats.model_id != model_id {
+                    continue;
+                }
+                if !columns.contains(&i32::try_from(column_stats.column_index)?) {
+                    continue;
+                }
+                let entry = total_of_top_n
+                    .entry(cluster_id)
+                    .or_default()
+                    .entry(column_stats.column_index)
+                    .or_default();
+                for (value, count) in column_stats.n_largest_count.top_n().iter().map(|ec| {
+                    (
+                        ec.value.to_string(),
+                        ec.count.to_i64().expect("Count is not a valid i64"),
+                    )
+                }) {
+                    *entry.entry(value).or_insert(0) += count;
+                }
+            }
+        }
+        let limited_top_n = limited_top_n_of_clusters(
+            total_of_top_n,
+            portion_of_top_n.unwrap_or(DEFAULT_PORTION_OF_TOP_N),
+        );
+
+        Ok(to_element_counts(limited_top_n, number_of_top_n))
+    }
+
+    /// Gets top N IP addresses of a cluster.
+    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
+    ///     limited by `cluster_id: &str`.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `usize` is smaller than 4 bytes or if `cluster_ids` is empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
+    pub fn get_top_ip_addresses_of_cluster(
+        &self,
+        model_id: i32,
+        cluster_ids: &[i32],
+        size: usize,
+    ) -> Result<Vec<TopElementCountsByColumn>> {
+        use std::cmp::Reverse;
+
+        if cluster_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut top_n: HashMap<u32, HashMap<String, i64>> = HashMap::new();
+        for cluster_id in cluster_ids {
+            let prefix = cluster_id.to_be_bytes();
+            let iter = self.prefix_iter(Direction::Forward, None, &prefix);
+            for result in iter {
+                let column_stats = result?;
+                if column_stats.model_id != model_id {
+                    continue;
+                }
+                match column_stats.n_largest_count.mode().as_ref() {
+                    Some(Element::IpAddr(_)) => {}
+                    // Only process IP addresses.
+                    _ => continue,
+                }
+                let entry: &mut _ = top_n.entry(column_stats.column_index).or_default();
+                for ec in column_stats.n_largest_count.top_n() {
+                    *entry.entry(ec.value.to_string()).or_insert(0) +=
+                        ec.count.to_i64().expect("Count is not a valid i64");
+                }
+            }
+        }
+
+        let mut top_n: Vec<TopElementCountsByColumn> = top_n
+            .into_iter()
+            .map(|t| {
+                let mut top_n: Vec<ElementCount> =
+                    t.1.into_iter()
+                        .map(|t| ElementCount {
+                            value: t.0,
+                            count: t.1,
+                        })
+                        .collect();
+                top_n.sort_by_key(|v| Reverse(v.count));
+                top_n.truncate(size);
+                TopElementCountsByColumn {
+                    column_index: t.0.to_usize().expect("column index < usize::max"),
+                    counts: top_n,
+                }
+            })
+            .collect();
+        top_n.sort_by_key(|v| v.column_index);
+        Ok(top_n)
+    }
+
+    /// Returns the top trends of a model.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `usize` is smaller than 4 bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
+    pub fn get_top_time_series_of_model(
+        &self,
+        _model_id: i32,
+        _time: Option<NaiveDateTime>,
+        _start: Option<i64>,
+        _end: Option<i64>,
+    ) -> Result<Vec<TopTrendsByColumn>> {
         // This function is not implemented yet.
+        todo!("Implement get_top_time_series_of_model");
     }
 
     /// Returns the number of rounds in the given cluster.
@@ -253,6 +416,24 @@ impl<'d> Table<'d, ColumnStats> {
     }
 }
 
+/// #Panics
+///
+/// Panics if the indices of selected columns are not valid `u32` values.
+fn get_selected_column_index(columns: &[bool]) -> Vec<u32> {
+    // Collect the indices of columns that are marked as selected.
+    columns
+        .iter()
+        .enumerate()
+        .filter_map(|(index, &is_selected)| {
+            if is_selected {
+                Some(index.to_u32().expect("column index < u32::max"))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 fn get_column_type(column_stats: &ColumnStats) -> Option<i32> {
     // Determine the column type based on the mode of n_largest_count.
     // This is a simplified mapping; adjust as necessary for your application.
@@ -266,6 +447,84 @@ fn get_column_type(column_stats: &ColumnStats) -> Option<i32> {
         Some(Element::Binary(_)) => Some(7),
         _ => None,
     }
+}
+
+fn get_columns_for_top_n(top_n: &[bool]) -> HashSet<i32> {
+    // Collect the indices of columns that are marked for top N.
+    top_n
+        .iter()
+        .enumerate()
+        .filter_map(|(index, &is_top_n)| {
+            if is_top_n {
+                Some(index.to_i32().expect("column index < i32::max"))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn limited_top_n_of_clusters(
+    top_n_of_clusters: HashMap<i32, HashMap<u32, HashMap<String, i64>>>,
+    limit_rate: f64,
+) -> HashMap<u32, HashMap<String, i64>> {
+    use std::cmp::Reverse;
+
+    let mut top_n_total: HashMap<u32, HashMap<String, i64>> = HashMap::new(); // (usize, (String, BigDecimal)) = (column_index, (Ip Address, size))
+    for (_, top_n) in top_n_of_clusters {
+        for (column_index, t) in top_n {
+            let total_sizes: i64 = t.iter().map(|v| v.1).sum();
+            let mut top_n: Vec<(String, i64)> = t.into_iter().collect();
+            top_n.sort_by_key(|v| Reverse(v.1));
+
+            let size_including_ips =
+                i64::from_f64((total_sizes.to_f64().unwrap_or(0.0) * limit_rate).trunc())
+                    .unwrap_or_else(|| i64::from_u32(DEFAULT_NUMBER_OF_COLUMN).unwrap_or(i64::MAX));
+
+            let mut sum_sizes = 0;
+            for (ip, size) in top_n {
+                sum_sizes += size;
+                *top_n_total
+                    .entry(column_index)
+                    .or_default()
+                    .entry(ip)
+                    .or_insert(0) += size;
+                if sum_sizes > size_including_ips {
+                    break;
+                }
+            }
+        }
+    }
+
+    top_n_total
+}
+
+fn to_element_counts(
+    top_n_total: HashMap<u32, HashMap<String, i64>>,
+    number_of_top_n: usize,
+) -> Vec<TopElementCountsByColumn> {
+    let mut top_n: Vec<TopElementCountsByColumn> = top_n_total
+        .into_iter()
+        .map(|(column_index, map)| {
+            let mut top_n: Vec<ElementCount> = map
+                .into_iter()
+                .map(|(dsc, size)| ElementCount {
+                    value: dsc,
+                    count: size,
+                })
+                .collect();
+            top_n
+                .sort_unstable_by(|a, b| b.count.cmp(&a.count).then_with(|| a.value.cmp(&b.value)));
+            top_n.truncate(number_of_top_n);
+            TopElementCountsByColumn {
+                column_index: usize::try_from(column_index).expect("column index < usize::max"),
+                counts: top_n,
+            }
+        })
+        .collect();
+    top_n.sort_by_key(|v| v.column_index);
+
+    top_n
 }
 
 fn from_timestamp(timestamp: i64) -> Result<NaiveDateTime> {
