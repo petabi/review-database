@@ -99,7 +99,7 @@ use crate::{Agent, ExternalService, Indexed, IterableMap};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.38.0,<0.39.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.38.0,<=0.39.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
