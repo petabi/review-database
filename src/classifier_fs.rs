@@ -33,7 +33,7 @@ impl ClassifierFileManager {
         Ok(Self { base_dir })
     }
 
-    /// Computes the file system path for a classifier based on model ID and name.
+    /// Creates the file system path for a classifier based on model id and name.
     ///
     /// This is a pure function that generates deterministic paths without checking
     /// if the file actually exists. The path structure is:
@@ -46,10 +46,10 @@ impl ClassifierFileManager {
             .join(format!("classifier_{name}.bin"))
     }
 
-    /// Sores classifier data to the file system.
+    /// Stores classifier data to the file system.
     ///
     /// Data is first written to a temporary file with a unique timestamp
-    /// extension, then atomically renamed to the final location.
+    /// extension, then renamed to the final location.
     ///
     /// Note that since `REview` only supports a single `REconverge`, it is
     /// highly unlikely that `review-database` receives multiple write requests
@@ -149,8 +149,9 @@ impl ClassifierFileManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_new_creates_directory() {
