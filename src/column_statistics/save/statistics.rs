@@ -14,8 +14,8 @@ use crate::schema::{cluster::dsl as cluster_d, column_description::dsl as cd_d};
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize)]
 pub struct ColumnStatisticsUpdate {
-    cluster_id: String, // NOT cluster_id but id of cluster table
-    column_statistics: Vec<ColumnStatistics>,
+    pub(crate) cluster_id: String, // NOT cluster_id but id of cluster table
+    pub(crate) column_statistics: Vec<ColumnStatistics>,
 }
 
 #[derive(Deserialize, Debug, Insertable, PartialEq)]
