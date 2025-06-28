@@ -13,6 +13,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   confidence value is set to 1.0 since Blocklist events are generated when
   user-specified blocklist IPs match, indicating high confidence in the
   detection.
+- Enhanced `Account` model with user security status fields including
+  `failed_login_attempts`, `is_locked_out`, `locked_out_until`, and
+  `is_suspended` to support comprehensive user security management.
+- Added security-related methods to account management:
+  `increment_failed_login`, `clear_failed_logins`, `is_account_locked`,
+  `suspend_account`, `unsuspend_account`, and `get_accounts_with_security_status`.
+- Implemented version-aware deserialization for `Account` struct to handle
+  backward compatibility with existing account records in the database.
+- Added automatic account lockout functionality with configurable thresholds
+  and time-based expiration for security protection.
 
 ## [0.38.0] - 2025-06-23
 

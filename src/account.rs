@@ -44,6 +44,9 @@ pub struct Account {
     pub(crate) password_hash_algorithm: PasswordHashAlgorithm,
     pub(crate) password_last_modified_at: DateTime<Utc>,
     pub customer_ids: Option<Vec<u32>>,
+    pub failed_login_attempts: u8,
+    pub locked_out_until: Option<DateTime<Utc>>,
+    pub is_suspended: bool,
 }
 
 impl Account {
@@ -85,6 +88,9 @@ impl Account {
             password_hash_algorithm: Self::DEFAULT_HASH_ALGORITHM,
             password_last_modified_at: now,
             customer_ids,
+            failed_login_attempts: 0,
+            locked_out_until: None,
+            is_suspended: false,
         })
     }
 
@@ -335,6 +341,9 @@ mod tests {
             password_hash_algorithm: PasswordHashAlgorithm::Pbkdf2HmacSha512,
             password_last_modified_at: Utc::now(),
             customer_ids: Some(Vec::new()),
+            failed_login_attempts: 0,
+            locked_out_until: None,
+            is_suspended: false,
         };
         assert!(account.verify_password("password"));
         assert!(!account.verify_password("updated"));
