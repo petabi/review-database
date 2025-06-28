@@ -298,8 +298,7 @@ fn read_version_file(path: &Path) -> Result<Version> {
 }
 
 fn migrate_0_37_to_0_38_0(store: &super::Store) -> Result<()> {
-    migrate_0_38_node(store)?;
-    migrate_0_38_account(store)
+    migrate_0_38_node(store)
 }
 
 fn migrate_0_38_to_0_39_0(store: &super::Store) -> Result<()> {
@@ -307,22 +306,6 @@ fn migrate_0_38_to_0_39_0(store: &super::Store) -> Result<()> {
 }
 
 fn migrate_0_39_account(store: &super::Store) -> Result<()> {
-    use bincode::Options;
-
-    use crate::{migration::migration_structures::AccountV36, types::Account};
-
-    let map = store.account_map();
-    let raw = map.raw();
-    for (key, old_value) in raw.iter_forward()? {
-        let old = bincode::DefaultOptions::new().deserialize::<AccountV36>(&old_value)?;
-        let new: Account = old.into();
-        let new_value = bincode::DefaultOptions::new().serialize::<Account>(&new)?;
-        raw.update((&key, &old_value), (&key, &new_value))?;
-    }
-    Ok(())
-}
-
-fn migrate_0_38_account(store: &super::Store) -> Result<()> {
     use bincode::Options;
 
     use crate::{migration::migration_structures::AccountV36, types::Account};

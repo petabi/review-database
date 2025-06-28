@@ -2230,7 +2230,7 @@ impl From<AccountBeforeV36> for AccountV36 {
             name: input.name,
             department: input.department,
             language: input.language,
-            theme: input.theme,
+            theme: None,
             creation_time: input.creation_time,
             last_signin_time: input.last_signin_time,
             allow_access_from: input.allow_access_from,
