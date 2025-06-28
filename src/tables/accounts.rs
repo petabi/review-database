@@ -50,7 +50,6 @@ impl From<LegacyAccount> for Account {
             password_last_modified_at: legacy.password_last_modified_at,
             customer_ids: legacy.customer_ids,
             failed_login_attempts: 0,
-            is_locked_out: false,
             locked_out_until: None,
             is_suspended: false,
         }
@@ -265,7 +264,6 @@ impl<'d> Table<'d, Account> {
                 account.failed_login_attempts = account.failed_login_attempts.saturating_add(1);
 
                 if account.failed_login_attempts >= LOCKOUT_THRESHOLD {
-                    account.is_locked_out = true;
                     account.locked_out_until =
                         Some(Utc::now() + chrono::Duration::minutes(LOCKOUT_DURATION_MINUTES));
                 }
@@ -315,7 +313,6 @@ impl<'d> Table<'d, Account> {
                     };
 
                 account.failed_login_attempts = 0;
-                account.is_locked_out = false;
                 account.locked_out_until = None;
 
                 let value = bincode::DefaultOptions::new().serialize(&account)?;
@@ -348,14 +345,13 @@ impl<'d> Table<'d, Account> {
             bail!("no such entry");
         };
 
-        if account.is_locked_out {
-            if let Some(locked_until) = account.locked_out_until {
-                if Utc::now() >= locked_until {
-                    self.clear_failed_logins(username)?;
-                    return Ok(false);
-                }
+        if let Some(locked_until) = account.locked_out_until {
+            if Utc::now() >= locked_until {
+                self.clear_failed_logins(username)?;
+                Ok(false)
+            } else {
+                Ok(true)
             }
-            Ok(true)
         } else {
             Ok(false)
         }
@@ -678,7 +674,7 @@ mod tests {
         table.increment_failed_login("user1").unwrap();
         let retrieved = table.get("user1").unwrap().unwrap();
         assert_eq!(retrieved.failed_login_attempts, 1);
-        assert!(!retrieved.is_locked_out);
+        assert!(retrieved.locked_out_until.is_none());
 
         for _ in 0..4 {
             table.increment_failed_login("user1").unwrap();
@@ -686,14 +682,12 @@ mod tests {
 
         let locked_account = table.get("user1").unwrap().unwrap();
         assert_eq!(locked_account.failed_login_attempts, 5);
-        assert!(locked_account.is_locked_out);
         assert!(locked_account.locked_out_until.is_some());
         assert!(table.is_account_locked("user1").unwrap());
 
         table.clear_failed_logins("user1").unwrap();
         let cleared_account = table.get("user1").unwrap().unwrap();
         assert_eq!(cleared_account.failed_login_attempts, 0);
-        assert!(!cleared_account.is_locked_out);
         assert!(cleared_account.locked_out_until.is_none());
         assert!(!table.is_account_locked("user1").unwrap());
     }
@@ -836,7 +830,6 @@ mod tests {
         assert_eq!(retrieved_account.username, "legacy_user");
         assert_eq!(retrieved_account.name, "Legacy User");
         assert_eq!(retrieved_account.failed_login_attempts, 0);
-        assert!(!retrieved_account.is_locked_out);
         assert!(retrieved_account.locked_out_until.is_none());
         assert!(!retrieved_account.is_suspended);
     }
@@ -865,7 +858,6 @@ mod tests {
         .unwrap();
 
         account.failed_login_attempts = 5;
-        account.is_locked_out = true;
         account.locked_out_until = Some(chrono::Utc::now() + chrono::Duration::milliseconds(100));
         table.put(&account).unwrap();
 
@@ -877,7 +869,6 @@ mod tests {
 
         let unlocked_account = table.get("user1").unwrap().unwrap();
         assert_eq!(unlocked_account.failed_login_attempts, 0);
-        assert!(!unlocked_account.is_locked_out);
         assert!(unlocked_account.locked_out_until.is_none());
     }
 }

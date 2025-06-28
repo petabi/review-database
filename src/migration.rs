@@ -99,7 +99,7 @@ use crate::{Agent, ExternalService, Indexed, IterableMap};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.38.0,<0.39.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.39.0-alpha.1,<0.39.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -218,8 +218,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_37_to_0_38_0,
         ),
         (
-            VersionReq::parse(">=0.38.0,<0.39.0")?,
-            Version::parse("0.39.0")?,
+            VersionReq::parse(">=0.38.0,<0.39.0-alpha")?,
+            Version::parse("0.39.0-alpha.1")?,
             migrate_0_38_to_0_39_0,
         ),
     ];
@@ -298,12 +298,43 @@ fn read_version_file(path: &Path) -> Result<Version> {
 }
 
 fn migrate_0_37_to_0_38_0(store: &super::Store) -> Result<()> {
-    migrate_0_38_node(store)
+    migrate_0_38_node(store)?;
+    migrate_0_38_account(store)
 }
 
-#[allow(clippy::unnecessary_wraps)]
-fn migrate_0_38_to_0_39_0(_store: &super::Store) -> Result<()> {
-    // No migration needed for 0.39.0 - Blocklist events are not generated in production
+fn migrate_0_38_to_0_39_0(store: &super::Store) -> Result<()> {
+    migrate_0_39_account(store)
+}
+
+fn migrate_0_39_account(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
+    use crate::{migration::migration_structures::AccountV36, types::Account};
+
+    let map = store.account_map();
+    let raw = map.raw();
+    for (key, old_value) in raw.iter_forward()? {
+        let old = bincode::DefaultOptions::new().deserialize::<AccountV36>(&old_value)?;
+        let new: Account = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<Account>(&new)?;
+        raw.update((&key, &old_value), (&key, &new_value))?;
+    }
+    Ok(())
+}
+
+fn migrate_0_38_account(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
+    use crate::{migration::migration_structures::AccountV36, types::Account};
+
+    let map = store.account_map();
+    let raw = map.raw();
+    for (key, old_value) in raw.iter_forward()? {
+        let old = bincode::DefaultOptions::new().deserialize::<AccountV36>(&old_value)?;
+        let new: Account = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<Account>(&new)?;
+        raw.update((&key, &old_value), (&key, &new_value))?;
+    }
     Ok(())
 }
 
@@ -386,14 +417,14 @@ fn migrate_0_34_0_to_0_36(store: &super::Store) -> Result<()> {
 fn migrate_0_36_account(store: &super::Store) -> Result<()> {
     use bincode::Options;
 
-    use crate::{migration::migration_structures::AccountBeforeV36, types::Account};
+    use crate::migration::migration_structures::{AccountBeforeV36, AccountV36};
 
     let map = store.account_map();
     let raw = map.raw();
     for (key, old_value) in raw.iter_forward()? {
         let old = bincode::DefaultOptions::new().deserialize::<AccountBeforeV36>(&old_value)?;
-        let new: Account = old.into();
-        let new_value = bincode::DefaultOptions::new().serialize::<Account>(&new)?;
+        let intermediate: AccountV36 = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<AccountV36>(&intermediate)?;
         raw.update((&key, &old_value), (&key, &new_value))?;
     }
     Ok(())
