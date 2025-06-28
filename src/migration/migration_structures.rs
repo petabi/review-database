@@ -2203,7 +2203,25 @@ pub struct AccountBeforeV36 {
     pub(crate) password_last_modified_at: DateTime<Utc>,
 }
 
-impl From<AccountBeforeV36> for Account {
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
+pub struct AccountV36 {
+    pub username: String,
+    pub(crate) password: SaltedPassword,
+    pub role: Role,
+    pub name: String,
+    pub department: String,
+    pub language: Option<String>,
+    pub theme: Option<String>,
+    pub(crate) creation_time: DateTime<Utc>,
+    pub(crate) last_signin_time: Option<DateTime<Utc>>,
+    pub allow_access_from: Option<Vec<IpAddr>>,
+    pub max_parallel_sessions: Option<u8>,
+    pub(crate) password_hash_algorithm: PasswordHashAlgorithm,
+    pub(crate) password_last_modified_at: DateTime<Utc>,
+    pub customer_ids: Option<Vec<u32>>,
+}
+
+impl From<AccountBeforeV36> for AccountV36 {
     fn from(input: AccountBeforeV36) -> Self {
         Self {
             username: input.username,
@@ -2212,7 +2230,7 @@ impl From<AccountBeforeV36> for Account {
             name: input.name,
             department: input.department,
             language: input.language,
-            theme: None,
+            theme: input.theme,
             creation_time: input.creation_time,
             last_signin_time: input.last_signin_time,
             allow_access_from: input.allow_access_from,
@@ -2223,8 +2241,28 @@ impl From<AccountBeforeV36> for Account {
                 Role::SystemAdministrator => None,
                 _ => Some(Vec::new()),
             },
+        }
+    }
+}
+
+impl From<AccountV36> for Account {
+    fn from(input: AccountV36) -> Self {
+        Self {
+            username: input.username,
+            password: input.password,
+            role: input.role,
+            name: input.name,
+            department: input.department,
+            language: input.language,
+            theme: input.theme,
+            creation_time: input.creation_time,
+            last_signin_time: input.last_signin_time,
+            allow_access_from: input.allow_access_from,
+            max_parallel_sessions: input.max_parallel_sessions,
+            password_hash_algorithm: input.password_hash_algorithm,
+            password_last_modified_at: input.password_last_modified_at,
+            customer_ids: input.customer_ids,
             failed_login_attempts: 0,
-            is_locked_out: false,
             locked_out_until: None,
             is_suspended: false,
         }
