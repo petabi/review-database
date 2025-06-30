@@ -25,6 +25,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `failed_login_attempts`, `is_locked_out`, `locked_out_until`, and
   `is_suspended` to support comprehensive user security management.
 
+- Added `ClassifierFileManager` for file system-based storage of classifier
+  binary data, replacing direct PostgreSQL storage.
+
+### Changed
+
+- Changed `classifier` column from `Bytea` to `Nullable<Bytea>` in PostgreSQL to
+  support migration to file system storage.
+
 ## [0.38.0] - 2025-06-23
 
 ### Added
