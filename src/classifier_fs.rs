@@ -188,6 +188,7 @@ fn validate_name(name: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+
     use tempfile::TempDir;
 
     use super::*;
@@ -352,10 +353,10 @@ mod tests {
         let handles: Vec<_> = (0..10)
             .map(|i| {
                 let manager = Arc::clone(&manager);
-                let data = format!("data_{}", i).into_bytes();
+                let data = format!("data_{i}").into_bytes();
                 tokio::spawn(async move {
                     manager
-                        .store_classifier(1, &format!("test_{}", i), &data)
+                        .store_classifier(1, &format!("test_{i}"), &data)
                         .await
                 })
             })
@@ -366,7 +367,7 @@ mod tests {
         }
 
         for i in 0..10 {
-            assert!(manager.classifier_exists(1, &format!("test_{}", i)));
+            assert!(manager.classifier_exists(1, &format!("test_{i}")));
         }
     }
 
