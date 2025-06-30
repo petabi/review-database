@@ -14,6 +14,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   user-specified blocklist IPs match, indicating high confidence in the
   detection.
 
+- Added `ClassifierFileManager` for file system-based storage of classifier
+  binary data, replacing direct PostgreSQL storage.
+
+### Changed
+
+- Changed `classifier` column from `Bytea` to `Nullable<Bytea>` in PostgreSQL to
+  support migration to file system storage.
+
 ## [0.38.0] - 2025-06-23
 
 ### Added
