@@ -95,16 +95,20 @@ impl ClassifierFileManager {
         })?;
 
         // Rename to final location
-        if let Err(e) = async_fs::rename(&temp_path, &file_path).await {
+        if let Err(rename_err) = async_fs::rename(&temp_path, &file_path).await {
             // Clean up temp file on failure
-            if let Err(e) = async_fs::remove_file(&temp_path).await {
-                bail!("Failed to remove temp classifier file: {e}");
+            match async_fs::remove_file(&temp_path).await {
+                Ok(()) => bail!(
+                    "Failed to rename temp classifier file {} to {}: {rename_err}",
+                    temp_path.display(),
+                    file_path.display()
+                ),
+                Err(remove_err) => {
+                    bail!(
+                        "Failed to rename and remove temp classifier file: {rename_err}, {remove_err}"
+                    )
+                }
             }
-            bail!(
-                "Failed to rename temp classifier file {} to {}: {e}",
-                temp_path.display(),
-                file_path.display()
-            );
         }
 
         Ok(())
