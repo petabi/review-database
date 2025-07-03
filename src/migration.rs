@@ -4297,33 +4297,42 @@ mod tests {
     #[test]
     fn migrate_0_36_account() {
         use bincode::Options;
+        use chrono::Utc;
 
-        use crate::{account::Role, types::Account};
+        use crate::{
+            account::{PasswordHashAlgorithm, Role, SaltedPassword},
+            migration::migration_structures::AccountV36,
+        };
 
         let settings = TestSchema::new();
         let map = settings.store.account_map();
         let raw = map.raw();
 
-        let new_account = Account::new(
-            "test",
-            "password",
-            Role::SecurityAdministrator,
-            "name".to_string(),
-            "department".to_string(),
-            None,
-            None,
-            None,
-            None,
-            Some(Vec::new()),
-        )
-        .unwrap();
-
-        let old: AccountBeforeV36 = new_account.clone().into();
+        let old_account = AccountBeforeV36 {
+            username: "test".to_string(),
+            password: SaltedPassword::new_with_hash_algorithm(
+                "password",
+                &PasswordHashAlgorithm::Argon2id,
+            )
+            .unwrap(),
+            role: Role::SecurityAdministrator,
+            name: "name".to_string(),
+            department: "department".to_string(),
+            language: None,
+            theme: None,
+            creation_time: Utc::now(),
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
+            password_last_modified_at: Utc::now(),
+        };
+        let new_account = AccountV36::from(old_account.clone());
         let value = bincode::DefaultOptions::new()
-            .serialize(&old)
+            .serialize(&old_account)
             .expect("serializable");
 
-        assert!(raw.put(old.username.as_bytes(), &value).is_ok());
+        assert!(raw.put(old_account.username.as_bytes(), &value).is_ok());
 
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
@@ -4331,11 +4340,13 @@ mod tests {
         assert!(super::migrate_0_36_account(&settings.store).is_ok());
 
         let map = settings.store.account_map();
-        let res = map.get(&new_account.username);
-        assert!(res.is_ok());
-        let account = res.unwrap();
+        let raw = map.raw();
+        let res = raw.get(old_account.username.as_bytes()).unwrap().unwrap();
+        let account = bincode::DefaultOptions::new()
+            .deserialize::<AccountV36>(res.as_ref())
+            .unwrap();
 
-        assert_eq!(account, Some(new_account));
+        assert_eq!(account, new_account);
     }
 
     #[test]

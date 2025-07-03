@@ -4,69 +4,17 @@ use std::net::IpAddr;
 
 use anyhow::{Context, bail};
 use bincode::Options;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use rocksdb::OptimisticTransactionDB;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     EXCLUSIVE, Map, Role, Table,
-    account::{PasswordHashAlgorithm, SaltedPassword},
     types::{Account, FromKeyValue},
 };
 
-#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
-pub(crate) struct LegacyAccount {
-    pub username: String,
-    pub password: SaltedPassword,
-    pub role: Role,
-    pub name: String,
-    pub department: String,
-    pub language: Option<String>,
-    pub theme: Option<String>,
-    pub creation_time: DateTime<Utc>,
-    pub last_signin_time: Option<DateTime<Utc>>,
-    pub allow_access_from: Option<Vec<IpAddr>>,
-    pub max_parallel_sessions: Option<u8>,
-    pub password_hash_algorithm: PasswordHashAlgorithm,
-    pub password_last_modified_at: DateTime<Utc>,
-    pub customer_ids: Option<Vec<u32>>,
-}
-
-impl From<LegacyAccount> for Account {
-    fn from(legacy: LegacyAccount) -> Self {
-        Self {
-            username: legacy.username,
-            password: legacy.password,
-            role: legacy.role,
-            name: legacy.name,
-            department: legacy.department,
-            language: legacy.language,
-            theme: legacy.theme,
-            creation_time: legacy.creation_time,
-            last_signin_time: legacy.last_signin_time,
-            allow_access_from: legacy.allow_access_from,
-            max_parallel_sessions: legacy.max_parallel_sessions,
-            password_hash_algorithm: legacy.password_hash_algorithm,
-            password_last_modified_at: legacy.password_last_modified_at,
-            customer_ids: legacy.customer_ids,
-            failed_login_attempts: 0,
-            locked_out_until: None,
-            is_suspended: false,
-        }
-    }
-}
-
 impl FromKeyValue for Account {
     fn from_key_value(_key: &[u8], value: &[u8]) -> anyhow::Result<Self> {
-        let options = bincode::DefaultOptions::new();
-
-        if let Ok(account) = options.deserialize::<Account>(value) {
-            Ok(account)
-        } else if let Ok(legacy_account) = options.deserialize::<LegacyAccount>(value) {
-            Ok(legacy_account.into())
-        } else {
-            Err(anyhow::anyhow!("Failed to deserialize account data"))
-        }
+        super::deserialize(value)
     }
 }
 
@@ -106,17 +54,7 @@ impl<'d> Table<'d, Account> {
         let Some(value) = self.map.get(username.as_bytes())? else {
             return Ok(None);
         };
-
-        let options = bincode::DefaultOptions::new();
-        let account = if let Ok(account) = options.deserialize::<Account>(value.as_ref()) {
-            account
-        } else if let Ok(legacy_account) = options.deserialize::<LegacyAccount>(value.as_ref()) {
-            legacy_account.into()
-        } else {
-            return Err(anyhow::anyhow!("Failed to deserialize account data"));
-        };
-
-        Ok(Some(account))
+        Ok(Some(super::deserialize(value.as_ref())?))
     }
 
     /// Updates an entry in account map.
@@ -149,17 +87,7 @@ impl<'d> Table<'d, Account> {
                 .get_for_update_cf(self.map.cf, username, EXCLUSIVE)
                 .context("cannot read old entry")?
             {
-                let options = bincode::DefaultOptions::new();
-                let mut account =
-                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
-                        account
-                    } else if let Ok(legacy_account) =
-                        options.deserialize::<LegacyAccount>(old_value.as_ref())
-                    {
-                        legacy_account.into()
-                    } else {
-                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
-                    };
+                let mut account = super::deserialize::<Account>(old_value.as_ref())?;
 
                 if let Some(password) = &new_password {
                     account.update_password(password)?;
@@ -250,16 +178,9 @@ impl<'d> Table<'d, Account> {
                 .context("cannot read old entry")?
             {
                 let options = bincode::DefaultOptions::new();
-                let mut account =
-                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
-                        account
-                    } else if let Ok(legacy_account) =
-                        options.deserialize::<LegacyAccount>(old_value.as_ref())
-                    {
-                        legacy_account.into()
-                    } else {
-                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
-                    };
+                let Ok(mut account) = options.deserialize::<Account>(old_value.as_ref()) else {
+                    return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                };
 
                 account.failed_login_attempts = account.failed_login_attempts.saturating_add(1);
 
@@ -301,16 +222,9 @@ impl<'d> Table<'d, Account> {
                 .context("cannot read old entry")?
             {
                 let options = bincode::DefaultOptions::new();
-                let mut account =
-                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
-                        account
-                    } else if let Ok(legacy_account) =
-                        options.deserialize::<LegacyAccount>(old_value.as_ref())
-                    {
-                        legacy_account.into()
-                    } else {
-                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
-                    };
+                let Ok(mut account) = options.deserialize::<Account>(old_value.as_ref()) else {
+                    return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                };
 
                 account.failed_login_attempts = 0;
                 account.locked_out_until = None;
@@ -370,16 +284,9 @@ impl<'d> Table<'d, Account> {
                 .context("cannot read old entry")?
             {
                 let options = bincode::DefaultOptions::new();
-                let mut account =
-                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
-                        account
-                    } else if let Ok(legacy_account) =
-                        options.deserialize::<LegacyAccount>(old_value.as_ref())
-                    {
-                        legacy_account.into()
-                    } else {
-                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
-                    };
+                let Ok(mut account) = options.deserialize::<Account>(old_value.as_ref()) else {
+                    return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                };
 
                 account.is_suspended = true;
 
@@ -415,16 +322,9 @@ impl<'d> Table<'d, Account> {
                 .context("cannot read old entry")?
             {
                 let options = bincode::DefaultOptions::new();
-                let mut account =
-                    if let Ok(account) = options.deserialize::<Account>(old_value.as_ref()) {
-                        account
-                    } else if let Ok(legacy_account) =
-                        options.deserialize::<LegacyAccount>(old_value.as_ref())
-                    {
-                        legacy_account.into()
-                    } else {
-                        return Err(anyhow::anyhow!("Failed to deserialize account data"));
-                    };
+                let Ok(mut account) = options.deserialize::<Account>(old_value.as_ref()) else {
+                    return Err(anyhow::anyhow!("Failed to deserialize account data"));
+                };
 
                 account.is_suspended = false;
 
@@ -782,56 +682,6 @@ mod tests {
             .unwrap();
         assert!(!user2.is_suspended);
         assert_eq!(user2.failed_login_attempts, 1);
-    }
-
-    #[test]
-    fn test_version_aware_deserialization() {
-        use bincode::Options;
-
-        use super::LegacyAccount;
-        use crate::account::{PasswordHashAlgorithm, SaltedPassword};
-
-        let db_dir = tempfile::tempdir().unwrap();
-        let backup_dir = tempfile::tempdir().unwrap();
-        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
-        let table = store.account_map();
-
-        let legacy_account = LegacyAccount {
-            username: "legacy_user".to_string(),
-            password: SaltedPassword::new_with_hash_algorithm(
-                "password",
-                &PasswordHashAlgorithm::Argon2id,
-            )
-            .unwrap(),
-            role: Role::SecurityAdministrator,
-            name: "Legacy User".to_string(),
-            department: "Legacy Dept".to_string(),
-            language: None,
-            theme: None,
-            creation_time: chrono::Utc::now(),
-            last_signin_time: None,
-            allow_access_from: None,
-            max_parallel_sessions: None,
-            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
-            password_last_modified_at: chrono::Utc::now(),
-            customer_ids: None,
-        };
-
-        let serialized_legacy = bincode::DefaultOptions::new()
-            .serialize(&legacy_account)
-            .unwrap();
-
-        table
-            .raw()
-            .put("legacy_user".as_bytes(), &serialized_legacy)
-            .unwrap();
-
-        let retrieved_account = table.get("legacy_user").unwrap().unwrap();
-        assert_eq!(retrieved_account.username, "legacy_user");
-        assert_eq!(retrieved_account.name, "Legacy User");
-        assert_eq!(retrieved_account.failed_login_attempts, 0);
-        assert!(retrieved_account.locked_out_until.is_none());
-        assert!(!retrieved_account.is_suspended);
     }
 
     #[test]
