@@ -4588,4 +4588,86 @@ mod tests {
             std::time::Duration::from_secs(100 * 24 * 60 * 60)
         );
     }
+
+    #[test]
+    fn migrate_0_39_account() {
+        use bincode::Options;
+        use chrono::Utc;
+
+        use crate::{
+            account::{PasswordHashAlgorithm, Role, SaltedPassword},
+            migration::migration_structures::AccountV36,
+            types::Account,
+        };
+
+        let settings = TestSchema::new();
+        let map = settings.store.account_map();
+        let raw = map.raw();
+
+        // Create a few AccountV36 entries
+        let now = Utc::now();
+        let v36_1 = AccountV36 {
+            username: "user1".to_string(),
+            password: SaltedPassword::new_with_hash_algorithm(
+                "pw1",
+                &PasswordHashAlgorithm::Argon2id,
+            )
+            .unwrap(),
+            role: Role::SecurityAdministrator,
+            name: "User One".to_string(),
+            department: "Dept1".to_string(),
+            language: Some("en".to_string()),
+            theme: Some("dark".to_string()),
+            creation_time: now,
+            last_signin_time: Some(now),
+            allow_access_from: Some(vec!["127.0.0.1".parse().unwrap()]),
+            max_parallel_sessions: Some(2),
+            password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
+            password_last_modified_at: now,
+            customer_ids: Some(vec![1, 2]),
+        };
+        let v36_2 = AccountV36 {
+            username: "user2".to_string(),
+            password: SaltedPassword::new_with_hash_algorithm(
+                "pw2",
+                &PasswordHashAlgorithm::Pbkdf2HmacSha512,
+            )
+            .unwrap(),
+            role: Role::SystemAdministrator,
+            name: "User Two".to_string(),
+            department: "Dept2".to_string(),
+            language: None,
+            theme: None,
+            creation_time: now,
+            last_signin_time: None,
+            allow_access_from: None,
+            max_parallel_sessions: None,
+            password_hash_algorithm: PasswordHashAlgorithm::Pbkdf2HmacSha512,
+            password_last_modified_at: now,
+            customer_ids: None,
+        };
+        let v36s = [v36_1, v36_2];
+        for v36 in &v36s {
+            let value = bincode::DefaultOptions::new()
+                .serialize(v36)
+                .expect("serializable");
+            assert!(raw.put(v36.username.as_bytes(), &value).is_ok());
+        }
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        assert!(super::migrate_0_39_account(&settings.store).is_ok());
+
+        let map = settings.store.account_map();
+        for v36 in &v36s {
+            let raw_value = map.raw().get(v36.username.as_bytes()).expect("get value");
+            assert!(raw_value.is_some());
+            let account: Account = bincode::DefaultOptions::new()
+                .deserialize(raw_value.unwrap().as_ref())
+                .expect("deserialize Account");
+            let expected: Account = v36.clone().into();
+            assert_eq!(account, expected);
+        }
+    }
 }
