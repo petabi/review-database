@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use chrono::NaiveDateTime;
 use column_description::dsl as col_d;
-use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use num_traits::ToPrimitive;
 use structured::{Element, FloatRange};
@@ -15,8 +15,8 @@ use super::{
 use crate::{
     Database, Error,
     schema::{
-        column_description, csv_column_extra, top_n_binary, top_n_datetime, top_n_enum,
-        top_n_float, top_n_int, top_n_ipaddr, top_n_text,
+        column_description, top_n_binary, top_n_datetime, top_n_enum, top_n_float, top_n_int,
+        top_n_ipaddr, top_n_text,
     },
 };
 
@@ -77,19 +77,19 @@ macro_rules! get_top_n_of_column {
     }};
 }
 
-pub(super) async fn get_columns_for_top_n(
-    conn: &mut AsyncPgConnection,
+pub(super) fn get_columns_for_top_n(
+    store: &crate::Store,
     model_id: i32,
 ) -> Result<HashSet<i32>, Error> {
-    use csv_column_extra::dsl as column_d;
-
-    let Some(Some(columns)) = column_d::csv_column_extra
-        .select(column_d::column_top_n)
-        .filter(column_d::model_id.eq(model_id))
-        .first::<Option<Vec<Option<bool>>>>(conn)
-        .await
-        .optional()?
+    let csv_column_extra_map = store.csv_column_extra_map();
+    let Some(csv_extra) = csv_column_extra_map
+        .get_by_model(model_id)
+        .map_err(|e| Error::InvalidInput(format!("Failed to get csv column extra: {e}")))?
     else {
+        return Ok(HashSet::new());
+    };
+
+    let Some(columns) = csv_extra.column_top_n else {
         return Ok(HashSet::new());
     };
 
@@ -97,7 +97,7 @@ pub(super) async fn get_columns_for_top_n(
         .into_iter()
         .enumerate()
         .filter_map(|(index, is)| {
-            if let Some(true) = is {
+            if is {
                 Some(index.to_i32().expect("column index < i32::max"))
             } else {
                 None
@@ -192,6 +192,7 @@ impl Database {
     #[allow(clippy::too_many_lines)]
     pub async fn get_top_columns_of_model(
         &self,
+        store: &crate::Store,
         model_id: i32,
         number_of_top_n: usize,
         time: Option<NaiveDateTime>,
@@ -199,7 +200,7 @@ impl Database {
         portion_of_top_n: Option<f64>,
     ) -> Result<Vec<TopElementCountsByColumn>, Error> {
         let mut conn = self.pool.get().await?;
-        let columns_for_top_n = get_columns_for_top_n(&mut conn, model_id).await?;
+        let columns_for_top_n = get_columns_for_top_n(store, model_id)?;
         let mut column_types = self.get_column_types_of_model(model_id).await?;
         column_types.retain(|c| columns_for_top_n.contains(&c.column_index));
 
