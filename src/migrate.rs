@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
     let config = Config::load_config(parse().as_deref())?;
     migrate_data_dir(&config.data_dir, &config.backup_dir).context("migration failed")?;
 
-    let db = Database::new(&config.database_url, &config.ca_certs())
+    let db = Database::new(&config.database_url, &config.ca_certs(), &config.data_dir)
         .await
         .context("failed to connect to the PostgreSQL database")?;
     let store = Store::new(&config.data_dir, &config.backup_dir)?;
