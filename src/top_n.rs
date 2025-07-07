@@ -160,6 +160,22 @@ impl Database {
 
         Ok(result)
     }
+
+    /// Load cluster ids for all the clusters in the model.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
+    pub async fn load_cluster_ids(&self, model: i32) -> Result<Vec<(i32, String)>, Error> {
+        use crate::schema::cluster::dsl::{self, cluster, cluster_id, id};
+        use diesel_async::RunQueryDsl;
+        let mut conn = self.pool.get().await?;
+        Ok(cluster
+            .select((id, cluster_id))
+            .filter(dsl::model_id.eq(&model).and(dsl::category_id.ne(2)))
+            .load::<(i32, String)>(&mut conn)
+            .await?)
+    }
 }
 
 async fn get_cluster_sizes(
