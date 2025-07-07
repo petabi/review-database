@@ -38,7 +38,6 @@ pub use self::account::Role;
 use self::backends::ConnectionPool;
 pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
-pub use self::classifier_fs::ClassifierFileManager;
 pub use self::cluster::*;
 pub use self::collections::{Indexable, Indexed};
 pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, IterableMap, Map};
@@ -91,6 +90,7 @@ pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 #[derive(Clone)]
 pub struct Database {
     pool: ConnectionPool,
+    classifier_fm: classifier_fs::ClassifierFileManager,
 }
 
 impl Database {
@@ -99,10 +99,17 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the connection pool cannot be created.
-    pub async fn new<P: AsRef<Path>>(url: &str, db_root_ca: &[P]) -> Result<Self, Error> {
-        ConnectionPool::new(url, db_root_ca)
-            .await
-            .map(|pool| Self { pool })
+    pub async fn new<P: AsRef<Path>>(
+        url: &str,
+        db_root_ca: &[P],
+        data_dir: P,
+    ) -> Result<Self, Error> {
+        let pool = ConnectionPool::new(url, db_root_ca).await?;
+        let classifier_fm = classifier_fs::ClassifierFileManager::new(data_dir)?;
+        Ok(Self {
+            pool,
+            classifier_fm,
+        })
     }
 }
 
@@ -498,6 +505,8 @@ pub enum Error {
     SerdeJson(#[from] serde_json::Error),
     #[error("Certificate error: {0}")]
     Tls(String),
+    #[error("ClassifierFileManager error: {0}")]
+    Classifier(#[from] anyhow::Error),
 }
 
 #[cfg(test)]
