@@ -5,6 +5,18 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added `ClassifierFileManager` for file system-based storage of classifier
+  binary data, replacing direct PostgreSQL storage.
+
+### Changed
+
+- Changed `classifier` column from `Bytea` to `Nullable<Bytea>` in PostgreSQL to
+  support migration to file system storage.
+
 ## [0.39.0] - 2025-07-07
 
 ### Added
@@ -24,14 +36,6 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Enhanced `Account` model with user security status fields including
   `failed_login_attempts`, `is_locked_out`, `locked_out_until`, and
   `is_suspended` to support comprehensive user security management.
-
-- Added `ClassifierFileManager` for file system-based storage of classifier
-  binary data, replacing direct PostgreSQL storage.
-
-### Changed
-
-- Changed `classifier` column from `Bytea` to `Nullable<Bytea>` in PostgreSQL to
-  support migration to file system storage.
 
 ## [0.38.0] - 2025-06-23
 
@@ -928,6 +932,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.39.0...main
 [0.39.0]: https://github.com/petabi/review-database/compare/v0.38.0...0.39.0
 [0.38.0]: https://github.com/petabi/review-database/compare/0.37.0...0.38.0
 [0.37.0]: https://github.com/petabi/review-database/compare/0.36.0...0.37.0
