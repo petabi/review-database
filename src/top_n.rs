@@ -161,7 +161,7 @@ impl Database {
         Ok(result)
     }
 
-    /// Load `(id, cluster_id)` for all the clusters in the model that satisfy the given conditions.
+    /// Loads `(id, cluster_id)` for all the clusters in the model that satisfy the given conditions.
     /// - `model`: The model ID to filter clusters by.
     /// - `cluster_id`: Optional cluster ID to filter clusters by.
     ///
