@@ -370,6 +370,70 @@ impl<'d> Table<'d, ColumnStats> {
         Ok(top_n)
     }
 
+    /// Gets top N IP addresses of a model.
+    /// `cluster_ids`: retrieved by `load_cluster_ids_with_size_limit(model_id, portion_of_cluster)`.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `portion_of_top_n` is not between 0.0 and 1.0.
+    /// Will panic if a `column_index` from the database cannot be represented as a `usize`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
+    pub fn get_top_ip_addresses_of_model(
+        &self,
+        model_id: i32,
+        cluster_ids: &[u32],
+        size: usize, // number of top N IP addresses to return
+        time: Option<NaiveDateTime>,
+        portion_of_top_n: Option<f64>,
+    ) -> Result<Vec<TopElementCountsByColumn>> {
+        let time = time.map(from_naive_utc).map(i64::to_be_bytes);
+        let mut total_of_top_n: HashMap<_, HashMap<_, HashMap<String, i64>>> = HashMap::new();
+
+        for &cluster_id in cluster_ids {
+            let mut prefix = cluster_id.to_be_bytes().to_vec();
+            if let Some(ts) = time {
+                prefix.extend(ts);
+            }
+            let iter = self.prefix_iter(Direction::Forward, None, &prefix);
+            for result in iter {
+                let column_stats = result?;
+                if column_stats.model_id != model_id {
+                    continue;
+                }
+                if !matches!(
+                    column_stats.n_largest_count.mode().as_ref(),
+                    Some(Element::IpAddr(_))
+                ) {
+                    continue;
+                }
+                let entry = total_of_top_n
+                    .entry(cluster_id)
+                    .or_default()
+                    .entry(column_stats.column_index)
+                    .or_default();
+                for result in column_stats.n_largest_count.top_n().iter().map(|ec| {
+                    ec.count
+                        .to_i64()
+                        .map(|c| (ec.value.to_string(), c))
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("Count {} is too large to fit in i64", ec.count)
+                        })
+                }) {
+                    let (value, count) = result?;
+                    *entry.entry(value).or_insert(0) += count;
+                }
+            }
+        }
+        let limited_top_n = limited_top_n_of_clusters(
+            total_of_top_n,
+            portion_of_top_n.unwrap_or(DEFAULT_PORTION_OF_TOP_N),
+        );
+        Ok(to_element_counts(limited_top_n, size))
+    }
+
     /// Returns the number of rounds in the given cluster.
     ///
     /// # Errors
@@ -1162,6 +1226,82 @@ mod tests {
         assert_eq!(result.selected.len(), 1);
         assert_eq!(result.selected[0].cluster_id, "cluster-one");
         assert_eq!(result.selected[0].columns[0].counts[0].count, 42);
+    }
+    #[test]
+    fn test_get_top_ip_addresses_of_model() {
+        use chrono::NaiveDate;
+        use structured::{ColumnStatistics, Description, Element, ElementCount, NLargestCount};
+
+        let store = setup_store();
+        let table = store.column_stats_map();
+
+        let model_id = 10;
+        let cluster_id = 55;
+        let column_index = 0;
+        let batch_ts = NaiveDate::from_ymd_opt(2025, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+
+        let ip_counts = NLargestCount::new(
+            3,
+            vec![
+                ElementCount {
+                    value: Element::IpAddr("192.168.0.1".parse().unwrap()),
+                    count: 30,
+                },
+                ElementCount {
+                    value: Element::IpAddr("10.0.0.1".parse().unwrap()),
+                    count: 20,
+                },
+                ElementCount {
+                    value: Element::IpAddr("8.8.8.8".parse().unwrap()),
+                    count: 10,
+                },
+            ],
+            Some(Element::IpAddr("192.168.0.1".parse().unwrap())),
+        );
+
+        let stats = ColumnStatistics {
+            description: Description::default(),
+            n_largest_count: ip_counts.clone(),
+        };
+
+        table
+            .insert_column_statistics(
+                vec![(
+                    cluster_id,
+                    crate::ColumnStatisticsUpdate {
+                        cluster_id: cluster_id.to_string(),
+                        column_statistics: vec![stats],
+                    },
+                )],
+                model_id,
+                batch_ts,
+            )
+            .unwrap();
+
+        let result = table
+            .get_top_ip_addresses_of_model(model_id, &[cluster_id], 2, Some(batch_ts), Some(1.0))
+            .unwrap();
+
+        // One cluster, one column, only top 2 returned
+        assert_eq!(result.len(), 1); // one column
+        let column_result = &result[0];
+        assert_eq!(column_result.column_index, column_index);
+
+        let values: Vec<_> = column_result
+            .counts
+            .iter()
+            .map(|e| e.value.to_string())
+            .collect();
+
+        assert_eq!(values.len(), 2);
+        assert_eq!(values[0], "192.168.0.1");
+        assert_eq!(values[1], "10.0.0.1");
+
+        let counts: Vec<_> = column_result.counts.iter().map(|e| e.count).collect();
+        assert_eq!(counts, vec![30, 20]);
     }
 
     fn setup_store() -> Arc<Store> {

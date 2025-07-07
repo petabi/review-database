@@ -191,6 +191,34 @@ impl Database {
         }
         Ok(query.load::<(i32, String)>(&mut conn).await?)
     }
+
+    /// Loads `id` for all the clusters in the model that satisfy the given conditions.
+    /// - `model`: The model ID to filter clusters by.
+    /// - `portion_of_clusters`: The portion of clusters to limit the results to, as a fraction (0.0 to 1.0). Default is 0.3.
+    ///
+    /// Returns a vector of cluster IDs, limited by the specified portion of clusters.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an underlying database operation fails.
+    pub async fn load_cluster_ids_with_size_limit(
+        &self,
+        model: i32,
+        portion_of_clusters: Option<f64>,
+    ) -> Result<Vec<i32>, Error> {
+        let mut conn = self.pool.get().await?;
+        let cluster_sizes = get_cluster_sizes(&mut conn, model).await?;
+        if cluster_sizes.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let portion_of_clusters = portion_of_clusters.unwrap_or(DEFAULT_PORTION_OF_CLUSTER);
+        let number_of_clusters = DEFAULT_NUMBER_OF_CLUSTER;
+        let cluster_ids =
+            get_limited_cluster_ids(&cluster_sizes, portion_of_clusters, number_of_clusters);
+
+        Ok(cluster_ids)
+    }
 }
 
 async fn get_cluster_sizes(
