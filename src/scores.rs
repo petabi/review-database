@@ -9,10 +9,12 @@ pub struct Scores {
 }
 
 impl Scores {
+    #[must_use]
     pub fn new(model: i32, inner: crate::types::ModelScores) -> Self {
         Self { model, inner }
     }
 
+    #[must_use]
     pub fn into_inner(self) -> crate::types::ModelScores {
         self.inner
     }

@@ -31,35 +31,7 @@ pub struct Model {
 }
 
 impl Model {
-    #[must_use]
-    pub fn into_storage(
-        self,
-    ) -> (
-        SqlModel,
-        Vec<u8>,
-        Vec<crate::batch_info::BatchInfo>,
-        crate::scores::Scores,
-    ) {
-        let sql = SqlModel {
-            id: self.id,
-            name: self.name,
-            version: self.version,
-            kind: self.kind,
-            max_event_id_num: self.max_event_id_num,
-            data_source_id: self.data_source_id,
-            classification_id: Some(self.classification_id),
-        };
-        let batch_info = self
-            .batch_info
-            .into_iter()
-            .map(|b| crate::batch_info::BatchInfo::new(self.id, b))
-            .collect();
-        let scores = crate::scores::Scores::new(self.id, self.scores);
-        (sql, self.serialized_classifier, batch_info, scores)
-    }
-
-    #[must_use]
-    pub fn from_storage(model: SqlModel, serialized_classifier: Vec<u8>) -> Self {
+    fn from_storage(model: SqlModel, serialized_classifier: Vec<u8>) -> Self {
         Self {
             id: model.id,
             name: model.name,
@@ -227,8 +199,8 @@ struct Body {
 
 #[derive(Deserialize, Queryable)]
 #[allow(clippy::module_name_repetitions)]
-pub struct SqlModel {
-    pub id: i32,
+struct SqlModel {
+    id: i32,
     name: String,
     version: i32,
     kind: String,
@@ -243,7 +215,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model already exists or if a database operation fails.
-    pub async fn add_model(&self, model: &SqlModel) -> Result<i32, Error> {
+    pub async fn add_model(&self, model: &Model) -> Result<i32, Error> {
         let mut conn = self.pool.get().await?;
         let n = diesel::insert_into(dsl::model)
             .values((
@@ -261,6 +233,9 @@ impl Database {
         if n == 0 {
             Err(Error::InvalidInput("failed to insert model".into()))
         } else {
+            self.classifier_fm
+                .store_classifier(n, &model.name, &model.serialized_classifier)
+                .await?;
             Ok(n)
         }
     }
@@ -283,6 +258,8 @@ impl Database {
         let Some(id) = id else {
             return Err(Error::InvalidInput(format!("The model {name} not found")));
         };
+
+        self.classifier_fm.delete_classifier(id, name).await?;
 
         diesel::delete(extra::csv_column_extra)
             .filter(extra::model_id.eq(id))
@@ -422,7 +399,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn load_model_by_name(&self, name: &str) -> Result<SqlModel, Error> {
+    pub async fn load_model_by_name(&self, name: &str) -> Result<Model, Error> {
         let query = dsl::model
             .select((
                 dsl::id,
@@ -436,7 +413,14 @@ impl Database {
             .filter(dsl::name.eq(name));
 
         let mut conn = self.pool.get().await?;
-        Ok(query.get_result::<SqlModel>(&mut conn).await?)
+        let model = query.get_result::<SqlModel>(&mut conn).await?;
+        if !self.classifier_fm.classifier_exists(model.id, name) {
+            return Err(Error::Classifier(anyhow::Error::msg(
+                "classifier file does not exist for model {name}",
+            )));
+        }
+        let classifier = self.classifier_fm.load_classifier(model.id, name).await?;
+        Ok(Model::from_storage(model, classifier))
     }
 
     /// Returns the models between `after` and `before`.
@@ -501,7 +485,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn update_model(&self, model: &SqlModel) -> Result<i32, Error> {
+    pub async fn update_model(&self, model: &Model) -> Result<i32, Error> {
         let mut conn = self.pool.get().await?;
 
         diesel::update(dsl::model.filter(dsl::id.eq(model.id)))
@@ -518,6 +502,9 @@ impl Database {
             .map_err(|e| {
                 Error::InvalidInput(format!("failed to update model \"{}\": {e}", model.name))
             })?;
+        self.classifier_fm
+            .store_classifier(model.id, &model.name, &model.serialized_classifier)
+            .await?;
 
         Ok(model.id)
     }
