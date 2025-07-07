@@ -507,7 +507,7 @@ pub enum Error {
     #[error("Certificate error: {0}")]
     Tls(String),
     #[error("ClassifierFileManager error: {0}")]
-    Classifier(#[from] anyhow::Error),
+    Classifier(#[from] classifier_fs::ClassifierFsError),
 }
 
 #[cfg(test)]

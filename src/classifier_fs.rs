@@ -3,8 +3,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Context, Result, bail};
 use tokio::fs as async_fs;
+
+pub type Result<T> = std::result::Result<T, ClassifierFsError>;
 
 /// Manages classifier file storage in the file system using computed paths.
 ///
@@ -28,15 +29,11 @@ impl ClassifierFileManager {
 
         // Validate base directory is not a file
         if base_dir.exists() && !base_dir.is_dir() {
-            bail!(
-                "Base path exists but is not a directory: {}",
-                base_dir.display()
-            );
+            return Err(ClassifierFsError::NotADirectory(base_dir));
         }
 
         fs::create_dir_all(&base_dir)
-            .with_context(|| format!("Failed to create directories: {}", base_dir.display()))?;
-
+            .map_err(|err| ClassifierFsError::DirectoryCreation(err, base_dir.clone()))?;
         Ok(Self { base_dir })
     }
 
@@ -83,8 +80,8 @@ impl ClassifierFileManager {
 
         // Create parent directories if they don't exist
         if let Some(parent) = file_path.parent() {
-            async_fs::create_dir_all(parent).await.with_context(|| {
-                format!("Failed to create parent directories: {}", parent.display())
+            async_fs::create_dir_all(parent).await.map_err(|err| {
+                ClassifierFsError::ParentDirectoryCreation(err, file_path.clone())
             })?;
         }
 
@@ -92,28 +89,19 @@ impl ClassifierFileManager {
         let temp_path = file_path.with_extension(timestamp.to_string());
 
         // Write to temporary file first
-        async_fs::write(&temp_path, data).await.with_context(|| {
-            format!(
-                "Failed to write temp classifier file: {}",
-                temp_path.display()
-            )
-        })?;
+        async_fs::write(&temp_path, data)
+            .await
+            .map_err(|err| ClassifierFsError::FileWrite(err, temp_path.clone()))?;
 
         // Rename to final location
         if let Err(rename_err) = async_fs::rename(&temp_path, &file_path).await {
             // Clean up temp file on failure
-            match async_fs::remove_file(&temp_path).await {
-                Ok(()) => bail!(
-                    "Failed to rename temp classifier file {} to {}: {rename_err}",
-                    temp_path.display(),
-                    file_path.display()
-                ),
-                Err(remove_err) => {
-                    bail!(
-                        "Failed to rename and remove temp classifier file: {rename_err}, {remove_err}"
-                    )
-                }
-            }
+            return match async_fs::remove_file(&temp_path).await {
+                Ok(()) => Err(ClassifierFsError::FileRename(
+                    rename_err, temp_path, file_path,
+                )),
+                Err(remove_err) => Err(ClassifierFsError::TempFileCleanup(remove_err, temp_path)),
+            };
         }
 
         Ok(())
@@ -137,7 +125,7 @@ impl ClassifierFileManager {
 
         async_fs::read(&file_path)
             .await
-            .with_context(|| format!("Failed to load classifier file: {}", file_path.display()))
+            .map_err(|err| ClassifierFsError::FileRead(err, file_path))
     }
 
     /// Checks if a classifier file exists without loading it.
@@ -165,9 +153,9 @@ impl ClassifierFileManager {
 
         // Only attempt deletion if file exists
         if file_path.exists() {
-            async_fs::remove_file(&file_path).await.with_context(|| {
-                format!("Failed to remove classifier file: {}", file_path.display())
-            })?;
+            async_fs::remove_file(&file_path)
+                .await
+                .map_err(|err| ClassifierFsError::FileRemoval(err, file_path))?;
         }
 
         Ok(())
@@ -177,21 +165,60 @@ impl ClassifierFileManager {
 /// Validates classifier name to prevent characters that could cause issues.
 fn validate_name(name: &str) -> Result<()> {
     if name.is_empty() || name.len() > 255 {
-        bail!("Invalid name length: must be 1-255 characters");
+        return Err(ClassifierFsError::InvalidName(
+            "must be 1-255 characters".to_string(),
+        ));
     }
 
     if name.contains("..") || name.contains('/') || name.contains('\\') {
-        bail!("Invalid name: contains path separators or traversal sequences");
+        return Err(ClassifierFsError::InvalidName(
+            "contains path separators or traversal sequences".to_string(),
+        ));
     }
 
     if name
         .chars()
         .any(|c| c.is_control() || ":<>|*?\"".contains(c))
     {
-        bail!("Invalid name: contains forbidden characters");
+        return Err(ClassifierFsError::InvalidName(
+            "contains forbidden characters".to_string(),
+        ));
     }
 
     Ok(())
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ClassifierFsError {
+    #[error("Base path exists but is not a directory: {0}")]
+    NotADirectory(PathBuf),
+
+    #[error("Failed to create directories: {1}: {0}")]
+    DirectoryCreation(std::io::Error, PathBuf),
+
+    #[error("Invalid name: {0}")]
+    InvalidName(String),
+
+    #[error("Failed to create parent directories: {1}: {0}")]
+    ParentDirectoryCreation(std::io::Error, PathBuf),
+
+    #[error("Failed to load classifier file: {1}: {0}")]
+    FileRead(std::io::Error, PathBuf),
+
+    #[error("Failed to write classifier file: {1}: {0}")]
+    FileWrite(std::io::Error, PathBuf),
+
+    #[error("Failed to remove classifier file: {1}: {0}")]
+    FileRemoval(std::io::Error, PathBuf),
+
+    #[error("Failed to rename classifier file from {1} to {2}: {0}")]
+    FileRename(std::io::Error, PathBuf, PathBuf),
+
+    #[error("classifier file does not exist for model_id: {0}, name = '{1}'")]
+    FileNotFound(i32, String),
+
+    #[error("Failed to remove temp classifier file: {1}: {0}")]
+    TempFileCleanup(std::io::Error, PathBuf),
 }
 
 #[cfg(test)]

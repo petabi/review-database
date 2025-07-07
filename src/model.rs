@@ -415,9 +415,9 @@ impl Database {
         let mut conn = self.pool.get().await?;
         let model = query.get_result::<SqlModel>(&mut conn).await?;
         if !self.classifier_fm.classifier_exists(model.id, name) {
-            return Err(Error::Classifier(anyhow::Error::msg(
-                "classifier file does not exist for model {name}",
-            )));
+            return Err(Error::Classifier(
+                super::classifier_fs::ClassifierFsError::FileNotFound(model.id, name.into()),
+            ));
         }
         let classifier = self.classifier_fm.load_classifier(model.id, name).await?;
         Ok(Model::from_storage(model, classifier))
