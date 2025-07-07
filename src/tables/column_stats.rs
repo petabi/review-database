@@ -132,8 +132,7 @@ impl<'d> Table<'d, ColumnStats> {
     }
 
     /// Gets the top N multimaps of a model.
-    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
-    ///     cluster `category_id` != 2
+    /// `cluster_ids`: retrieved by `load_cluster_ids(model_id)`
     ///     limited by `get_limited_cluster_ids(..portion_of_clusters..)`
     /// `column_1`: the `CsvColumnExtra::column_1` value of the model,
     ///     default to `vec![]`.
@@ -245,7 +244,7 @@ impl<'d> Table<'d, ColumnStats> {
     }
 
     /// Gets the top N columns of a model.
-    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
+    /// `cluster_ids`: retrieved by `load_cluster_ids(model_id)` and
     ///     limited by `get_limited_cluster_ids(..portion_of_clusters..)`
     /// `top_n`: the `CsvColumnExtra::column_top_n` value of the model.
     ///
@@ -306,7 +305,7 @@ impl<'d> Table<'d, ColumnStats> {
     }
 
     /// Gets top N IP addresses of a cluster.
-    /// `cluster_ids`: retrieved by `get_cluster_sizes(model_id)` and
+    /// `cluster_ids`: retrieved by `load_cluster_ids(model_id)` and
     ///     limited by `cluster_id: &str`.
     ///
     /// # Panics
