@@ -161,20 +161,35 @@ impl Database {
         Ok(result)
     }
 
-    /// Load cluster ids for all the clusters in the model.
+    /// Load `(id, cluster_id)` for all the clusters in the model that satisfy the given conditions.
+    /// - `model`: The model ID to filter clusters by.
+    /// - `cluster_id`: Optional cluster ID to filter clusters by.
+    ///
+    /// Returns a vector of tuples containing the cluster ID
+    ///     and its corresponding string ID in ascending order of `id` and `cluster_id`.
     ///
     /// # Errors
     ///
     /// Returns an error if an underlying database operation fails.
-    pub async fn load_cluster_ids(&self, model: i32) -> Result<Vec<(i32, String)>, Error> {
-        use crate::schema::cluster::dsl::{self, cluster, cluster_id, id};
+    pub async fn load_cluster_ids(
+        &self,
+        model: i32,
+        cluster_id: Option<&str>,
+    ) -> Result<Vec<(i32, String)>, Error> {
         use diesel_async::RunQueryDsl;
+
+        use crate::schema::cluster::dsl;
         let mut conn = self.pool.get().await?;
-        Ok(cluster
-            .select((id, cluster_id))
+        let mut query = dsl::cluster
             .filter(dsl::model_id.eq(&model).and(dsl::category_id.ne(2)))
-            .load::<(i32, String)>(&mut conn)
-            .await?)
+            .select((dsl::id, dsl::cluster_id))
+            .order_by(dsl::id.asc())
+            .then_order_by(dsl::cluster_id.asc())
+            .into_boxed();
+        if let Some(cluster_id) = cluster_id {
+            query = query.filter(dsl::cluster_id.eq(cluster_id));
+        }
+        Ok(query.load::<(i32, String)>(&mut conn).await?)
     }
 }
 
