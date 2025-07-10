@@ -9,10 +9,7 @@ use structured::{Description, Element, NLargestCount};
 
 use crate::tables::TableIter;
 use crate::types::FromKeyValue;
-use crate::{
-    ColumnStatisticsUpdate, ElementCount, Map, Statistics, Table, TopElementCountsByColumn,
-    TopMultimaps,
-};
+use crate::{ElementCount, Map, Statistics, Table, TopElementCountsByColumn, TopMultimaps};
 use crate::{Iterable, UniqueKey, tables::Value as ValueTrait};
 
 const DEFAULT_NUMBER_OF_COLUMN: u32 = 30;
@@ -104,19 +101,19 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn insert_column_statistics(
         &self,
-        statistics: Vec<(u32, ColumnStatisticsUpdate)>,
+        stats: Vec<(u32, Vec<structured::ColumnStatistics>)>,
         model_id: i32,
         batch_ts: NaiveDateTime,
     ) -> Result<()> {
         let batch_ts = from_naive_utc(batch_ts);
-        for (cluster_id, columns) in statistics {
+        for (cluster_id, columns) in stats {
             let mut key = Key {
                 cluster_id,
                 batch_ts,
                 column_index: 0,
                 model_id,
             };
-            for (column_index, col) in columns.column_statistics.into_iter().enumerate() {
+            for (column_index, col) in columns.into_iter().enumerate() {
                 key.column_index = u32::try_from(column_index)?;
 
                 let value = Value {
@@ -128,6 +125,7 @@ impl<'d> Table<'d, ColumnStats> {
                     .insert(&key.to_bytes(), &super::serialize(&value)?)?;
             }
         }
+
         Ok(())
     }
 
@@ -869,26 +867,23 @@ mod tests {
 
         let statistics = vec![(
             cluster_id,
-            crate::ColumnStatisticsUpdate {
-                cluster_id: cluster_id.to_string(),
-                column_statistics: vec![ColumnStatistics {
-                    description: Description::default(),
-                    n_largest_count: NLargestCount::new(
-                        2,
-                        vec![
-                            ElementCount {
-                                value: Element::Int(1),
-                                count: 10,
-                            },
-                            ElementCount {
-                                value: Element::Int(2),
-                                count: 5,
-                            },
-                        ],
-                        Some(Element::Int(1)),
-                    ),
-                }],
-            },
+            vec![ColumnStatistics {
+                description: Description::default(),
+                n_largest_count: NLargestCount::new(
+                    2,
+                    vec![
+                        ElementCount {
+                            value: Element::Int(1),
+                            count: 10,
+                        },
+                        ElementCount {
+                            value: Element::Int(2),
+                            count: 5,
+                        },
+                    ],
+                    Some(Element::Int(1)),
+                ),
+            }],
         )];
 
         table
@@ -951,31 +946,11 @@ mod tests {
         };
 
         table
-            .insert_column_statistics(
-                vec![(
-                    cluster_id,
-                    crate::ColumnStatisticsUpdate {
-                        cluster_id: cluster_id.to_string(),
-                        column_statistics: vec![stats1],
-                    },
-                )],
-                model_id,
-                batch1,
-            )
+            .insert_column_statistics(vec![(cluster_id, vec![stats1])], model_id, batch1)
             .unwrap();
 
         table
-            .insert_column_statistics(
-                vec![(
-                    cluster_id,
-                    crate::ColumnStatisticsUpdate {
-                        cluster_id: cluster_id.to_string(),
-                        column_statistics: vec![stats2],
-                    },
-                )],
-                model_id,
-                batch2,
-            )
+            .insert_column_statistics(vec![(cluster_id, vec![stats2])], model_id, batch2)
             .unwrap();
 
         let count = table.count_rounds_by_cluster(cluster_id).unwrap();
@@ -1016,17 +991,7 @@ mod tests {
 
         for batch in &[batch1, batch2] {
             table
-                .insert_column_statistics(
-                    vec![(
-                        cluster_id,
-                        crate::ColumnStatisticsUpdate {
-                            cluster_id: cluster_id.to_string(),
-                            column_statistics: vec![stats.clone()],
-                        },
-                    )],
-                    model_id,
-                    *batch,
-                )
+                .insert_column_statistics(vec![(cluster_id, vec![stats.clone()])], model_id, *batch)
                 .unwrap();
         }
 
@@ -1068,17 +1033,7 @@ mod tests {
         };
 
         table
-            .insert_column_statistics(
-                vec![(
-                    cluster_id,
-                    crate::ColumnStatisticsUpdate {
-                        cluster_id: cluster_id.to_string(),
-                        column_statistics: vec![stats],
-                    },
-                )],
-                model_id,
-                batch_ts,
-            )
+            .insert_column_statistics(vec![(cluster_id, vec![stats])], model_id, batch_ts)
             .unwrap();
 
         let column_types = table.get_column_types_of_model(model_id).unwrap();
@@ -1268,17 +1223,7 @@ mod tests {
         };
 
         table
-            .insert_column_statistics(
-                vec![(
-                    cluster_id,
-                    crate::ColumnStatisticsUpdate {
-                        cluster_id: cluster_id.to_string(),
-                        column_statistics: vec![stats],
-                    },
-                )],
-                model_id,
-                batch_ts,
-            )
+            .insert_column_statistics(vec![(cluster_id, vec![stats])], model_id, batch_ts)
             .unwrap();
 
         let result = table
