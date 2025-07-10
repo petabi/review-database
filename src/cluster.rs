@@ -265,6 +265,24 @@ impl Database {
 
         Ok(())
     }
+
+    /// Find the numerical ids according to string ids of clusters for a model
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
+    pub async fn cluster_name_to_ids(
+        &self,
+        model_id: i32,
+        names: &[&str],
+    ) -> Result<Vec<(i32, String)>, Error> {
+        let query = dsl::cluster
+            .select((dsl::id, dsl::cluster_id))
+            .filter(dsl::model_id.eq(&model_id))
+            .filter(dsl::cluster_id.eq_any(names));
+        let mut conn = self.pool.get().await?;
+        Ok(query.get_results(&mut conn).await?)
+    }
 }
 
 async fn upsert(

@@ -17,6 +17,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Changed `classifier` column from `Bytea` to `Nullable<Bytea>` in PostgreSQL to
   support migration to file system storage.
 
+### Removed
+
+- `Database::insert_column_statistics` is removed. User is advised to use
+  `Table<'d, ColumnStats>::insert_column_statistics`.
+
 ## [0.39.0] - 2025-07-07
 
 ### Added
