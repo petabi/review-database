@@ -1,6 +1,7 @@
 //! Routines to check the database format version and migrate it if necessary.
 #![allow(clippy::too_many_lines)]
 
+mod migrate_classifiers_to_filesystem;
 mod migration_structures;
 
 use std::{
@@ -111,7 +112,7 @@ const COMPATIBLE_VERSION_REQ: &str = ">=0.39.0,<0.40.0-alpha";
 ///
 /// Returns an error if the data hasn't been migrated successfully to Rocksdb.
 pub async fn migrate_backend<P: AsRef<Path>>(
-    _: &super::Database,
+    database: &super::Database,
     _: &super::Store,
     _: P,
 ) -> Result<()> {
@@ -128,6 +129,9 @@ pub async fn migrate_backend<P: AsRef<Path>>(
     // if compatible.matches(&version) {
     //     backend_0_23(db, store).await?;
     // }
+
+    migrate_classifiers_to_filesystem::run_migration(database).await?;
+
     Ok(())
 }
 
