@@ -11,6 +11,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added `ClassifierFileManager` for file system-based storage of classifier
   binary data, replacing direct PostgreSQL storage.
+- Added new `TorConnectionConn` event kind and event structure for monitoring
+  network connections to Tor exit nodes.
 
 ### Changed
 
