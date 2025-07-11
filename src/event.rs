@@ -72,7 +72,7 @@ pub use self::{
     ssh::{BlocklistSsh, BlocklistSshFields},
     sysmon::WindowsThreat,
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
-    tor::{HttpEventFields, TorConnection},
+    tor::{HttpEventFields, TorConnection, TorConnectionConn},
 };
 use super::{
     Customer, EventCategory, Network, TriagePolicy,
@@ -95,6 +95,7 @@ const HTTP_THREAT: &str = "HTTP Threat";
 const RDP_BRUTE_FORCE: &str = "RDP Brute Force";
 const REPEATED_HTTP_SESSIONS: &str = "Repeated HTTP Sessions";
 const TOR_CONNECTION: &str = "Tor Connection";
+const TOR_CONNECTION_CONN: &str = "Tor Connection Conn";
 const DOMAIN_GENERATION_ALGORITHM: &str = "Domain Generation Algorithm";
 const FTP_BRUTE_FORCE: &str = "FTP Brute Force";
 const FTP_PLAIN_TEXT: &str = "FTP Plain text";
@@ -128,6 +129,9 @@ pub enum Event {
 
     /// An HTTP connection to a Tor exit node.
     TorConnection(TorConnection),
+
+    /// A network connection to a Tor exit node.
+    TorConnectionConn(TorConnectionConn),
 
     /// DGA (Domain Generation Algorithm) generated hostname in HTTP request message
     DomainGenerationAlgorithm(DomainGenerationAlgorithm),
@@ -209,6 +213,13 @@ impl fmt::Display for Event {
                 )
             }
             Event::TorConnection(event) => {
+                write!(
+                    f,
+                    "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                    event.time.to_rfc3339(),
+                )
+            }
+            Event::TorConnectionConn(event) => {
                 write!(
                     f,
                     "time={:?} event_kind={event_kind:?} category={category:?} {event}",
@@ -484,6 +495,7 @@ impl Event {
             Event::RdpBruteForce(event) => event.matches(locator, filter),
             Event::RepeatedHttpSessions(event) => event.matches(locator, filter),
             Event::TorConnection(event) => event.matches(locator, filter),
+            Event::TorConnectionConn(event) => event.matches(locator, filter),
             Event::DomainGenerationAlgorithm(event) => event.matches(locator, filter),
             Event::FtpBruteForce(event) => event.matches(locator, filter),
             Event::FtpPlainText(event) => event.matches(locator, filter),
@@ -549,6 +561,11 @@ impl Event {
                 }
             }
             Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    addr_pair = (Some(event.src_addr), Some(event.dst_addr));
+                }
+            }
+            Event::TorConnectionConn(event) => {
                 if event.matches(locator, filter)?.0 {
                     addr_pair = (Some(event.src_addr), Some(event.dst_addr));
                 }
@@ -743,6 +760,11 @@ impl Event {
                     kind = Some(TOR_CONNECTION);
                 }
             }
+            Event::TorConnectionConn(event) => {
+                if event.matches(locator, filter)?.0 {
+                    kind = Some(TOR_CONNECTION_CONN);
+                }
+            }
             Event::DomainGenerationAlgorithm(event) => {
                 if event.matches(locator, filter)?.0 {
                     kind = Some(DOMAIN_GENERATION_ALGORITHM);
@@ -916,6 +938,7 @@ impl Event {
             Event::RdpBruteForce(e) => (EventKind::RdpBruteForce, e.category()),
             Event::RepeatedHttpSessions(e) => (EventKind::RepeatedHttpSessions, e.category()),
             Event::TorConnection(e) => (EventKind::TorConnection, e.category()),
+            Event::TorConnectionConn(e) => (EventKind::TorConnectionConn, e.category()),
             Event::DomainGenerationAlgorithm(e) => {
                 (EventKind::DomainGenerationAlgorithm, e.category())
             }
@@ -1040,6 +1063,11 @@ impl Event {
                 }
             }
             Event::TorConnection(event) => {
+                if event.matches(locator, filter)?.0 {
+                    category = Some(event.category());
+                }
+            }
+            Event::TorConnectionConn(event) => {
                 if event.matches(locator, filter)?.0 {
                     category = Some(event.category());
                 }
@@ -1397,6 +1425,11 @@ impl Event {
                     level = Some(event.level());
                 }
             }
+            Event::TorConnectionConn(event) => {
+                if event.matches(locator, filter)?.0 {
+                    level = Some(event.level());
+                }
+            }
             Event::DomainGenerationAlgorithm(event) => {
                 if event.matches(locator, filter)?.0 {
                     level = Some(event.level());
@@ -1614,6 +1647,9 @@ impl Event {
             Event::TorConnection(event) => {
                 event.triage_scores = Some(triage_scores);
             }
+            Event::TorConnectionConn(event) => {
+                event.triage_scores = Some(triage_scores);
+            }
             Event::DomainGenerationAlgorithm(event) => {
                 event.triage_scores = Some(triage_scores);
             }
@@ -1741,6 +1777,7 @@ pub enum EventKind {
     RepeatedHttpSessions,
     ExtraThreat,
     TorConnection,
+    TorConnectionConn,
     DomainGenerationAlgorithm,
     FtpBruteForce,
     FtpPlainText,
@@ -1794,6 +1831,7 @@ impl EventKind {
             Self::RepeatedHttpSessions => &[Exfiltration],
             Self::ExtraThreat => &[Reconnaissance],
             Self::TorConnection => &[CommandAndControl],
+            Self::TorConnectionConn => &[CommandAndControl],
             Self::DomainGenerationAlgorithm => &[CommandAndControl],
             Self::FtpBruteForce => &[CredentialAccess],
             Self::FtpPlainText => &[LateralMovement],
@@ -1903,6 +1941,7 @@ impl EventFilter {
             );
             moderate_kinds_by(kinds, &["rdp", "brute", "force"], "rdp brute force");
             moderate_kinds_by(kinds, &["tor", "connection"], "tor exit nodes");
+            moderate_kinds_by(kinds, &["tor", "connection", "conn"], "tor connection");
             moderate_kinds_by(kinds, &["domain", "generation", "algorithm"], "dga");
             moderate_kinds_by(kinds, &["ftp", "brute", "force"], "ftp brute force");
             moderate_kinds_by(kinds, &["ftp", "plain", "text"], "ftp plain text");
@@ -2067,6 +2106,10 @@ impl EventMessage {
             }
             EventKind::TorConnection => bincode::deserialize::<HttpEventFields>(&self.fields)
                 .map(|fields| fields.syslog_rfc5424()),
+            EventKind::TorConnectionConn => {
+                bincode::deserialize::<BlocklistConnFields>(&self.fields)
+                    .map(|fields| fields.syslog_rfc5424())
+            }
             EventKind::DomainGenerationAlgorithm => bincode::deserialize::<DgaFields>(&self.fields)
                 .map(|fields| fields.syslog_rfc5424()),
             EventKind::FtpBruteForce => bincode::deserialize::<FtpBruteForceFields>(&self.fields)
@@ -2354,6 +2397,15 @@ impl Iterator for EventIterator<'_> {
                 Some(Ok((
                     key,
                     Event::TorConnection(TorConnection::new(time, &fields)),
+                )))
+            }
+            EventKind::TorConnectionConn => {
+                let Ok(fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::TorConnectionConn(TorConnectionConn::new(time, fields)),
                 )))
             }
             EventKind::DomainGenerationAlgorithm => {
