@@ -380,7 +380,7 @@ impl Match for TorConnectionConn {
     }
 
     fn kind(&self) -> &'static str {
-        "tor connection"
+        "tor exit nodes"
     }
 
     fn sensor(&self) -> &str {

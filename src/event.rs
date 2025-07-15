@@ -1777,7 +1777,6 @@ pub enum EventKind {
     RepeatedHttpSessions,
     ExtraThreat,
     TorConnection,
-    TorConnectionConn,
     DomainGenerationAlgorithm,
     FtpBruteForce,
     FtpPlainText,
@@ -1809,6 +1808,7 @@ pub enum EventKind {
     SuspiciousTlsTraffic,
     BlocklistBootp,
     BlocklistDhcp,
+    TorConnectionConn,
 }
 
 impl EventKind {
@@ -1941,7 +1941,7 @@ impl EventFilter {
             );
             moderate_kinds_by(kinds, &["rdp", "brute", "force"], "rdp brute force");
             moderate_kinds_by(kinds, &["tor", "connection"], "tor exit nodes");
-            moderate_kinds_by(kinds, &["tor", "connection", "conn"], "tor connection");
+            moderate_kinds_by(kinds, &["tor", "connection", "conn"], "tor exit nodes");
             moderate_kinds_by(kinds, &["domain", "generation", "algorithm"], "dga");
             moderate_kinds_by(kinds, &["ftp", "brute", "force"], "ftp brute force");
             moderate_kinds_by(kinds, &["ftp", "plain", "text"], "ftp plain text");
