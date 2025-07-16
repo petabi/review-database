@@ -399,3 +399,205 @@ impl Match for TorConnectionConn {
         find_conn_attr_by_kind!(self, raw_event_attr)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::net::IpAddr;
+
+    use attrievent::attribute::{ConnAttr, RawEventAttrKind};
+    use chrono::{TimeZone, Utc};
+
+    use super::{Match, TorConnectionConn};
+    use crate::event::{
+        EventCategory, LearningMethod, MEDIUM, common::AttrValue, conn::BlocklistConnFields,
+    };
+
+    fn tor_connection_conn_fields() -> BlocklistConnFields {
+        BlocklistConnFields {
+            sensor: "test-sensor".to_string(),
+            src_addr: "192.168.1.100".parse().unwrap(),
+            src_port: 12345,
+            dst_addr: "198.51.100.1".parse().unwrap(),
+            dst_port: 443,
+            proto: 6,
+            conn_state: "SF".to_string(),
+            duration: 100,
+            service: "https".to_string(),
+            orig_bytes: 1024,
+            resp_bytes: 2048,
+            orig_pkts: 10,
+            resp_pkts: 15,
+            orig_l2_bytes: 1100,
+            resp_l2_bytes: 2200,
+            confidence: 0.95,
+            category: EventCategory::CommandAndControl,
+        }
+    }
+
+    #[test]
+    fn tor_connection_conn_new() {
+        let time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
+        let fields = tor_connection_conn_fields();
+
+        let event = TorConnectionConn::new(time, fields);
+
+        assert_eq!(event.time, time);
+        assert_eq!(event.sensor, "test-sensor");
+        assert_eq!(event.src_addr, "192.168.1.100".parse::<IpAddr>().unwrap());
+        assert_eq!(event.src_port, 12345);
+        assert_eq!(event.dst_addr, "198.51.100.1".parse::<IpAddr>().unwrap());
+        assert_eq!(event.dst_port, 443);
+        assert_eq!(event.proto, 6);
+        assert_eq!(event.conn_state, "SF");
+        assert_eq!(event.duration, 100);
+        assert_eq!(event.service, "https");
+        assert_eq!(event.orig_bytes, 1024);
+        assert_eq!(event.resp_bytes, 2048);
+        assert_eq!(event.orig_pkts, 10);
+        assert_eq!(event.resp_pkts, 15);
+        assert_eq!(event.orig_l2_bytes, 1100);
+        assert_eq!(event.resp_l2_bytes, 2200);
+        assert!((event.confidence - 0.95).abs() < f32::EPSILON);
+        assert_eq!(event.category, EventCategory::CommandAndControl);
+        assert!(event.triage_scores.is_none());
+    }
+
+    #[test]
+    fn tor_connection_conn_display() {
+        let time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
+        let event = TorConnectionConn::new(time, tor_connection_conn_fields());
+
+        let display_output = format!("{event}");
+        assert!(display_output.contains("sensor=\"test-sensor\""));
+        assert!(display_output.contains("src_addr=\"192.168.1.100\""));
+        assert!(display_output.contains("dst_addr=\"198.51.100.1\""));
+        assert!(display_output.contains("conn_state=\"SF\""));
+        assert!(display_output.contains("service=\"https\""));
+    }
+
+    #[test]
+    fn tor_connection_conn_match_trait() {
+        let time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
+        let event = TorConnectionConn::new(time, tor_connection_conn_fields());
+
+        assert_eq!(
+            event.src_addrs(),
+            &["192.168.1.100".parse::<IpAddr>().unwrap()]
+        );
+        assert_eq!(event.src_port(), 12345);
+        assert_eq!(
+            event.dst_addrs(),
+            &["198.51.100.1".parse::<IpAddr>().unwrap()]
+        );
+        assert_eq!(event.dst_port(), 443);
+        assert_eq!(event.proto(), 6);
+        assert_eq!(event.category(), EventCategory::CommandAndControl);
+        assert_eq!(event.level(), MEDIUM);
+        assert_eq!(event.kind(), "tor exit nodes");
+        assert_eq!(event.sensor(), "test-sensor");
+        assert_eq!(event.confidence(), Some(0.95));
+        assert!(matches!(
+            event.learning_method(),
+            LearningMethod::SemiSupervised
+        ));
+    }
+
+    #[test]
+    fn tor_connection_conn_find_attr_by_kind() {
+        let time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
+        let event = TorConnectionConn::new(time, tor_connection_conn_fields());
+
+        // Test finding source address attribute
+        let src_addr_attr = RawEventAttrKind::Conn(ConnAttr::SrcAddr);
+        if let Some(AttrValue::Addr(addr)) = event.find_attr_by_kind(src_addr_attr) {
+            assert_eq!(addr, "192.168.1.100".parse::<IpAddr>().unwrap());
+        } else {
+            panic!("Expected SrcAddr attribute");
+        }
+
+        // Test finding destination port attribute
+        let dst_port_attr = RawEventAttrKind::Conn(ConnAttr::DstPort);
+        if let Some(AttrValue::UInt(port)) = event.find_attr_by_kind(dst_port_attr) {
+            assert_eq!(port, 443);
+        } else {
+            panic!("Expected DstPort attribute");
+        }
+
+        // Test finding protocol attribute
+        let proto_attr = RawEventAttrKind::Conn(ConnAttr::Proto);
+        if let Some(AttrValue::UInt(proto)) = event.find_attr_by_kind(proto_attr) {
+            assert_eq!(proto, 6);
+        } else {
+            panic!("Expected Proto attribute");
+        }
+
+        // Test finding connection state attribute
+        let conn_state_attr = RawEventAttrKind::Conn(ConnAttr::ConnState);
+        if let Some(AttrValue::String(state)) = event.find_attr_by_kind(conn_state_attr) {
+            assert_eq!(state, "SF");
+        } else {
+            panic!("Expected ConnState attribute");
+        }
+
+        // Test finding duration attribute
+        let duration_attr = RawEventAttrKind::Conn(ConnAttr::Duration);
+        if let Some(AttrValue::SInt(duration)) = event.find_attr_by_kind(duration_attr) {
+            assert_eq!(duration, 100);
+        } else {
+            panic!("Expected Duration attribute");
+        }
+
+        // Test finding service attribute
+        let service_attr = RawEventAttrKind::Conn(ConnAttr::Service);
+        if let Some(AttrValue::String(service)) = event.find_attr_by_kind(service_attr) {
+            assert_eq!(service, "https");
+        } else {
+            panic!("Expected Service attribute");
+        }
+
+        // Test finding byte count attributes
+        let orig_bytes_attr = RawEventAttrKind::Conn(ConnAttr::OrigBytes);
+        if let Some(AttrValue::UInt(bytes)) = event.find_attr_by_kind(orig_bytes_attr) {
+            assert_eq!(bytes, 1024);
+        } else {
+            panic!("Expected OrigBytes attribute");
+        }
+
+        let resp_bytes_attr = RawEventAttrKind::Conn(ConnAttr::RespBytes);
+        if let Some(AttrValue::UInt(bytes)) = event.find_attr_by_kind(resp_bytes_attr) {
+            assert_eq!(bytes, 2048);
+        } else {
+            panic!("Expected RespBytes attribute");
+        }
+
+        // Test finding packet count attributes
+        let orig_pkts_attr = RawEventAttrKind::Conn(ConnAttr::OrigPkts);
+        if let Some(AttrValue::UInt(pkts)) = event.find_attr_by_kind(orig_pkts_attr) {
+            assert_eq!(pkts, 10);
+        } else {
+            panic!("Expected OrigPkts attribute");
+        }
+
+        let resp_pkts_attr = RawEventAttrKind::Conn(ConnAttr::RespPkts);
+        if let Some(AttrValue::UInt(pkts)) = event.find_attr_by_kind(resp_pkts_attr) {
+            assert_eq!(pkts, 15);
+        } else {
+            panic!("Expected RespPkts attribute");
+        }
+
+        // Test finding L2 byte count attributes
+        let orig_l2_bytes_attr = RawEventAttrKind::Conn(ConnAttr::OrigL2Bytes);
+        if let Some(AttrValue::UInt(bytes)) = event.find_attr_by_kind(orig_l2_bytes_attr) {
+            assert_eq!(bytes, 1100);
+        } else {
+            panic!("Expected OrigL2Bytes attribute");
+        }
+
+        let resp_l2_bytes_attr = RawEventAttrKind::Conn(ConnAttr::RespL2Bytes);
+        if let Some(AttrValue::UInt(bytes)) = event.find_attr_by_kind(resp_l2_bytes_attr) {
+            assert_eq!(bytes, 2200);
+        } else {
+            panic!("Expected RespL2Bytes attribute");
+        }
+    }
+}
