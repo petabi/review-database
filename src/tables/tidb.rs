@@ -214,6 +214,7 @@ impl<'d> Table<'d, Tidb> {
         self.map.delete(name.as_bytes())
     }
 
+    #[allow(unused)]
     pub(crate) fn raw(&self) -> &Map<'_> {
         &self.map
     }

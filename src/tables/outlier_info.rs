@@ -182,6 +182,7 @@ impl<'d> Table<'d, OutlierInfo> {
         Ok(true)
     }
 
+    #[allow(unused)]
     pub(crate) fn raw(&self) -> &Map<'_> {
         &self.map
     }

@@ -68,6 +68,7 @@ impl<'d> Table<'d, AccountPolicy> {
             .transpose()
     }
 
+    #[allow(unused)]
     pub(crate) fn raw(&self) -> &Map<'_> {
         &self.map
     }
