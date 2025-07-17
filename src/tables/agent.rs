@@ -131,6 +131,7 @@ impl<'d> Table<'d, Agent> {
         Map::open(db, super::AGENTS).map(Table::new)
     }
 
+    #[allow(unused)]
     pub(crate) fn raw(&self) -> &Map<'_> {
         &self.map
     }

@@ -169,6 +169,7 @@ impl<'d> Table<'d> {
         self.node.raw()
     }
 
+    #[allow(unused)]
     pub(crate) fn agent_raw(&self) -> &Map<'_> {
         self.agent.raw()
     }
