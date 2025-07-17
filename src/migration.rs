@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0-alpha.1,<0.40.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0-alpha.2,<0.40.0-alpha.3";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -218,6 +218,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.39.0")?,
             migrate_0_38_to_0_39_0,
         ),
+        (
+            VersionReq::parse(">=0.39.0,<0.40.0")?,
+            Version::parse("0.40.0")?,
+            migrate_0_39_to_0_40_0,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -291,6 +296,27 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
+}
+
+fn migrate_0_39_to_0_40_0(store: &super::Store) -> Result<()> {
+    migrate_0_40_tidb(store)
+}
+
+fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
+    use crate::Tidb;
+    use crate::migration::migration_structures::OldTidb;
+
+    let map = store.tidb_map();
+    let raw = map.raw();
+    for (key, value) in raw.iter_forward()? {
+        let old_tidb: OldTidb = bincode::DefaultOptions::new().deserialize(value.as_ref())?;
+        let new_tidb = Tidb::try_from(old_tidb)?;
+        let (_new_key, new_value) = new_tidb.into_key_value()?;
+        raw.put(&key, &new_value)?;
+    }
+    Ok(())
 }
 
 fn migrate_0_37_to_0_38_0(store: &super::Store) -> Result<()> {
@@ -1256,5 +1282,70 @@ mod tests {
             let expected: Account = v36.clone().into();
             assert_eq!(account, expected);
         }
+    }
+
+    #[test]
+    fn migrate_0_40_tidb() {
+        use bincode::Options;
+
+        use crate::EventCategory;
+        use crate::TidbKind;
+        use crate::migration::migration_structures::{OldRule, OldTidb};
+
+        let settings = TestSchema::new();
+        let map = settings.store.tidb_map();
+        let raw = map.raw();
+
+        let tidb_name = "HttpUriThreat".to_string();
+        let old = OldTidb {
+            id: 201,
+            name: tidb_name.clone(),
+            description: None,
+            kind: TidbKind::Token,
+            category: EventCategory::Reconnaissance,
+            version: "1.0".to_string(),
+            patterns: vec![
+                OldRule {
+                    rule_id: 2_010_100,
+                    category: EventCategory::Reconnaissance,
+                    name: "http_uri_threat".to_string(),
+                    description: None,
+                    references: None,
+                    samples: None,
+                    signatures: Some(vec!["sql,injection,attack".to_string()]),
+                },
+                OldRule {
+                    rule_id: 2_010_101,
+                    category: EventCategory::Reconnaissance,
+                    name: "http_uri_threat2".to_string(),
+                    description: None,
+                    references: None,
+                    samples: None,
+                    signatures: Some(vec!["etc,passwd".to_string()]),
+                },
+            ],
+        };
+        let value = bincode::DefaultOptions::new()
+            .serialize(&old)
+            .expect("serializable");
+
+        assert!(raw.put(tidb_name.as_bytes(), &value).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        assert!(super::migrate_0_40_tidb(&settings.store).is_ok());
+
+        let map = settings.store.tidb_map();
+        let res = map.get(&tidb_name);
+        assert!(res.is_ok());
+        let new = res.unwrap();
+        assert!(new.is_some());
+        let new = new.unwrap();
+        assert_eq!(new.id, 201);
+        assert_eq!(new.category, EventCategory::Reconnaissance);
+        new.patterns.iter().for_each(|rule| {
+            assert_eq!(rule.confidence, None);
+        });
     }
 }
