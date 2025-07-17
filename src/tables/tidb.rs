@@ -39,7 +39,7 @@ impl Tidb {
         Ok(tidb)
     }
 
-    fn into_key_value(self) -> Result<(Vec<u8>, Vec<u8>)> {
+    pub(crate) fn into_key_value(self) -> Result<(Vec<u8>, Vec<u8>)> {
         let value = super::serialize(&self)?;
         let key = self.name.into_bytes();
         Ok((key, value))
@@ -71,6 +71,8 @@ pub struct Rule {
     pub references: Option<Vec<String>>,
     pub samples: Option<Vec<String>>,
     pub signatures: Option<Vec<String>>,
+    /// Confidence level of the rule, ranging from 0.0 to 1.0.
+    pub confidence: Option<f32>,
 }
 
 #[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]

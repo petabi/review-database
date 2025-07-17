@@ -10,8 +10,8 @@ use strum_macros::{Display, EnumString};
 
 use crate::{
     Agent, BlocklistTlsFields, EventCategory, ExternalServiceConfig, ExternalServiceStatus,
-    ExtraThreat, HttpThreatFields, Indexable, NetworkThreat, NodeProfile, Role, TriageScore,
-    WindowsThreat,
+    ExtraThreat, HttpThreatFields, Indexable, NetworkThreat, NodeProfile, Role, Tidb, TidbKind,
+    TidbRule, TriageScore, WindowsThreat,
     account::{PasswordHashAlgorithm, SaltedPassword},
     tables::InnerNode,
     types::Account,
@@ -579,5 +579,56 @@ impl Indexable for OldInnerFromV29BeforeV37 {
 
     fn set_index(&mut self, index: u32) {
         self.id = index;
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct OldTidb {
+    pub id: u32,
+    pub name: String,
+    pub description: Option<String>,
+    pub kind: TidbKind,
+    pub category: EventCategory,
+    pub version: String,
+    pub patterns: Vec<OldRule>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct OldRule {
+    pub rule_id: u32,
+    pub category: EventCategory,
+    pub name: String,
+    pub description: Option<String>,
+    pub references: Option<Vec<String>>,
+    pub samples: Option<Vec<String>>,
+    pub signatures: Option<Vec<String>>,
+}
+
+impl TryFrom<OldTidb> for Tidb {
+    type Error = anyhow::Error;
+
+    fn try_from(input: OldTidb) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: input.id,
+            name: input.name,
+            description: input.description,
+            kind: input.kind,
+            category: input.category,
+            version: input.version,
+            patterns: input
+                .patterns
+                .into_iter()
+                .map(|rule| TidbRule {
+                    rule_id: rule.rule_id,
+                    category: rule.category,
+                    name: rule.name,
+                    description: rule.description,
+                    references: rule.references,
+                    samples: rule.samples,
+                    signatures: rule.signatures,
+                    confidence: None, // Old rules do not have confidence
+                })
+                .collect(),
+        })
     }
 }
