@@ -1,8 +1,8 @@
 //! The `network` table.
 
-use std::{borrow::Cow, fmt::Display};
+use std::{borrow::Cow, collections::HashMap, fmt::Display};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::{DateTime, Utc};
 use num_derive::{FromPrimitive, ToPrimitive};
 use rocksdb::{Direction, OptimisticTransactionDB};
@@ -187,6 +187,53 @@ impl<'d> Table<'d> {
         self.node.count()
     }
 
+    /// Checks if a hostname is already in use by any node across all customers.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    fn is_hostname_in_use(&self, hostname: &str) -> Result<bool> {
+        for result in self.iter(Direction::Forward, None) {
+            let node = result.context("Failed to iterate over nodes")?;
+            if let Some(profile) = &node.profile {
+                if profile.hostname == hostname {
+                    return Ok(true);
+                }
+            }
+            if let Some(profile_draft) = &node.profile_draft {
+                if profile_draft.hostname == hostname {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
+    /// Checks if a hostname is already in use by any node except the specified node ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    fn is_hostname_in_use_except(&self, hostname: &str, except_id: u32) -> Result<bool> {
+        for result in self.iter(Direction::Forward, None) {
+            let node = result.context("Failed to iterate over nodes")?;
+            if node.id == except_id {
+                continue;
+            }
+            if let Some(profile) = &node.profile {
+                if profile.hostname == hostname {
+                    return Ok(true);
+                }
+            }
+            if let Some(profile_draft) = &node.profile_draft {
+                if profile_draft.hostname == hostname {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
     /// Returns a tuple of `(node, invalid_agents, invalid_external_services)` when node with `id` exists.
     ///
     /// # Errors
@@ -234,8 +281,27 @@ impl<'d> Table<'d> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the database operation fails.
+    /// Returns an error if the database operation fails or if the hostname is already in use.
     pub fn put(&self, entry: Node) -> Result<u32> {
+        // Check hostname uniqueness in profile
+        if let Some(profile) = &entry.profile {
+            if self.is_hostname_in_use(&profile.hostname)? {
+                bail!(
+                    "Hostname '{}' is already in use by another node",
+                    profile.hostname
+                );
+            }
+        }
+
+        // Check hostname uniqueness in profile_draft
+        if let Some(profile_draft) = &entry.profile_draft {
+            if self.is_hostname_in_use(&profile_draft.hostname)? {
+                bail!(
+                    "Hostname '{}' is already in use by another node",
+                    profile_draft.hostname
+                );
+            }
+        }
         let inner = Inner {
             id: entry.id,
             name: entry.name,
@@ -307,9 +373,28 @@ impl<'d> Table<'d> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the `id` is invalid or the database operation fails.
+    /// Returns an error if the `id` is invalid, the database operation fails, or if the hostname is already in use.
+    #[allow(clippy::too_many_lines)]
     pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
-        use std::collections::HashMap;
+        // Check hostname uniqueness in new profile
+        if let Some(new_profile) = &new.profile {
+            if self.is_hostname_in_use_except(&new_profile.hostname, id)? {
+                bail!(
+                    "Hostname '{}' is already in use by another node",
+                    new_profile.hostname
+                );
+            }
+        }
+
+        // Check hostname uniqueness in new profile_draft
+        if let Some(new_profile_draft) = &new.profile_draft {
+            if self.is_hostname_in_use_except(&new_profile_draft.hostname, id)? {
+                bail!(
+                    "Hostname '{}' is already in use by another node",
+                    new_profile_draft.hostname
+                );
+            }
+        }
 
         // Update Agent
         let mut old_agents: HashMap<_, _> = old.agents.iter().map(|a| (&a.key, a)).collect();
@@ -1182,6 +1267,219 @@ mod test {
 
         // Check that the status of the `AgentKind::SemiSupervised` agent was updated.
         assert_eq!(updated.agents[1].status, Status::Disabled);
+    }
+
+    #[test]
+    fn hostname_uniqueness_on_put() {
+        let store = setup_store();
+        let node_table = store.node_map();
+
+        let profile1 = Profile {
+            customer_id: 1,
+            description: "Customer 1 Node".to_string(),
+            hostname: "unique-hostname".to_string(),
+        };
+
+        let profile2 = Profile {
+            customer_id: 2,
+            description: "Customer 2 Node".to_string(),
+            hostname: "unique-hostname".to_string(), // Same hostname as profile1
+        };
+
+        let node1 = create_node(0, "node1", None, Some(profile1), None, vec![], vec![]);
+        let node2 = create_node(0, "node2", None, Some(profile2), None, vec![], vec![]);
+
+        // First node should succeed
+        let result1 = node_table.put(node1);
+        assert!(result1.is_ok());
+
+        // Second node with same hostname should fail
+        let result2 = node_table.put(node2);
+        assert!(result2.is_err());
+        assert!(
+            result2
+                .unwrap_err()
+                .to_string()
+                .contains("Hostname 'unique-hostname' is already in use")
+        );
+    }
+
+    #[test]
+    fn hostname_uniqueness_on_put_with_draft() {
+        let store = setup_store();
+        let node_table = store.node_map();
+
+        let profile = Profile {
+            customer_id: 1,
+            description: "Node with profile".to_string(),
+            hostname: "hostname-in-use".to_string(),
+        };
+
+        let draft_profile = Profile {
+            customer_id: 2,
+            description: "Node with draft".to_string(),
+            hostname: "hostname-in-use".to_string(), // Same hostname as profile
+        };
+
+        let node1 = create_node(0, "node1", None, Some(profile), None, vec![], vec![]);
+        let node2 = create_node(0, "node2", None, None, Some(draft_profile), vec![], vec![]);
+
+        // First node should succeed
+        let result1 = node_table.put(node1);
+        assert!(result1.is_ok());
+
+        // Second node with same hostname in draft should fail
+        let result2 = node_table.put(node2);
+        assert!(result2.is_err());
+        assert!(
+            result2
+                .unwrap_err()
+                .to_string()
+                .contains("Hostname 'hostname-in-use' is already in use")
+        );
+    }
+
+    #[test]
+    fn hostname_uniqueness_on_update() {
+        let store = setup_store();
+        let mut node_table = store.node_map();
+
+        let profile1 = Profile {
+            customer_id: 1,
+            description: "Node 1".to_string(),
+            hostname: "hostname1".to_string(),
+        };
+
+        let profile2 = Profile {
+            customer_id: 2,
+            description: "Node 2".to_string(),
+            hostname: "hostname2".to_string(),
+        };
+
+        let node1 = create_node(
+            0,
+            "node1",
+            None,
+            Some(profile1.clone()),
+            None,
+            vec![],
+            vec![],
+        );
+        let node2 = create_node(0, "node2", None, Some(profile2), None, vec![], vec![]);
+
+        let _id1 = node_table.put(node1).unwrap();
+        let id2 = node_table.put(node2).unwrap();
+
+        // Try to update node2 to use the same hostname as node1
+        let old = Update {
+            name: Some("node2".to_string()),
+            name_draft: None,
+            profile: Some(Profile {
+                customer_id: 2,
+                description: "Node 2".to_string(),
+                hostname: "hostname2".to_string(),
+            }),
+            profile_draft: None,
+            agents: vec![],
+            external_services: vec![],
+        };
+
+        let new = Update {
+            name: Some("node2".to_string()),
+            name_draft: None,
+            profile: Some(Profile {
+                customer_id: 2,
+                description: "Node 2".to_string(),
+                hostname: "hostname1".to_string(), // Trying to use hostname1
+            }),
+            profile_draft: None,
+            agents: vec![],
+            external_services: vec![],
+        };
+
+        // Update should fail due to hostname conflict
+        let result = node_table.update(id2, &old, &new);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Hostname 'hostname1' is already in use")
+        );
+    }
+
+    #[test]
+    fn hostname_uniqueness_allows_same_node_update() {
+        let store = setup_store();
+        let mut node_table = store.node_map();
+
+        let profile = Profile {
+            customer_id: 1,
+            description: "Node 1".to_string(),
+            hostname: "hostname1".to_string(),
+        };
+
+        let node = create_node(
+            0,
+            "node1",
+            None,
+            Some(profile.clone()),
+            None,
+            vec![],
+            vec![],
+        );
+        let id = node_table.put(node).unwrap();
+
+        // Update the same node with the same hostname should succeed
+        let old = Update {
+            name: Some("node1".to_string()),
+            name_draft: None,
+            profile: Some(profile.clone()),
+            profile_draft: None,
+            agents: vec![],
+            external_services: vec![],
+        };
+
+        let new = Update {
+            name: Some("node1".to_string()),
+            name_draft: Some("updated-node1".to_string()),
+            profile: Some(profile), // Same hostname
+            profile_draft: None,
+            agents: vec![],
+            external_services: vec![],
+        };
+
+        // Update should succeed since it's the same node
+        let result = node_table.update(id, &old, &new);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn hostname_uniqueness_different_hostnames_allowed() {
+        let store = setup_store();
+        let node_table = store.node_map();
+
+        let profile1 = Profile {
+            customer_id: 1,
+            description: "Customer 1 Node".to_string(),
+            hostname: "hostname1".to_string(),
+        };
+
+        let profile2 = Profile {
+            customer_id: 2,
+            description: "Customer 2 Node".to_string(),
+            hostname: "hostname2".to_string(), // Different hostname
+        };
+
+        let node1 = create_node(0, "node1", None, Some(profile1), None, vec![], vec![]);
+        let node2 = create_node(0, "node2", None, Some(profile2), None, vec![], vec![]);
+
+        // Both nodes should succeed as they have different hostnames
+        let result1 = node_table.put(node1);
+        assert!(result1.is_ok());
+
+        let result2 = node_table.put(node2);
+        assert!(result2.is_ok());
     }
 
     #[test]

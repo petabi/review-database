@@ -13,6 +13,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   binary data, replacing direct PostgreSQL storage.
 - Added new `TorConnectionConn` event kind and event structure for monitoring
   network connections to Tor exit nodes.
+- Added hostname uniqueness constraint for nodes across all customers. Node
+  hostnames in both `profile` and `profile_draft` fields must now be unique
+  globally, preventing hostname conflicts between different customers.
 
 ### Changed
 
