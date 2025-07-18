@@ -187,20 +187,37 @@ impl<'d> Table<'d> {
         self.node.count()
     }
 
-    /// Checks if a hostname is already in use by any node across all customers.
+    /// Checks if a hostname is already in use by any node within a transaction.
+    /// This is used to atomically check hostname uniqueness.
     ///
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    fn is_hostname_in_use(&self, hostname: &str) -> Result<bool> {
-        for result in self.iter(Direction::Forward, None) {
-            let node = result.context("Failed to iterate over nodes")?;
-            if let Some(profile) = &node.profile {
+    fn is_hostname_in_use_transaction(
+        &self,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+        hostname: &str,
+    ) -> Result<bool> {
+        use rocksdb::IteratorMode;
+
+        let iter = txn.iterator_cf(self.node.raw().cf(), IteratorMode::Start);
+
+        for item in iter {
+            let (key, value) = item.context("Failed to read item from transaction iterator")?;
+
+            // Skip the index entry (empty key)
+            if key.is_empty() {
+                continue;
+            }
+
+            let inner: Inner = super::deserialize(&value)?;
+
+            if let Some(profile) = &inner.profile {
                 if profile.hostname == hostname {
                     return Ok(true);
                 }
             }
-            if let Some(profile_draft) = &node.profile_draft {
+            if let Some(profile_draft) = &inner.profile_draft {
                 if profile_draft.hostname == hostname {
                     return Ok(true);
                 }
@@ -209,23 +226,41 @@ impl<'d> Table<'d> {
         Ok(false)
     }
 
-    /// Checks if a hostname is already in use by any node except the specified node ID.
+    /// Checks if a hostname is already in use by any node except the specified node ID within a transaction.
     ///
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    fn is_hostname_in_use_except(&self, hostname: &str, except_id: u32) -> Result<bool> {
-        for result in self.iter(Direction::Forward, None) {
-            let node = result.context("Failed to iterate over nodes")?;
-            if node.id == except_id {
+    fn is_hostname_in_use_except_transaction(
+        &self,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+        hostname: &str,
+        except_id: u32,
+    ) -> Result<bool> {
+        use rocksdb::IteratorMode;
+
+        let iter = txn.iterator_cf(self.node.raw().cf(), IteratorMode::Start);
+
+        for item in iter {
+            let (key, value) = item.context("Failed to read item from transaction iterator")?;
+
+            // Skip the index entry (empty key)
+            if key.is_empty() {
                 continue;
             }
-            if let Some(profile) = &node.profile {
+
+            let inner: Inner = super::deserialize(&value)?;
+
+            if inner.id == except_id {
+                continue;
+            }
+
+            if let Some(profile) = &inner.profile {
                 if profile.hostname == hostname {
                     return Ok(true);
                 }
             }
-            if let Some(profile_draft) = &node.profile_draft {
+            if let Some(profile_draft) = &inner.profile_draft {
                 if profile_draft.hostname == hostname {
                     return Ok(true);
                 }
@@ -283,52 +318,85 @@ impl<'d> Table<'d> {
     ///
     /// Returns an error if the database operation fails or if the hostname is already in use.
     pub fn put(&self, entry: Node) -> Result<u32> {
-        // Check hostname uniqueness in profile
-        if let Some(profile) = &entry.profile {
-            if self.is_hostname_in_use(&profile.hostname)? {
-                bail!(
-                    "Hostname '{}' is already in use by another node",
-                    profile.hostname
-                );
+        // Use optimistic transactions to atomically check hostname uniqueness
+        // This ensures no race condition can occur between the check and insert
+        loop {
+            // First, check hostname uniqueness within a transaction
+            let txn = self.node.raw().db().transaction();
+
+            if let Some(profile) = &entry.profile {
+                if self.is_hostname_in_use_transaction(&txn, &profile.hostname)? {
+                    bail!(
+                        "Hostname '{}' is already in use by another node",
+                        profile.hostname
+                    );
+                }
+            }
+
+            if let Some(profile_draft) = &entry.profile_draft {
+                if self.is_hostname_in_use_transaction(&txn, &profile_draft.hostname)? {
+                    bail!(
+                        "Hostname '{}' is already in use by another node",
+                        profile_draft.hostname
+                    );
+                }
+            }
+
+            // Release the transaction and attempt insertion
+            match txn.commit() {
+                Ok(()) => {
+                    // Hostname uniqueness check passed, now try to insert the node
+                    let inner = Inner {
+                        id: entry.id,
+                        name: entry.name.clone(),
+                        name_draft: entry.name_draft.clone(),
+                        profile: entry.profile.clone(),
+                        profile_draft: entry.profile_draft.clone(),
+                        creation_time: entry.creation_time,
+                        agents: entry.agents.iter().map(|a| a.key.clone()).collect(),
+                        external_services: entry
+                            .external_services
+                            .iter()
+                            .map(|a| a.key.clone())
+                            .collect(),
+                    };
+
+                    // Try to insert using the existing IndexedTable.put method
+                    match self.node.put(inner) {
+                        Ok(node_id) => {
+                            // Node insertion succeeded, add agents and external services
+                            for mut agent in entry.agents {
+                                agent.node = node_id;
+                                self.agent.put(&agent)?;
+                            }
+
+                            for mut external_service in entry.external_services {
+                                external_service.node = node_id;
+                                self.external_service.put(&external_service)?;
+                            }
+
+                            return Ok(node_id);
+                        }
+                        Err(e) => {
+                            // If insert failed, check if it's due to a race condition
+                            // If so, retry the whole process (including hostname check)
+                            if e.to_string().contains("Resource busy")
+                                || e.to_string().contains("already exists")
+                            {
+                                continue;
+                            }
+                            return Err(e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    if !e.as_ref().starts_with("Resource busy:") {
+                        return Err(e).context("failed to check hostname uniqueness");
+                    }
+                    // Hostname check transaction failed, retry
+                }
             }
         }
-
-        // Check hostname uniqueness in profile_draft
-        if let Some(profile_draft) = &entry.profile_draft {
-            if self.is_hostname_in_use(&profile_draft.hostname)? {
-                bail!(
-                    "Hostname '{}' is already in use by another node",
-                    profile_draft.hostname
-                );
-            }
-        }
-        let inner = Inner {
-            id: entry.id,
-            name: entry.name,
-            name_draft: entry.name_draft,
-            profile: entry.profile,
-            profile_draft: entry.profile_draft,
-            creation_time: entry.creation_time,
-            agents: entry.agents.iter().map(|a| a.key.clone()).collect(),
-            external_services: entry
-                .external_services
-                .iter()
-                .map(|a| a.key.clone())
-                .collect(),
-        };
-
-        let node = self.node.put(inner)?;
-
-        for mut agent in entry.agents {
-            agent.node = node;
-            self.agent.put(&agent)?;
-        }
-
-        for mut external_service in entry.external_services {
-            external_service.node = node;
-            self.external_service.put(&external_service)?;
-        }
-        Ok(node)
     }
 
     /// Removes a node with given `id`, returns `(key, invalid_agents, invalid_external_services)`.
@@ -376,23 +444,42 @@ impl<'d> Table<'d> {
     /// Returns an error if the `id` is invalid, the database operation fails, or if the hostname is already in use.
     #[allow(clippy::too_many_lines)]
     pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
-        // Check hostname uniqueness in new profile
-        if let Some(new_profile) = &new.profile {
-            if self.is_hostname_in_use_except(&new_profile.hostname, id)? {
-                bail!(
-                    "Hostname '{}' is already in use by another node",
-                    new_profile.hostname
-                );
-            }
-        }
+        // Use optimistic transaction to atomically check hostname uniqueness and perform update
+        loop {
+            let txn = self.node.raw().db().transaction();
 
-        // Check hostname uniqueness in new profile_draft
-        if let Some(new_profile_draft) = &new.profile_draft {
-            if self.is_hostname_in_use_except(&new_profile_draft.hostname, id)? {
-                bail!(
-                    "Hostname '{}' is already in use by another node",
-                    new_profile_draft.hostname
-                );
+            // Check hostname uniqueness within transaction
+            if let Some(new_profile) = &new.profile {
+                if self.is_hostname_in_use_except_transaction(&txn, &new_profile.hostname, id)? {
+                    bail!(
+                        "Hostname '{}' is already in use by another node",
+                        new_profile.hostname
+                    );
+                }
+            }
+
+            if let Some(new_profile_draft) = &new.profile_draft {
+                if self.is_hostname_in_use_except_transaction(
+                    &txn,
+                    &new_profile_draft.hostname,
+                    id,
+                )? {
+                    bail!(
+                        "Hostname '{}' is already in use by another node",
+                        new_profile_draft.hostname
+                    );
+                }
+            }
+
+            // The hostname check passed within the transaction, now commit and proceed with update
+            match txn.commit() {
+                Ok(()) => break,
+                Err(e) => {
+                    if !e.as_ref().starts_with("Resource busy:") {
+                        return Err(e).context("failed to check hostname uniqueness");
+                    }
+                    // Transaction failed due to conflict, retry
+                }
             }
         }
 
