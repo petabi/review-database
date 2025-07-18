@@ -1,4 +1,3 @@
-mod column;
 mod ipaddr;
 mod one_to_n;
 mod time_series;
@@ -6,7 +5,6 @@ mod time_series;
 use std::cmp::Reverse;
 use std::collections::HashMap;
 
-use chrono::NaiveDateTime;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use diesel_async::pg::AsyncPgConnection;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -20,34 +18,6 @@ const DEFAULT_PORTION_OF_CLUSTER: f64 = 0.3;
 const DEFAULT_NUMBER_OF_CLUSTER: usize = 10;
 const DEFAULT_PORTION_OF_TOP_N: f64 = 1.0;
 const DEFAULT_NUMBER_OF_COLUMN: usize = 30;
-
-trait ValueType {
-    fn into_string(self) -> String;
-}
-
-impl ValueType for NaiveDateTime {
-    fn into_string(self) -> String {
-        self.to_string()
-    }
-}
-
-impl ValueType for i64 {
-    fn into_string(self) -> String {
-        self.to_string()
-    }
-}
-
-impl ValueType for String {
-    fn into_string(self) -> String {
-        self
-    }
-}
-
-impl ValueType for Vec<u8> {
-    fn into_string(self) -> String {
-        String::from_utf8_lossy(&self).to_string()
-    }
-}
 
 impl From<(i32, i32)> for StructuredColumnType {
     fn from((column_index, type_id): (i32, i32)) -> Self {
