@@ -25,11 +25,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - `Database::insert_column_statistics` is removed. User is advised to use
   `Table<'d, ColumnStats>::insert_column_statistics`.
 - `Database::get_columns_for_top_n` and `Database::get_top_multimaps_of_model`
-  is removed. User is advised to use `Table<'d, CsvColumnExtra>::get_by_model`
+  are removed. User is advised to use `Table<'d, CsvColumnExtra>::get_by_model`
   to retrieve `CsvColumnExtra` for the model, and then use
   `Table<'d, ColumnStats>::get_columns_for_top_n` and
   `Table<'d, ColumnStats>::get_top_multimaps_of_model` for retrieving
   corresponding statistics.
+- `Database::count_rounds_by_cluster` and `Database::load_rounds_by_cluster` are
+  removed. User is advised to use `Table<'d, ColumnStats>::count_rounds_by_cluster`
+  and `Table<'d, ColumnStats>::load_rounds_by_cluster` respectively instead.
 
 ## [0.39.0] - 2025-07-07
 
