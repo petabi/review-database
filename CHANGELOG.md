@@ -27,6 +27,23 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Migration from version 0.39.0 and earlier is no longer supported.
 - `Database::insert_column_statistics` is removed. User is advised to use
   `Table<'d, ColumnStats>::insert_column_statistics`.
+- `Database::get_columns_for_top_n` and `Database::get_top_multimaps_of_model`
+  are removed. User is advised to use `Table<'d, CsvColumnExtra>::get_by_model`
+  to retrieve `CsvColumnExtra` for the model, and then use
+  `Table<'d, ColumnStats>::get_columns_for_top_n` and
+  `Table<'d, ColumnStats>::get_top_multimaps_of_model` for retrieving
+  corresponding statistics.
+- `Database::count_rounds_by_cluster` and `Database::load_rounds_by_cluster` are
+  removed. User is advised to use `Table<'d, ColumnStats>::count_rounds_by_cluster`
+  and `Table<'d, ColumnStats>::load_rounds_by_cluster` respectively instead.
+- `Database::get_column_types_of_model` is removed. User is advised to use
+  `Table<'d, ColumnStats>::get_column_types_of_model`.
+- `Database::get_top_ip_addresses_of_cluster` and `Database::get_top_ip_addresses_of_model`
+  are removed. User is advised to use `Table<'d, CsvColumnExtra>::get_by_model`
+  to retrieve `CsvColumnExtra` for the model, and then use
+  `Table<'d, ColumnStats>::get_top_ip_addresses_of_cluster` and
+  `Table<'d, ColumnStats>::get_top_ip_addresses_of_model` for retrieving
+  corresponding statistics.
 
 ## [0.39.0] - 2025-07-07
 
