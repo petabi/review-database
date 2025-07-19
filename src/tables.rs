@@ -74,7 +74,7 @@ pub use self::trusted_domain::TrustedDomain;
 pub use self::trusted_user_agent::TrustedUserAgent;
 use super::{Indexed, IndexedMap, Map, event};
 use crate::{
-    Direction, Indexable,
+    Direction, Indexable, IndexedMapUpdate,
     batch_info::BatchInfo,
     category::Category,
     collections::IndexedSet,
@@ -538,6 +538,20 @@ impl<R: UniqueKey + Value> Table<'_, R> {
             .put(record.unique_key().as_ref(), record.value().as_ref())
     }
 
+    /// Stores a record into the database within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn put_with_transaction(
+        &self,
+        record: &R,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()> {
+        self.map
+            .put_with_transaction(record.unique_key().as_ref(), record.value().as_ref(), txn)
+    }
+
     /// Adds a record into the database.
     ///
     /// # Errors
@@ -547,6 +561,56 @@ impl<R: UniqueKey + Value> Table<'_, R> {
     pub fn insert(&self, record: &R) -> Result<()> {
         self.map
             .insert(record.unique_key().as_ref(), record.value().as_ref())
+    }
+
+    /// Adds a record into the database within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the record with the same key exists, or the database
+    /// operation fails.
+    pub fn insert_with_transaction(
+        &self,
+        record: &R,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()> {
+        self.map
+            .insert_with_transaction(record.unique_key().as_ref(), record.value().as_ref(), txn)
+    }
+
+    /// Updates a record in the database within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the old value does not match the value in the database, the old key does
+    /// not exist, or the database operation fails.
+    pub fn update_with_transaction(
+        &self,
+        old: &R,
+        new: &R,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()>
+    where
+        R: Value,
+    {
+        self.map.update_with_transaction(
+            (old.unique_key().as_ref(), old.value().as_ref()),
+            (new.unique_key().as_ref(), new.value().as_ref()),
+            txn,
+        )
+    }
+
+    /// Deletes a record from the database within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key does not exist or the database operation fails.
+    pub fn delete_with_transaction(
+        &self,
+        key: &[u8],
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()> {
+        self.map.delete_with_transaction(key, txn)
     }
 }
 
@@ -636,6 +700,22 @@ impl<'d, R> IndexedTable<'d, R> {
         self.indexed_map.insert(entry)
     }
 
+    /// Stores a record with the given ID within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn put_with_transaction(
+        &self,
+        entry: R,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<u32>
+    where
+        R: Indexable,
+    {
+        self.indexed_map.insert_with_transaction(entry, txn)
+    }
+
     /// Removes a record with the given ID.
     ///
     /// # Errors
@@ -646,6 +726,22 @@ impl<'d, R> IndexedTable<'d, R> {
         R: Indexable,
     {
         self.indexed_map.remove::<R>(id)
+    }
+
+    /// Removes a record with the given ID within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn remove_with_transaction(
+        &self,
+        id: u32,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<Vec<u8>>
+    where
+        R: Indexable,
+    {
+        self.indexed_map.remove_with_transaction::<R>(id, txn)
     }
 
     /// Get a record with the given ID.
@@ -667,6 +763,27 @@ impl<'d, R> IndexedTable<'d, R> {
     /// Returns an error if the database operation fails.
     pub fn deactivate(&self, id: u32) -> Result<Vec<u8>> {
         self.indexed_map.deactivate(id)
+    }
+
+    /// Updates a record within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn update_with_transaction<O, V>(
+        &self,
+        id: u32,
+        old: &O,
+        new: &V,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()>
+    where
+        O: IndexedMapUpdate,
+        O::Entry: Indexable + FromKeyValue,
+        V: IndexedMapUpdate,
+        V::Entry: Indexable + From<O::Entry>,
+    {
+        self.indexed_map.update_with_transaction(id, old, new, txn)
     }
 }
 

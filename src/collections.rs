@@ -377,6 +377,42 @@ pub trait Indexed {
         Ok(i)
     }
 
+    /// Inserts a new key-value pair within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key already exists.
+    fn insert_with_transaction<T: Indexable>(
+        &self,
+        mut entry: T,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<u32> {
+        if entry.key().is_empty() {
+            bail!("key shouldn't be empty");
+        }
+        let mut index = self.index_in_transaction(txn)?;
+        let i = index.insert(&entry.key()).context("cannot insert key")?;
+        entry.set_index(i);
+        if txn
+            .get_for_update_cf(self.cf(), entry.indexed_key(), super::EXCLUSIVE)
+            .context("cannot read from database")?
+            .is_some()
+        {
+            bail!("key already exists");
+        }
+        txn.put_cf(
+            self.cf(),
+            [],
+            bincode::DefaultOptions::new()
+                .serialize(&index)
+                .expect("serializable"),
+        )
+        .context("failed to update database index")?;
+        txn.put_cf(self.cf(), entry.indexed_key(), entry.value())
+            .context("failed to write new entry")?;
+        Ok(i)
+    }
+
     /// Removes a key-value pair with the given ID.
     ///
     /// # Errors
@@ -413,6 +449,37 @@ pub trait Indexed {
                 }
             }
         }
+        Ok(key)
+    }
+
+    /// Removes a key-value pair with the given ID within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    fn remove_with_transaction<T: Indexable>(
+        &self,
+        id: u32,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<Vec<u8>> {
+        let mut index = self
+            .index_in_transaction(txn)
+            .context("cannot read index")?;
+        let key = index.remove(id).context("cannot remove key")?;
+        if key.is_empty() {
+            bail!("corrupt index");
+        }
+        let indexed_key = T::make_indexed_key(Cow::Borrowed(&key), id);
+        txn.put_cf(
+            self.cf(),
+            [],
+            bincode::DefaultOptions::new()
+                .serialize(&index)
+                .context("failed to serialize index")?,
+        )
+        .context("failed to update database index")?;
+        txn.delete_cf(self.cf(), indexed_key)
+            .context("failed to remove entry")?;
         Ok(key)
     }
 
@@ -535,6 +602,91 @@ pub trait Indexed {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Updates an old key-value pair to a new one within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `id` is invalid or the database operation fails.
+    fn update_with_transaction<O, V>(
+        &self,
+        id: u32,
+        old: &O,
+        new: &V,
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()>
+    where
+        O: IndexedMapUpdate,
+        O::Entry: Indexable + FromKeyValue,
+        V: IndexedMapUpdate,
+        V::Entry: Indexable + From<O::Entry>,
+    {
+        let mut index = self
+            .index_in_transaction(txn)
+            .context("cannot read index")?;
+        let cur_key = if let Some(key) = new.key() {
+            if key.is_empty() {
+                bail!("key shouldn't be empty");
+            }
+            index.update(id, &key).context("cannot update index")?
+        } else {
+            Vec::new()
+        };
+        let key = if new.key().is_some() {
+            V::Entry::make_indexed_key(Cow::Owned(cur_key), id)
+        } else if let Some(key) = index.get(id).context("invalid ID")? {
+            V::Entry::make_indexed_key(Cow::Borrowed(key), id)
+        } else {
+            bail!("no such ID");
+        };
+
+        let entry = if let Some(value) = txn
+            .get_for_update_cf(self.cf(), &key, super::EXCLUSIVE)
+            .context("cannot read entry")?
+        {
+            O::Entry::from_key_value(&key, &value).context("invalid entry in database")?
+        } else {
+            bail!("corrupt index");
+        };
+        if !old.verify(&entry) {
+            bail!("entry changed");
+        }
+        let new_key = if let Some(new_key) = new.key() {
+            let new_key = V::Entry::make_indexed_key(new_key, id);
+
+            if new_key != key {
+                txn.delete_cf(self.cf(), &key)
+                    .context("failed to delete old entry")?;
+                if txn
+                    .get_pinned_cf(self.cf(), &new_key)
+                    .context("cannot read from database")?
+                    .is_some()
+                {
+                    bail!("new key already exists");
+                }
+            }
+            new_key
+        } else {
+            key
+        };
+
+        let new_entry = new.apply(entry.into());
+        txn.put_cf(
+            self.cf(),
+            new_key,
+            new_entry.context("invalid update")?.value(),
+        )
+        .context("failed to write updated entry")?;
+        txn.put_cf(
+            self.cf(),
+            [],
+            bincode::DefaultOptions::new()
+                .serialize(&index)
+                .context("failed to serialize index")?,
+        )
+        .context("failed to update database index")?;
         Ok(())
     }
 }
