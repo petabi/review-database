@@ -317,13 +317,13 @@ impl<'d> Table<'d> {
     /// # Errors
     ///
     /// Returns an error if the database operation fails or if the hostname is already in use.
-    pub fn put(&self, entry: Node) -> Result<u32> {
-        // Use optimistic transactions to atomically check hostname uniqueness
+    pub fn put(&self, entry: &Node) -> Result<u32> {
+        // Use optimistic transactions to atomically check hostname uniqueness and perform all writes
         // This ensures no race condition can occur between the check and insert
-        loop {
-            // First, check hostname uniqueness within a transaction
+        'outer: loop {
             let txn = self.node.raw().db().transaction();
 
+            // Check hostname uniqueness within the transaction
             if let Some(profile) = &entry.profile {
                 if self.is_hostname_in_use_transaction(&txn, &profile.hostname)? {
                     bail!(
@@ -342,58 +342,74 @@ impl<'d> Table<'d> {
                 }
             }
 
-            // Release the transaction and attempt insertion
-            match txn.commit() {
-                Ok(()) => {
-                    // Hostname uniqueness check passed, now try to insert the node
-                    let inner = Inner {
-                        id: entry.id,
-                        name: entry.name.clone(),
-                        name_draft: entry.name_draft.clone(),
-                        profile: entry.profile.clone(),
-                        profile_draft: entry.profile_draft.clone(),
-                        creation_time: entry.creation_time,
-                        agents: entry.agents.iter().map(|a| a.key.clone()).collect(),
-                        external_services: entry
-                            .external_services
-                            .iter()
-                            .map(|a| a.key.clone())
-                            .collect(),
-                    };
+            // Create the inner node entry
+            let inner = Inner {
+                id: entry.id,
+                name: entry.name.clone(),
+                name_draft: entry.name_draft.clone(),
+                profile: entry.profile.clone(),
+                profile_draft: entry.profile_draft.clone(),
+                creation_time: entry.creation_time,
+                agents: entry.agents.iter().map(|a| a.key.clone()).collect(),
+                external_services: entry
+                    .external_services
+                    .iter()
+                    .map(|a| a.key.clone())
+                    .collect(),
+            };
 
-                    // Try to insert using the existing IndexedTable.put method
-                    match self.node.put(inner) {
-                        Ok(node_id) => {
-                            // Node insertion succeeded, add agents and external services
-                            for mut agent in entry.agents {
-                                agent.node = node_id;
-                                self.agent.put(&agent)?;
-                            }
-
-                            for mut external_service in entry.external_services {
-                                external_service.node = node_id;
-                                self.external_service.put(&external_service)?;
-                            }
-
-                            return Ok(node_id);
-                        }
-                        Err(e) => {
-                            // If insert failed, check if it's due to a race condition
-                            // If so, retry the whole process (including hostname check)
-                            if e.to_string().contains("Resource busy")
-                                || e.to_string().contains("already exists")
-                            {
-                                continue;
-                            }
-                            return Err(e);
-                        }
+            // Insert the node within the same transaction
+            let node_id = match self.node.put_with_transaction(inner, &txn) {
+                Ok(id) => id,
+                Err(e) => {
+                    if e.to_string().contains("Resource busy")
+                        || e.to_string().contains("already exists")
+                    {
+                        continue 'outer;
                     }
+                    return Err(e);
                 }
+            };
+
+            // Insert agents within the same transaction
+            for agent in &entry.agents {
+                let mut agent = agent.clone();
+                agent.node = node_id;
+                if let Err(e) = self.agent.put_with_transaction(&agent, &txn) {
+                    if e.to_string().contains("Resource busy")
+                        || e.to_string().contains("already exists")
+                    {
+                        continue 'outer;
+                    }
+                    return Err(e);
+                }
+            }
+
+            // Insert external services within the same transaction
+            for external_service in &entry.external_services {
+                let mut external_service = external_service.clone();
+                external_service.node = node_id;
+                if let Err(e) = self
+                    .external_service
+                    .put_with_transaction(&external_service, &txn)
+                {
+                    if e.to_string().contains("Resource busy")
+                        || e.to_string().contains("already exists")
+                    {
+                        continue 'outer;
+                    }
+                    return Err(e);
+                }
+            }
+
+            // Commit the entire transaction atomically
+            match txn.commit() {
+                Ok(()) => return Ok(node_id),
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
-                        return Err(e).context("failed to check hostname uniqueness");
+                        return Err(e).context("failed to insert node and associated data");
                     }
-                    // Hostname check transaction failed, retry
+                    // Transaction failed due to conflict, retry
                 }
             }
         }
@@ -444,7 +460,7 @@ impl<'d> Table<'d> {
     /// Returns an error if the `id` is invalid, the database operation fails, or if the hostname is already in use.
     #[allow(clippy::too_many_lines)]
     pub fn update(&mut self, id: u32, old: &Update, new: &Update) -> Result<()> {
-        // Use optimistic transaction to atomically check hostname uniqueness and perform update
+        // Use optimistic transaction to atomically check hostname uniqueness and update the node
         loop {
             let txn = self.node.raw().db().transaction();
 
@@ -471,19 +487,56 @@ impl<'d> Table<'d> {
                 }
             }
 
-            // The hostname check passed within the transaction, now commit and proceed with update
+            // Update Node within the transaction
+            let old_inner = InnerUpdate {
+                name: old.name.clone(),
+                name_draft: old.name_draft.clone(),
+                profile: old.profile.clone(),
+                profile_draft: old.profile_draft.clone(),
+                agents: old.agents.iter().map(|a| a.key.clone()).collect(),
+                external_services: old
+                    .external_services
+                    .iter()
+                    .map(|a| a.key.clone())
+                    .collect(),
+            };
+
+            let new_inner = InnerUpdate {
+                name: new.name.clone(),
+                name_draft: new.name_draft.clone(),
+                profile: new.profile.clone(),
+                profile_draft: new.profile_draft.clone(),
+                agents: new.agents.iter().map(|a| a.key.clone()).collect(),
+                external_services: new
+                    .external_services
+                    .iter()
+                    .map(|a| a.key.clone())
+                    .collect(),
+            };
+
+            if let Err(e) = self
+                .node
+                .update_with_transaction(id, &old_inner, &new_inner, &txn)
+            {
+                if e.to_string().contains("Resource busy") {
+                    continue;
+                }
+                return Err(e);
+            }
+
+            // Commit the hostname check and node update transaction atomically
             match txn.commit() {
                 Ok(()) => break,
                 Err(e) => {
                     if !e.as_ref().starts_with("Resource busy:") {
-                        return Err(e).context("failed to check hostname uniqueness");
+                        return Err(e).context("failed to update node");
                     }
                     // Transaction failed due to conflict, retry
                 }
             }
         }
 
-        // Update Agent
+        // Update Agent operations (outside the hostname transaction)
         let mut old_agents: HashMap<_, _> = old.agents.iter().map(|a| (&a.key, a)).collect();
         let mut new_agents: HashMap<_, _> = new.agents.iter().map(|a| (&a.key, a)).collect();
 
@@ -518,7 +571,7 @@ impl<'d> Table<'d> {
             self.agent.update(&old, &new)?;
         }
 
-        // Update ExternalService
+        // Update ExternalService operations (outside the hostname transaction)
         let mut old_external_services: HashMap<_, _> =
             old.external_services.iter().map(|a| (&a.key, a)).collect();
         let mut new_external_services: HashMap<_, _> =
@@ -558,34 +611,7 @@ impl<'d> Table<'d> {
             self.external_service.update(&old, &new)?;
         }
 
-        // Update Node
-        let old_inner = InnerUpdate {
-            name: old.name.clone(),
-            name_draft: old.name_draft.clone(),
-            profile: old.profile.clone(),
-            profile_draft: old.profile_draft.clone(),
-            agents: old.agents.iter().map(|a| a.key.clone()).collect(),
-            external_services: old
-                .external_services
-                .iter()
-                .map(|a| a.key.clone())
-                .collect(),
-        };
-
-        let new_inner = InnerUpdate {
-            name: new.name.clone(),
-            name_draft: new.name_draft.clone(),
-            profile: new.profile.clone(),
-            profile_draft: new.profile_draft.clone(),
-            agents: new.agents.iter().map(|a| a.key.clone()).collect(),
-            external_services: new
-                .external_services
-                .iter()
-                .map(|a| a.key.clone())
-                .collect(),
-        };
-
-        self.node.update(id, &old_inner, &new_inner)
+        Ok(())
     }
 
     /// Updates the status of an agent specified by `agent_key`, which belongs to the node whose
@@ -725,15 +751,6 @@ impl Indexable for Inner {
 impl IndexedTable<'_, Inner> {
     pub(crate) fn raw(&self) -> &IndexedMap<'_> {
         &self.indexed_map
-    }
-
-    /// Updates the `Node` from `old` to `new`, given `id`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the `id` is invalid or the database operation fails.
-    fn update(&mut self, id: u32, old: &InnerUpdate, new: &InnerUpdate) -> Result<()> {
-        self.indexed_map.update(id, old, new)
     }
 }
 
@@ -1054,7 +1071,7 @@ mod test {
         );
         let node_table = store.node_map();
         assert_eq!(node_table.count().unwrap(), 0);
-        let res = node_table.put(node.clone());
+        let res = node_table.put(&node);
         assert!(res.is_ok());
 
         // update node id to the actual id in database.
@@ -1115,7 +1132,7 @@ mod test {
                 .count(),
             0
         );
-        let res = node_table.put(node.clone());
+        let res = node_table.put(&node);
         assert!(res.is_ok());
 
         // update node id to the actual id in database.
@@ -1182,7 +1199,7 @@ mod test {
         );
         let mut node_table = store.node_map();
 
-        let res = node_table.put(node.clone());
+        let res = node_table.put(&node);
         assert!(res.is_ok());
 
         // update node id to the actual id in database.
@@ -1252,7 +1269,7 @@ mod test {
 
         let mut node_table = store.node_map();
 
-        let res = node_table.put(node.clone());
+        let res = node_table.put(&node);
         assert!(res.is_ok());
 
         // update node id to the actual id in database.
@@ -1326,7 +1343,7 @@ mod test {
 
         let mut node_table = store.node_map();
 
-        let res = node_table.put(node.clone());
+        let res = node_table.put(&node);
         assert!(res.is_ok());
 
         node.id = res.unwrap();
@@ -1377,11 +1394,11 @@ mod test {
         let node2 = create_node(0, "node2", None, Some(profile2), None, vec![], vec![]);
 
         // First node should succeed
-        let result1 = node_table.put(node1);
+        let result1 = node_table.put(&node1);
         assert!(result1.is_ok());
 
         // Second node with same hostname should fail
-        let result2 = node_table.put(node2);
+        let result2 = node_table.put(&node2);
         assert!(result2.is_err());
         assert!(
             result2
@@ -1412,11 +1429,11 @@ mod test {
         let node2 = create_node(0, "node2", None, None, Some(draft_profile), vec![], vec![]);
 
         // First node should succeed
-        let result1 = node_table.put(node1);
+        let result1 = node_table.put(&node1);
         assert!(result1.is_ok());
 
         // Second node with same hostname in draft should fail
-        let result2 = node_table.put(node2);
+        let result2 = node_table.put(&node2);
         assert!(result2.is_err());
         assert!(
             result2
@@ -1454,8 +1471,8 @@ mod test {
         );
         let node2 = create_node(0, "node2", None, Some(profile2), None, vec![], vec![]);
 
-        let _id1 = node_table.put(node1).unwrap();
-        let id2 = node_table.put(node2).unwrap();
+        let _id1 = node_table.put(&node1).unwrap();
+        let id2 = node_table.put(&node2).unwrap();
 
         // Try to update node2 to use the same hostname as node1
         let old = Update {
@@ -1515,7 +1532,7 @@ mod test {
             vec![],
             vec![],
         );
-        let id = node_table.put(node).unwrap();
+        let id = node_table.put(&node).unwrap();
 
         // Update the same node with the same hostname should succeed
         let old = Update {
@@ -1562,10 +1579,10 @@ mod test {
         let node2 = create_node(0, "node2", None, Some(profile2), None, vec![], vec![]);
 
         // Both nodes should succeed as they have different hostnames
-        let result1 = node_table.put(node1);
+        let result1 = node_table.put(&node1);
         assert!(result1.is_ok());
 
-        let result2 = node_table.put(node2);
+        let result2 = node_table.put(&node2);
         assert!(result2.is_ok());
     }
 
@@ -1599,7 +1616,7 @@ mod test {
 
         let mut node_table = store.node_map();
 
-        let res = node_table.put(node.clone());
+        let res = node_table.put(&node);
         assert!(res.is_ok());
 
         // update node id to the actual id in database.
