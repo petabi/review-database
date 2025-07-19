@@ -25,6 +25,20 @@ impl<'a> Map<'a> {
             .map_err(|e| anyhow!("database error: {}", e))
     }
 
+    /// Deletes a key-value pair with the given key within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key does not exist or the database operation fails.
+    pub fn delete_with_transaction(
+        &self,
+        key: &[u8],
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()> {
+        txn.delete_cf(self.cf, key)
+            .map_err(|e| anyhow!("database error: {}", e))
+    }
+
     /// Gets a value corresponding to the given key.
     ///
     /// # Errors
@@ -45,6 +59,21 @@ impl<'a> Map<'a> {
         self.db
             .put_cf(self.cf, key, value)
             .map_err(|e| anyhow!("database error: {}", e))
+    }
+
+    /// Puts a key-value pair within a transaction, overwriting any existing value for the key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn put_with_transaction(
+        &self,
+        key: &[u8],
+        value: &[u8],
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()> {
+        txn.put_cf(self.cf, key, value)
+            .context("failed to write entry")
     }
 
     /// Inserts a new key-value pair.
@@ -74,6 +103,28 @@ impl<'a> Map<'a> {
                 }
             }
         }
+    }
+
+    /// Inserts a new key-value pair within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key already exists or the database operation fails.
+    pub fn insert_with_transaction(
+        &self,
+        key: &[u8],
+        value: &[u8],
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()> {
+        if txn
+            .get_for_update_cf(self.cf, key, EXCLUSIVE)
+            .context("database read error")?
+            .is_some()
+        {
+            bail!("key already exists");
+        }
+        txn.put_cf(self.cf, key, value)
+            .context("failed to write new entry")
     }
 
     /// Replaces the entire key-value pairs with new ones.
@@ -152,6 +203,44 @@ impl<'a> Map<'a> {
             }
         }
         Ok(())
+    }
+
+    /// Updates an old key-value pair to a new one within a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the old value does not match the value in the database, the old key does
+    /// not exist, or the database operation fails.
+    pub fn update_with_transaction(
+        &self,
+        old: (&[u8], &[u8]),
+        new: (&[u8], &[u8]),
+        txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
+    ) -> Result<()> {
+        if let Some(old_value) = txn
+            .get_for_update_cf(self.cf, old.0, EXCLUSIVE)
+            .context("cannot read old entry")?
+        {
+            if old.1 != old_value.as_slice() {
+                bail!("old value mismatch");
+            }
+        } else {
+            bail!("no such entry");
+        }
+
+        if old.0 != new.0 {
+            txn.delete_cf(self.cf, old.0)
+                .context("failed to delete old entry")?;
+            if txn
+                .get_pinned_cf(self.cf, new.0)
+                .context("cannot read from database")?
+                .is_some()
+            {
+                bail!("new key already exists");
+            }
+        }
+        txn.put_cf(self.cf, new.0, new.1)
+            .context("failed to write new entry")
     }
 
     fn inner_iterator(&self, mode: IteratorMode) -> MapIterator {
