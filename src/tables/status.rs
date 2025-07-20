@@ -6,7 +6,8 @@ use rocksdb::OptimisticTransactionDB;
 
 use super::UniqueKey;
 use crate::{
-    Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
+    Indexable, IndexedMap, IndexedMapUpdate, IndexedTable,
+    collections::Indexed,
     types::{FromKeyValue, Status},
 };
 

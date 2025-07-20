@@ -3,7 +3,9 @@ use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
 
 use super::UniqueKey;
-use crate::{Indexed, IndexedMap, IndexedTable, category::Category, types::FromKeyValue};
+use crate::{
+    IndexedMap, IndexedTable, category::Category, collections::Indexed, types::FromKeyValue,
+};
 
 const DEFAULT_ENTRIES: [(u32, &str); 2] = [(1, "Non-Specified Alert"), (2, "Irrelevant Alert")];
 

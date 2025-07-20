@@ -8,7 +8,10 @@ use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
-use crate::{Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, types::FromKeyValue};
+use crate::{
+    Indexable, IndexedMap, IndexedMapUpdate, IndexedTable, collections::Indexed,
+    types::FromKeyValue,
+};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct SamplingPolicy {

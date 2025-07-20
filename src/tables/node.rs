@@ -11,8 +11,8 @@ use strum_macros::EnumString;
 
 use super::TableIter as TI;
 use crate::{
-    Agent, ExternalService, Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable,
-    Iterable, Map, Table as CrateTable, UniqueKey, types::FromKeyValue,
+    Agent, ExternalService, Indexable, IndexedMap, IndexedMapUpdate, IndexedTable, Iterable, Map,
+    Table as CrateTable, UniqueKey, collections::Indexed, types::FromKeyValue,
 };
 
 #[derive(

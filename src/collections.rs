@@ -288,6 +288,7 @@ pub trait Indexed {
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
+    #[allow(unused)] // TODO: Make sure this functions is called when appropriate
     fn clear_inactive(&self) -> Result<()> {
         loop {
             let txn = self.db().transaction();

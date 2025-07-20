@@ -17,7 +17,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use crate::{ExternalService, Indexed, IterableMap};
+use crate::{ExternalService, IterableMap, collections::Indexed};
 
 /// The range of versions that use the current database format.
 ///

@@ -6,7 +6,10 @@ use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 use structured::arrow::datatypes::ToByteSlice;
 
-use crate::{Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, types::FromKeyValue};
+use crate::{
+    Indexable, IndexedMap, IndexedMapUpdate, IndexedTable, collections::Indexed,
+    types::FromKeyValue,
+};
 
 #[derive(Deserialize, Serialize, Default)]
 pub struct CsvColumnExtra {

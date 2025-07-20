@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::UniqueKey;
 use crate::{
-    Indexable, Indexed, IndexedMap, IndexedMapUpdate, IndexedTable, Iterable, types::FromKeyValue,
+    Indexable, IndexedMap, IndexedMapUpdate, IndexedTable, Iterable, collections::Indexed,
+    types::FromKeyValue,
 };
 
 #[derive(Deserialize, Serialize)]

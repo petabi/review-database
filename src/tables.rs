@@ -72,12 +72,12 @@ pub use self::triage_policy::{
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 pub use self::trusted_domain::TrustedDomain;
 pub use self::trusted_user_agent::TrustedUserAgent;
-use super::{Indexed, IndexedMap, Map, event};
+use super::{IndexedMap, Map, event};
 use crate::{
     Direction, Indexable, IndexedMapUpdate,
     batch_info::BatchInfo,
     category::Category,
-    collections::IndexedSet,
+    collections::{Indexed, IndexedSet},
     scores::Scores,
     types::{Account, FromKeyValue, Qualifier, Status},
 };
