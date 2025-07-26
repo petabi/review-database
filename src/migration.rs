@@ -306,12 +306,12 @@ fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
     use bincode::Options;
 
     use crate::Tidb;
-    use crate::migration::migration_structures::OldTidb;
+    use crate::migration::migration_structures::TidbV0_39;
 
     let map = store.tidb_map();
     let raw = map.raw();
     for (key, value) in raw.iter_forward()? {
-        let old_tidb: OldTidb = bincode::DefaultOptions::new().deserialize(value.as_ref())?;
+        let old_tidb: TidbV0_39 = bincode::DefaultOptions::new().deserialize(value.as_ref())?;
         let new_tidb = Tidb::try_from(old_tidb)?;
         let (_new_key, new_value) = new_tidb.into_key_value()?;
         raw.put(&key, &new_value)?;
@@ -330,12 +330,12 @@ fn migrate_0_38_to_0_39_0(store: &super::Store) -> Result<()> {
 fn migrate_0_39_account(store: &super::Store) -> Result<()> {
     use bincode::Options;
 
-    use crate::{migration::migration_structures::AccountV36, types::Account};
+    use crate::{migration::migration_structures::AccountV0_36, types::Account};
 
     let map = store.account_map();
     let raw = map.raw();
     for (key, old_value) in raw.iter_forward()? {
-        let old = bincode::DefaultOptions::new().deserialize::<AccountV36>(&old_value)?;
+        let old = bincode::DefaultOptions::new().deserialize::<AccountV0_36>(&old_value)?;
         let new: Account = old.into();
         let new_value = bincode::DefaultOptions::new().serialize::<Account>(&new)?;
         raw.update((&key, &old_value), (&key, &new_value))?;
@@ -345,7 +345,7 @@ fn migrate_0_39_account(store: &super::Store) -> Result<()> {
 
 fn migrate_0_38_node(store: &super::Store) -> Result<()> {
     use bincode::Options;
-    use migration_structures::OldInnerFromV29BeforeV37;
+    use migration_structures::InnerV0_29;
 
     use crate::{
         IterableMap,
@@ -357,7 +357,7 @@ fn migrate_0_38_node(store: &super::Store) -> Result<()> {
     let external_service_raw = map.external_service_raw();
     for (_key, old_value) in node_raw.iter_forward()? {
         let old_inner_node = bincode::DefaultOptions::new()
-            .deserialize::<OldInnerFromV29BeforeV37>(&old_value)
+            .deserialize::<InnerV0_29>(&old_value)
             .context("Failed to migrate node database: invalid node value")?;
         if let Some(ref config) = old_inner_node.giganto {
             let external_service = ExternalService {
@@ -383,7 +383,7 @@ fn migrate_0_36_0_to_0_37(store: &super::Store) -> Result<()> {
 }
 
 fn migrate_0_37_event_struct(store: &super::Store) -> Result<()> {
-    use migration_structures::BlocklistTlsFieldsBeforeV37;
+    use migration_structures::BlocklistTlsFieldsV0_36;
     use num_traits::FromPrimitive;
 
     use crate::event::{BlocklistTlsFields, EventKind};
@@ -405,7 +405,7 @@ fn migrate_0_37_event_struct(store: &super::Store) -> Result<()> {
 
         match event_kind {
             EventKind::SuspiciousTlsTraffic | EventKind::BlocklistTls => {
-                update_event_db_with_new_event::<BlocklistTlsFieldsBeforeV37, BlocklistTlsFields>(
+                update_event_db_with_new_event::<BlocklistTlsFieldsV0_36, BlocklistTlsFields>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -422,14 +422,14 @@ fn migrate_0_34_0_to_0_36(store: &super::Store) -> Result<()> {
 fn migrate_0_36_account(store: &super::Store) -> Result<()> {
     use bincode::Options;
 
-    use crate::migration::migration_structures::{AccountBeforeV36, AccountV36};
+    use crate::migration::migration_structures::{AccountV0_34, AccountV0_36};
 
     let map = store.account_map();
     let raw = map.raw();
     for (key, old_value) in raw.iter_forward()? {
-        let old = bincode::DefaultOptions::new().deserialize::<AccountBeforeV36>(&old_value)?;
-        let intermediate: AccountV36 = old.into();
-        let new_value = bincode::DefaultOptions::new().serialize::<AccountV36>(&intermediate)?;
+        let old = bincode::DefaultOptions::new().deserialize::<AccountV0_34>(&old_value)?;
+        let intermediate: AccountV0_36 = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<AccountV0_36>(&intermediate)?;
         raw.update((&key, &old_value), (&key, &new_value))?;
     }
     Ok(())
@@ -442,7 +442,7 @@ fn migrate_0_30_to_0_34_0(store: &super::Store) -> Result<()> {
 
 fn migrate_0_34_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        ExtraThreatBeforeV34, HttpThreatBeforeV34, NetworkThreatBeforeV34, WindowsThreatBeforeV34,
+        ExtraThreatV0_33, HttpThreatV0_33, NetworkThreatV0_33, WindowsThreatV0_33,
     };
     use num_traits::FromPrimitive;
 
@@ -465,22 +465,20 @@ fn migrate_0_34_events(store: &super::Store) -> Result<()> {
 
         match event_kind {
             EventKind::HttpThreat => {
-                update_event_db_with_new_event::<HttpThreatBeforeV34, HttpThreatFields>(
+                update_event_db_with_new_event::<HttpThreatV0_33, HttpThreatFields>(
                     &k, &v, &event_db,
                 )?;
             }
             EventKind::NetworkThreat => {
-                update_event_db_with_new_event::<NetworkThreatBeforeV34, NetworkThreat>(
+                update_event_db_with_new_event::<NetworkThreatV0_33, NetworkThreat>(
                     &k, &v, &event_db,
                 )?;
             }
             EventKind::ExtraThreat => {
-                update_event_db_with_new_event::<ExtraThreatBeforeV34, ExtraThreat>(
-                    &k, &v, &event_db,
-                )?;
+                update_event_db_with_new_event::<ExtraThreatV0_33, ExtraThreat>(&k, &v, &event_db)?;
             }
             EventKind::WindowsThreat => {
-                update_event_db_with_new_event::<WindowsThreatBeforeV34, WindowsThreat>(
+                update_event_db_with_new_event::<WindowsThreatV0_33, WindowsThreat>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -496,11 +494,11 @@ fn migrate_0_34_account(store: &super::Store) -> Result<()> {
 
     use crate::{
         account::{PasswordHashAlgorithm, Role, SaltedPassword},
-        migration::migration_structures::AccountBeforeV36,
+        migration::migration_structures::AccountV0_34,
     };
 
     #[derive(Deserialize, Serialize)]
-    pub struct OldAccount {
+    pub struct AccountV0_33 {
         pub username: String,
         password: SaltedPassword,
         pub role: Role,
@@ -515,8 +513,8 @@ fn migrate_0_34_account(store: &super::Store) -> Result<()> {
         password_last_modified_at: DateTime<Utc>,
     }
 
-    impl From<OldAccount> for AccountBeforeV36 {
-        fn from(input: OldAccount) -> Self {
+    impl From<AccountV0_33> for AccountV0_34 {
+        fn from(input: AccountV0_33) -> Self {
             Self {
                 username: input.username,
                 password: input.password,
@@ -540,9 +538,9 @@ fn migrate_0_34_account(store: &super::Store) -> Result<()> {
     let map = store.account_map();
     let raw = map.raw();
     for (key, old_value) in raw.iter_forward()? {
-        let old = bincode::DefaultOptions::new().deserialize::<OldAccount>(&old_value)?;
-        let new: AccountBeforeV36 = old.into();
-        let new_value = bincode::DefaultOptions::new().serialize::<AccountBeforeV36>(&new)?;
+        let old = bincode::DefaultOptions::new().deserialize::<AccountV0_33>(&old_value)?;
+        let new: AccountV0_34 = old.into();
+        let new_value = bincode::DefaultOptions::new().serialize::<AccountV0_34>(&new)?;
         raw.update((&key, &old_value), (&key, &new_value))?;
     }
     Ok(())
@@ -571,7 +569,7 @@ mod tests {
     use semver::{Version, VersionReq};
 
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::{Store, migration::migration_structures::AccountBeforeV36};
+    use crate::{Store, migration::migration_structures::AccountV0_34};
 
     #[allow(dead_code)]
     struct TestSchema {
@@ -667,7 +665,7 @@ mod tests {
             password_last_modified_at: DateTime<Utc>,
         }
 
-        impl From<OldAccount> for AccountBeforeV36 {
+        impl From<OldAccount> for AccountV0_34 {
             fn from(input: OldAccount) -> Self {
                 Self {
                     username: input.username,
@@ -689,8 +687,8 @@ mod tests {
             }
         }
 
-        impl From<AccountBeforeV36> for OldAccount {
-            fn from(input: AccountBeforeV36) -> Self {
+        impl From<AccountV0_34> for OldAccount {
+            fn from(input: AccountV0_34) -> Self {
                 Self {
                     username: input.username,
                     password: input.password,
@@ -713,7 +711,7 @@ mod tests {
         let raw = map.raw();
 
         let now = Utc::now();
-        let new_account = AccountBeforeV36 {
+        let new_account = AccountV0_34 {
             username: "test".to_string(),
             password: SaltedPassword::new_with_hash_algorithm(
                 "password",
@@ -749,7 +747,7 @@ mod tests {
         let raw = map.raw();
         let (_, value) = raw.iter_forward().unwrap().next().unwrap();
         let result_account = bincode::DefaultOptions::new()
-            .deserialize::<AccountBeforeV36>(&value)
+            .deserialize::<AccountV0_34>(&value)
             .unwrap();
 
         assert_eq!(new_account, result_account);
@@ -764,7 +762,7 @@ mod tests {
         let settings = TestSchema::new();
         let event_db = settings.store.events();
 
-        let value = super::migration_structures::HttpThreatBeforeV34 {
+        let value = super::migration_structures::HttpThreatV0_33 {
             time: chrono::Utc::now(),
             sensor: "sensor_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
@@ -811,7 +809,7 @@ mod tests {
 
         assert!(event_db.put(&message).is_ok());
 
-        let value = super::migration_structures::NetworkThreatBeforeV34 {
+        let value = super::migration_structures::NetworkThreatV0_33 {
             time: chrono::Utc::now(),
             sensor: "sensor_1".to_string(),
             orig_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
@@ -839,7 +837,7 @@ mod tests {
 
         assert!(event_db.put(&message).is_ok());
 
-        let value = super::migration_structures::WindowsThreatBeforeV34 {
+        let value = super::migration_structures::WindowsThreatV0_33 {
             time: chrono::Utc::now(),
             sensor: "sensor_1".to_string(),
             service: "service".to_string(),
@@ -868,7 +866,7 @@ mod tests {
 
         assert!(event_db.put(&message).is_ok());
 
-        let value = super::migration_structures::ExtraThreatBeforeV34 {
+        let value = super::migration_structures::ExtraThreatV0_33 {
             time: chrono::Utc::now(),
             sensor: "sensor_1".to_string(),
             service: "service".to_string(),
@@ -903,14 +901,14 @@ mod tests {
 
         use crate::{
             account::{PasswordHashAlgorithm, Role, SaltedPassword},
-            migration::migration_structures::AccountV36,
+            migration::migration_structures::AccountV0_36,
         };
 
         let settings = TestSchema::new();
         let map = settings.store.account_map();
         let raw = map.raw();
 
-        let old_account = AccountBeforeV36 {
+        let old_account = AccountV0_34 {
             username: "test".to_string(),
             password: SaltedPassword::new_with_hash_algorithm(
                 "password",
@@ -929,7 +927,7 @@ mod tests {
             password_hash_algorithm: PasswordHashAlgorithm::Argon2id,
             password_last_modified_at: Utc::now(),
         };
-        let new_account = AccountV36::from(old_account.clone());
+        let new_account = AccountV0_36::from(old_account.clone());
         let value = bincode::DefaultOptions::new()
             .serialize(&old_account)
             .expect("serializable");
@@ -945,7 +943,7 @@ mod tests {
         let raw = map.raw();
         let res = raw.get(old_account.username.as_bytes()).unwrap().unwrap();
         let account = bincode::DefaultOptions::new()
-            .deserialize::<AccountV36>(res.as_ref())
+            .deserialize::<AccountV0_36>(res.as_ref())
             .unwrap();
 
         assert_eq!(account, new_account);
@@ -959,7 +957,7 @@ mod tests {
 
         use crate::{EventKind, EventMessage, event::BlocklistTlsFields};
 
-        let value = super::migration_structures::BlocklistTlsFieldsBeforeV37 {
+        let value = super::migration_structures::BlocklistTlsFieldsV0_36 {
             sensor: "sensor_1".to_string(),
             src_addr: "192.168.4.76".parse::<IpAddr>().unwrap(),
             src_port: 46378,
@@ -1052,9 +1050,7 @@ mod tests {
 
         use chrono::Utc;
 
-        use super::migration_structures::{
-            DumpItem, OldInnerFromV29BeforeV37, OldNodeFromV29BeforeV37,
-        };
+        use super::migration_structures::{DumpItem, InnerV0_29, NodeV0_29};
         use crate::{
             Agent, NodeProfile,
             collections::Indexed,
@@ -1128,7 +1124,7 @@ mod tests {
             ack_transmission: u16::MAX,
         };
 
-        let old_node = OldNodeFromV29BeforeV37 {
+        let old_node = NodeV0_29 {
             id: 0,
             name: "name".to_string(),
             name_draft: None,
@@ -1163,7 +1159,7 @@ mod tests {
             piglet_agent.value().as_ref(),
         );
         assert!(piglet_res.is_ok());
-        let old_inner_node: OldInnerFromV29BeforeV37 = old_node.clone().into();
+        let old_inner_node: InnerV0_29 = old_node.clone().into();
         let res = node_db.insert(old_inner_node);
         assert!(res.is_ok());
 
@@ -1209,7 +1205,7 @@ mod tests {
 
         use crate::{
             account::{PasswordHashAlgorithm, Role, SaltedPassword},
-            migration::migration_structures::AccountV36,
+            migration::migration_structures::AccountV0_36,
             types::Account,
         };
 
@@ -1219,7 +1215,7 @@ mod tests {
 
         // Create a few AccountV36 entries
         let now = Utc::now();
-        let v36_1 = AccountV36 {
+        let v36_1 = AccountV0_36 {
             username: "user1".to_string(),
             password: SaltedPassword::new_with_hash_algorithm(
                 "pw1",
@@ -1239,7 +1235,7 @@ mod tests {
             password_last_modified_at: now,
             customer_ids: Some(vec![1, 2]),
         };
-        let v36_2 = AccountV36 {
+        let v36_2 = AccountV0_36 {
             username: "user2".to_string(),
             password: SaltedPassword::new_with_hash_algorithm(
                 "pw2",
@@ -1290,14 +1286,14 @@ mod tests {
 
         use crate::EventCategory;
         use crate::TidbKind;
-        use crate::migration::migration_structures::{OldRule, OldTidb};
+        use crate::migration::migration_structures::{RuleV0_39, TidbV0_39};
 
         let settings = TestSchema::new();
         let map = settings.store.tidb_map();
         let raw = map.raw();
 
         let tidb_name = "HttpUriThreat".to_string();
-        let old = OldTidb {
+        let old = TidbV0_39 {
             id: 201,
             name: tidb_name.clone(),
             description: None,
@@ -1305,7 +1301,7 @@ mod tests {
             category: EventCategory::Reconnaissance,
             version: "1.0".to_string(),
             patterns: vec![
-                OldRule {
+                RuleV0_39 {
                     rule_id: 2_010_100,
                     category: EventCategory::Reconnaissance,
                     name: "http_uri_threat".to_string(),
@@ -1314,7 +1310,7 @@ mod tests {
                     samples: None,
                     signatures: Some(vec!["sql,injection,attack".to_string()]),
                 },
-                OldRule {
+                RuleV0_39 {
                     rule_id: 2_010_101,
                     category: EventCategory::Reconnaissance,
                     name: "http_uri_threat2".to_string(),
