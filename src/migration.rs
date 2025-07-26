@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0-alpha.2,<0.40.0-alpha.3";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0-alpha.3,<0.40.0-alpha.4";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -299,7 +299,8 @@ fn read_version_file(path: &Path) -> Result<Version> {
 }
 
 fn migrate_0_39_to_0_40_0(store: &super::Store) -> Result<()> {
-    migrate_0_40_tidb(store)
+    migrate_0_40_tidb(store)?;
+    migrate_0_40_filter(store)
 }
 
 fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
@@ -315,6 +316,86 @@ fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
         let new_tidb = Tidb::try_from(old_tidb)?;
         let (_new_key, new_value) = new_tidb.into_key_value()?;
         raw.put(&key, &new_value)?;
+    }
+    Ok(())
+}
+
+fn migrate_0_40_filter(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
+    use crate::Filter;
+    use crate::migration::migration_structures::FilterValueV0_40;
+
+    #[derive(serde::Serialize)]
+    struct NewValue {
+        directions: Option<Vec<crate::FlowKind>>,
+        keywords: Option<Vec<String>>,
+        network_tags: Option<Vec<String>>,
+        customers: Option<Vec<String>>,
+        endpoints: Option<Vec<crate::FilterEndpoint>>,
+        sensors: Option<Vec<String>>,
+        os: Option<Vec<String>>,
+        devices: Option<Vec<String>>,
+        hostnames: Option<Vec<String>>,
+        user_ids: Option<Vec<String>>,
+        user_names: Option<Vec<String>>,
+        user_departments: Option<Vec<String>>,
+        countries: Option<Vec<String>>,
+        categories: Option<Vec<u8>>,
+        levels: Option<Vec<u8>>,
+        kinds: Option<Vec<String>>,
+        learning_methods: Option<Vec<crate::LearningMethod>>,
+        confidence: Option<f32>,
+        period: crate::PeriodForSearch,
+    }
+
+    let map = store.filter_map();
+    let raw = map.raw();
+    for (key, old_value) in raw.iter_forward()? {
+        // Deserialize old value format
+        let old_filter_value: FilterValueV0_40 =
+            bincode::DefaultOptions::new().deserialize(&old_value)?;
+
+        // Convert to new filter (this will set username and name to empty strings)
+        let mut new_filter = Filter::from(old_filter_value);
+
+        // Extract username and name from key
+        let sep = key
+            .iter()
+            .position(|c| *c == 0)
+            .ok_or_else(|| anyhow::anyhow!("corrupted filter key"))?;
+        let username = std::str::from_utf8(&key[..sep])?.to_string();
+        let name = std::str::from_utf8(&key[sep + 1..])?.to_string();
+
+        new_filter.username = username;
+        new_filter.name = name;
+
+        // Serialize the new filter value using bincode
+
+        let value_to_serialize = NewValue {
+            directions: new_filter.directions,
+            keywords: new_filter.keywords,
+            network_tags: new_filter.network_tags,
+            customers: new_filter.customers,
+            endpoints: new_filter.endpoints,
+            sensors: new_filter.sensors,
+            os: new_filter.os,
+            devices: new_filter.devices,
+            hostnames: new_filter.hostnames,
+            user_ids: new_filter.user_ids,
+            user_names: new_filter.user_names,
+            user_departments: new_filter.user_departments,
+            countries: new_filter.countries,
+            categories: new_filter.categories,
+            levels: new_filter.levels,
+            kinds: new_filter.kinds,
+            learning_methods: new_filter.learning_methods,
+            confidence: new_filter.confidence,
+            period: new_filter.period,
+        };
+
+        let new_value = bincode::DefaultOptions::new().serialize(&value_to_serialize)?;
+        raw.update((&key, &old_value), (&key, &new_value))?;
     }
     Ok(())
 }
