@@ -61,6 +61,7 @@ impl PortScanFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Serialize, Deserialize)]
 pub struct PortScan {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -70,6 +71,7 @@ pub struct PortScan {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -100,6 +102,7 @@ impl PortScan {
             start_time: fields.start_time,
             end_time: fields.end_time,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -131,7 +134,7 @@ impl Match for PortScan {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -195,6 +198,7 @@ impl MultiHostPortScanFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Serialize, Deserialize)]
 pub struct MultiHostPortScan {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -204,6 +208,7 @@ pub struct MultiHostPortScan {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -234,6 +239,7 @@ impl MultiHostPortScan {
             start_time: fields.start_time,
             end_time: fields.end_time,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -265,7 +271,7 @@ impl Match for MultiHostPortScan {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -333,6 +339,7 @@ pub struct ExternalDdos {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -361,6 +368,7 @@ impl ExternalDdos {
             start_time: fields.start_time,
             end_time: fields.end_time,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -392,7 +400,7 @@ impl Match for ExternalDdos {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -492,6 +500,7 @@ pub struct BlocklistConn {
     pub resp_l2_bytes: u64,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -541,6 +550,7 @@ impl BlocklistConn {
             resp_l2_bytes: fields.resp_l2_bytes,
             confidence: fields.confidence,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -572,7 +582,7 @@ impl Match for BlocklistConn {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {

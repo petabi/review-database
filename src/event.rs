@@ -4399,6 +4399,7 @@ mod tests {
             attack_kind: "attack_kind".to_string(),
             confidence: 0.9,
             category: EventCategory::Reconnaissance,
+            threat_level: std::num::NonZeroU8::new(3).unwrap(), // MEDIUM
             triage_scores: None,
         };
 
@@ -4484,6 +4485,7 @@ mod tests {
             confidence: 0.9,
             triage_scores: None,
             category: EventCategory::Reconnaissance,
+            threat_level: std::num::NonZeroU8::new(3).unwrap(), // MEDIUM
         };
 
         let message = EventMessage {

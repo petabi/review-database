@@ -5,7 +5,7 @@ use attrievent::attribute::{NetworkAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use super::{EventCategory, LearningMethod, TriageScore, common::Match};
 use crate::event::common::{AttrValue, triage_scores_to_string};
 
 // TODO: We plan to implement the triage feature after detection events from other network
@@ -48,6 +48,7 @@ pub struct NetworkThreat {
     pub attack_kind: String,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -128,7 +129,7 @@ impl Match for NetworkThreat {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {

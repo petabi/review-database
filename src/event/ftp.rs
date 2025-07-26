@@ -79,6 +79,7 @@ pub struct FtpBruteForce {
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -113,6 +114,7 @@ impl FtpBruteForce {
             end_time: fields.end_time,
             is_internal: fields.is_internal,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -144,7 +146,7 @@ impl Match for FtpBruteForce {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -255,6 +257,7 @@ pub struct FtpPlainText {
     pub file_size: u64,
     pub file_id: String,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -311,6 +314,7 @@ impl FtpPlainText {
             file_size: fields.file_size,
             file_id: fields.file_id,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -342,7 +346,7 @@ impl Match for FtpPlainText {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -389,6 +393,7 @@ pub struct BlocklistFtp {
     pub file_size: u64,
     pub file_id: String,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -445,6 +450,7 @@ impl BlocklistFtp {
             file_size: fields.file_size,
             file_id: fields.file_id,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -476,7 +482,7 @@ impl Match for BlocklistFtp {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {

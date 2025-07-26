@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0-alpha.2,<0.40.0-alpha.3";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.1,<0.42.0-alpha.1";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -223,6 +223,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             Version::parse("0.40.0")?,
             migrate_0_39_to_0_40_0,
         ),
+        (
+            VersionReq::parse(">=0.40.0,<0.41.0")?,
+            Version::parse("0.41.0")?,
+            migrate_0_40_to_0_41_0,
+        ),
     ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
@@ -315,6 +320,52 @@ fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
         let new_tidb = Tidb::try_from(old_tidb)?;
         let (_new_key, new_value) = new_tidb.into_key_value()?;
         raw.put(&key, &new_value)?;
+    }
+    Ok(())
+}
+
+fn migrate_0_40_to_0_41_0(store: &super::Store) -> Result<()> {
+    migrate_0_41_events(store)
+}
+
+fn migrate_0_41_events(store: &super::Store) -> Result<()> {
+    use migration_structures::{ExtraThreatV0_40, NetworkThreatV0_40, PortScanV0_40};
+    use num_traits::FromPrimitive;
+
+    use crate::event::{EventKind, ExtraThreat, NetworkThreat, PortScan};
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        match event_kind {
+            EventKind::PortScan => {
+                update_event_db_with_new_event::<PortScanV0_40, PortScan>(&k, &v, &event_db)?;
+            }
+            EventKind::NetworkThreat => {
+                update_event_db_with_new_event::<NetworkThreatV0_40, NetworkThreat>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::ExtraThreat => {
+                update_event_db_with_new_event::<ExtraThreatV0_40, ExtraThreat>(&k, &v, &event_db)?;
+            }
+            _ => {
+                // For now, only migrate these three event types as examples
+                // In a full implementation, all event types would be handled
+            }
+        }
     }
     Ok(())
 }

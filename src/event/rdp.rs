@@ -62,6 +62,7 @@ pub struct RdpBruteForce {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -90,6 +91,7 @@ impl RdpBruteForce {
             end_time: fields.end_time,
             proto: fields.proto,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -121,7 +123,7 @@ impl Match for RdpBruteForce {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -199,6 +201,7 @@ pub struct BlocklistRdp {
     pub cookie: String,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistRdp {
@@ -233,6 +236,7 @@ impl BlocklistRdp {
             cookie: fields.cookie,
             confidence: fields.confidence,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -264,7 +268,7 @@ impl Match for BlocklistRdp {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
