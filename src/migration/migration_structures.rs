@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
-pub struct HttpThreatBeforeV34 {
+pub struct HttpThreatV0_33 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -60,8 +60,8 @@ pub struct HttpThreatBeforeV34 {
     pub category: EventCategory,
 }
 
-impl From<HttpThreatBeforeV34> for HttpThreatFields {
-    fn from(input: HttpThreatBeforeV34) -> Self {
+impl From<HttpThreatV0_33> for HttpThreatFields {
+    fn from(input: HttpThreatV0_33) -> Self {
         Self {
             time: input.time,
             sensor: input.sensor,
@@ -105,7 +105,7 @@ impl From<HttpThreatBeforeV34> for HttpThreatFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistTlsFieldsBeforeV37 {
+pub struct BlocklistTlsFieldsV0_36 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -137,8 +137,8 @@ pub struct BlocklistTlsFieldsBeforeV37 {
     pub category: EventCategory,
 }
 
-impl From<BlocklistTlsFieldsBeforeV37> for BlocklistTlsFields {
-    fn from(input: BlocklistTlsFieldsBeforeV37) -> Self {
+impl From<BlocklistTlsFieldsV0_36> for BlocklistTlsFields {
+    fn from(input: BlocklistTlsFieldsV0_36) -> Self {
         Self {
             sensor: input.sensor,
             src_addr: input.src_addr,
@@ -175,7 +175,7 @@ impl From<BlocklistTlsFieldsBeforeV37> for BlocklistTlsFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct NetworkThreatBeforeV34 {
+pub struct NetworkThreatV0_33 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -197,8 +197,8 @@ pub struct NetworkThreatBeforeV34 {
     pub category: EventCategory,
 }
 
-impl From<NetworkThreatBeforeV34> for NetworkThreat {
-    fn from(input: NetworkThreatBeforeV34) -> Self {
+impl From<NetworkThreatV0_33> for NetworkThreat {
+    fn from(input: NetworkThreatV0_33) -> Self {
         Self {
             time: input.time,
             sensor: input.sensor,
@@ -223,7 +223,7 @@ impl From<NetworkThreatBeforeV34> for NetworkThreat {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct WindowsThreatBeforeV34 {
+pub struct WindowsThreatV0_33 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -245,8 +245,8 @@ pub struct WindowsThreatBeforeV34 {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl From<WindowsThreatBeforeV34> for WindowsThreat {
-    fn from(input: WindowsThreatBeforeV34) -> Self {
+impl From<WindowsThreatV0_33> for WindowsThreat {
+    fn from(input: WindowsThreatV0_33) -> Self {
         Self {
             time: input.time,
             sensor: input.sensor,
@@ -271,7 +271,7 @@ impl From<WindowsThreatBeforeV34> for WindowsThreat {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ExtraThreatBeforeV34 {
+pub struct ExtraThreatV0_33 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -287,8 +287,8 @@ pub struct ExtraThreatBeforeV34 {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
-impl From<ExtraThreatBeforeV34> for ExtraThreat {
-    fn from(input: ExtraThreatBeforeV34) -> Self {
+impl From<ExtraThreatV0_33> for ExtraThreat {
+    fn from(input: ExtraThreatV0_33) -> Self {
         Self {
             time: input.time,
             sensor: input.sensor,
@@ -393,7 +393,7 @@ pub struct GigantoConfig {
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
-pub struct AccountBeforeV36 {
+pub struct AccountV0_34 {
     pub username: String,
     pub(crate) password: SaltedPassword,
     pub role: Role,
@@ -410,7 +410,7 @@ pub struct AccountBeforeV36 {
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
-pub struct AccountV36 {
+pub struct AccountV0_36 {
     pub username: String,
     pub(crate) password: SaltedPassword,
     pub role: Role,
@@ -427,8 +427,8 @@ pub struct AccountV36 {
     pub customer_ids: Option<Vec<u32>>,
 }
 
-impl From<AccountBeforeV36> for AccountV36 {
-    fn from(input: AccountBeforeV36) -> Self {
+impl From<AccountV0_34> for AccountV0_36 {
+    fn from(input: AccountV0_34) -> Self {
         Self {
             username: input.username,
             password: input.password,
@@ -451,8 +451,8 @@ impl From<AccountBeforeV36> for AccountV36 {
     }
 }
 
-impl From<AccountV36> for Account {
-    fn from(input: AccountV36) -> Self {
+impl From<AccountV0_36> for Account {
+    fn from(input: AccountV0_36) -> Self {
         Self {
             username: input.username,
             password: input.password,
@@ -475,7 +475,7 @@ impl From<AccountV36> for Account {
     }
 }
 
-impl From<Account> for AccountBeforeV36 {
+impl From<Account> for AccountV0_34 {
     fn from(input: Account) -> Self {
         Self {
             username: input.username,
@@ -502,7 +502,7 @@ pub struct Giganto {
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
-pub struct OldNodeFromV29BeforeV37 {
+pub struct NodeV0_29 {
     pub id: u32,
     pub name: String,
     pub name_draft: Option<String>,
@@ -514,7 +514,7 @@ pub struct OldNodeFromV29BeforeV37 {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-pub struct OldInnerFromV29BeforeV37 {
+pub struct InnerV0_29 {
     pub id: u32,
     pub name: String,
     pub name_draft: Option<String>,
@@ -525,8 +525,8 @@ pub struct OldInnerFromV29BeforeV37 {
     pub giganto: Option<Giganto>,
 }
 
-impl From<OldNodeFromV29BeforeV37> for OldInnerFromV29BeforeV37 {
-    fn from(input: OldNodeFromV29BeforeV37) -> Self {
+impl From<NodeV0_29> for InnerV0_29 {
+    fn from(input: NodeV0_29) -> Self {
         Self {
             id: input.id,
             name: input.name,
@@ -540,8 +540,8 @@ impl From<OldNodeFromV29BeforeV37> for OldInnerFromV29BeforeV37 {
     }
 }
 
-impl From<OldInnerFromV29BeforeV37> for InnerNode {
-    fn from(input: OldInnerFromV29BeforeV37) -> Self {
+impl From<InnerV0_29> for InnerNode {
+    fn from(input: InnerV0_29) -> Self {
         Self {
             id: input.id,
             name: input.name,
@@ -557,7 +557,7 @@ impl From<OldInnerFromV29BeforeV37> for InnerNode {
     }
 }
 
-impl Indexable for OldInnerFromV29BeforeV37 {
+impl Indexable for InnerV0_29 {
     fn key(&self) -> Cow<[u8]> {
         Cow::from(self.name.as_bytes())
     }
@@ -583,18 +583,18 @@ impl Indexable for OldInnerFromV29BeforeV37 {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-pub struct OldTidb {
+pub struct TidbV0_39 {
     pub id: u32,
     pub name: String,
     pub description: Option<String>,
     pub kind: TidbKind,
     pub category: EventCategory,
     pub version: String,
-    pub patterns: Vec<OldRule>,
+    pub patterns: Vec<RuleV0_39>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-pub struct OldRule {
+pub struct RuleV0_39 {
     pub rule_id: u32,
     pub category: EventCategory,
     pub name: String,
@@ -604,10 +604,10 @@ pub struct OldRule {
     pub signatures: Option<Vec<String>>,
 }
 
-impl TryFrom<OldTidb> for Tidb {
+impl TryFrom<TidbV0_39> for Tidb {
     type Error = anyhow::Error;
 
-    fn try_from(input: OldTidb) -> Result<Self, Self::Error> {
+    fn try_from(input: TidbV0_39) -> Result<Self, Self::Error> {
         Ok(Self {
             id: input.id,
             name: input.name,
