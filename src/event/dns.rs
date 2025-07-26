@@ -118,6 +118,7 @@ pub struct DnsCovertChannel {
     pub ttl: Vec<i32>,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -176,6 +177,7 @@ impl DnsCovertChannel {
             ttl: fields.ttl,
             confidence: fields.confidence,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -207,7 +209,7 @@ impl Match for DnsCovertChannel {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -255,6 +257,7 @@ pub struct LockyRansomware {
     pub ttl: Vec<i32>,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -313,6 +316,7 @@ impl LockyRansomware {
             ttl: fields.ttl,
             confidence: fields.confidence,
             category: fields.category,
+            threat_level: HIGH,
             triage_scores: None,
         }
     }
@@ -344,7 +348,7 @@ impl Match for LockyRansomware {
     }
 
     fn level(&self) -> NonZeroU8 {
-        HIGH
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -447,6 +451,7 @@ pub struct CryptocurrencyMiningPool {
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -505,6 +510,7 @@ impl CryptocurrencyMiningPool {
             ttl: fields.ttl,
             coins: fields.coins,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -536,7 +542,7 @@ impl Match for CryptocurrencyMiningPool {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -638,6 +644,7 @@ pub struct BlocklistDns {
     pub ttl: Vec<i32>,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -695,6 +702,7 @@ impl BlocklistDns {
             ttl: fields.ttl,
             confidence: fields.confidence,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -726,7 +734,7 @@ impl Match for BlocklistDns {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {

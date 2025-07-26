@@ -88,6 +88,7 @@ pub struct RepeatedHttpSessions {
     pub dst_port: u16,
     pub proto: u8,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -118,6 +119,7 @@ impl RepeatedHttpSessions {
             dst_port: fields.dst_port,
             proto: fields.proto,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -149,7 +151,7 @@ impl Match for RepeatedHttpSessions {
     }
 
     fn level(&self) -> std::num::NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -328,6 +330,7 @@ pub struct HttpThreat {
     pub attack_kind: String,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -416,6 +419,7 @@ impl HttpThreat {
             attack_kind: fields.attack_kind,
             confidence: fields.confidence,
             category: fields.category,
+            threat_level: LOW,
             triage_scores: None,
         }
     }
@@ -447,7 +451,7 @@ impl Match for HttpThreat {
     }
 
     fn level(&self) -> NonZeroU8 {
-        LOW
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -605,6 +609,7 @@ pub struct DomainGenerationAlgorithm {
     pub state: String,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -683,6 +688,7 @@ impl DomainGenerationAlgorithm {
             state: fields.state,
             confidence: fields.confidence,
             category: fields.category,
+            threat_level: LOW,
             triage_scores: None,
         }
     }
@@ -714,7 +720,7 @@ impl Match for DomainGenerationAlgorithm {
     }
 
     fn level(&self) -> NonZeroU8 {
-        LOW
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -771,6 +777,7 @@ pub struct NonBrowser {
     pub post_body: Vec<u8>,
     pub state: String,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -847,6 +854,7 @@ impl NonBrowser {
             post_body: fields.post_body.clone(),
             state: fields.state.clone(),
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -878,7 +886,7 @@ impl Match for NonBrowser {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -1012,6 +1020,7 @@ pub struct BlocklistHttp {
     pub state: String,
     pub confidence: f32,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -1089,6 +1098,7 @@ impl BlocklistHttp {
             state: fields.state.clone(),
             confidence: fields.confidence,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -1120,7 +1130,7 @@ impl Match for BlocklistHttp {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {

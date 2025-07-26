@@ -281,7 +281,7 @@ pub(super) trait Match {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TriageScore {
     pub policy_id: u32,
     pub score: f64,
@@ -1998,6 +1998,7 @@ mod tests {
             confidence: 0.9,
             triage_scores: None,
             category: EventCategory::Reconnaissance,
+            threat_level: std::num::NonZeroU8::new(3).unwrap(), // MEDIUM
         }
     }
 
@@ -2014,6 +2015,7 @@ mod tests {
             attack_kind: "attack_kind".to_string(),
             confidence: 0.9,
             category: EventCategory::Reconnaissance,
+            threat_level: std::num::NonZeroU8::new(3).unwrap(), // MEDIUM
             triage_scores: None,
         }
     }

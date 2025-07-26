@@ -218,6 +218,7 @@ impl From<NetworkThreatBeforeV34> for NetworkThreat {
             confidence: input.confidence,
             triage_scores: input.triage_scores,
             category: input.category,
+            threat_level: std::num::NonZeroU8::new(3).expect("3 is non-zero"), // MEDIUM
         }
     }
 }
@@ -302,6 +303,7 @@ impl From<ExtraThreatBeforeV34> for ExtraThreat {
             confidence: input.confidence,
             triage_scores: input.triage_scores,
             category: input.category,
+            threat_level: std::num::NonZeroU8::new(3).expect("3 is non-zero"), // MEDIUM
         }
     }
 }
@@ -630,5 +632,128 @@ impl TryFrom<OldTidb> for Tidb {
                 })
                 .collect(),
         })
+    }
+}
+
+// Event structures before v0.41.0 (without threat_level field)
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PortScanV0_40 {
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_ports: Vec<u16>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct NetworkThreatV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub orig_addr: IpAddr,
+    pub orig_port: u16,
+    pub resp_addr: IpAddr,
+    pub resp_port: u16,
+    pub proto: u8,
+    pub service: String,
+    pub end_time: i64,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: Option<usize>,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ExtraThreatV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub service: String,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: Option<usize>,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+// From implementations for converting old events to new events with threat_level
+
+impl From<PortScanV0_40> for crate::event::PortScan {
+    fn from(old: PortScanV0_40) -> Self {
+        use std::num::NonZeroU8;
+        Self {
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addr: old.dst_addr,
+            dst_ports: old.dst_ports,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            proto: old.proto,
+            category: old.category,
+            threat_level: NonZeroU8::new(3).expect("3 is non-zero"), // MEDIUM
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+impl From<NetworkThreatV0_40> for NetworkThreat {
+    fn from(old: NetworkThreatV0_40) -> Self {
+        use std::num::NonZeroU8;
+        Self {
+            time: old.time,
+            sensor: old.sensor,
+            orig_addr: old.orig_addr,
+            orig_port: old.orig_port,
+            resp_addr: old.resp_addr,
+            resp_port: old.resp_port,
+            proto: old.proto,
+            service: old.service,
+            end_time: old.end_time,
+            content: old.content,
+            db_name: old.db_name,
+            rule_id: old.rule_id,
+            matched_to: old.matched_to,
+            cluster_id: old.cluster_id,
+            attack_kind: old.attack_kind,
+            confidence: old.confidence,
+            category: old.category,
+            threat_level: NonZeroU8::new(3).expect("3 is non-zero"), // MEDIUM
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+impl From<ExtraThreatV0_40> for ExtraThreat {
+    fn from(old: ExtraThreatV0_40) -> Self {
+        use std::num::NonZeroU8;
+        Self {
+            time: old.time,
+            sensor: old.sensor,
+            service: old.service,
+            content: old.content,
+            db_name: old.db_name,
+            rule_id: old.rule_id,
+            matched_to: old.matched_to,
+            cluster_id: old.cluster_id,
+            attack_kind: old.attack_kind,
+            confidence: old.confidence,
+            category: old.category,
+            threat_level: NonZeroU8::new(3).expect("3 is non-zero"), // MEDIUM
+            triage_scores: old.triage_scores,
+        }
     }
 }

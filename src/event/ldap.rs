@@ -83,6 +83,7 @@ pub struct LdapBruteForce {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -115,6 +116,7 @@ impl LdapBruteForce {
             start_time: fields.start_time,
             end_time: fields.end_time,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -146,7 +148,7 @@ impl Match for LdapBruteForce {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -241,6 +243,7 @@ pub struct LdapPlainText {
     pub object: Vec<String>,
     pub argument: Vec<String>,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -287,6 +290,7 @@ impl LdapPlainText {
             object: fields.object,
             argument: fields.argument,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -318,7 +322,7 @@ impl Match for LdapPlainText {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
@@ -360,6 +364,7 @@ pub struct BlocklistLdap {
     pub object: Vec<String>,
     pub argument: Vec<String>,
     pub category: EventCategory,
+    pub threat_level: NonZeroU8,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -406,6 +411,7 @@ impl BlocklistLdap {
             object: fields.object,
             argument: fields.argument,
             category: fields.category,
+            threat_level: MEDIUM,
             triage_scores: None,
         }
     }
@@ -437,7 +443,7 @@ impl Match for BlocklistLdap {
     }
 
     fn level(&self) -> NonZeroU8 {
-        MEDIUM
+        self.threat_level
     }
 
     fn kind(&self) -> &'static str {
