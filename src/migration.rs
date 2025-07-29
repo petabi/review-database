@@ -1342,6 +1342,7 @@ mod tests {
         assert_eq!(new.category, EventCategory::Reconnaissance);
         new.patterns.iter().for_each(|rule| {
             assert_eq!(rule.confidence, None);
+            assert_eq!(rule.kind, None);
         });
     }
 }

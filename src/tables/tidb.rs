@@ -67,6 +67,7 @@ pub struct Rule {
     pub rule_id: u32,
     pub category: EventCategory,
     pub name: String,
+    pub kind: Option<RuleKind>,
     pub description: Option<String>,
     pub references: Option<Vec<String>>,
     pub samples: Option<Vec<String>>,
@@ -82,6 +83,13 @@ pub enum Kind {
     Url,
     Token,
     Regex,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RuleKind {
+    Os,
+    AgentSoftware,
 }
 
 impl UniqueKey for Tidb {
