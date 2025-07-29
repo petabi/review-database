@@ -47,6 +47,28 @@ impl<'d> Table<'d, ColumnStats> {
         self.map.delete(&entry.unique_key())
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if the database operation fails.
+    pub fn remove_by_model(&self, model_id: i32) -> Result<()> {
+        let iter = self.iter(Direction::Forward, None);
+        let to_deletes: Vec<_> = iter
+            .filter_map(|result| {
+                let stats = result.ok()?;
+                if stats.model_id == model_id {
+                    Some(stats.unique_key())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        for to_delete in to_deletes {
+            self.map.delete(&to_delete)?;
+        }
+
+        Ok(())
+    }
+
     /// Returns the column statistics for the given cluster and time.
     ///
     /// # Errors
@@ -1247,6 +1269,173 @@ mod tests {
 
         let counts: Vec<_> = column_result.counts.iter().map(|e| e.count).collect();
         assert_eq!(counts, vec![30, 20]);
+    }
+
+    #[test]
+    fn test_remove_by_model() {
+        use chrono::NaiveDate;
+        use structured::{ColumnStatistics, Description, Element, ElementCount, NLargestCount};
+
+        let store = setup_store();
+        let table = store.column_stats_map();
+
+        let model_id_1 = 100;
+        let model_id_2 = 200;
+        let cluster_id_1 = 10;
+        let cluster_id_2 = 20;
+        let batch_ts = NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+
+        // Create test data for model_id_1
+        let stats_1 = ColumnStatistics {
+            description: Description::default(),
+            n_largest_count: NLargestCount::new(
+                2,
+                vec![
+                    ElementCount {
+                        value: Element::Int(1),
+                        count: 10,
+                    },
+                    ElementCount {
+                        value: Element::Int(2),
+                        count: 5,
+                    },
+                ],
+                Some(Element::Int(1)),
+            ),
+        };
+
+        // Create test data for model_id_2
+        let stats_2 = ColumnStatistics {
+            description: Description::default(),
+            n_largest_count: NLargestCount::new(
+                1,
+                vec![ElementCount {
+                    value: Element::Text("test".into()),
+                    count: 15,
+                }],
+                Some(Element::Text("test".into())),
+            ),
+        };
+
+        // Insert data for both models
+        table
+            .insert_column_statistics(
+                vec![(cluster_id_1, vec![stats_1.clone()])],
+                model_id_1,
+                batch_ts,
+            )
+            .unwrap();
+        table
+            .insert_column_statistics(
+                vec![(cluster_id_2, vec![stats_2.clone()])],
+                model_id_2,
+                batch_ts,
+            )
+            .unwrap();
+
+        // Verify both models have data
+        let stats_before = table
+            .get_column_statistics(cluster_id_1, vec![batch_ts])
+            .unwrap();
+        assert_eq!(stats_before.len(), 1);
+        let stats_before_2 = table
+            .get_column_statistics(cluster_id_2, vec![batch_ts])
+            .unwrap();
+        assert_eq!(stats_before_2.len(), 1);
+
+        // Remove data for model_id_1
+        table.remove_by_model(model_id_1).unwrap();
+
+        // Verify model_id_1 data is removed
+        let stats_after = table
+            .get_column_statistics(cluster_id_1, vec![batch_ts])
+            .unwrap();
+        assert_eq!(stats_after.len(), 0);
+
+        // Verify model_id_2 data is still present
+        let stats_after_2 = table
+            .get_column_statistics(cluster_id_2, vec![batch_ts])
+            .unwrap();
+        assert_eq!(stats_after_2.len(), 1);
+        assert_eq!(
+            stats_after_2[0]
+                .column_stats
+                .n_largest_count
+                .number_of_elements(),
+            1
+        );
+
+        // Remove data for model_id_2
+        table.remove_by_model(model_id_2).unwrap();
+
+        // Verify model_id_2 data is also removed
+        let stats_final = table
+            .get_column_statistics(cluster_id_2, vec![batch_ts])
+            .unwrap();
+        assert_eq!(stats_final.len(), 0);
+    }
+
+    #[test]
+    fn test_remove_by_model_empty_table() {
+        let store = setup_store();
+        let table = store.column_stats_map();
+
+        // Should not panic when removing from empty table
+        let result = table.remove_by_model(999);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_remove_by_model_nonexistent_model() {
+        use chrono::NaiveDate;
+        use structured::{ColumnStatistics, Description, Element, ElementCount, NLargestCount};
+
+        let store = setup_store();
+        let table = store.column_stats_map();
+
+        let model_id = 300;
+        let cluster_id = 30;
+        let batch_ts = NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+
+        let stats = ColumnStatistics {
+            description: Description::default(),
+            n_largest_count: NLargestCount::new(
+                1,
+                vec![ElementCount {
+                    value: Element::Int(42),
+                    count: 7,
+                }],
+                Some(Element::Int(42)),
+            ),
+        };
+
+        // Insert data for model_id
+        table
+            .insert_column_statistics(vec![(cluster_id, vec![stats])], model_id, batch_ts)
+            .unwrap();
+
+        // Try to remove a different model_id that doesn't exist
+        let result = table.remove_by_model(999);
+        assert!(result.is_ok());
+
+        // Verify original data is still present
+        let stats_after = table
+            .get_column_statistics(cluster_id, vec![batch_ts])
+            .unwrap();
+        assert_eq!(stats_after.len(), 1);
+        assert_eq!(
+            stats_after[0]
+                .column_stats
+                .n_largest_count
+                .number_of_elements(),
+            1
+        );
     }
 
     fn setup_store() -> Arc<Store> {
