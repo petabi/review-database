@@ -246,8 +246,6 @@ impl Database {
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
     pub async fn delete_model(&self, name: &str) -> Result<i32, Error> {
-        use super::schema::csv_column_extra::dsl as extra;
-
         let mut conn = self.pool.get().await?;
         let id = diesel::delete(dsl::model)
             .filter(dsl::name.eq(name))
@@ -261,27 +259,13 @@ impl Database {
 
         self.classifier_fm.delete_classifier(id, name).await?;
 
-        diesel::delete(extra::csv_column_extra)
-            .filter(extra::model_id.eq(id))
-            .execute(&mut conn)
-            .await?;
-
         self.delete_stats(id, &mut conn).await?;
 
         Ok(id)
     }
 
     async fn delete_stats(&self, id: i32, conn: &mut AsyncPgConnection) -> Result<(), Error> {
-        use super::schema::{
-            cluster::dsl as cluster, column_description::dsl as column_description,
-            description_binary::dsl as d_binary, description_datetime::dsl as d_datetime,
-            description_enum::dsl as d_enum, description_float::dsl as d_float,
-            description_int::dsl as d_int, description_ipaddr::dsl as d_ipaddr,
-            description_text::dsl as d_text, time_series::dsl as time_series,
-            top_n_binary::dsl as t_binary, top_n_datetime::dsl as t_datetime,
-            top_n_enum::dsl as t_enum, top_n_float::dsl as t_float, top_n_int::dsl as t_int,
-            top_n_ipaddr::dsl as t_ipaddr, top_n_text::dsl as t_text,
-        };
+        use super::schema::{cluster::dsl as cluster, time_series::dsl as time_series};
 
         let cluster_ids: Vec<i32> = diesel::delete(cluster::cluster)
             .filter(cluster::model_id.eq(id))
@@ -294,70 +278,6 @@ impl Database {
 
         diesel::delete(time_series::time_series)
             .filter(time_series::cluster_id.eq_any(&cluster_ids))
-            .execute(conn)
-            .await?;
-
-        let description_ids: Vec<i32> = diesel::delete(column_description::column_description)
-            .filter(column_description::cluster_id.eq_any(&cluster_ids))
-            .returning(column_description::id)
-            .get_results(conn)
-            .await?;
-
-        diesel::delete(d_binary::description_binary)
-            .filter(d_binary::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(d_datetime::description_datetime)
-            .filter(d_datetime::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(d_enum::description_enum)
-            .filter(d_enum::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(d_float::description_float)
-            .filter(d_float::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(d_int::description_int)
-            .filter(d_int::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(d_ipaddr::description_ipaddr)
-            .filter(d_ipaddr::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(d_text::description_text)
-            .filter(d_text::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-
-        diesel::delete(t_binary::top_n_binary)
-            .filter(t_binary::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(t_datetime::top_n_datetime)
-            .filter(t_datetime::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(t_enum::top_n_enum)
-            .filter(t_enum::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(t_float::top_n_float)
-            .filter(t_float::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(t_int::top_n_int)
-            .filter(t_int::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(t_ipaddr::top_n_ipaddr)
-            .filter(t_ipaddr::description_id.eq_any(&description_ids))
-            .execute(conn)
-            .await?;
-        diesel::delete(t_text::top_n_text)
-            .filter(t_text::description_id.eq_any(&description_ids))
             .execute(conn)
             .await?;
 
