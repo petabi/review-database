@@ -62,7 +62,7 @@ pub use self::template::{
     Structured, StructuredClusteringAlgorithm, Template, Unstructured,
     UnstructuredClusteringAlgorithm,
 };
-pub use self::tidb::{Kind as TidbKind, Rule as TidbRule, Tidb};
+pub use self::tidb::{Kind as TidbKind, Rule as TidbRule, RuleKind as TidbRuleKind, Tidb};
 pub use self::tor_exit_node::TorExitNode;
 pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::triage_policy::{

@@ -75,7 +75,7 @@ pub use self::tables::{
     PacketAttr, ProtocolPorts, Response, ResponseKind, SamplingInterval, SamplingKind,
     SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
     StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
-    TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
+    TidbRuleKind, TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
     TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
     UnstructuredClusteringAlgorithm, ValueKind,
 };
