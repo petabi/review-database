@@ -16,7 +16,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added hostname uniqueness constraint for nodes across all customers. Node
   hostnames in both `profile` and `profile_draft` fields must now be unique
   globally, preventing hostname conflicts between different customers.
-- Added `confidence` field to `tidb::Rule` struct.
+- Added `confidence` and `kind` field to `tidb::Rule` struct.
 
 ### Changed
 

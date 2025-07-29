@@ -622,6 +622,7 @@ impl TryFrom<TidbV0_39> for Tidb {
                     rule_id: rule.rule_id,
                     category: rule.category,
                     name: rule.name,
+                    kind: None, // Old rules do not have kind
                     description: rule.description,
                     references: rule.references,
                     samples: rule.samples,
