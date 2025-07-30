@@ -220,7 +220,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.39.0,<0.40.0")?,
-            Version::parse("0.40.0")?,
+            Version::parse("0.40.0-alpha.3")?,
             migrate_0_39_to_0_40_0,
         ),
     ];
