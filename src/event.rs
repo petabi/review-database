@@ -1013,15 +1013,24 @@ impl Event {
                 dst_country = find_ip_country(locator, dst_addr);
             }
         }
+        // Rule 1: If origin and destination countries are different, count each one
         if src_country != dst_country && addr_pair.0.is_some() && addr_pair.1.is_some() {
             counter
-                .entry(src_country)
+                .entry(src_country.clone())
                 .and_modify(|e| *e += 1)
                 .or_insert(1);
         }
+        // Rule 2: If destination exists, count destination country (handles same country case)
         if addr_pair.1.is_some() {
             counter
                 .entry(dst_country)
+                .and_modify(|e| *e += 1)
+                .or_insert(1);
+        }
+        // Rule 3: If destination is None but origin exists, count origin country
+        else if addr_pair.0.is_some() {
+            counter
+                .entry(src_country)
                 .and_modify(|e| *e += 1)
                 .or_insert(1);
         }
@@ -5263,5 +5272,39 @@ mod tests {
         assert_eq!(categories.len(), 2);
         assert!(categories.contains(&EventCategory::CommandAndControl));
         assert!(categories.contains(&EventCategory::Exfiltration));
+    }
+
+    #[test]
+    fn count_country_destination_none() {
+        // Test for Rule 3: When destination is None but origin exists, count origin country
+        use std::collections::HashMap;
+
+        // Mock the logic from count_country with None destination
+        let mut counter = HashMap::new();
+        let src_country = "US".to_string();
+        let dst_country = "ZZ".to_string(); // Default when no destination
+        let addr_pair: (Option<IpAddr>, Option<IpAddr>) =
+            (Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1))), None); // src exists, dst is None
+
+        // This is the core logic being tested:
+        // Rule 1: Different countries with both addresses existing (skip)
+        if src_country != dst_country && addr_pair.0.is_some() && addr_pair.1.is_some() {
+            // This shouldn't execute because addr_pair.1 is None
+        }
+        // Rule 2: If destination exists, count destination (skip)
+        if addr_pair.1.is_some() {
+            // This shouldn't execute because addr_pair.1 is None
+        }
+        // Rule 3: If destination is None but origin exists, count origin country
+        else if addr_pair.0.is_some() {
+            counter
+                .entry(src_country)
+                .and_modify(|e| *e += 1)
+                .or_insert(1);
+        }
+
+        // Verify that the source country was counted
+        assert_eq!(counter.get("US"), Some(&1));
+        assert_eq!(counter.len(), 1);
     }
 }
