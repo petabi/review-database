@@ -2047,7 +2047,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            duration: 1000,
+            end_time: 1000,
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),

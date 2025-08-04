@@ -3052,7 +3052,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            duration: 1000,
+            end_time: 1000,
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -3091,9 +3091,12 @@ mod tests {
         let message = message.syslog_rfc5424();
         assert!(message.is_ok());
         let (_, _, syslog_message) = message.unwrap();
+        let end_time = chrono::DateTime::<Utc>::from_timestamp_nanos(1000).to_rfc3339();
         assert_eq!(
-            &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="HttpThreat" category="Reconnaissance" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" duration="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" db_name="db" rule_id="12000" matched_to="match" cluster_id="1111" attack_kind="attack" confidence="0.8""#
+            syslog_message,
+            format!(
+                "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"HttpThreat\" category=\"Reconnaissance\" sensor=\"collector1\" src_addr=\"127.0.0.1\" src_port=\"10000\" dst_addr=\"127.0.0.2\" dst_port=\"80\" proto=\"6\" end_time=\"{end_time}\" method=\"GET\" host=\"example.com\" uri=\"/uri/path\" referer=\"-\" version=\"1.1\" user_agent=\"browser\" request_len=\"100\" response_len=\"100\" status_code=\"200\" status_msg=\"-\" username=\"-\" password=\"-\" cookie=\"cookie\" content_encoding=\"encoding type\" content_type=\"content type\" cache_control=\"no cache\" orig_filenames=\"a1,a2\" orig_mime_types=\"\" resp_filenames=\"\" resp_mime_types=\"b1,b2\" post_body=\"1234567890...\" state=\"\" db_name=\"db\" rule_id=\"12000\" matched_to=\"match\" cluster_id=\"1111\" attack_kind=\"attack\" confidence=\"0.8\""
+            )
         );
 
         let http_threat =

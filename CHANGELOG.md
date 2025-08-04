@@ -22,6 +22,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Changed `classifier` column from `Bytea` to `Nullable<Bytea>` in PostgreSQL to
   support migration to file system storage.
+- Renamed `HttpThreatFields::duration` to `HttpThreatFields::end_time`
+  to follow the project naming convention for temporal fields. This improves
+  consistency and clarity in field semantics.
 
 ### Removed
 
