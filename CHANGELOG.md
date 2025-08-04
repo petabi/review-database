@@ -47,6 +47,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `Table<'d, ColumnStats>::get_top_ip_addresses_of_model` for retrieving
   corresponding statistics.
 
+### Fixed
+
+- Updated the implementation of the `Match::confidence` trait for `WindowsThreat`
+  to return the value of the existing `confidence` field instead of `None`. This
+  ensures that threat confidence is accurately represented and used in scoring logic.
+
 ## [0.39.0] - 2025-07-07
 
 ### Added
