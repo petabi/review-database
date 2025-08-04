@@ -52,6 +52,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Updated the implementation of the `Match::confidence` trait for `WindowsThreat`
   to return the value of the existing `confidence` field instead of `None`. This
   ensures that threat confidence is accurately represented and used in scoring logic.
+- `Event::count_country` includes those events without destination.
 
 ## [0.39.0] - 2025-07-07
 
