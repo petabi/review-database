@@ -70,7 +70,7 @@ impl From<HttpThreatV0_33> for HttpThreatFields {
             dst_addr: input.dst_addr,
             dst_port: input.dst_port,
             proto: input.proto,
-            duration: input.duration,
+            end_time: input.duration,
             method: input.method,
             host: input.host,
             uri: input.uri,
