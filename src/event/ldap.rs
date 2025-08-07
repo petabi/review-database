@@ -165,7 +165,7 @@ impl Match for LdapBruteForce {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         if let RawEventAttrKind::Ldap(attr) = raw_event_attr {
             match attr {
                 LdapAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
@@ -337,7 +337,7 @@ impl Match for LdapPlainText {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_ldap_attr_by_kind!(self, raw_event_attr)
     }
 }
@@ -456,7 +456,7 @@ impl Match for BlocklistLdap {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_ldap_attr_by_kind!(self, raw_event_attr)
     }
 }

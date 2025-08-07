@@ -226,7 +226,7 @@ impl Match for DnsCovertChannel {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }
@@ -363,7 +363,7 @@ impl Match for LockyRansomware {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }
@@ -555,7 +555,7 @@ impl Match for CryptocurrencyMiningPool {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }
@@ -745,7 +745,7 @@ impl Match for BlocklistDns {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }

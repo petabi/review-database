@@ -1289,13 +1289,13 @@ impl Event {
     ) -> Result<()> {
         let addr_pair = self.address_pair(locator, filter)?;
 
-        if let Some(src_addr) = addr_pair.0 {
-            if let Some(dst_addr) = addr_pair.1 {
-                counter
-                    .entry((src_addr, dst_addr))
-                    .and_modify(|e| *e += 1)
-                    .or_insert(1);
-            }
+        if let Some(src_addr) = addr_pair.0
+            && let Some(dst_addr) = addr_pair.1
+        {
+            counter
+                .entry((src_addr, dst_addr))
+                .and_modify(|e| *e += 1)
+                .or_insert(1);
         }
 
         Ok(())
@@ -1315,15 +1315,14 @@ impl Event {
         let addr_pair = self.address_pair(locator, filter)?;
         let kind = self.kind(locator, filter)?;
 
-        if let Some(src_addr) = addr_pair.0 {
-            if let Some(dst_addr) = addr_pair.1 {
-                if let Some(kind) = kind {
-                    counter
-                        .entry((src_addr, dst_addr, kind))
-                        .and_modify(|e| *e += 1)
-                        .or_insert(1);
-                }
-            }
+        if let Some(src_addr) = addr_pair.0
+            && let Some(dst_addr) = addr_pair.1
+            && let Some(kind) = kind
+        {
+            counter
+                .entry((src_addr, dst_addr, kind))
+                .and_modify(|e| *e += 1)
+                .or_insert(1);
         }
 
         Ok(())
@@ -1625,15 +1624,15 @@ impl Event {
     ) -> Result<()> {
         let addr_pair = self.address_pair(locator, filter)?;
 
-        if let Some(src_addr) = addr_pair.0 {
-            if let Some(id) = find_network(src_addr, networks) {
-                counter.entry(id).and_modify(|e| *e += 1).or_insert(1);
-            }
+        if let Some(src_addr) = addr_pair.0
+            && let Some(id) = find_network(src_addr, networks)
+        {
+            counter.entry(id).and_modify(|e| *e += 1).or_insert(1);
         }
-        if let Some(dst_addr) = addr_pair.1 {
-            if let Some(id) = find_network(dst_addr, networks) {
-                counter.entry(id).and_modify(|e| *e += 1).or_insert(1);
-            }
+        if let Some(dst_addr) = addr_pair.1
+            && let Some(id) = find_network(dst_addr, networks)
+        {
+            counter.entry(id).and_modify(|e| *e += 1).or_insert(1);
         }
 
         Ok(())
@@ -2228,7 +2227,7 @@ impl<'a> EventDb<'a> {
 
     /// Creates an iterator over key-value pairs, starting from `key`.
     #[must_use]
-    pub fn iter_from(&self, key: i128, direction: Direction) -> EventIterator {
+    pub fn iter_from(&self, key: i128, direction: Direction) -> EventIterator<'_> {
         let iter = self
             .inner
             .iterator(IteratorMode::From(&key.to_be_bytes(), direction));
@@ -2237,7 +2236,7 @@ impl<'a> EventDb<'a> {
 
     /// Creates an iterator over key-value pairs for the entire events.
     #[must_use]
-    pub fn iter_forward(&self) -> EventIterator {
+    pub fn iter_forward(&self) -> EventIterator<'_> {
         let iter = self.inner.iterator(IteratorMode::Start);
         EventIterator { inner: iter }
     }
@@ -2246,7 +2245,7 @@ impl<'a> EventDb<'a> {
     #[must_use]
     pub(crate) fn raw_iter_forward(
         &self,
-    ) -> DBIteratorWithThreadMode<rocksdb::OptimisticTransactionDB> {
+    ) -> DBIteratorWithThreadMode<'_, rocksdb::OptimisticTransactionDB> {
         self.inner.iterator(IteratorMode::Start)
     }
 

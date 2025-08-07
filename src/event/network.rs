@@ -147,7 +147,7 @@ impl Match for NetworkThreat {
         LearningMethod::Unsupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_network_attr_by_kind!(self, raw_event_attr)
     }
 }

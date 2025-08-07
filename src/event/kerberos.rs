@@ -204,7 +204,7 @@ impl Match for BlocklistKerberos {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_kerberos_attr_by_kind!(self, raw_event_attr)
     }
 }

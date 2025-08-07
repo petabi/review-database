@@ -113,7 +113,7 @@ impl Match for ExtraThreat {
         LearningMethod::Unsupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         if let RawEventAttrKind::Log(LogAttr::Content) = raw_event_attr {
             return Some(AttrValue::String(&self.content));
         }

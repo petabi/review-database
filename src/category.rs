@@ -28,7 +28,7 @@ impl Ord for Category {
 }
 
 impl Indexable for Category {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.name.as_bytes())
     }
 
@@ -56,7 +56,7 @@ impl Indexable for Category {
 impl IndexedMapUpdate for Category {
     type Entry = Category;
 
-    fn key(&self) -> Option<Cow<[u8]>> {
+    fn key(&self) -> Option<Cow<'_, [u8]>> {
         if self.name.is_empty() {
             None
         } else {

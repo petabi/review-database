@@ -171,192 +171,192 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn access_tokens(&self) -> Table<AccessToken> {
+    pub(crate) fn access_tokens(&self) -> Table<'_, AccessToken> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<AccessToken>::open(inner).expect("{ACCESS_TOKENS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn accounts(&self) -> Table<Account> {
+    pub(crate) fn accounts(&self) -> Table<'_, Account> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Account>::open(inner).expect("{ACCOUNTS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn account_policy(&self) -> Table<AccountPolicy> {
+    pub(crate) fn account_policy(&self) -> Table<'_, AccountPolicy> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<AccountPolicy>::open(inner).expect("{ACCOUNT_POLICY} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn agents(&self) -> Table<Agent> {
+    pub(crate) fn agents(&self) -> Table<'_, Agent> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Agent>::open(inner).expect("{AGENTS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn external_service(&self) -> Table<ExternalService> {
+    pub(crate) fn external_service(&self) -> Table<'_, ExternalService> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<ExternalService>::open(inner).expect("{EXTERNAL_SERVICES} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn batch_info(&self) -> Table<BatchInfo> {
+    pub(crate) fn batch_info(&self) -> Table<'_, BatchInfo> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<BatchInfo>::open(inner).expect("{BATCH_INFO} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn filters(&self) -> Table<Filter> {
+    pub(crate) fn filters(&self) -> Table<'_, Filter> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Filter>::open(inner).expect("{FILTERS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn model_indicators(&self) -> Table<ModelIndicator> {
+    pub(crate) fn model_indicators(&self) -> Table<'_, ModelIndicator> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<ModelIndicator>::open(inner).expect("{MODEL_INDICATORS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn scores(&self) -> Table<Scores> {
+    pub(crate) fn scores(&self) -> Table<'_, Scores> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Scores>::open(inner).expect("{SCORES} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn templates(&self) -> Table<Template> {
+    pub(crate) fn templates(&self) -> Table<'_, Template> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Template>::open(inner).expect("{TEMPLATES} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn tor_exit_nodes(&self) -> Table<TorExitNode> {
+    pub(crate) fn tor_exit_nodes(&self) -> Table<'_, TorExitNode> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<TorExitNode>::open(inner).expect("{TOR_EXIT_NODES} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn categories(&self) -> IndexedTable<Category> {
+    pub(crate) fn categories(&self) -> IndexedTable<'_, Category> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Category>::open(inner).expect("{CATEGORY} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn qualifiers(&self) -> IndexedTable<Qualifier> {
+    pub(crate) fn qualifiers(&self) -> IndexedTable<'_, Qualifier> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Qualifier>::open(inner).expect("{QUALIFIERS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn statuses(&self) -> IndexedTable<Status> {
+    pub(crate) fn statuses(&self) -> IndexedTable<'_, Status> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Status>::open(inner).expect("{STATUSES} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn csv_column_extras(&self) -> IndexedTable<CsvColumnExtra> {
+    pub(crate) fn csv_column_extras(&self) -> IndexedTable<'_, CsvColumnExtra> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<CsvColumnExtra>::open(inner)
             .expect("{CSV_COLUMN_EXTRAS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn triage_responses(&self) -> IndexedTable<TriageResponse> {
+    pub(crate) fn triage_responses(&self) -> IndexedTable<'_, TriageResponse> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<TriageResponse>::open(inner)
             .expect("{TRIAGE_RESPONSE} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn networks(&self) -> IndexedTable<Network> {
+    pub(crate) fn networks(&self) -> IndexedTable<'_, Network> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Network>::open(inner).expect("{NETWORKS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn allow_networks(&self) -> IndexedTable<AllowNetwork> {
+    pub(crate) fn allow_networks(&self) -> IndexedTable<'_, AllowNetwork> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<AllowNetwork>::open(inner).expect("{ALLOW_NETWORKS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn block_networks(&self) -> IndexedTable<BlockNetwork> {
+    pub(crate) fn block_networks(&self) -> IndexedTable<'_, BlockNetwork> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<BlockNetwork>::open(inner).expect("{BLOCK_NETWORKS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn sampling_policies(&self) -> IndexedTable<SamplingPolicy> {
+    pub(crate) fn sampling_policies(&self) -> IndexedTable<'_, SamplingPolicy> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<SamplingPolicy>::open(inner)
             .expect("{SAMPLING_POLICY} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn customers(&self) -> IndexedTable<Customer> {
+    pub(crate) fn customers(&self) -> IndexedTable<'_, Customer> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Customer>::open(inner).expect("{CUSTOMERS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn data_sources(&self) -> IndexedTable<DataSource> {
+    pub(crate) fn data_sources(&self) -> IndexedTable<'_, DataSource> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<DataSource>::open(inner).expect("{DATA_SOURCES} table must be present")
     }
 
-    pub(crate) fn nodes(&self) -> NodeTable {
+    pub(crate) fn nodes(&self) -> NodeTable<'_> {
         let inner = self.inner.as_ref().expect("database must be open");
         NodeTable::open(inner).expect("{NETWORKS} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn triage_policies(&self) -> IndexedTable<TriagePolicy> {
+    pub(crate) fn triage_policies(&self) -> IndexedTable<'_, TriagePolicy> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<TriagePolicy>::open(inner).expect("{TRIAGE_POLICY} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn tidbs(&self) -> Table<Tidb> {
+    pub(crate) fn tidbs(&self) -> Table<'_, Tidb> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<Tidb>::open(inner).expect("{TIDB} table must be present")
     }
 
     #[must_use]
-    pub(crate) fn trusted_domains(&self) -> Table<TrustedDomain> {
+    pub(crate) fn trusted_domains(&self) -> Table<'_, TrustedDomain> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<TrustedDomain>::open(inner).expect("{TRUSTED_DNS_SERVERS} table must be present")
     }
 
-    pub(crate) fn trusted_user_agents(&self) -> Table<TrustedUserAgent> {
+    pub(crate) fn trusted_user_agents(&self) -> Table<'_, TrustedUserAgent> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<TrustedUserAgent>::open(inner).expect("{TRUSTED_USER_AGENTS} table must be present")
     }
 
-    pub(crate) fn traffic_filters(&self) -> Table<TrafficFilter> {
+    pub(crate) fn traffic_filters(&self) -> Table<'_, TrafficFilter> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<TrafficFilter>::open(inner).expect("{TRAFFIC_FILTER_RULES} table must be present")
     }
 
-    pub(crate) fn outlier_infos(&self) -> Table<OutlierInfo> {
+    pub(crate) fn outlier_infos(&self) -> Table<'_, OutlierInfo> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<OutlierInfo>::open(inner).expect("{OUTLIERS} table must be present")
     }
 
     #[must_use]
-    pub fn events(&self) -> event::EventDb {
+    pub fn events(&self) -> event::EventDb<'_> {
         let inner = self.inner.as_ref().expect("database must be open");
         event::EventDb::new(inner)
     }
 
     #[must_use]
-    pub(crate) fn column_stats(&self) -> Table<ColumnStats> {
+    pub(crate) fn column_stats(&self) -> Table<'_, ColumnStats> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<ColumnStats>::open(inner).expect("{COLUMN_STATS} table must be present")
     }
 
     #[must_use]
-    pub(super) fn indexed_set(&self, name: &'static [u8]) -> Option<IndexedSet> {
+    pub(super) fn indexed_set(&self, name: &'static [u8]) -> Option<IndexedSet<'_>> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedSet::new(inner, META, name).ok()
     }

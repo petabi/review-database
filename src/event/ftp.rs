@@ -163,7 +163,7 @@ impl Match for FtpBruteForce {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         if let RawEventAttrKind::Ftp(attr) = raw_event_attr {
             match attr {
                 FtpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
@@ -361,7 +361,7 @@ impl Match for FtpPlainText {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_ftp_attr_by_kind!(self, raw_event_attr)
     }
 }
@@ -495,7 +495,7 @@ impl Match for BlocklistFtp {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_ftp_attr_by_kind!(self, raw_event_attr)
     }
 }

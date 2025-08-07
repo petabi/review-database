@@ -140,7 +140,7 @@ impl Match for RdpBruteForce {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         if let RawEventAttrKind::Rdp(attr) = raw_event_attr {
             match attr {
                 RdpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
@@ -283,7 +283,7 @@ impl Match for BlocklistRdp {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_rdp_attr_by_kind!(self, raw_event_attr)
     }
 }

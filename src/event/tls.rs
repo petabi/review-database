@@ -295,7 +295,7 @@ impl Match for BlocklistTls {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_tls_attr_by_kind!(self, raw_event_attr)
     }
 }
@@ -458,7 +458,7 @@ impl Match for SuspiciousTlsTraffic {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_tls_attr_by_kind!(self, raw_event_attr)
     }
 }
