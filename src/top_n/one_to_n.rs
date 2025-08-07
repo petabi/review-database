@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::TopElementCountsByColumn;
 
 #[derive(Debug, QueryableByName, Serialize)]
+#[allow(dead_code)]
 pub struct SelectedCluster {
     #[diesel(sql_type = Integer)]
     model_id: i32,

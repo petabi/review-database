@@ -135,10 +135,10 @@ impl Store {
         let backup_path = backup.join(DEFAULT_STATES);
         let states = StateDb::open(&db_path, backup_path)?;
         let pretrained = path.join(Self::DEFAULT_PRETRAINED);
-        if let Err(e) = std::fs::create_dir_all(&pretrained) {
-            if e.kind() != io::ErrorKind::AlreadyExists {
-                return Err(anyhow::anyhow!("{e}"));
-            }
+        if let Err(e) = std::fs::create_dir_all(&pretrained)
+            && e.kind() != io::ErrorKind::AlreadyExists
+        {
+            return Err(anyhow::anyhow!("{e}"));
         }
         let store = Self { states, pretrained };
         Ok(store)
@@ -146,79 +146,79 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn events(&self) -> EventDb {
+    pub fn events(&self) -> EventDb<'_> {
         self.states.events()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn access_token_map(&self) -> Table<AccessToken> {
+    pub fn access_token_map(&self) -> Table<'_, AccessToken> {
         self.states.access_tokens()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn account_map(&self) -> Table<types::Account> {
+    pub fn account_map(&self) -> Table<'_, types::Account> {
         self.states.accounts()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn account_policy_map(&self) -> Table<AccountPolicy> {
+    pub fn account_policy_map(&self) -> Table<'_, AccountPolicy> {
         self.states.account_policy()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn agents_map(&self) -> Table<Agent> {
+    pub fn agents_map(&self) -> Table<'_, Agent> {
         self.states.agents()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn allow_network_map(&self) -> IndexedTable<AllowNetwork> {
+    pub fn allow_network_map(&self) -> IndexedTable<'_, AllowNetwork> {
         self.states.allow_networks()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn batch_info_map(&self) -> Table<batch_info::BatchInfo> {
+    pub fn batch_info_map(&self) -> Table<'_, batch_info::BatchInfo> {
         self.states.batch_info()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn block_network_map(&self) -> IndexedTable<BlockNetwork> {
+    pub fn block_network_map(&self) -> IndexedTable<'_, BlockNetwork> {
         self.states.block_networks()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn category_map(&self) -> IndexedTable<category::Category> {
+    pub fn category_map(&self) -> IndexedTable<'_, category::Category> {
         self.states.categories()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn column_stats_map(&self) -> Table<ColumnStats> {
+    pub fn column_stats_map(&self) -> Table<'_, ColumnStats> {
         self.states.column_stats()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn csv_column_extra_map(&self) -> IndexedTable<CsvColumnExtraConfig> {
+    pub fn csv_column_extra_map(&self) -> IndexedTable<'_, CsvColumnExtraConfig> {
         self.states.csv_column_extras()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn customer_map(&self) -> IndexedTable<Customer> {
+    pub fn customer_map(&self) -> IndexedTable<'_, Customer> {
         self.states.customers()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn data_source_map(&self) -> IndexedTable<DataSource> {
+    pub fn data_source_map(&self) -> IndexedTable<'_, DataSource> {
         self.states.data_sources()
     }
 
@@ -228,7 +228,7 @@ impl Store {
     ///
     /// Returns an error if database operation fails or the data is invalid.
     #[allow(clippy::missing_panics_doc)]
-    pub fn event_tag_set(&self) -> Result<TagSet<EventTagId>> {
+    pub fn event_tag_set(&self) -> Result<TagSet<'_, EventTagId>> {
         let set = self
             .states
             .indexed_set(tables::EVENT_TAGS)
@@ -238,19 +238,19 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn filter_map(&self) -> Table<Filter> {
+    pub fn filter_map(&self) -> Table<'_, Filter> {
         self.states.filters()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn model_indicator_map(&self) -> Table<ModelIndicator> {
+    pub fn model_indicator_map(&self) -> Table<'_, ModelIndicator> {
         self.states.model_indicators()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn network_map(&self) -> IndexedTable<Network> {
+    pub fn network_map(&self) -> IndexedTable<'_, Network> {
         self.states.networks()
     }
 
@@ -260,7 +260,7 @@ impl Store {
     ///
     /// Returns an error if database operation fails or the data is invalid.
     #[allow(clippy::missing_panics_doc)]
-    pub fn network_tag_set(&self) -> Result<TagSet<NetworkTagId>> {
+    pub fn network_tag_set(&self) -> Result<TagSet<'_, NetworkTagId>> {
         let set = self
             .states
             .indexed_set(tables::NETWORK_TAGS)
@@ -270,91 +270,91 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn node_map(&self) -> NodeTable {
+    pub fn node_map(&self) -> NodeTable<'_> {
         self.states.nodes()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn outlier_map(&self) -> Table<OutlierInfo> {
+    pub fn outlier_map(&self) -> Table<'_, OutlierInfo> {
         self.states.outlier_infos()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn external_service_map(&self) -> Table<ExternalService> {
+    pub fn external_service_map(&self) -> Table<'_, ExternalService> {
         self.states.external_service()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn sampling_policy_map(&self) -> IndexedTable<SamplingPolicy> {
+    pub fn sampling_policy_map(&self) -> IndexedTable<'_, SamplingPolicy> {
         self.states.sampling_policies()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn qualifier_map(&self) -> IndexedTable<types::Qualifier> {
+    pub fn qualifier_map(&self) -> IndexedTable<'_, types::Qualifier> {
         self.states.qualifiers()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn scores_map(&self) -> Table<scores::Scores> {
+    pub fn scores_map(&self) -> Table<'_, scores::Scores> {
         self.states.scores()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn status_map(&self) -> IndexedTable<types::Status> {
+    pub fn status_map(&self) -> IndexedTable<'_, types::Status> {
         self.states.statuses()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn template_map(&self) -> Table<Template> {
+    pub fn template_map(&self) -> Table<'_, Template> {
         self.states.templates()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn tidb_map(&self) -> Table<Tidb> {
+    pub fn tidb_map(&self) -> Table<'_, Tidb> {
         self.states.tidbs()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn tor_exit_node_map(&self) -> Table<TorExitNode> {
+    pub fn tor_exit_node_map(&self) -> Table<'_, TorExitNode> {
         self.states.tor_exit_nodes()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn triage_policy_map(&self) -> IndexedTable<TriagePolicy> {
+    pub fn triage_policy_map(&self) -> IndexedTable<'_, TriagePolicy> {
         self.states.triage_policies()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn triage_response_map(&self) -> IndexedTable<TriageResponse> {
+    pub fn triage_response_map(&self) -> IndexedTable<'_, TriageResponse> {
         self.states.triage_responses()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn trusted_domain_map(&self) -> Table<TrustedDomain> {
+    pub fn trusted_domain_map(&self) -> Table<'_, TrustedDomain> {
         self.states.trusted_domains()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn trusted_user_agent_map(&self) -> Table<TrustedUserAgent> {
+    pub fn trusted_user_agent_map(&self) -> Table<'_, TrustedUserAgent> {
         self.states.trusted_user_agents()
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn traffic_filter_map(&self) -> Table<TrafficFilter> {
+    pub fn traffic_filter_map(&self) -> Table<'_, TrafficFilter> {
         self.states.traffic_filters()
     }
 
@@ -364,7 +364,7 @@ impl Store {
     ///
     /// Returns an error if database operation fails or the data is invalid.
     #[allow(clippy::missing_panics_doc)]
-    pub fn workflow_tag_set(&self) -> Result<TagSet<WorkflowTagId>> {
+    pub fn workflow_tag_set(&self) -> Result<TagSet<'_, WorkflowTagId>> {
         let set = self
             .states
             .indexed_set(tables::WORKFLOW_TAGS)

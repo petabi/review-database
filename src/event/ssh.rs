@@ -229,7 +229,7 @@ impl Match for BlocklistSsh {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_ssh_attr_by_kind!(self, raw_event_attr)
     }
 }

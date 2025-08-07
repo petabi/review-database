@@ -212,15 +212,15 @@ impl<'d> Table<'d> {
 
             let inner: Inner = super::deserialize(&value)?;
 
-            if let Some(profile) = &inner.profile {
-                if profile.hostname == hostname {
-                    return Ok(true);
-                }
+            if let Some(profile) = &inner.profile
+                && profile.hostname == hostname
+            {
+                return Ok(true);
             }
-            if let Some(profile_draft) = &inner.profile_draft {
-                if profile_draft.hostname == hostname {
-                    return Ok(true);
-                }
+            if let Some(profile_draft) = &inner.profile_draft
+                && profile_draft.hostname == hostname
+            {
+                return Ok(true);
             }
         }
         Ok(false)
@@ -255,15 +255,15 @@ impl<'d> Table<'d> {
                 continue;
             }
 
-            if let Some(profile) = &inner.profile {
-                if profile.hostname == hostname {
-                    return Ok(true);
-                }
+            if let Some(profile) = &inner.profile
+                && profile.hostname == hostname
+            {
+                return Ok(true);
             }
-            if let Some(profile_draft) = &inner.profile_draft {
-                if profile_draft.hostname == hostname {
-                    return Ok(true);
-                }
+            if let Some(profile_draft) = &inner.profile_draft
+                && profile_draft.hostname == hostname
+            {
+                return Ok(true);
             }
         }
         Ok(false)
@@ -324,22 +324,22 @@ impl<'d> Table<'d> {
             let txn = self.node.raw().db().transaction();
 
             // Check hostname uniqueness within the transaction
-            if let Some(profile) = &entry.profile {
-                if self.is_hostname_in_use_transaction(&txn, &profile.hostname)? {
-                    bail!(
-                        "Hostname '{}' is already in use by another node",
-                        profile.hostname
-                    );
-                }
+            if let Some(profile) = &entry.profile
+                && self.is_hostname_in_use_transaction(&txn, &profile.hostname)?
+            {
+                bail!(
+                    "Hostname '{}' is already in use by another node",
+                    profile.hostname
+                );
             }
 
-            if let Some(profile_draft) = &entry.profile_draft {
-                if self.is_hostname_in_use_transaction(&txn, &profile_draft.hostname)? {
-                    bail!(
-                        "Hostname '{}' is already in use by another node",
-                        profile_draft.hostname
-                    );
-                }
+            if let Some(profile_draft) = &entry.profile_draft
+                && self.is_hostname_in_use_transaction(&txn, &profile_draft.hostname)?
+            {
+                bail!(
+                    "Hostname '{}' is already in use by another node",
+                    profile_draft.hostname
+                );
             }
 
             // Create the inner node entry
@@ -465,26 +465,26 @@ impl<'d> Table<'d> {
             let txn = self.node.raw().db().transaction();
 
             // Check hostname uniqueness within transaction
-            if let Some(new_profile) = &new.profile {
-                if self.is_hostname_in_use_except_transaction(&txn, &new_profile.hostname, id)? {
-                    bail!(
-                        "Hostname '{}' is already in use by another node",
-                        new_profile.hostname
-                    );
-                }
+            if let Some(new_profile) = &new.profile
+                && self.is_hostname_in_use_except_transaction(&txn, &new_profile.hostname, id)?
+            {
+                bail!(
+                    "Hostname '{}' is already in use by another node",
+                    new_profile.hostname
+                );
             }
 
-            if let Some(new_profile_draft) = &new.profile_draft {
-                if self.is_hostname_in_use_except_transaction(
+            if let Some(new_profile_draft) = &new.profile_draft
+                && self.is_hostname_in_use_except_transaction(
                     &txn,
                     &new_profile_draft.hostname,
                     id,
-                )? {
-                    bail!(
-                        "Hostname '{}' is already in use by another node",
-                        new_profile_draft.hostname
-                    );
-                }
+                )?
+            {
+                bail!(
+                    "Hostname '{}' is already in use by another node",
+                    new_profile_draft.hostname
+                );
             }
 
             // Update Node within the transaction
@@ -726,7 +726,7 @@ impl FromKeyValue for Inner {
 }
 
 impl Indexable for Inner {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::from(self.name.as_bytes())
     }
 
@@ -779,7 +779,7 @@ impl From<Inner> for InnerUpdate {
 impl IndexedMapUpdate for InnerUpdate {
     type Entry = Inner;
 
-    fn key(&self) -> Option<Cow<[u8]>> {
+    fn key(&self) -> Option<Cow<'_, [u8]>> {
         self.name.as_deref().map(|n| Cow::Borrowed(n.as_bytes()))
     }
 
@@ -796,10 +796,10 @@ impl IndexedMapUpdate for InnerUpdate {
     }
 
     fn verify(&self, value: &Self::Entry) -> bool {
-        if let Some(n) = self.name.as_deref() {
-            if n != value.name {
-                return false;
-            }
+        if let Some(n) = self.name.as_deref()
+            && n != value.name
+        {
+            return false;
         }
         if self.name_draft != value.name_draft {
             return false;

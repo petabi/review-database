@@ -37,7 +37,7 @@ impl UniqueKey for Customer {
 }
 
 impl Indexable for Customer {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.name.as_bytes())
     }
     fn index(&self) -> u32 {
@@ -87,7 +87,7 @@ pub struct Update {
 impl IndexedMapUpdate for Update {
     type Entry = Customer;
 
-    fn key(&self) -> Option<Cow<[u8]>> {
+    fn key(&self) -> Option<Cow<'_, [u8]>> {
         self.name.as_deref().map(str::as_bytes).map(Cow::Borrowed)
     }
 
@@ -108,15 +108,15 @@ impl IndexedMapUpdate for Update {
     }
 
     fn verify(&self, value: &Self::Entry) -> bool {
-        if let Some(v) = self.name.as_deref() {
-            if v != value.name {
-                return false;
-            }
+        if let Some(v) = self.name.as_deref()
+            && v != value.name
+        {
+            return false;
         }
-        if let Some(v) = self.description.as_deref() {
-            if v != value.description {
-                return false;
-            }
+        if let Some(v) = self.description.as_deref()
+            && v != value.description
+        {
+            return false;
         }
         if let Some(v) = self.networks.as_deref() {
             if v.len() != value.networks.len() {

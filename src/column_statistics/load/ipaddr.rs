@@ -59,9 +59,7 @@ impl ToDescription for DescriptionIpAddr {
 
 impl ToNLargestCount for DescriptionIpAddr {
     fn to_n_largest_count(self, ec: Vec<ElementCount>) -> NLargestCount {
-        let ipaddr = IpAddr::V4(
-            Ipv4Addr::from_str(&self.mode).unwrap_or_else(|_| Ipv4Addr::new(0, 0, 0, 0)),
-        );
+        let ipaddr = IpAddr::V4(Ipv4Addr::from_str(&self.mode).unwrap_or(Ipv4Addr::UNSPECIFIED));
         NLargestCount::new(
             usize::try_from(self.unique_count).unwrap_or_default(),
             ec,
@@ -85,9 +83,7 @@ impl DescriptionIndex for TopNIpAddr {
 
 impl ToElementCount for TopNIpAddr {
     fn to_element_count(self) -> ElementCount {
-        let ipaddr = IpAddr::V4(
-            Ipv4Addr::from_str(&self.value).unwrap_or_else(|_| Ipv4Addr::new(0, 0, 0, 0)),
-        );
+        let ipaddr = IpAddr::V4(Ipv4Addr::from_str(&self.value).unwrap_or(Ipv4Addr::UNSPECIFIED));
         ElementCount {
             value: Element::IpAddr(ipaddr),
             count: usize::try_from(self.count).unwrap_or_default(),

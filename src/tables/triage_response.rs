@@ -84,7 +84,7 @@ impl UniqueKey for TriageResponse {
 }
 
 impl Indexable for TriageResponse {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(&self.key)
     }
 
@@ -187,7 +187,7 @@ impl Update {
 impl IndexedMapUpdate for Update {
     type Entry = TriageResponse;
 
-    fn key(&self) -> Option<Cow<[u8]>> {
+    fn key(&self) -> Option<Cow<'_, [u8]>> {
         Some(Cow::Borrowed(&self.key))
     }
 
@@ -209,16 +209,16 @@ impl IndexedMapUpdate for Update {
         if self.key != value.key {
             return false;
         }
-        if let Some(r) = self.remarks.as_deref() {
-            if r != value.remarks {
-                return false;
-            }
+        if let Some(r) = self.remarks.as_deref()
+            && r != value.remarks
+        {
+            return false;
         }
 
-        if let Some(tag_ids) = self.tag_ids.as_deref() {
-            if tag_ids != value.tag_ids {
-                return false;
-            }
+        if let Some(tag_ids) = self.tag_ids.as_deref()
+            && tag_ids != value.tag_ids
+        {
+            return false;
         }
         true
     }

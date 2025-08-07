@@ -32,7 +32,7 @@ pub(super) trait Match {
     fn sensor(&self) -> &str;
     fn confidence(&self) -> Option<f32>;
     fn learning_method(&self) -> LearningMethod;
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue>;
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>>;
     fn score_by_attr(&self, attr_triage: &[PacketAttr]) -> f64 {
         let total_score = attr_triage.iter().fold(0.0, |score_acc, item| {
             let Ok(kind) =
@@ -73,10 +73,10 @@ pub(super) trait Match {
     }
 
     fn kind_matches(&self, filter: &EventFilter) -> bool {
-        if let Some(kinds) = &filter.kinds {
-            if kinds.iter().all(|k| k != self.kind()) {
-                return false;
-            }
+        if let Some(kinds) = &filter.kinds
+            && kinds.iter().all(|k| k != self.kind())
+        {
+            return false;
         }
 
         true
@@ -95,8 +95,8 @@ pub(super) trait Match {
         filter: &EventFilter,
         locator: Option<&ip2location::DB>,
     ) -> Result<(bool, Option<Vec<TriageScore>>)> {
-        if let Some(customers) = &filter.customers {
-            if customers.iter().all(|customer| {
+        if let Some(customers) = &filter.customers
+            && customers.iter().all(|customer| {
                 self.src_addrs()
                     .iter()
                     .all(|&src_addr| !customer.contains(src_addr))
@@ -104,13 +104,13 @@ pub(super) trait Match {
                         .dst_addrs()
                         .iter()
                         .all(|&dst_addr| !customer.contains(dst_addr))
-            }) {
-                return Ok((false, None));
-            }
+            })
+        {
+            return Ok((false, None));
         }
 
-        if let Some(endpoints) = &filter.endpoints {
-            if endpoints.iter().all(|endpoint| match endpoint.direction {
+        if let Some(endpoints) = &filter.endpoints
+            && endpoints.iter().all(|endpoint| match endpoint.direction {
                 Some(TrafficDirection::From) => self
                     .src_addrs()
                     .iter()
@@ -128,21 +128,21 @@ pub(super) trait Match {
                             .iter()
                             .all(|&dst_addr| !endpoint.network.contains(dst_addr))
                 }
-            }) {
-                return Ok((false, None));
-            }
+            })
+        {
+            return Ok((false, None));
         }
 
-        if let Some(addr) = filter.source {
-            if self.src_addrs().iter().all(|&src_addr| src_addr != addr) {
-                return Ok((false, None));
-            }
+        if let Some(addr) = filter.source
+            && self.src_addrs().iter().all(|&src_addr| src_addr != addr)
+        {
+            return Ok((false, None));
         }
 
-        if let Some(addr) = filter.destination {
-            if self.dst_addrs().iter().all(|&dst_addr| dst_addr != addr) {
-                return Ok((false, None));
-            }
+        if let Some(addr) = filter.destination
+            && self.dst_addrs().iter().all(|&dst_addr| dst_addr != addr)
+        {
+            return Ok((false, None));
         }
 
         if let Some((kinds, internal)) = &filter.directions {
@@ -194,67 +194,64 @@ pub(super) trait Match {
             }
         }
 
-        if let Some(categories) = &filter.categories {
-            if categories
+        if let Some(categories) = &filter.categories
+            && categories
                 .iter()
                 .all(|category| *category != self.category())
-            {
-                return Ok((false, None));
-            }
+        {
+            return Ok((false, None));
         }
 
-        if let Some(levels) = &filter.levels {
-            if levels.iter().all(|level| *level != self.level()) {
-                return Ok((false, None));
-            }
+        if let Some(levels) = &filter.levels
+            && levels.iter().all(|level| *level != self.level())
+        {
+            return Ok((false, None));
         }
 
-        if let Some(learning_methods) = &filter.learning_methods {
-            if learning_methods
+        if let Some(learning_methods) = &filter.learning_methods
+            && learning_methods
                 .iter()
                 .all(|learning_method| *learning_method != self.learning_method())
-            {
+        {
+            return Ok((false, None));
+        }
+
+        if let Some(sensors) = &filter.sensors
+            && sensors.iter().all(|s| s != self.sensor())
+        {
+            return Ok((false, None));
+        }
+
+        if let Some(confidence) = &filter.confidence
+            && let Some(event_confidence) = self.confidence()
+            && event_confidence < *confidence
+        {
+            return Ok((false, None));
+        }
+
+        if let Some(triage_policies) = &filter.triage_policies
+            && !triage_policies.is_empty()
+        {
+            let triage_scores = triage_policies
+                .iter()
+                .filter_map(|triage| {
+                    let score = self.score_by_ti_db(&triage.ti_db)
+                        + self.score_by_attr(&triage.packet_attr)
+                        + self.score_by_confidence(&triage.confidence);
+                    if triage.response.iter().any(|r| score >= r.minimum_score) {
+                        Some(TriageScore {
+                            policy_id: triage.id,
+                            score,
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            if triage_scores.is_empty() {
                 return Ok((false, None));
             }
-        }
-
-        if let Some(sensors) = &filter.sensors {
-            if sensors.iter().all(|s| s != self.sensor()) {
-                return Ok((false, None));
-            }
-        }
-
-        if let Some(confidence) = &filter.confidence {
-            if let Some(event_confidence) = self.confidence() {
-                if event_confidence < *confidence {
-                    return Ok((false, None));
-                }
-            }
-        }
-
-        if let Some(triage_policies) = &filter.triage_policies {
-            if !triage_policies.is_empty() {
-                let triage_scores = triage_policies
-                    .iter()
-                    .filter_map(|triage| {
-                        let score = self.score_by_ti_db(&triage.ti_db)
-                            + self.score_by_attr(&triage.packet_attr)
-                            + self.score_by_confidence(&triage.confidence);
-                        if triage.response.iter().any(|r| score >= r.minimum_score) {
-                            Some(TriageScore {
-                                policy_id: triage.id,
-                                score,
-                            })
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                if triage_scores.is_empty() {
-                    return Ok((false, None));
-                }
-                return Ok((true, Some(triage_scores)));
-            }
+            return Ok((true, Some(triage_scores)));
         }
 
         Ok((true, None))
@@ -498,12 +495,12 @@ where
     T: TryFrom<K> + PartialOrd,
     K: Deserialize<'de>,
 {
-    if let Some(first_val) = deserialize::<K>(&packet_attr.first_value) {
-        if let Ok(first_val) = T::try_from(first_val) {
-            let second_val =
-                check_second_value::<T, K>(packet_attr.cmp_kind, packet_attr.second_value.as_ref());
-            return matches_attr(packet_attr.cmp_kind, attr_val, &first_val, second_val);
-        }
+    if let Some(first_val) = deserialize::<K>(&packet_attr.first_value)
+        && let Ok(first_val) = T::try_from(first_val)
+    {
+        let second_val =
+            check_second_value::<T, K>(packet_attr.cmp_kind, packet_attr.second_value.as_ref());
+        return matches_attr(packet_attr.cmp_kind, attr_val, &first_val, second_val);
     }
     false
 }

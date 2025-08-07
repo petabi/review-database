@@ -271,7 +271,7 @@ impl Match for TorConnection {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_http_attr_by_kind!(self, raw_event_attr)
     }
 }
@@ -395,7 +395,7 @@ impl Match for TorConnectionConn {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_conn_attr_by_kind!(self, raw_event_attr)
     }
 }

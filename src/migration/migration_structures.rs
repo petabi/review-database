@@ -558,7 +558,7 @@ impl From<InnerV0_29> for InnerNode {
 }
 
 impl Indexable for InnerV0_29 {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::from(self.name.as_bytes())
     }
 

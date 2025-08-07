@@ -150,7 +150,7 @@ impl Match for PortScan {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         if let RawEventAttrKind::Conn(attr) = raw_event_attr {
             match attr {
                 ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
@@ -284,7 +284,7 @@ impl Match for MultiHostPortScan {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         if let RawEventAttrKind::Conn(attr) = raw_event_attr {
             match attr {
                 ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
@@ -411,7 +411,7 @@ impl Match for ExternalDdos {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         if let RawEventAttrKind::Conn(attr) = raw_event_attr {
             match attr {
                 ConnAttr::SrcAddr => Some(AttrValue::VecAddr(&self.src_addrs)),
@@ -591,7 +591,7 @@ impl Match for BlocklistConn {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_conn_attr_by_kind!(self, raw_event_attr)
     }
 }

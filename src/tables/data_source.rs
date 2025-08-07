@@ -42,7 +42,7 @@ impl UniqueKey for DataSource {
 }
 
 impl Indexable for DataSource {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.name.as_bytes())
     }
     fn index(&self) -> u32 {
@@ -117,7 +117,7 @@ pub struct Update {
 impl IndexedMapUpdate for Update {
     type Entry = DataSource;
 
-    fn key(&self) -> Option<Cow<[u8]>> {
+    fn key(&self) -> Option<Cow<'_, [u8]>> {
         self.name.as_deref().map(str::as_bytes).map(Cow::Borrowed)
     }
 
@@ -144,13 +144,12 @@ impl IndexedMapUpdate for Update {
             value.source.clear();
             value.source.push_str(v);
         }
-        if let Some(v) = self.kind.as_deref() {
-            if value.data_type != DataType::TimeSeries {
-                if let Some(s) = value.kind.as_mut() {
-                    s.clear();
-                    s.push_str(v);
-                }
-            }
+        if let Some(v) = self.kind.as_deref()
+            && value.data_type != DataType::TimeSeries
+            && let Some(s) = value.kind.as_mut()
+        {
+            s.clear();
+            s.push_str(v);
         }
 
         if let Some(v) = self.description.as_deref() {
@@ -162,15 +161,15 @@ impl IndexedMapUpdate for Update {
     }
 
     fn verify(&self, value: &Self::Entry) -> bool {
-        if let Some(v) = self.name.as_deref() {
-            if value.name != v {
-                return false;
-            }
+        if let Some(v) = self.name.as_deref()
+            && value.name != v
+        {
+            return false;
         }
-        if let Some(v) = self.server_name.as_deref() {
-            if value.server_name != v {
-                return false;
-            }
+        if let Some(v) = self.server_name.as_deref()
+            && value.server_name != v
+        {
+            return false;
         }
         if let Some(v) = self.address.as_deref() {
             if let Ok(v) = v.parse() {
@@ -181,24 +180,24 @@ impl IndexedMapUpdate for Update {
                 return false;
             }
         }
-        if let Some(v) = self.data_type {
-            if value.data_type != v {
-                return false;
-            }
+        if let Some(v) = self.data_type
+            && value.data_type != v
+        {
+            return false;
         }
 
-        if let Some(v) = self.source.as_deref() {
-            if value.source != v {
-                return false;
-            }
+        if let Some(v) = self.source.as_deref()
+            && value.source != v
+        {
+            return false;
         }
         if value.kind.as_deref() != self.kind.as_deref() {
             return false;
         }
-        if let Some(v) = self.description.as_deref() {
-            if value.description != v {
-                return false;
-            }
+        if let Some(v) = self.description.as_deref()
+            && value.description != v
+        {
+            return false;
         }
         true
     }

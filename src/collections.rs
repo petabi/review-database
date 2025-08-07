@@ -61,7 +61,7 @@ impl KeyIndex {
         })
     }
 
-    pub fn iter(&self) -> KeyIndexIterator {
+    pub fn iter(&self) -> KeyIndexIterator<'_> {
         KeyIndexIterator {
             entries: &self.keys,
             i: 0,
@@ -181,9 +181,9 @@ pub trait Indexable
 where
     Self: Sized,
 {
-    fn key(&self) -> Cow<[u8]>;
+    fn key(&self) -> Cow<'_, [u8]>;
     fn index(&self) -> u32;
-    fn indexed_key(&self) -> Cow<[u8]> {
+    fn indexed_key(&self) -> Cow<'_, [u8]> {
         Self::make_indexed_key(self.key(), self.index())
     }
     fn make_indexed_key(key: Cow<[u8]>, index: u32) -> Cow<[u8]>;
@@ -230,7 +230,7 @@ pub trait Indexed {
     /// # Errors
     ///
     /// Never fails.
-    fn inner_iterator(&self, mode: IteratorMode) -> Result<IndexedMapIterator> {
+    fn inner_iterator(&self, mode: IteratorMode) -> Result<IndexedMapIterator<'_>> {
         let iter = self.db().iterator_cf(self.cf(), mode);
 
         Ok(IndexedMapIterator { inner: iter })
@@ -716,7 +716,7 @@ impl<'i, M> IterableMap<'i, IndexedMapIterator<'i>> for M
 where
     M: Indexed,
 {
-    fn iter_forward(&self) -> Result<IndexedMapIterator> {
+    fn iter_forward(&self) -> Result<IndexedMapIterator<'_>> {
         self.inner_iterator(IteratorMode::From(&[0], Direction::Forward))
     }
 }
@@ -725,7 +725,7 @@ pub trait IndexedMapUpdate {
     type Entry;
 
     /// Returns the key of itself.
-    fn key(&self) -> Option<Cow<[u8]>>;
+    fn key(&self) -> Option<Cow<'_, [u8]>>;
 
     /// Applies the changes to the value.
     ///

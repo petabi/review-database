@@ -243,7 +243,7 @@ impl<'a> Map<'a> {
             .context("failed to write new entry")
     }
 
-    fn inner_iterator(&self, mode: IteratorMode) -> MapIterator {
+    fn inner_iterator(&self, mode: IteratorMode) -> MapIterator<'_> {
         let iter = self.db.iterator_cf(self.cf, mode);
 
         MapIterator { inner: iter }
@@ -251,7 +251,7 @@ impl<'a> Map<'a> {
 }
 
 impl<'i> IterableMap<'i, MapIterator<'i>> for Map<'i> {
-    fn iter_forward(&self) -> Result<MapIterator> {
+    fn iter_forward(&self) -> Result<MapIterator<'_>> {
         Ok(self.inner_iterator(IteratorMode::Start))
     }
 }

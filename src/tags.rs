@@ -74,7 +74,7 @@ impl<'a, IdKind> TagSet<'a, IdKind> {
 
     /// Returns an iterator over the tags in the set.
     #[must_use]
-    pub fn tags(&self) -> Tags {
+    pub fn tags(&self) -> Tags<'_> {
         Tags {
             tags: self.tags.as_slice(),
             index: 0,

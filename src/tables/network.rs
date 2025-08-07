@@ -97,7 +97,7 @@ impl UniqueKey for Network {
 }
 
 impl Indexable for Network {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.name.as_bytes())
     }
 
@@ -112,7 +112,7 @@ impl Indexable for Network {
         Cow::Owned(key)
     }
 
-    fn indexed_key(&self) -> Cow<[u8]> {
+    fn indexed_key(&self) -> Cow<'_, [u8]> {
         let mut key = self.name.as_bytes().to_vec();
         key.extend(self.id.to_be_bytes());
         std::borrow::Cow::Owned(key)
@@ -240,7 +240,7 @@ impl Update {
 impl IndexedMapUpdate for Update {
     type Entry = Network;
 
-    fn key(&self) -> Option<Cow<[u8]>> {
+    fn key(&self) -> Option<Cow<'_, [u8]>> {
         self.name.as_deref().map(|n| Cow::Borrowed(n.as_bytes()))
     }
 
@@ -271,30 +271,30 @@ impl IndexedMapUpdate for Update {
     }
 
     fn verify(&self, value: &Self::Entry) -> bool {
-        if let Some(v) = self.name.as_deref() {
-            if v != value.name {
-                return false;
-            }
+        if let Some(v) = self.name.as_deref()
+            && v != value.name
+        {
+            return false;
         }
-        if let Some(v) = self.description.as_deref() {
-            if v != value.description {
-                return false;
-            }
+        if let Some(v) = self.description.as_deref()
+            && v != value.description
+        {
+            return false;
         }
-        if let Some(v) = &self.networks {
-            if v != &value.networks {
-                return false;
-            }
+        if let Some(v) = &self.networks
+            && v != &value.networks
+        {
+            return false;
         }
-        if let Some(v) = self.customer_ids.as_deref() {
-            if v != value.customer_ids {
-                return false;
-            }
+        if let Some(v) = self.customer_ids.as_deref()
+            && v != value.customer_ids
+        {
+            return false;
         }
-        if let Some(v) = self.tag_ids.as_deref() {
-            if v != value.tag_ids {
-                return false;
-            }
+        if let Some(v) = self.tag_ids.as_deref()
+            && v != value.tag_ids
+        {
+            return false;
         }
         true
     }

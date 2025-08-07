@@ -215,7 +215,7 @@ impl Match for BlocklistBootp {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue> {
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_bootp_attr_by_kind!(self, raw_event_attr)
     }
 }

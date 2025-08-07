@@ -29,7 +29,7 @@ impl FromKeyValue for CsvColumnExtra {
 }
 
 impl Indexable for CsvColumnExtra {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::Owned(self.model_id.to_be_bytes().to_vec())
     }
 
@@ -57,7 +57,7 @@ impl Indexable for CsvColumnExtra {
 impl IndexedMapUpdate for CsvColumnExtra {
     type Entry = CsvColumnExtra;
 
-    fn key(&self) -> Option<Cow<[u8]>> {
+    fn key(&self) -> Option<Cow<'_, [u8]>> {
         Some(Cow::Owned(self.model_id.to_be_bytes().to_vec()))
     }
 

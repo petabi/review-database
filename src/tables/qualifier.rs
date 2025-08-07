@@ -34,7 +34,7 @@ impl UniqueKey for Qualifier {
 }
 
 impl Indexable for Qualifier {
-    fn key(&self) -> Cow<[u8]> {
+    fn key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.description.as_bytes())
     }
 
@@ -62,7 +62,7 @@ impl Indexable for Qualifier {
 impl IndexedMapUpdate for Qualifier {
     type Entry = Qualifier;
 
-    fn key(&self) -> Option<Cow<[u8]>> {
+    fn key(&self) -> Option<Cow<'_, [u8]>> {
         if self.description.is_empty() {
             None
         } else {
