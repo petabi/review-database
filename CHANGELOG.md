@@ -49,6 +49,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed `kind_matches` method in `HttpThreat` to filter out single-character and
+  non-alphanumeric tokens from pattern matching, preventing false positives
+  when matching attack kinds containing punctuation like "-" against filter
+  kinds with hyphens.
 - Updated the implementation of the `Match::confidence` trait for `WindowsThreat`
   to return the value of the existing `confidence` field instead of `None`. This
   ensures that threat confidence is accurately represented and used in scoring logic.

@@ -475,6 +475,7 @@ impl Match for HttpThreat {
             let patterns = self
                 .attack_kind
                 .split_whitespace()
+                .filter(|s| s.chars().any(char::is_alphanumeric))
                 .map(ToString::to_string)
                 .collect::<Vec<String>>();
             let ac = AhoCorasickBuilder::new()
@@ -484,6 +485,7 @@ impl Match for HttpThreat {
             if kinds.iter().all(|kind| {
                 let words = kind
                     .split_whitespace()
+                    .filter(|s| s.chars().any(char::is_alphanumeric))
                     .map(ToString::to_string)
                     .collect::<Vec<String>>();
                 !words.iter().all(|w| ac.is_match(w))
