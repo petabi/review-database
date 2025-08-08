@@ -10,8 +10,8 @@ use strum_macros::{Display, EnumString};
 
 use crate::{
     Agent, BlocklistTlsFields, EventCategory, ExternalServiceConfig, ExternalServiceStatus,
-    ExtraThreat, HttpThreatFields, Indexable, NetworkThreat, NodeProfile, Role, Tidb, TidbKind,
-    TidbRule, TriageScore, WindowsThreat,
+    ExtraThreat, FilterEndpoint, FlowKind, HttpThreatFields, Indexable, LearningMethod,
+    NetworkThreat, NodeProfile, Role, Tidb, TidbKind, TidbRule, TriageScore, WindowsThreat,
     account::{PasswordHashAlgorithm, SaltedPassword},
     tables::InnerNode,
     types::Account,
@@ -631,5 +631,82 @@ impl TryFrom<TidbV0_39> for Tidb {
                 })
                 .collect(),
         })
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub struct FilterV0_40 {
+    pub username: String,
+    pub name: String,
+    pub directions: Option<Vec<FlowKind>>,
+    pub keywords: Option<Vec<String>>,
+    pub network_tags: Option<Vec<String>>,
+    pub customers: Option<Vec<String>>,
+    pub endpoints: Option<Vec<FilterEndpoint>>,
+    pub sensors: Option<Vec<String>>,
+    pub os: Option<Vec<String>>,
+    pub devices: Option<Vec<String>>,
+    pub hostnames: Option<Vec<String>>,
+    pub user_ids: Option<Vec<String>>,
+    pub user_names: Option<Vec<String>>,
+    pub user_departments: Option<Vec<String>>,
+    pub countries: Option<Vec<String>>,
+    pub categories: Option<Vec<u8>>,
+    pub levels: Option<Vec<u8>>,
+    pub kinds: Option<Vec<String>>,
+    pub learning_methods: Option<Vec<LearningMethod>>,
+    pub confidence: Option<f32>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FilterValueV0_40 {
+    pub directions: Option<Vec<FlowKind>>,
+    pub keywords: Option<Vec<String>>,
+    pub network_tags: Option<Vec<String>>,
+    pub customers: Option<Vec<String>>,
+    pub endpoints: Option<Vec<FilterEndpoint>>,
+    pub sensors: Option<Vec<String>>,
+    pub os: Option<Vec<String>>,
+    pub devices: Option<Vec<String>>,
+    pub hostnames: Option<Vec<String>>,
+    pub user_ids: Option<Vec<String>>,
+    pub user_names: Option<Vec<String>>,
+    pub user_departments: Option<Vec<String>>,
+    pub countries: Option<Vec<String>>,
+    pub categories: Option<Vec<u8>>,
+    pub levels: Option<Vec<u8>>,
+    pub kinds: Option<Vec<String>>,
+    pub learning_methods: Option<Vec<LearningMethod>>,
+    pub confidence: Option<f32>,
+}
+
+impl From<FilterValueV0_40> for crate::Filter {
+    fn from(old_value: FilterValueV0_40) -> Self {
+        use crate::PeriodForSearch;
+
+        Self {
+            username: String::new(), // Will be set from key
+            name: String::new(),     // Will be set from key
+            directions: old_value.directions,
+            keywords: old_value.keywords,
+            network_tags: old_value.network_tags,
+            customers: old_value.customers,
+            endpoints: old_value.endpoints,
+            sensors: old_value.sensors,
+            os: old_value.os,
+            devices: old_value.devices,
+            hostnames: old_value.hostnames,
+            user_ids: old_value.user_ids,
+            user_names: old_value.user_names,
+            user_departments: old_value.user_departments,
+            countries: old_value.countries,
+            categories: old_value.categories,
+            levels: old_value.levels,
+            kinds: old_value.kinds,
+            learning_methods: old_value.learning_methods,
+            confidence: old_value.confidence,
+            period: PeriodForSearch::Recent("1 hour".to_string()),
+        }
     }
 }

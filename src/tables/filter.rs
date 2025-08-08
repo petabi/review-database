@@ -1,12 +1,18 @@
 //! The `filter` map.
 
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
 use crate::{FilterEndpoint, FlowKind, Iterable, LearningMethod, Map, Table, types::FromKeyValue};
 
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PeriodForSearch {
+    Recent(String),
+    Custom(DateTime<Utc>, DateTime<Utc>),
+}
+
 pub struct Filter {
     pub username: String,
     pub name: String,
@@ -28,6 +34,35 @@ pub struct Filter {
     pub kinds: Option<Vec<String>>,
     pub learning_methods: Option<Vec<LearningMethod>>,
     pub confidence: Option<f32>,
+    pub period: PeriodForSearch,
+}
+
+impl Default for Filter {
+    fn default() -> Self {
+        Self {
+            username: String::new(),
+            name: String::new(),
+            directions: None,
+            keywords: None,
+            network_tags: None,
+            customers: None,
+            endpoints: None,
+            sensors: None,
+            os: None,
+            devices: None,
+            hostnames: None,
+            user_ids: None,
+            user_names: None,
+            user_departments: None,
+            countries: None,
+            categories: None,
+            levels: None,
+            kinds: None,
+            learning_methods: None,
+            confidence: None,
+            period: PeriodForSearch::Recent("1 hour".to_string()),
+        }
+    }
 }
 
 impl Filter {
@@ -59,6 +94,7 @@ impl Filter {
             kinds: self.kinds,
             learning_methods: self.learning_methods,
             confidence: self.confidence,
+            period: self.period,
         };
         let value = super::serialize(&value)?;
         Ok((key, value))
@@ -85,6 +121,7 @@ pub(crate) struct Value {
     kinds: Option<Vec<String>>,
     learning_methods: Option<Vec<LearningMethod>>,
     confidence: Option<f32>,
+    period: PeriodForSearch,
 }
 
 impl FromKeyValue for Filter {
@@ -119,6 +156,7 @@ impl FromKeyValue for Filter {
             kinds: value.kinds,
             learning_methods: value.learning_methods,
             confidence: value.confidence,
+            period: value.period,
         })
     }
 }
@@ -190,6 +228,11 @@ impl<'d> Table<'d, Filter> {
                 .transpose()
         })
         .collect()
+    }
+
+    /// Provides access to the underlying map for low-level operations.
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
     }
 }
 
