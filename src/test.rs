@@ -27,7 +27,7 @@ impl Store {
         Self { db }
     }
 
-    pub(super) fn indexed_set(&self) -> IndexedSet {
+    pub(super) fn indexed_set(&self) -> IndexedSet<'_> {
         IndexedSet::new(&self.db, "test_cf", b"indexed set").unwrap()
     }
 }

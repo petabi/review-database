@@ -982,7 +982,7 @@ mod tests {
 
         // Filtering success.
         let mut success_filter = event_filter();
-        let src_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+        let src_addr = IpAddr::V4(Ipv4Addr::LOCALHOST);
         let dst_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2));
         success_filter.customers = Some(vec![create_customer(src_addr)]);
         success_filter.endpoints = Some(vec![create_endpoint(src_addr)]);
@@ -1055,7 +1055,7 @@ mod tests {
 
         // Filtering success.
         let mut success_filter = event_filter();
-        let src_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+        let src_addr = IpAddr::V4(Ipv4Addr::LOCALHOST);
         let dst_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2));
         success_filter.customers = Some(vec![create_customer(src_addr)]);
         success_filter.endpoints = Some(vec![create_endpoint(src_addr)]);
@@ -1176,7 +1176,7 @@ mod tests {
                 attr_name: HttpAttr::SrcAddr.to_string(),
                 value_kind: ValueKind::IpAddr,
                 cmp_kind: AttrCmpKind::CloseRange,
-                first_value: serialize(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))).unwrap(),
+                first_value: serialize(&IpAddr::V4(Ipv4Addr::LOCALHOST)).unwrap(),
                 second_value: serialize(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
                 weight: Some(0.1),
             },
@@ -1262,7 +1262,7 @@ mod tests {
                 value_kind: ValueKind::IpAddr,
                 cmp_kind: AttrCmpKind::LeftOpenRange,
                 first_value: serialize(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 0))).unwrap(),
-                second_value: serialize(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                second_value: serialize(&IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 weight: Some(0.15),
             },
             PacketAttr {
@@ -1353,7 +1353,7 @@ mod tests {
     fn blocklist_bootp_fields() -> BlocklistBootpFields {
         BlocklistBootpFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 68,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
@@ -1378,7 +1378,7 @@ mod tests {
     fn blocklist_conn_fields() -> BlocklistConnFields {
         BlocklistConnFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -1400,7 +1400,7 @@ mod tests {
     fn blocklist_dcerpc_fields() -> BlocklistDceRpcFields {
         BlocklistDceRpcFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 135,
@@ -1418,7 +1418,7 @@ mod tests {
     fn blocklist_dhcp_fields() -> BlocklistDhcpFields {
         BlocklistDhcpFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 68,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
@@ -1430,11 +1430,11 @@ mod tests {
             siaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 7)),
             giaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 8)),
             subnet_mask: IpAddr::V4(Ipv4Addr::new(255, 255, 255, 0)),
-            router: vec![IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))],
-            domain_name_server: vec![IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))],
+            router: vec![IpAddr::V4(Ipv4Addr::LOCALHOST)],
+            domain_name_server: vec![IpAddr::V4(Ipv4Addr::LOCALHOST)],
             req_ip_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 100)),
             lease_time: 100,
-            server_id: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            server_id: IpAddr::V4(Ipv4Addr::LOCALHOST),
             param_req_list: vec![1, 2, 3],
             message: "message".to_string(),
             renewal_time: 100,
@@ -1450,7 +1450,7 @@ mod tests {
     fn blocklist_dns_fields() -> BlocklistDnsFields {
         BlocklistDnsFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
@@ -1476,7 +1476,7 @@ mod tests {
     fn blocklist_http_fields() -> BlocklistHttpFields {
         BlocklistHttpFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -1512,7 +1512,7 @@ mod tests {
     fn blocklist_kerberos_fields() -> BlocklistKerberosFields {
         BlocklistKerberosFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 88,
@@ -1535,7 +1535,7 @@ mod tests {
     fn blocklist_mqtt_fields() -> BlocklistMqttFields {
         BlocklistMqttFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 1883,
@@ -1555,7 +1555,7 @@ mod tests {
     fn blocklist_nfs_fields() -> BlocklistNfsFields {
         BlocklistNfsFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 2049,
@@ -1571,7 +1571,7 @@ mod tests {
     fn blocklist_ntlm_fields() -> BlocklistNtlmFields {
         BlocklistNtlmFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
@@ -1590,7 +1590,7 @@ mod tests {
     fn blocklist_rdp_fields() -> BlocklistRdpFields {
         BlocklistRdpFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 3389,
@@ -1605,7 +1605,7 @@ mod tests {
     fn blocklist_smb_fields() -> BlocklistSmbFields {
         BlocklistSmbFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
@@ -1630,7 +1630,7 @@ mod tests {
     fn blocklist_smtp_fields() -> BlocklistSmtpFields {
         BlocklistSmtpFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 25,
@@ -1651,7 +1651,7 @@ mod tests {
     fn blocklist_ssh_fields() -> BlocklistSshFields {
         BlocklistSshFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 22,
@@ -1678,7 +1678,7 @@ mod tests {
     fn blocklist_tls_fields() -> BlocklistTlsFields {
         BlocklistTlsFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
@@ -1713,7 +1713,7 @@ mod tests {
     fn ldap_event_fields() -> LdapEventFields {
         LdapEventFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
@@ -1732,7 +1732,7 @@ mod tests {
 
     fn ftp_event_fields() -> FtpEventFields {
         FtpEventFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
@@ -1757,7 +1757,7 @@ mod tests {
 
     fn port_scan_fields() -> PortScanFields {
         PortScanFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
@@ -1769,7 +1769,7 @@ mod tests {
 
     fn multi_host_port_scan_fields() -> MultiHostPortScanFields {
         MultiHostPortScanFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
@@ -1785,7 +1785,7 @@ mod tests {
     fn external_ddos_fields() -> ExternalDdosFields {
         ExternalDdosFields {
             src_addrs: vec![
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
             ],
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -1800,7 +1800,7 @@ mod tests {
         CryptocurrencyMiningPoolFields {
             sensor: "sensro".to_string(),
             session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
@@ -1824,7 +1824,7 @@ mod tests {
 
     fn ftp_brute_force_fields() -> FtpBruteForceFields {
         FtpBruteForceFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
             proto: 6,
@@ -1839,7 +1839,7 @@ mod tests {
     fn repeated_http_sessions_fiedls() -> RepeatedHttpSessionsFields {
         RepeatedHttpSessionsFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
@@ -1851,7 +1851,7 @@ mod tests {
     fn dga_fields() -> DgaFields {
         DgaFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -1887,7 +1887,7 @@ mod tests {
     fn http_event_fields() -> HttpEventFields {
         HttpEventFields {
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -1921,7 +1921,7 @@ mod tests {
 
     fn ldap_brute_force_fields() -> LdapBruteForceFields {
         LdapBruteForceFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
             proto: 6,
@@ -1937,7 +1937,7 @@ mod tests {
 
     fn rdp_brute_force_fields() -> RdpBruteForceFields {
         RdpBruteForceFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
@@ -1953,7 +1953,7 @@ mod tests {
         DnsEventFields {
             sensor: "sensor".to_string(),
             session_end_time: Utc::now(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
@@ -1979,7 +1979,7 @@ mod tests {
         NetworkThreat {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             sensor: "sensor".to_string(),
-            orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            orig_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             orig_port: 10000,
             resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             resp_port: 80,
@@ -2042,7 +2042,7 @@ mod tests {
         HttpThreatFields {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             sensor: "sensor".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,

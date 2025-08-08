@@ -388,10 +388,10 @@ mod test {
 
         let r = table.get(agent);
         assert!(r.is_ok());
-        if let Ok(Some(tf)) = r {
-            if let Some(rule) = tf.rules.get(&network) {
-                assert_eq!(rule.tcp_ports, Some(vec![8080, 8888]));
-            }
+        if let Ok(Some(tf)) = r
+            && let Some(rule) = tf.rules.get(&network)
+        {
+            assert_eq!(rule.tcp_ports, Some(vec![8080, 8888]));
         }
     }
 
