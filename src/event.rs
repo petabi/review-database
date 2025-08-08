@@ -2794,7 +2794,7 @@ mod tests {
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
             session_end_time: Utc::now(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
@@ -2863,7 +2863,7 @@ mod tests {
             customers: None,
             endpoints: None,
             directions: None,
-            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
             countries: None,
             categories: None,
@@ -2893,7 +2893,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             counter.get(&(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
             )),
             Some(&1)
@@ -2904,7 +2904,7 @@ mod tests {
     async fn syslog_for_dga() {
         let fields = DgaFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -3047,7 +3047,7 @@ mod tests {
         let fields = HttpThreatFields {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -3108,7 +3108,7 @@ mod tests {
     async fn syslog_for_nonbrowser() {
         let fields = HttpEventFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -3166,7 +3166,7 @@ mod tests {
     async fn syslog_for_blocklist_http() {
         let fields = BlocklistHttpFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -3277,7 +3277,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_portscan() {
         let fields = PortScanFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
@@ -3314,7 +3314,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_multihostportscan() {
         let fields = MultiHostPortScanFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
@@ -3358,7 +3358,7 @@ mod tests {
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
             ],
-            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            dst_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
@@ -3392,7 +3392,7 @@ mod tests {
     fn blocklist_bootp_fields() -> BlocklistBootpFields {
         BlocklistBootpFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 68,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
@@ -3467,7 +3467,7 @@ mod tests {
             customers: None,
             endpoints: None,
             directions: None,
-            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
             countries: None,
             categories: None,
@@ -3481,7 +3481,7 @@ mod tests {
         assert_eq!(
             event.address_pair(None, &filter).unwrap(),
             (
-                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
@@ -3504,7 +3504,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             counter.get(&(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
             )),
             Some(&1)
@@ -3515,7 +3515,7 @@ mod tests {
     async fn syslog_for_blocklist_conn() {
         let fields = BlocklistConnFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
@@ -3562,7 +3562,7 @@ mod tests {
     async fn syslog_for_blocklist_dcerpc() {
         let fields = BlocklistDceRpcFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 135,
@@ -3686,7 +3686,7 @@ mod tests {
             customers: None,
             endpoints: None,
             directions: None,
-            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
             countries: None,
             categories: None,
@@ -3700,7 +3700,7 @@ mod tests {
         assert_eq!(
             event.address_pair(None, &filter).unwrap(),
             (
-                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
@@ -3723,7 +3723,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             counter.get(&(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
             )),
             Some(&1)
@@ -3735,7 +3735,7 @@ mod tests {
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
             session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
@@ -3792,7 +3792,7 @@ mod tests {
         let fields = CryptocurrencyMiningPoolFields {
             sensor: "collector1".to_string(),
             session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
@@ -3843,7 +3843,7 @@ mod tests {
     async fn syslog_for_blocklist_dns() {
         let fields = BlocklistDnsFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
@@ -3892,7 +3892,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ftpbruteforce() {
         let fields = FtpBruteForceFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
             proto: 6,
@@ -3932,7 +3932,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ftpplaintext() {
         let fields = FtpEventFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
@@ -3981,7 +3981,7 @@ mod tests {
 
     fn ftpeventfields() -> FtpEventFields {
         FtpEventFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
@@ -4058,7 +4058,7 @@ mod tests {
             customers: None,
             endpoints: None,
             directions: None,
-            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
             countries: None,
             categories: None,
@@ -4072,7 +4072,7 @@ mod tests {
         assert_eq!(
             event.address_pair(None, &filter).unwrap(),
             (
-                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
@@ -4095,7 +4095,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             counter.get(&(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
             )),
             Some(&1)
@@ -4106,7 +4106,7 @@ mod tests {
     async fn syslog_for_repeatedhttpsessions() {
         let fields = RepeatedHttpSessionsFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
@@ -4142,7 +4142,7 @@ mod tests {
     async fn syslog_for_blocklist_kerberos() {
         let fields = BlocklistKerberosFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 88,
@@ -4191,7 +4191,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ldapbruteforce() {
         let fields = LdapBruteForceFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
             proto: 6,
@@ -4234,7 +4234,7 @@ mod tests {
     async fn syslog_for_ldapplaintext() {
         let fields = LdapEventFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
@@ -4279,7 +4279,7 @@ mod tests {
     fn ldapeventfields() -> LdapEventFields {
         LdapEventFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
@@ -4350,7 +4350,7 @@ mod tests {
             customers: None,
             endpoints: None,
             directions: None,
-            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
             countries: None,
             categories: None,
@@ -4364,7 +4364,7 @@ mod tests {
         assert_eq!(
             event.address_pair(None, &filter).unwrap(),
             (
-                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
@@ -4387,7 +4387,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             counter.get(&(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
             )),
             Some(&1)
@@ -4430,7 +4430,7 @@ mod tests {
     async fn syslog_for_blocklist_mqtt() {
         let fields = BlocklistMqttFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 1883,
@@ -4477,7 +4477,7 @@ mod tests {
         let fields = NetworkThreat {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             sensor: "collector1".to_string(),
-            orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            orig_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             orig_port: 10000,
             resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             resp_port: 80,
@@ -4514,7 +4514,7 @@ mod tests {
     async fn syslog_for_blocklist_nfs() {
         let fields = BlocklistNfsFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 2049,
@@ -4556,7 +4556,7 @@ mod tests {
     async fn syslog_for_blocklist_ntlm() {
         let fields = BlocklistNtlmFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
@@ -4600,7 +4600,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_rdpbruteforce() {
         let fields = RdpBruteForceFields {
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
@@ -4641,7 +4641,7 @@ mod tests {
     async fn syslog_for_blocklist_rdp() {
         let fields = BlocklistRdpFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 3389,
@@ -4682,7 +4682,7 @@ mod tests {
     async fn syslog_for_blocklist_smb() {
         let fields = BlocklistSmbFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
@@ -4733,7 +4733,7 @@ mod tests {
     async fn syslog_for_blocklist_smtp() {
         let fields = BlocklistSmtpFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 25,
@@ -4780,7 +4780,7 @@ mod tests {
     async fn syslog_for_blocklist_ssh() {
         let fields = BlocklistSshFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 22,
@@ -4887,7 +4887,7 @@ mod tests {
     async fn syslog_for_blocklist_tls() {
         let fields = BlocklistTlsFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
@@ -4948,7 +4948,7 @@ mod tests {
         HttpEventFields {
             sensor: "collector1".to_string(),
             session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
@@ -5033,7 +5033,7 @@ mod tests {
             customers: None,
             endpoints: None,
             directions: None,
-            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
             countries: None,
             categories: None,
@@ -5047,7 +5047,7 @@ mod tests {
         assert_eq!(
             event.address_pair(None, &filter).unwrap(),
             (
-                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
@@ -5070,7 +5070,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             counter.get(&(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
             )),
             Some(&1)
@@ -5080,7 +5080,7 @@ mod tests {
     fn blocklist_tls_fields() -> BlocklistTlsFields {
         BlocklistTlsFields {
             sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
@@ -5135,7 +5135,7 @@ mod tests {
             SuspiciousTlsTraffic::new(Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(), fields);
         assert_eq!(
             suspicious_tls_traffic.src_addrs(),
-            &[IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))]
+            &[IpAddr::V4(Ipv4Addr::LOCALHOST)]
         );
         assert_eq!(
             suspicious_tls_traffic.dst_addrs(),
@@ -5178,7 +5178,7 @@ mod tests {
             customers: None,
             endpoints: None,
             directions: None,
-            source: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
             countries: None,
             categories: None,
@@ -5192,7 +5192,7 @@ mod tests {
         assert_eq!(
             event.address_pair(None, &filter).unwrap(),
             (
-                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+                Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
                 Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
             )
         );
@@ -5218,7 +5218,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             counter.get(&(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
             )),
             Some(&1)
