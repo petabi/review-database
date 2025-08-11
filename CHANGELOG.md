@@ -5,6 +5,26 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0-alpha.4] - 2025-08-13
+
+### Added
+
+- Added `confidence` field to various semi-supervised detection event structures:
+  - `CryptocurrencyMiningPool` (default 1.0)
+  - `RdpBruteForce` (default 0.3)
+  - `FtpBruteForce` (default 0.3)
+  - `FtpPlainText` (default 1.0)
+  - `LdapBruteForce` (default 0.3)
+  - `LdapPlainText` (default 1.0)
+  - `PortScan` (default 0.3)
+  - `MultiHostPortScan` (default 0.3)
+  - `ExternalDdos` (default 0.3)
+  - `RepeatedHttpSessions` (default 0.3)
+  - `TorConnection` (default 1.0)
+  - `NonBrowser` (default 1.0)
+- Added database migration from version 0.39.0 to 0.40.0-alpha.4 to update
+  existing events with appropriate default confidence values.
+
 ## [0.40.0] - 2025-08-13
 
 ### Added

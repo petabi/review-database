@@ -60,6 +60,7 @@ pub struct RepeatedHttpSessionsFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -67,18 +68,20 @@ impl RepeatedHttpSessionsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
-            self.proto.to_string()
+            self.proto.to_string(),
+            self.confidence.to_string()
         )
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct RepeatedHttpSessions {
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -87,6 +90,7 @@ pub struct RepeatedHttpSessions {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -117,6 +121,7 @@ impl RepeatedHttpSessions {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -741,6 +746,7 @@ impl Match for DomainGenerationAlgorithm {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Serialize, Deserialize)]
 pub struct NonBrowser {
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -772,6 +778,7 @@ pub struct NonBrowser {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -848,6 +855,7 @@ impl NonBrowser {
             resp_mime_types: fields.resp_mime_types.clone(),
             post_body: fields.post_body.clone(),
             state: fields.state.clone(),
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }

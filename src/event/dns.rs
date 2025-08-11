@@ -391,6 +391,7 @@ pub struct CryptocurrencyMiningPoolFields {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -398,7 +399,7 @@ impl CryptocurrencyMiningPoolFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -420,10 +421,12 @@ impl CryptocurrencyMiningPoolFields {
             self.ra_flag.to_string(),
             vector_to_string(&self.ttl),
             self.coins.join(","),
+            self.confidence.to_string()
         )
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct CryptocurrencyMiningPool {
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -446,6 +449,7 @@ pub struct CryptocurrencyMiningPool {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -504,6 +508,7 @@ impl CryptocurrencyMiningPool {
             ra_flag: fields.ra_flag,
             ttl: fields.ttl,
             coins: fields.coins,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
