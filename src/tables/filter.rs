@@ -73,7 +73,7 @@ impl Filter {
         key
     }
 
-    fn into_key_value(self) -> Result<(Vec<u8>, Vec<u8>)> {
+    pub(crate) fn into_key_value(self) -> Result<(Vec<u8>, Vec<u8>)> {
         let key = Filter::create_key(&self.username, &self.name);
         let value = Value {
             directions: self.directions,

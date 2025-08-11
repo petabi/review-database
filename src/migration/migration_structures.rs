@@ -634,31 +634,6 @@ impl TryFrom<TidbV0_39> for Tidb {
     }
 }
 
-#[derive(Deserialize, Serialize)]
-#[allow(clippy::module_name_repetitions)]
-pub struct FilterV0_39 {
-    pub username: String,
-    pub name: String,
-    pub directions: Option<Vec<FlowKind>>,
-    pub keywords: Option<Vec<String>>,
-    pub network_tags: Option<Vec<String>>,
-    pub customers: Option<Vec<String>>,
-    pub endpoints: Option<Vec<FilterEndpoint>>,
-    pub sensors: Option<Vec<String>>,
-    pub os: Option<Vec<String>>,
-    pub devices: Option<Vec<String>>,
-    pub hostnames: Option<Vec<String>>,
-    pub user_ids: Option<Vec<String>>,
-    pub user_names: Option<Vec<String>>,
-    pub user_departments: Option<Vec<String>>,
-    pub countries: Option<Vec<String>>,
-    pub categories: Option<Vec<u8>>,
-    pub levels: Option<Vec<u8>>,
-    pub kinds: Option<Vec<String>>,
-    pub learning_methods: Option<Vec<LearningMethod>>,
-    pub confidence: Option<f32>,
-}
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct FilterValueV0_39 {
     pub directions: Option<Vec<FlowKind>>,
