@@ -1426,4 +1426,134 @@ mod tests {
             assert_eq!(rule.kind, None);
         });
     }
+
+    #[test]
+    fn migrate_0_40_filter() {
+        use bincode::Options;
+
+        use crate::{
+            Filter, FilterEndpoint, FlowKind, LearningMethod, PeriodForSearch,
+            migration::migration_structures::FilterValueV0_39, types::FromKeyValue,
+        };
+
+        let settings = TestSchema::new();
+        let map = settings.store.filter_map();
+        let raw = map.raw();
+
+        // Create test data in the old format
+        let old_filter_values = vec![
+            FilterValueV0_39 {
+                directions: Some(vec![FlowKind::Outbound]),
+                keywords: Some(vec!["malware".to_string(), "suspicious".to_string()]),
+                network_tags: Some(vec!["dmz".to_string()]),
+                customers: Some(vec!["customer1".to_string()]),
+                endpoints: Some(vec![FilterEndpoint {
+                    direction: None,
+                    predefined: None,
+                    custom: None,
+                }]),
+                sensors: Some(vec!["sensor1".to_string()]),
+                os: Some(vec!["windows".to_string()]),
+                devices: Some(vec!["laptop".to_string()]),
+                hostnames: Some(vec!["host1".to_string()]),
+                user_ids: Some(vec!["user1".to_string()]),
+                user_names: Some(vec!["John Doe".to_string()]),
+                user_departments: Some(vec!["IT".to_string()]),
+                countries: Some(vec!["US".to_string()]),
+                categories: Some(vec![1, 2]),
+                levels: Some(vec![3, 4]),
+                kinds: Some(vec!["threat".to_string()]),
+                learning_methods: Some(vec![LearningMethod::SemiSupervised]),
+                confidence: Some(0.85),
+            },
+            FilterValueV0_39 {
+                directions: None,
+                keywords: None,
+                network_tags: None,
+                customers: None,
+                endpoints: None,
+                sensors: None,
+                os: None,
+                devices: None,
+                hostnames: None,
+                user_ids: None,
+                user_names: None,
+                user_departments: None,
+                countries: None,
+                categories: None,
+                levels: None,
+                kinds: None,
+                learning_methods: None,
+                confidence: None,
+            },
+        ];
+
+        // Insert test data with keys in the format: username\0name
+        let test_filters = vec![
+            (
+                "admin\0security_filter".to_string(),
+                old_filter_values[0].clone(),
+            ),
+            (
+                "user\0basic_filter".to_string(),
+                old_filter_values[1].clone(),
+            ),
+        ];
+
+        for (key, value) in &test_filters {
+            let serialized_value = bincode::DefaultOptions::new()
+                .serialize(value)
+                .expect("serializable");
+            assert!(raw.put(key.as_bytes(), &serialized_value).is_ok());
+        }
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        // Run the migration
+        assert!(super::migrate_0_40_filter(&settings.store).is_ok());
+
+        // Verify the migration results
+        let map = settings.store.filter_map();
+        for (key, expected_old_value) in &test_filters {
+            let raw_value = map.raw().get(key.as_bytes()).expect("get value");
+            assert!(raw_value.is_some());
+
+            // Deserialize the new `Filter` format
+            let new_filter =
+                Filter::from_key_value(key.as_bytes(), raw_value.unwrap().as_ref()).unwrap();
+
+            // Verify that all the old fields are preserved
+            assert_eq!(new_filter.directions, expected_old_value.directions);
+            assert_eq!(new_filter.keywords, expected_old_value.keywords);
+            assert_eq!(new_filter.network_tags, expected_old_value.network_tags);
+            assert_eq!(new_filter.customers, expected_old_value.customers);
+            assert_eq!(new_filter.endpoints, expected_old_value.endpoints);
+            assert_eq!(new_filter.sensors, expected_old_value.sensors);
+            assert_eq!(new_filter.os, expected_old_value.os);
+            assert_eq!(new_filter.devices, expected_old_value.devices);
+            assert_eq!(new_filter.hostnames, expected_old_value.hostnames);
+            assert_eq!(new_filter.user_ids, expected_old_value.user_ids);
+            assert_eq!(new_filter.user_names, expected_old_value.user_names);
+            assert_eq!(
+                new_filter.user_departments,
+                expected_old_value.user_departments
+            );
+            assert_eq!(new_filter.countries, expected_old_value.countries);
+            assert_eq!(new_filter.categories, expected_old_value.categories);
+            assert_eq!(new_filter.levels, expected_old_value.levels);
+            assert_eq!(new_filter.kinds, expected_old_value.kinds);
+            assert_eq!(
+                new_filter.learning_methods,
+                expected_old_value.learning_methods
+            );
+            assert_eq!(new_filter.confidence, expected_old_value.confidence);
+
+            // Verify that the new period field is set to the default value
+            assert_eq!(
+                new_filter.period,
+                PeriodForSearch::Recent("1 hour".to_string())
+            );
+        }
+    }
 }

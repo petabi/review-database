@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{FilterEndpoint, FlowKind, Iterable, LearningMethod, Map, Table, types::FromKeyValue};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PeriodForSearch {
     Recent(String),
     Custom(DateTime<Utc>, DateTime<Utc>),

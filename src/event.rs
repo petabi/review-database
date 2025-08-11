@@ -1877,7 +1877,7 @@ impl EventKind {
 }
 
 /// Machine Learning Method.
-#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize, Debug)]
 pub enum LearningMethod {
     Unsupervised,
     SemiSupervised,
@@ -2704,7 +2704,7 @@ pub enum InvalidEvent {
 
 pub type Id = u32;
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
 pub struct FilterEndpoint {
     pub direction: Option<TrafficDirection>,
     pub predefined: Option<Id>,
@@ -2712,7 +2712,7 @@ pub struct FilterEndpoint {
 }
 
 /// Traffic flow direction.
-#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize, Debug)]
 pub enum FlowKind {
     Inbound,
     Outbound,
@@ -2727,7 +2727,7 @@ pub enum NetworkType {
     Gateway,
 }
 
-#[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize, Debug)]
 pub enum TrafficDirection {
     From,
     To,
