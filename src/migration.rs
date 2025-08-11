@@ -326,29 +326,6 @@ fn migrate_0_40_filter(store: &super::Store) -> Result<()> {
     use crate::Filter;
     use crate::migration::migration_structures::FilterValueV0_39;
 
-    #[derive(serde::Serialize)]
-    struct NewValue {
-        directions: Option<Vec<crate::FlowKind>>,
-        keywords: Option<Vec<String>>,
-        network_tags: Option<Vec<String>>,
-        customers: Option<Vec<String>>,
-        endpoints: Option<Vec<crate::FilterEndpoint>>,
-        sensors: Option<Vec<String>>,
-        os: Option<Vec<String>>,
-        devices: Option<Vec<String>>,
-        hostnames: Option<Vec<String>>,
-        user_ids: Option<Vec<String>>,
-        user_names: Option<Vec<String>>,
-        user_departments: Option<Vec<String>>,
-        countries: Option<Vec<String>>,
-        categories: Option<Vec<u8>>,
-        levels: Option<Vec<u8>>,
-        kinds: Option<Vec<String>>,
-        learning_methods: Option<Vec<crate::LearningMethod>>,
-        confidence: Option<f32>,
-        period: crate::PeriodForSearch,
-    }
-
     let map = store.filter_map();
     let raw = map.raw();
     for (key, old_value) in raw.iter_forward()? {
@@ -370,31 +347,7 @@ fn migrate_0_40_filter(store: &super::Store) -> Result<()> {
         new_filter.username = username;
         new_filter.name = name;
 
-        // Serialize the new filter value using bincode
-
-        let value_to_serialize = NewValue {
-            directions: new_filter.directions,
-            keywords: new_filter.keywords,
-            network_tags: new_filter.network_tags,
-            customers: new_filter.customers,
-            endpoints: new_filter.endpoints,
-            sensors: new_filter.sensors,
-            os: new_filter.os,
-            devices: new_filter.devices,
-            hostnames: new_filter.hostnames,
-            user_ids: new_filter.user_ids,
-            user_names: new_filter.user_names,
-            user_departments: new_filter.user_departments,
-            countries: new_filter.countries,
-            categories: new_filter.categories,
-            levels: new_filter.levels,
-            kinds: new_filter.kinds,
-            learning_methods: new_filter.learning_methods,
-            confidence: new_filter.confidence,
-            period: new_filter.period,
-        };
-
-        let new_value = bincode::DefaultOptions::new().serialize(&value_to_serialize)?;
+        let (_, new_value) = new_filter.into_key_value()?;
         raw.update((&key, &old_value), (&key, &new_value))?;
     }
     Ok(())
