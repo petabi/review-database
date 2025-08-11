@@ -89,6 +89,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Renamed `HttpThreatFields::duration` to `HttpThreatFields::end_time`
   to follow the project naming convention for temporal fields. This improves
   consistency and clarity in field semantics.
+- Modified FTP detection event structures (`FtpEventFields`, `FtpPlainText`,
+  `BlocklistFtp`) to replace individual command fields with a `commands` vector
+  containing `FtpCommand` structs. This allows storing multiple FTP commands and
+  responses instead of just the last one.
 
 ### Removed
 

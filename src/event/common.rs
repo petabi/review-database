@@ -541,6 +541,7 @@ mod tests {
     use serde::Serialize;
 
     use super::Match;
+    use crate::FtpCommand;
     use crate::{
         AttrCmpKind, Customer, CustomerNetwork, EventCategory, HostNetworkGroup, PacketAttr,
         ValueKind,
@@ -1738,6 +1739,18 @@ mod tests {
     }
 
     fn ftp_event_fields() -> FtpEventFields {
+        let command = FtpCommand {
+            command: "ls".to_string(),
+            reply_code: "200".to_string(),
+            reply_msg: "OK".to_string(),
+            data_passive: false,
+            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
+            data_resp_port: 10001,
+            file: "/etc/passwd".to_string(),
+            file_size: 5000,
+            file_id: "123".to_string(),
+        };
         FtpEventFields {
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
@@ -1747,18 +1760,8 @@ mod tests {
             end_time: 100,
             user: "user1".to_string(),
             password: "password".to_string(),
-            command: "ls".to_string(),
-            reply_code: "200".to_string(),
-            reply_msg: "OK".to_string(),
-            data_passive: false,
-            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
             sensor: "collector1".to_string(),
-            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
-            data_resp_port: 10001,
-            file: "/etc/passwd".to_string(),
-            file_size: 5000,
-            file_id: "123".to_string(),
-            confidence: 1.0,
+            commands: vec![command],
             category: EventCategory::LateralMovement,
         }
     }

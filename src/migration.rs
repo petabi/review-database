@@ -222,7 +222,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.39.0,<0.40.0")?,
-            Version::parse("0.40.0")?,
+            Version::parse("0.40.0-alpha.4")?,
             migrate_0_39_to_0_40_0,
         ),
         (
@@ -311,7 +311,8 @@ fn migrate_0_40_to_0_41_0(store: &super::Store) -> Result<()> {
 
 fn migrate_0_39_to_0_40_0(store: &super::Store) -> Result<()> {
     migrate_0_40_tidb(store)?;
-    migrate_0_40_filter(store)
+    migrate_0_40_filter(store)?;
+    migrate_0_40_ftp(store)
 }
 
 fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
@@ -360,6 +361,39 @@ fn migrate_0_40_filter(store: &super::Store) -> Result<()> {
 
         let (_, new_value) = new_filter.into_key_value()?;
         raw.update((&key, &old_value), (&key, &new_value))?;
+    }
+    Ok(())
+}
+
+fn migrate_0_40_ftp(store: &super::Store) -> Result<()> {
+    use migration_structures::FtpEventFieldsV0_39;
+    use num_traits::FromPrimitive;
+
+    use crate::event::{EventKind, FtpEventFields};
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+        match event_kind {
+            EventKind::FtpPlainText | EventKind::BlocklistFtp => {
+                update_event_db_with_new_event::<FtpEventFieldsV0_39, FtpEventFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            _ => {}
+        }
     }
     Ok(())
 }
@@ -611,11 +645,17 @@ where
 }
 
 fn migrate_0_39_events(store: &super::Store) -> Result<()> {
+    use migration_structures::{
+        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39,
+        LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
+        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+    };
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        EventKind, FtpEventFieldsV0_38, FtpEventFieldsV0_39, LdapEventFieldsV0_38,
-        LdapEventFieldsV0_39,
+        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
+        LdapBruteForce, LdapEventFieldsV0_38, LdapEventFieldsV0_39, LdapPlainText, MultiHostPortScan, NonBrowser, PortScan, RdpBruteForce,
+        RepeatedHttpSessions, TorConnection,
     };
 
     let event_db = store.events();
@@ -635,8 +675,50 @@ fn migrate_0_39_events(store: &super::Store) -> Result<()> {
         };
 
         match event_kind {
-            EventKind::FtpPlainText => {
-                update_event_db_with_new_event::<FtpEventFieldsV0_38, FtpEventFieldsV0_39>(
+            EventKind::TorConnection => {
+                update_event_db_with_new_event::<TorConnectionV0_39, TorConnection>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::NonBrowser => {
+                update_event_db_with_new_event::<NonBrowserV0_39, NonBrowser>(&k, &v, &event_db)?;
+            }
+            EventKind::RepeatedHttpSessions => {
+                update_event_db_with_new_event::<RepeatedHttpSessionsV0_39, RepeatedHttpSessions>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::PortScan => {
+                update_event_db_with_new_event::<PortScanV0_39, PortScan>(&k, &v, &event_db)?;
+            }
+            EventKind::MultiHostPortScan => {
+                update_event_db_with_new_event::<MultiHostPortScanV0_39, MultiHostPortScan>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::ExternalDdos => {
+                update_event_db_with_new_event::<ExternalDdosV0_39, ExternalDdos>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::CryptocurrencyMiningPool => {
+                update_event_db_with_new_event::<
+                    CryptocurrencyMiningPoolV0_39,
+                    CryptocurrencyMiningPool,
+                >(&k, &v, &event_db)?;
+            }
+            EventKind::FtpBruteForce => {
+                update_event_db_with_new_event::<FtpBruteForceV0_39, FtpBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::RdpBruteForce => {
+                update_event_db_with_new_event::<RdpBruteForceV0_39, RdpBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::LdapBruteForce => {
+                update_event_db_with_new_event::<LdapBruteForceV0_39, LdapBruteForce>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -1755,14 +1837,23 @@ mod tests {
     }
 
     #[test]
-    fn migrate_0_40_events() {
+    fn migrate_0_41_events() {
         use std::net::IpAddr;
 
         use num_traits::FromPrimitive;
 
+<<<<<<< HEAD
         use crate::event::{
             CryptocurrencyMiningPoolFieldsV0_39, FtpBruteForceFieldsV0_39, HttpEventFieldsV0_39,
             RdpBruteForceFieldsV0_39, RepeatedHttpSessionsFieldsV0_39,
+||||||| parent of 11e7c2b (Update files for issue #510)
+        use super::migration_structures::{
+            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
+            RdpBruteForceV0_39, TorConnectionV0_39,
+=======
+        use super::migration_structures::{
+            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, RdpBruteForceV0_39, TorConnectionV0_39,
+>>>>>>> 11e7c2b (Update files for issue #510)
         };
         use crate::{EventKind, EventMessage};
 
@@ -1954,8 +2045,121 @@ mod tests {
             }
         }
 
-        // Verify that all 5 test events were processed
-        assert_eq!(count, 5);
+        // Verify that all 4 test events were processed
+        assert_eq!(count, 4);
+    }
+
+    #[test]
+    fn migrate_0_40_ftp() {
+        use std::net::{IpAddr, Ipv4Addr};
+
+        use num_traits::FromPrimitive;
+
+        use crate::{EventKind, EventMessage};
+        let settings = TestSchema::new();
+        let event_db = settings.store.events();
+
+        // Create test data in the old format
+        let old_ftp_event_fields = super::migration_structures::FtpEventFieldsV0_39 {
+            sensor: "sensor1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 21,
+            proto: 6,
+            end_time: 100,
+            user: "user1".to_string(),
+            password: "password".to_string(),
+            command: "ls".to_string(),
+            reply_code: "200".to_string(),
+            reply_msg: "OK".to_string(),
+            data_passive: false,
+            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
+            data_resp_port: 10001,
+            file: "/etc/passwd".to_string(),
+            file_size: 5000,
+            file_id: "123".to_string(),
+            category: crate::EventCategory::LateralMovement,
+        };
+
+        // Insert FtpPlainText event
+        let ftp_plain_text_message = EventMessage {
+            time: chrono::Utc::now(),
+            kind: EventKind::FtpPlainText,
+            fields: bincode::serialize(&old_ftp_event_fields).unwrap_or_default(),
+        };
+        assert!(event_db.put(&ftp_plain_text_message).is_ok());
+
+        // Insert BlocklistFtp event with different category
+        let mut old_ftp_event_fields_blocklist = old_ftp_event_fields.clone();
+        old_ftp_event_fields_blocklist.category = crate::EventCategory::InitialAccess;
+
+        let blocklist_ftp_message = EventMessage {
+            time: chrono::Utc::now(),
+            kind: EventKind::BlocklistFtp,
+            fields: bincode::serialize(&old_ftp_event_fields_blocklist).unwrap_or_default(),
+        };
+        assert!(event_db.put(&blocklist_ftp_message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        // Run the migration
+        assert!(super::migrate_0_40_ftp(&settings.store).is_ok());
+
+        // Verify the migration results
+        let event_db = settings.store.events();
+        let iter = event_db.raw_iter_forward();
+        let mut ftp_plain_text_found = false;
+        let mut blocklist_ftp_found = false;
+
+        for event in iter {
+            let (k, v) = event.unwrap();
+            let key: [u8; 16] = k.as_ref().try_into().unwrap();
+            let key = i128::from_be_bytes(key);
+            let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+            let event_kind = EventKind::from_i128(kind).unwrap();
+
+            match event_kind {
+                EventKind::FtpPlainText => {
+                    let new_fields: crate::FtpEventFields =
+                        bincode::deserialize(v.as_ref()).unwrap();
+                    // Verify the migration worked correctly
+                    assert_eq!(new_fields.sensor, "sensor1");
+                    assert_eq!(new_fields.user, "user1");
+                    assert_eq!(new_fields.password, "password");
+                    assert_eq!(new_fields.commands.len(), 1);
+                    assert_eq!(new_fields.commands[0].command, "ls");
+                    assert_eq!(new_fields.commands[0].reply_code, "200");
+                    assert_eq!(new_fields.commands[0].reply_msg, "OK");
+                    assert_eq!(new_fields.commands[0].file, "/etc/passwd");
+                    assert_eq!(new_fields.commands[0].file_size, 5000);
+                    assert_eq!(new_fields.commands[0].file_id, "123");
+                    assert_eq!(new_fields.category, crate::EventCategory::LateralMovement);
+                    ftp_plain_text_found = true;
+                }
+                EventKind::BlocklistFtp => {
+                    let new_fields: crate::FtpEventFields =
+                        bincode::deserialize(v.as_ref()).unwrap();
+                    // Verify the migration worked correctly
+                    assert_eq!(new_fields.commands.len(), 1);
+                    assert_eq!(new_fields.commands[0].command, "ls");
+                    assert_eq!(new_fields.category, crate::EventCategory::InitialAccess);
+                    blocklist_ftp_found = true;
+                }
+                _ => {}
+            }
+        }
+
+        assert!(
+            ftp_plain_text_found,
+            "FtpPlainText event should have been migrated"
+        );
+        assert!(
+            blocklist_ftp_found,
+            "BlocklistFtp event should have been migrated"
+        );
     }
 
     #[test]
