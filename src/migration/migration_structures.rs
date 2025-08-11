@@ -636,7 +636,7 @@ impl TryFrom<TidbV0_39> for Tidb {
 
 #[derive(Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
-pub struct FilterV0_40 {
+pub struct FilterV0_39 {
     pub username: String,
     pub name: String,
     pub directions: Option<Vec<FlowKind>>,
@@ -660,7 +660,7 @@ pub struct FilterV0_40 {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct FilterValueV0_40 {
+pub struct FilterValueV0_39 {
     pub directions: Option<Vec<FlowKind>>,
     pub keywords: Option<Vec<String>>,
     pub network_tags: Option<Vec<String>>,
@@ -681,8 +681,8 @@ pub struct FilterValueV0_40 {
     pub confidence: Option<f32>,
 }
 
-impl From<FilterValueV0_40> for crate::Filter {
-    fn from(old_value: FilterValueV0_40) -> Self {
+impl From<FilterValueV0_39> for crate::Filter {
+    fn from(old_value: FilterValueV0_39) -> Self {
         use crate::PeriodForSearch;
 
         Self {

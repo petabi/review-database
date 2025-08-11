@@ -17,6 +17,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   hostnames in both `profile` and `profile_draft` fields must now be unique
   globally, preventing hostname conflicts between different customers.
 - Added `confidence` and `kind` field to `tidb::Rule` struct.
+- `Filter` has a new field, `period` to limit the search within a certain time
+  period.
 
 ### Changed
 

@@ -324,7 +324,7 @@ fn migrate_0_40_filter(store: &super::Store) -> Result<()> {
     use bincode::Options;
 
     use crate::Filter;
-    use crate::migration::migration_structures::FilterValueV0_40;
+    use crate::migration::migration_structures::FilterValueV0_39;
 
     #[derive(serde::Serialize)]
     struct NewValue {
@@ -353,7 +353,7 @@ fn migrate_0_40_filter(store: &super::Store) -> Result<()> {
     let raw = map.raw();
     for (key, old_value) in raw.iter_forward()? {
         // Deserialize old value format
-        let old_filter_value: FilterValueV0_40 =
+        let old_filter_value: FilterValueV0_39 =
             bincode::DefaultOptions::new().deserialize(&old_value)?;
 
         // Convert to new filter (this will set username and name to empty strings)
