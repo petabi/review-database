@@ -33,7 +33,7 @@ num-traits = "0.2"
 postgres-protocol = "0.6"
 rand = "0.9"
 ring = { version = "0.17", features = ["std"] }
-rocksdb = "0.23"
+rocksdb = "0.24"
 rustls = { version = "0.23", default-features = false, features = [
   "ring",
   "std",
