@@ -8,33 +8,18 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::event::common::{AttrValue, triage_scores_to_string};
 
-macro_rules! find_ftp_attr_by_kind {
-    ($event: expr, $raw_event_attr: expr) => {{
-        if let RawEventAttrKind::Ftp(attr) = $raw_event_attr {
-            let target_value = match attr {
-                FtpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
-                FtpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
-                FtpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
-                FtpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
-                FtpAttr::Proto => AttrValue::UInt($event.proto.into()),
-                FtpAttr::User => AttrValue::String(&$event.user),
-                FtpAttr::Password => AttrValue::String(&$event.password),
-                FtpAttr::Command => AttrValue::String(&$event.command),
-                FtpAttr::ReplyCode => AttrValue::String(&$event.reply_code),
-                FtpAttr::ReplyMsg => AttrValue::String(&$event.reply_msg),
-                FtpAttr::DataPassive => AttrValue::Bool($event.data_passive),
-                FtpAttr::DataOrigAddr => AttrValue::Addr($event.data_orig_addr),
-                FtpAttr::DataRespAddr => AttrValue::Addr($event.data_resp_addr),
-                FtpAttr::DataRespPort => AttrValue::UInt($event.data_resp_port.into()),
-                FtpAttr::File => AttrValue::String(&$event.file),
-                FtpAttr::FileSize => AttrValue::UInt($event.file_size),
-                FtpAttr::FileId => AttrValue::String(&$event.file_id),
-            };
-            Some(target_value)
-        } else {
-            None
-        }
-    }};
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FtpCommand {
+    pub command: String,
+    pub reply_code: String,
+    pub reply_msg: String,
+    pub data_passive: bool,
+    pub data_orig_addr: IpAddr,
+    pub data_resp_addr: IpAddr,
+    pub data_resp_port: u16,
+    pub file: String,
+    pub file_size: u64,
+    pub file_id: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -190,24 +175,33 @@ pub struct FtpEventFields {
     pub end_time: i64,
     pub user: String,
     pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
+    pub commands: Vec<FtpCommand>,
     pub category: EventCategory,
 }
 
 impl FtpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let commands_str = if self.commands.is_empty() {
+            "[]".to_string()
+        } else {
+            let first_cmd = &self.commands[0];
+            format!(
+                "[{{command={:?}, reply_code={:?}, reply_msg={:?}, data_passive={:?}, data_orig_addr={:?}, data_resp_addr={:?}, data_resp_port={:?}, file={:?}, file_size={:?}, file_id={:?}}}]",
+                first_cmd.command,
+                first_cmd.reply_code,
+                first_cmd.reply_msg,
+                first_cmd.data_passive.to_string(),
+                first_cmd.data_orig_addr.to_string(),
+                first_cmd.data_resp_addr.to_string(),
+                first_cmd.data_resp_port.to_string(),
+                first_cmd.file,
+                first_cmd.file_size.to_string(),
+                first_cmd.file_id,
+            )
+        };
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} commands={}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -218,16 +212,7 @@ impl FtpEventFields {
             self.end_time.to_string(),
             self.user,
             self.password,
-            self.command,
-            self.reply_code,
-            self.reply_msg,
-            self.data_passive.to_string(),
-            self.data_orig_addr.to_string(),
-            self.data_resp_addr.to_string(),
-            self.data_resp_port.to_string(),
-            self.file,
-            self.file_size.to_string(),
-            self.file_id,
+            commands_str,
         )
     }
 }
@@ -244,25 +229,34 @@ pub struct FtpPlainText {
     pub end_time: i64,
     pub user: String,
     pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
+    pub commands: Vec<FtpCommand>,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
 impl fmt::Display for FtpPlainText {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let commands_str = if self.commands.is_empty() {
+            "[]".to_string()
+        } else {
+            let first_cmd = &self.commands[0];
+            format!(
+                "[{{command={:?}, reply_code={:?}, reply_msg={:?}, data_passive={:?}, data_orig_addr={:?}, data_resp_addr={:?}, data_resp_port={:?}, file={:?}, file_size={:?}, file_id={:?}}}]",
+                first_cmd.command,
+                first_cmd.reply_code,
+                first_cmd.reply_msg,
+                first_cmd.data_passive.to_string(),
+                first_cmd.data_orig_addr.to_string(),
+                first_cmd.data_resp_addr.to_string(),
+                first_cmd.data_resp_port.to_string(),
+                first_cmd.file,
+                first_cmd.file_size.to_string(),
+                first_cmd.file_id,
+            )
+        };
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} commands={} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -272,16 +266,7 @@ impl fmt::Display for FtpPlainText {
             self.end_time.to_string(),
             self.user,
             self.password,
-            self.command,
-            self.reply_code,
-            self.reply_msg,
-            self.data_passive.to_string(),
-            self.data_orig_addr.to_string(),
-            self.data_resp_addr.to_string(),
-            self.data_resp_port.to_string(),
-            self.file,
-            self.file_size.to_string(),
-            self.file_id,
+            commands_str,
             triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
@@ -300,16 +285,7 @@ impl FtpPlainText {
             end_time: fields.end_time,
             user: fields.user,
             password: fields.password,
-            command: fields.command,
-            reply_code: fields.reply_code,
-            reply_msg: fields.reply_msg,
-            data_passive: fields.data_passive,
-            data_orig_addr: fields.data_orig_addr,
-            data_resp_addr: fields.data_resp_addr,
-            data_resp_port: fields.data_resp_port,
-            file: fields.file,
-            file_size: fields.file_size,
-            file_id: fields.file_id,
+            commands: fields.commands,
             category: fields.category,
             triage_scores: None,
         }
@@ -362,7 +338,90 @@ impl Match for FtpPlainText {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        find_ftp_attr_by_kind!(self, raw_event_attr)
+        if let RawEventAttrKind::Ftp(attr) = raw_event_attr {
+            let target_value = match attr {
+                FtpAttr::SrcAddr => AttrValue::Addr(self.src_addr),
+                FtpAttr::SrcPort => AttrValue::UInt(self.src_port.into()),
+                FtpAttr::DstAddr => AttrValue::Addr(self.dst_addr),
+                FtpAttr::DstPort => AttrValue::UInt(self.dst_port.into()),
+                FtpAttr::Proto => AttrValue::UInt(self.proto.into()),
+                FtpAttr::User => AttrValue::String(&self.user),
+                FtpAttr::Password => AttrValue::String(&self.password),
+                FtpAttr::Command => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.command)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::ReplyCode => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.reply_code)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::ReplyMsg => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.reply_msg)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::DataPassive => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::Bool(cmd.data_passive)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::DataOrigAddr => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::Addr(cmd.data_orig_addr)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::DataRespAddr => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::Addr(cmd.data_resp_addr)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::DataRespPort => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::UInt(cmd.data_resp_port.into())
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::File => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.file)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::FileSize => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::UInt(cmd.file_size)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::FileId => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.file_id)
+                    } else {
+                        return None;
+                    }
+                }
+            };
+            Some(target_value)
+        } else {
+            None
+        }
     }
 }
 
@@ -378,25 +437,34 @@ pub struct BlocklistFtp {
     pub end_time: i64,
     pub user: String,
     pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
+    pub commands: Vec<FtpCommand>,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
 impl fmt::Display for BlocklistFtp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let commands_str = if self.commands.is_empty() {
+            "[]".to_string()
+        } else {
+            let first_cmd = &self.commands[0];
+            format!(
+                "[{{command={:?}, reply_code={:?}, reply_msg={:?}, data_passive={:?}, data_orig_addr={:?}, data_resp_addr={:?}, data_resp_port={:?}, file={:?}, file_size={:?}, file_id={:?}}}]",
+                first_cmd.command,
+                first_cmd.reply_code,
+                first_cmd.reply_msg,
+                first_cmd.data_passive.to_string(),
+                first_cmd.data_orig_addr.to_string(),
+                first_cmd.data_resp_addr.to_string(),
+                first_cmd.data_resp_port.to_string(),
+                first_cmd.file,
+                first_cmd.file_size.to_string(),
+                first_cmd.file_id,
+            )
+        };
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} commands={} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -406,16 +474,7 @@ impl fmt::Display for BlocklistFtp {
             self.end_time.to_string(),
             self.user,
             self.password,
-            self.command,
-            self.reply_code,
-            self.reply_msg,
-            self.data_passive.to_string(),
-            self.data_orig_addr.to_string(),
-            self.data_resp_addr.to_string(),
-            self.data_resp_port.to_string(),
-            self.file,
-            self.file_size.to_string(),
-            self.file_id,
+            commands_str,
             triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
@@ -434,16 +493,7 @@ impl BlocklistFtp {
             end_time: fields.end_time,
             user: fields.user,
             password: fields.password,
-            command: fields.command,
-            reply_code: fields.reply_code,
-            reply_msg: fields.reply_msg,
-            data_passive: fields.data_passive,
-            data_orig_addr: fields.data_orig_addr,
-            data_resp_addr: fields.data_resp_addr,
-            data_resp_port: fields.data_resp_port,
-            file: fields.file,
-            file_size: fields.file_size,
-            file_id: fields.file_id,
+            commands: fields.commands,
             category: fields.category,
             triage_scores: None,
         }
@@ -496,6 +546,89 @@ impl Match for BlocklistFtp {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        find_ftp_attr_by_kind!(self, raw_event_attr)
+        if let RawEventAttrKind::Ftp(attr) = raw_event_attr {
+            let target_value = match attr {
+                FtpAttr::SrcAddr => AttrValue::Addr(self.src_addr),
+                FtpAttr::SrcPort => AttrValue::UInt(self.src_port.into()),
+                FtpAttr::DstAddr => AttrValue::Addr(self.dst_addr),
+                FtpAttr::DstPort => AttrValue::UInt(self.dst_port.into()),
+                FtpAttr::Proto => AttrValue::UInt(self.proto.into()),
+                FtpAttr::User => AttrValue::String(&self.user),
+                FtpAttr::Password => AttrValue::String(&self.password),
+                FtpAttr::Command => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.command)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::ReplyCode => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.reply_code)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::ReplyMsg => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.reply_msg)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::DataPassive => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::Bool(cmd.data_passive)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::DataOrigAddr => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::Addr(cmd.data_orig_addr)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::DataRespAddr => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::Addr(cmd.data_resp_addr)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::DataRespPort => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::UInt(cmd.data_resp_port.into())
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::File => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.file)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::FileSize => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::UInt(cmd.file_size)
+                    } else {
+                        return None;
+                    }
+                }
+                FtpAttr::FileId => {
+                    if let Some(cmd) = self.commands.first() {
+                        AttrValue::String(&cmd.file_id)
+                    } else {
+                        return None;
+                    }
+                }
+            };
+            Some(target_value)
+        } else {
+            None
+        }
     }
 }
