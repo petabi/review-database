@@ -659,7 +659,7 @@ pub struct FilterV0_39 {
     pub confidence: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct FilterValueV0_39 {
     pub directions: Option<Vec<FlowKind>>,
     pub keywords: Option<Vec<String>>,
