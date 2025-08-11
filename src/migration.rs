@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0,<0.41.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0-alpha.4,<0.40.0-alpha.5";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -220,7 +220,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.39.0,<0.40.0")?,
-            Version::parse("0.40.0")?,
+            Version::parse("0.40.0-alpha.4")?,
             migrate_0_39_to_0_40_0,
         ),
     ];
@@ -300,7 +300,8 @@ fn read_version_file(path: &Path) -> Result<Version> {
 
 fn migrate_0_39_to_0_40_0(store: &super::Store) -> Result<()> {
     migrate_0_40_tidb(store)?;
-    migrate_0_40_filter(store)
+    migrate_0_40_filter(store)?;
+    migrate_0_40_events(store)
 }
 
 fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
@@ -595,6 +596,104 @@ where
     let to_event: K = from_event.into();
     let new = bincode::serialize(&to_event).unwrap_or_default();
     event_db.update((k, v), (k, &new))?;
+    Ok(())
+}
+
+fn migrate_0_40_events(store: &super::Store) -> Result<()> {
+    use migration_structures::{
+        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
+        LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
+        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+    };
+    use num_traits::FromPrimitive;
+
+    use crate::event::NonBrowser;
+    use crate::event::{
+        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce, FtpPlainText,
+        LdapBruteForce, LdapPlainText, MultiHostPortScan, PortScan, RdpBruteForce,
+        RepeatedHttpSessions, TorConnection,
+    };
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        match event_kind {
+            EventKind::TorConnection => {
+                update_event_db_with_new_event::<TorConnectionV0_39, TorConnection>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::NonBrowser => {
+                update_event_db_with_new_event::<NonBrowserV0_39, NonBrowser>(&k, &v, &event_db)?;
+            }
+            EventKind::RepeatedHttpSessions => {
+                update_event_db_with_new_event::<RepeatedHttpSessionsV0_39, RepeatedHttpSessions>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::PortScan => {
+                update_event_db_with_new_event::<PortScanV0_39, PortScan>(&k, &v, &event_db)?;
+            }
+            EventKind::MultiHostPortScan => {
+                update_event_db_with_new_event::<MultiHostPortScanV0_39, MultiHostPortScan>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::ExternalDdos => {
+                update_event_db_with_new_event::<ExternalDdosV0_39, ExternalDdos>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::CryptocurrencyMiningPool => {
+                update_event_db_with_new_event::<
+                    CryptocurrencyMiningPoolV0_39,
+                    CryptocurrencyMiningPool,
+                >(&k, &v, &event_db)?;
+            }
+            EventKind::FtpBruteForce => {
+                update_event_db_with_new_event::<FtpBruteForceV0_39, FtpBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::FtpPlainText => {
+                update_event_db_with_new_event::<FtpPlainTextV0_39, FtpPlainText>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::RdpBruteForce => {
+                update_event_db_with_new_event::<RdpBruteForceV0_39, RdpBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::LdapBruteForce => {
+                update_event_db_with_new_event::<LdapBruteForceV0_39, LdapBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::LdapPlainText => {
+                update_event_db_with_new_event::<LdapPlainTextV0_39, LdapPlainText>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            _ => {
+                // No migration needed for other event types
+            }
+        }
+    }
+
     Ok(())
 }
 

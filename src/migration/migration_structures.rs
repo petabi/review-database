@@ -685,3 +685,554 @@ impl From<FilterValueV0_39> for crate::Filter {
         }
     }
 }
+
+// V0_39 event structures before confidence field was added
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TorConnectionV0_39 {
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub session_end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<TorConnectionV0_39> for crate::event::TorConnection {
+    fn from(old: TorConnectionV0_39) -> Self {
+        Self {
+            time: old.time,
+            sensor: old.sensor,
+            session_end_time: old.session_end_time,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            method: old.method,
+            host: old.host,
+            uri: old.uri,
+            referer: old.referer,
+            version: old.version,
+            user_agent: old.user_agent,
+            request_len: old.request_len,
+            response_len: old.response_len,
+            status_code: old.status_code,
+            status_msg: old.status_msg,
+            username: old.username,
+            password: old.password,
+            cookie: old.cookie,
+            content_encoding: old.content_encoding,
+            content_type: old.content_type,
+            cache_control: old.cache_control,
+            orig_filenames: old.orig_filenames,
+            orig_mime_types: old.orig_mime_types,
+            resp_filenames: old.resp_filenames,
+            resp_mime_types: old.resp_mime_types,
+            post_body: old.post_body,
+            state: old.state,
+            confidence: 1.0, // default value for TorConnection
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RepeatedHttpSessionsV0_39 {
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<RepeatedHttpSessionsV0_39> for crate::event::RepeatedHttpSessions {
+    fn from(old: RepeatedHttpSessionsV0_39) -> Self {
+        Self {
+            time: old.time,
+            sensor: old.sensor,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            confidence: 0.3, // default value for RepeatedHttpSessions
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct NonBrowserV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub session_end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<NonBrowserV0_39> for crate::event::NonBrowser {
+    fn from(old: NonBrowserV0_39) -> Self {
+        Self {
+            time: old.time,
+            sensor: old.sensor,
+            session_end_time: old.session_end_time,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            method: old.method,
+            host: old.host,
+            uri: old.uri,
+            referer: old.referer,
+            version: old.version,
+            user_agent: old.user_agent,
+            request_len: old.request_len,
+            response_len: old.response_len,
+            status_code: old.status_code,
+            status_msg: old.status_msg,
+            username: old.username,
+            password: old.password,
+            cookie: old.cookie,
+            content_encoding: old.content_encoding,
+            content_type: old.content_type,
+            cache_control: old.cache_control,
+            orig_filenames: old.orig_filenames,
+            orig_mime_types: old.orig_mime_types,
+            resp_filenames: old.resp_filenames,
+            resp_mime_types: old.resp_mime_types,
+            post_body: old.post_body,
+            state: old.state,
+            confidence: 1.0,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PortScanV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_ports: Vec<u16>,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<PortScanV0_39> for crate::event::PortScan {
+    fn from(old: PortScanV0_39) -> Self {
+        Self {
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addr: old.dst_addr,
+            dst_ports: old.dst_ports,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            proto: old.proto,
+            confidence: 0.3,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MultiHostPortScanV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_port: u16,
+    pub dst_addrs: Vec<IpAddr>,
+    pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<MultiHostPortScanV0_39> for crate::event::MultiHostPortScan {
+    fn from(old: MultiHostPortScanV0_39) -> Self {
+        Self {
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_port: old.dst_port,
+            dst_addrs: old.dst_addrs,
+            proto: old.proto,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            confidence: 0.3,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ExternalDdosV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addrs: Vec<IpAddr>,
+    pub dst_addr: IpAddr,
+    pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<ExternalDdosV0_39> for crate::event::ExternalDdos {
+    fn from(old: ExternalDdosV0_39) -> Self {
+        Self {
+            time: old.time,
+            src_addrs: old.src_addrs,
+            dst_addr: old.dst_addr,
+            proto: old.proto,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            confidence: 0.3,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct CryptocurrencyMiningPoolV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub session_end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub coins: Vec<String>,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<CryptocurrencyMiningPoolV0_39> for crate::event::CryptocurrencyMiningPool {
+    fn from(old: CryptocurrencyMiningPoolV0_39) -> Self {
+        Self {
+            time: old.time,
+            sensor: old.sensor,
+            session_end_time: old.session_end_time,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            query: old.query,
+            answer: old.answer,
+            trans_id: old.trans_id,
+            rtt: old.rtt,
+            qclass: old.qclass,
+            qtype: old.qtype,
+            rcode: old.rcode,
+            aa_flag: old.aa_flag,
+            tc_flag: old.tc_flag,
+            rd_flag: old.rd_flag,
+            ra_flag: old.ra_flag,
+            ttl: old.ttl,
+            coins: old.coins,
+            confidence: 1.0,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FtpBruteForceV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_list: Vec<String>,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub is_internal: bool,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<FtpBruteForceV0_39> for crate::event::FtpBruteForce {
+    fn from(old: FtpBruteForceV0_39) -> Self {
+        Self {
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            user_list: old.user_list,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            is_internal: old.is_internal,
+            confidence: 0.3,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FtpPlainTextV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub user: String,
+    pub password: String,
+    pub command: String,
+    pub reply_code: String,
+    pub reply_msg: String,
+    pub data_passive: bool,
+    pub data_orig_addr: IpAddr,
+    pub data_resp_addr: IpAddr,
+    pub data_resp_port: u16,
+    pub file: String,
+    pub file_size: u64,
+    pub file_id: String,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<FtpPlainTextV0_39> for crate::event::FtpPlainText {
+    fn from(old: FtpPlainTextV0_39) -> Self {
+        Self {
+            time: old.time,
+            sensor: old.sensor,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            end_time: old.end_time,
+            user: old.user,
+            password: old.password,
+            command: old.command,
+            reply_code: old.reply_code,
+            reply_msg: old.reply_msg,
+            data_passive: old.data_passive,
+            data_orig_addr: old.data_orig_addr,
+            data_resp_addr: old.data_resp_addr,
+            data_resp_port: old.data_resp_port,
+            file: old.file,
+            file_size: old.file_size,
+            file_id: old.file_id,
+            confidence: 1.0,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RdpBruteForceV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addrs: Vec<IpAddr>,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<RdpBruteForceV0_39> for crate::event::RdpBruteForce {
+    fn from(old: RdpBruteForceV0_39) -> Self {
+        Self {
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addrs: old.dst_addrs,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            proto: old.proto,
+            confidence: 0.3,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LdapBruteForceV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_pw_list: Vec<(String, String)>,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<LdapBruteForceV0_39> for crate::event::LdapBruteForce {
+    fn from(old: LdapBruteForceV0_39) -> Self {
+        Self {
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            user_pw_list: old.user_pw_list,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            confidence: 0.3,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LdapPlainTextV0_39 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<LdapPlainTextV0_39> for crate::event::LdapPlainText {
+    fn from(old: LdapPlainTextV0_39) -> Self {
+        Self {
+            time: old.time,
+            sensor: old.sensor,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            end_time: old.end_time,
+            message_id: old.message_id,
+            version: old.version,
+            opcode: old.opcode,
+            result: old.result,
+            diagnostic_message: old.diagnostic_message,
+            object: old.object,
+            argument: old.argument,
+            confidence: 1.0,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}

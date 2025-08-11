@@ -41,6 +41,7 @@ pub struct PortScanFields {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -48,19 +49,21 @@ impl PortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?}",
+            "category={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             vector_to_string(&self.dst_ports),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
-            self.proto.to_string()
+            self.proto.to_string(),
+            self.confidence.to_string()
         )
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Serialize, Deserialize)]
 pub struct PortScan {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -69,6 +72,7 @@ pub struct PortScan {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -99,6 +103,7 @@ impl PortScan {
             proto: fields.proto,
             start_time: fields.start_time,
             end_time: fields.end_time,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -175,6 +180,7 @@ pub struct MultiHostPortScanFields {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -182,7 +188,7 @@ impl MultiHostPortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?}",
+            "category={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
@@ -190,11 +196,13 @@ impl MultiHostPortScanFields {
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
+            self.confidence.to_string()
         )
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Serialize, Deserialize)]
 pub struct MultiHostPortScan {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -203,6 +211,7 @@ pub struct MultiHostPortScan {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -233,6 +242,7 @@ impl MultiHostPortScan {
             proto: fields.proto,
             start_time: fields.start_time,
             end_time: fields.end_time,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -306,6 +316,7 @@ pub struct ExternalDdosFields {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -313,18 +324,20 @@ impl ExternalDdosFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?}",
+            "category={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.to_string(),
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
+            self.confidence.to_string()
         )
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Serialize, Deserialize)]
 pub struct ExternalDdos {
     pub time: DateTime<Utc>,
     pub src_addrs: Vec<IpAddr>,
@@ -332,6 +345,7 @@ pub struct ExternalDdos {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -360,6 +374,7 @@ impl ExternalDdos {
             proto: fields.proto,
             start_time: fields.start_time,
             end_time: fields.end_time,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }

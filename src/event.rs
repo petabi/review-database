@@ -3139,6 +3139,7 @@ mod tests {
             resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
             post_body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
+            confidence: 1.0,
             category: EventCategory::CommandAndControl,
         };
 
@@ -3153,7 +3154,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" session_end_time="1970-01-01T00:10:10+00:00" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" session_end_time="1970-01-01T00:10:10+00:00" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="1""#
         );
 
         let non_browser = Event::NonBrowser(crate::NonBrowser::new(
@@ -3286,6 +3287,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Reconnaissance,
         };
 
@@ -3300,7 +3302,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" proto="6""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" proto="6" confidence="0.3""#
         );
 
         let port_scan = Event::PortScan(crate::PortScan::new(
@@ -3326,6 +3328,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Reconnaissance,
         };
 
@@ -3340,7 +3343,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let multi_host_port_scan = Event::MultiHostPortScan(crate::MultiHostPortScan::new(
@@ -3365,6 +3368,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Impact,
         };
 
@@ -3378,7 +3382,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let external_ddos = Event::ExternalDdos(ExternalDdos::new(
@@ -3813,6 +3817,7 @@ mod tests {
             ra_flag: true,
             ttl: vec![120; 5],
             coins: vec!["bitcoin".to_string(), "monero".to_string()],
+            confidence: 1.0,
             category: EventCategory::CommandAndControl,
         };
 
@@ -3827,7 +3832,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" session_end_time="1970-01-01T01:01:01+00:00" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" session_end_time="1970-01-01T01:01:01+00:00" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero" confidence="1""#
         );
 
         let cryptocurrency_mining_pool =
@@ -3903,6 +3908,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             is_internal: true,
+            confidence: 0.3,
             category: EventCategory::CredentialAccess,
         };
 
@@ -3917,7 +3923,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" is_internal="true""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" is_internal="true" confidence="0.3""#
         );
 
         let ftp_brute_force = Event::FtpBruteForce(crate::FtpBruteForce::new(
@@ -3954,6 +3960,7 @@ mod tests {
             file: "/etc/passwd".to_string(),
             file_size: 5000,
             file_id: "123".to_string(),
+            confidence: 1.0,
             category: EventCategory::LateralMovement,
         };
 
@@ -3968,7 +3975,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" confidence="1""#
         );
 
         let ftp_plain_text = Event::FtpPlainText(crate::FtpPlainText::new(
@@ -4003,6 +4010,7 @@ mod tests {
             file: "/etc/passwd".to_string(),
             file_size: 5000,
             file_id: "123".to_string(),
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -4022,7 +4030,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" confidence="1""#
         );
 
         let blocklist_ftp = Event::Blocklist(RecordType::Ftp(crate::BlocklistFtp::new(
@@ -4114,6 +4122,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Exfiltration,
         };
 
@@ -4128,7 +4137,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" confidence="0.3""#
         );
         let repeated_http_sessions = Event::RepeatedHttpSessions(crate::RepeatedHttpSessions::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -4204,6 +4213,7 @@ mod tests {
             ],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            confidence: 0.3,
             category: EventCategory::CredentialAccess,
         };
 
@@ -4218,7 +4228,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let ldap_brute_force = Event::LdapBruteForce(crate::LdapBruteForce::new(
@@ -4250,6 +4260,7 @@ mod tests {
             diagnostic_message: vec!["msg".to_string()],
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
+            confidence: 1.0,
             category: EventCategory::LateralMovement,
         };
 
@@ -4264,7 +4275,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" end_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" end_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" confidence="1""#
         );
 
         let ldap_plain_text = Event::LdapPlainText(crate::LdapPlainText::new(
@@ -4295,6 +4306,7 @@ mod tests {
             diagnostic_message: vec!["msg".to_string()],
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
+            confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
     }
@@ -4314,7 +4326,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" end_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" end_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" confidence="1""#
         );
 
         let blocklist_ldap = Event::Blocklist(RecordType::Ldap(crate::BlocklistLdap::new(
@@ -4611,6 +4623,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Discovery,
         };
 
@@ -4625,7 +4638,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" proto="6""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" proto="6" confidence="0.3""#
         );
 
         let rdp_brute_force = Event::RdpBruteForce(crate::RdpBruteForce::new(
@@ -4978,6 +4991,7 @@ mod tests {
             resp_mime_types: vec!["mime_type".to_string()],
             post_body: "post_body".as_bytes().to_vec(),
             state: "state".to_string(),
+            confidence: 1.0,
             category: EventCategory::CommandAndControl,
         }
     }
@@ -4997,7 +5011,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" session_end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" session_end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" confidence="1""#
         );
 
         let tor_connection = Event::TorConnection(crate::TorConnection::new(
