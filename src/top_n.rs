@@ -1,4 +1,3 @@
-mod one_to_n;
 mod time_series;
 
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
@@ -6,7 +5,6 @@ use diesel_async::pg::AsyncPgConnection;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
-pub use self::one_to_n::{TopColumnsOfCluster, TopMultimaps};
 #[allow(deprecated)]
 pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByColumn};
 use super::{Database, Error};

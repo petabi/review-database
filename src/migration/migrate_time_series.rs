@@ -4,8 +4,21 @@ use chrono::NaiveDateTime;
 use crate::Database;
 use crate::tables::TimeSeries;
 
+async fn retrieve_model_to_migrate(database: &Database) -> Result<Vec<i32>> {
+    use diesel_async::RunQueryDsl;
+
+    use crate::diesel::QueryDsl;
+    use crate::schema::model::dsl;
+    let mut conn = database.pool.get().await?;
+    Ok(dsl::model
+        .select(dsl::id)
+        .order_by(dsl::id)
+        .load(&mut conn)
+        .await?)
+}
+
 pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()> {
-    let models = super::migrate_column_stats::retrieve_model_to_migrate(database).await?;
+    let models = retrieve_model_to_migrate(database).await?;
     tracing::info!(
         "Migrating Time Series for a total of {} models from PostgreSQL to RocksDb",
         models.len()
