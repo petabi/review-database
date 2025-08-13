@@ -9,11 +9,23 @@ use structured::{Description, Element, NLargestCount};
 
 use crate::tables::TableIter;
 use crate::types::FromKeyValue;
-use crate::{ElementCount, Map, Statistics, Table, TopElementCountsByColumn, TopMultimaps};
+use crate::{ElementCount, Map, Statistics, Table, TopElementCountsByColumn};
 use crate::{Iterable, UniqueKey, tables::Value as ValueTrait};
 
 const DEFAULT_NUMBER_OF_COLUMN: u32 = 30;
 const DEFAULT_PORTION_OF_TOP_N: f64 = 1.0;
+
+#[derive(Deserialize)]
+pub struct TopColumnsOfCluster {
+    pub cluster_id: String,
+    pub columns: Vec<TopElementCountsByColumn>,
+}
+
+#[derive(Deserialize)]
+pub struct TopMultimaps {
+    pub n_index: usize,
+    pub selected: Vec<TopColumnsOfCluster>,
+}
 
 impl<'d> Table<'d, ColumnStats> {
     /// Opens the `column_stats` table in the database.
@@ -711,7 +723,7 @@ fn to_multi_maps(
                     .get(&cluster)
                     .expect("Cluster ID not found in cluster_ids map")
                     .clone();
-                crate::TopColumnsOfCluster {
+                TopColumnsOfCluster {
                     cluster_id,
                     columns: v
                         .into_iter()
