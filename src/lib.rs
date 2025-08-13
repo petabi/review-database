@@ -75,16 +75,15 @@ pub use self::tables::{
     PacketAttr, PeriodForSearch, ProtocolPorts, Response, ResponseKind, SamplingInterval,
     SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
     StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
-    TidbRuleKind, TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
-    TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
-    UnstructuredClusteringAlgorithm, ValueKind,
+    TidbRuleKind, TopColumnsOfCluster, TopMultimaps, TorExitNode, TrafficFilter, TriagePolicy,
+    TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent,
+    UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
 pub use self::top_n::*;
 pub use self::top_n::{
-    ClusterTrend, ElementCount, LineSegment, Regression, StructuredColumnType, TopColumnsOfCluster,
-    TopMultimaps, TopTrendsByColumn,
+    ClusterTrend, ElementCount, LineSegment, Regression, StructuredColumnType, TopTrendsByColumn,
 };
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 

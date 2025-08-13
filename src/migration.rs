@@ -2,7 +2,6 @@
 #![allow(clippy::too_many_lines)]
 
 mod migrate_classifiers_to_filesystem;
-mod migrate_column_stats;
 mod migration_structures;
 
 use std::{
@@ -113,7 +112,7 @@ const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0,<0.41.0-alpha";
 /// Returns an error if the data hasn't been migrated successfully to Rocksdb.
 pub async fn migrate_backend<P: AsRef<Path>>(
     database: &super::Database,
-    store: &super::Store,
+    _store: &super::Store,
     data_dir: P,
 ) -> Result<()> {
     // Below is an example for cases when data migration between `PostgreSQL`
@@ -133,16 +132,13 @@ pub async fn migrate_backend<P: AsRef<Path>>(
     let path = data_dir.as_ref();
     let file = path.join("VERSION");
 
-    let version = read_version_file(&file)?;
+    let _version = read_version_file(&file)?;
 
-    let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
+    let Ok(_compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
         unreachable!("COMPATIBLE_VERSION_REQ must be valid")
     };
 
     migrate_classifiers_to_filesystem::run_migration(database).await?;
-    if compatible.matches(&version) {
-        migrate_column_stats::run(database, store).await?;
-    }
 
     Ok(())
 }
