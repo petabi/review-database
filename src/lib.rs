@@ -64,8 +64,7 @@ pub use self::tables::{
 pub use self::top_n::*;
 #[allow(deprecated)]
 pub use self::top_n::{
-    ClusterTrend, ElementCount, LineSegment, Regression, StructuredColumnType, TopColumnsOfCluster,
-    TopMultimaps, TopTrendsByColumn,
+    ClusterTrend, ElementCount, LineSegment, Regression, StructuredColumnType, TopTrendsByColumn,
 };
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 pub use self::util::find_ip_country;
