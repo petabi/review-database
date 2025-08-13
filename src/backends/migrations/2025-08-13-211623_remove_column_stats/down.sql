@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS column_description (
   count BIGINT NOT NULL,
   unique_count BIGINT NOT NULL
 );
+<<<<<<< HEAD
+=======
+CREATE INDEX IF NOT EXISTS column_description_idx ON column_description(event_range_id, column_index);
+>>>>>>> 1717a0b (Remove `top_n_*`, `description_*`, `column_description`, `csv_column_extra` tables from PostgresQL)
 CREATE TABLE IF NOT EXISTS csv_column_extra (
     id SERIAL PRIMARY KEY,
     model_id INTEGER NOT NULL,
