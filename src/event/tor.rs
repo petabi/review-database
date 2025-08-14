@@ -70,6 +70,7 @@ pub struct HttpEventFields {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -77,7 +78,7 @@ impl HttpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -107,12 +108,14 @@ impl HttpEventFields {
             self.resp_filenames.join(","),
             self.resp_mime_types.join(","),
             get_post_body(&self.post_body),
-            self.state
+            self.state,
+            self.confidence.to_string()
         )
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Serialize, Deserialize)]
 pub struct TorConnection {
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -144,6 +147,7 @@ pub struct TorConnection {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -220,6 +224,7 @@ impl TorConnection {
             resp_mime_types: fields.resp_mime_types.clone(),
             post_body: fields.post_body.clone(),
             state: fields.state.clone(),
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }

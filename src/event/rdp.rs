@@ -36,6 +36,7 @@ pub struct RdpBruteForceFields {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -43,17 +44,19 @@ impl RdpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?}",
+            "category={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
-            self.proto.to_string()
+            self.proto.to_string(),
+            self.confidence.to_string()
         )
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct RdpBruteForce {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -61,6 +64,7 @@ pub struct RdpBruteForce {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -89,6 +93,7 @@ impl RdpBruteForce {
             start_time: fields.start_time,
             end_time: fields.end_time,
             proto: fields.proto,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }

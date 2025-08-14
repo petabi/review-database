@@ -41,6 +41,7 @@ pub struct LdapBruteForceFields {
     pub user_pw_list: Vec<(String, String)>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -48,7 +49,7 @@ impl LdapBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?}",
+            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -56,7 +57,8 @@ impl LdapBruteForceFields {
             self.proto.to_string(),
             get_user_pw_list(&self.user_pw_list),
             self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339()
+            self.end_time.to_rfc3339(),
+            self.confidence.to_string()
         )
     }
 }
@@ -73,6 +75,7 @@ fn get_user_pw_list(user_pw_list: &[(String, String)]) -> String {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct LdapBruteForce {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -82,6 +85,7 @@ pub struct LdapBruteForce {
     pub user_pw_list: Vec<(String, String)>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -114,6 +118,7 @@ impl LdapBruteForce {
             user_pw_list: fields.user_pw_list.clone(),
             start_time: fields.start_time,
             end_time: fields.end_time,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -196,6 +201,7 @@ pub struct LdapEventFields {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -203,7 +209,7 @@ impl LdapEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor.to_string(),
             self.src_addr.to_string(),
@@ -218,7 +224,8 @@ impl LdapEventFields {
             self.result.join(","),
             self.diagnostic_message.join(","),
             self.object.join(","),
-            self.argument.join(",")
+            self.argument.join(","),
+            self.confidence.to_string()
         )
     }
 }
@@ -240,6 +247,7 @@ pub struct LdapPlainText {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -286,6 +294,7 @@ impl LdapPlainText {
             diagnostic_message: fields.diagnostic_message,
             object: fields.object,
             argument: fields.argument,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }

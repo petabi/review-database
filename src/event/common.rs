@@ -278,7 +278,7 @@ pub(super) trait Match {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TriageScore {
     pub policy_id: u32,
     pub score: f64,
@@ -1726,6 +1726,7 @@ mod tests {
             diagnostic_message: vec!["msg".to_string()],
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
+            confidence: 1.0,
             category: EventCategory::LateralMovement,
         }
     }
@@ -1751,6 +1752,7 @@ mod tests {
             file: "/etc/passwd".to_string(),
             file_size: 5000,
             file_id: "123".to_string(),
+            confidence: 1.0,
             category: EventCategory::LateralMovement,
         }
     }
@@ -1763,6 +1765,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Reconnaissance,
         }
     }
@@ -1778,6 +1781,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Reconnaissance,
         }
     }
@@ -1792,6 +1796,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Impact,
         }
     }
@@ -1818,6 +1823,7 @@ mod tests {
             ra_flag: true,
             ttl: vec![120; 5],
             coins: vec!["bitcoin".to_string(), "monero".to_string()],
+            confidence: 1.0,
             category: EventCategory::CommandAndControl,
         }
     }
@@ -1832,6 +1838,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             is_internal: true,
+            confidence: 0.3,
             category: EventCategory::CredentialAccess,
         }
     }
@@ -1844,6 +1851,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Exfiltration,
         }
     }
@@ -1915,6 +1923,7 @@ mod tests {
             resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
             post_body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
+            confidence: 1.0,
             category: EventCategory::CommandAndControl,
         }
     }
@@ -1931,6 +1940,7 @@ mod tests {
             ],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            confidence: 0.3,
             category: EventCategory::CredentialAccess,
         }
     }
@@ -1945,6 +1955,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
             proto: 6,
+            confidence: 0.3,
             category: EventCategory::Discovery,
         }
     }

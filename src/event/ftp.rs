@@ -47,6 +47,7 @@ pub struct FtpBruteForceFields {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -54,7 +55,7 @@ impl FtpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?}",
+            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} confidence={:?}",
             self.category.to_string(),
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -63,11 +64,13 @@ impl FtpBruteForceFields {
             self.user_list.join(","),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
-            self.is_internal.to_string()
+            self.is_internal.to_string(),
+            self.confidence.to_string()
         )
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct FtpBruteForce {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
@@ -78,6 +81,7 @@ pub struct FtpBruteForce {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -112,6 +116,7 @@ impl FtpBruteForce {
             start_time: fields.start_time,
             end_time: fields.end_time,
             is_internal: fields.is_internal,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -200,6 +205,7 @@ pub struct FtpEventFields {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
+    pub confidence: f32,
     pub category: EventCategory,
 }
 
@@ -207,7 +213,7 @@ impl FtpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -228,6 +234,7 @@ impl FtpEventFields {
             self.file,
             self.file_size.to_string(),
             self.file_id,
+            self.confidence.to_string()
         )
     }
 }
@@ -254,6 +261,7 @@ pub struct FtpPlainText {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -310,6 +318,7 @@ impl FtpPlainText {
             file: fields.file,
             file_size: fields.file_size,
             file_id: fields.file_id,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }

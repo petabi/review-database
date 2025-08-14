@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0,<0.41.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0-alpha.4,<0.40.0-alpha.5";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -220,7 +220,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.39.0,<0.40.0")?,
-            Version::parse("0.40.0")?,
+            Version::parse("0.40.0-alpha.4")?,
             migrate_0_39_to_0_40_0,
         ),
     ];
@@ -300,7 +300,8 @@ fn read_version_file(path: &Path) -> Result<Version> {
 
 fn migrate_0_39_to_0_40_0(store: &super::Store) -> Result<()> {
     migrate_0_40_tidb(store)?;
-    migrate_0_40_filter(store)
+    migrate_0_40_filter(store)?;
+    migrate_0_40_events(store)
 }
 
 fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
@@ -595,6 +596,104 @@ where
     let to_event: K = from_event.into();
     let new = bincode::serialize(&to_event).unwrap_or_default();
     event_db.update((k, v), (k, &new))?;
+    Ok(())
+}
+
+fn migrate_0_40_events(store: &super::Store) -> Result<()> {
+    use migration_structures::{
+        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
+        LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
+        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+    };
+    use num_traits::FromPrimitive;
+
+    use crate::event::NonBrowser;
+    use crate::event::{
+        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce, FtpPlainText,
+        LdapBruteForce, LdapPlainText, MultiHostPortScan, PortScan, RdpBruteForce,
+        RepeatedHttpSessions, TorConnection,
+    };
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        match event_kind {
+            EventKind::TorConnection => {
+                update_event_db_with_new_event::<TorConnectionV0_39, TorConnection>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::NonBrowser => {
+                update_event_db_with_new_event::<NonBrowserV0_39, NonBrowser>(&k, &v, &event_db)?;
+            }
+            EventKind::RepeatedHttpSessions => {
+                update_event_db_with_new_event::<RepeatedHttpSessionsV0_39, RepeatedHttpSessions>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::PortScan => {
+                update_event_db_with_new_event::<PortScanV0_39, PortScan>(&k, &v, &event_db)?;
+            }
+            EventKind::MultiHostPortScan => {
+                update_event_db_with_new_event::<MultiHostPortScanV0_39, MultiHostPortScan>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::ExternalDdos => {
+                update_event_db_with_new_event::<ExternalDdosV0_39, ExternalDdos>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::CryptocurrencyMiningPool => {
+                update_event_db_with_new_event::<
+                    CryptocurrencyMiningPoolV0_39,
+                    CryptocurrencyMiningPool,
+                >(&k, &v, &event_db)?;
+            }
+            EventKind::FtpBruteForce => {
+                update_event_db_with_new_event::<FtpBruteForceV0_39, FtpBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::FtpPlainText => {
+                update_event_db_with_new_event::<FtpPlainTextV0_39, FtpPlainText>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::RdpBruteForce => {
+                update_event_db_with_new_event::<RdpBruteForceV0_39, RdpBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::LdapBruteForce => {
+                update_event_db_with_new_event::<LdapBruteForceV0_39, LdapBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::LdapPlainText => {
+                update_event_db_with_new_event::<LdapPlainTextV0_39, LdapPlainText>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            _ => {
+                // No migration needed for other event types
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -1508,5 +1607,219 @@ mod tests {
                 PeriodForSearch::Recent("1 hour".to_string())
             );
         }
+    }
+
+    #[test]
+    fn migrate_0_40_events() {
+        use std::net::IpAddr;
+
+        use num_traits::FromPrimitive;
+
+        use super::migration_structures::{
+            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
+            RdpBruteForceV0_39, TorConnectionV0_39,
+        };
+        use crate::{EventKind, EventMessage};
+
+        let settings = TestSchema::new();
+        let event_db = settings.store.events();
+
+        // Test TorConnection migration (confidence should be 1.0)
+        let tor_event = TorConnectionV0_39 {
+            time: chrono::Utc::now(),
+            sensor: "sensor_1".to_string(),
+            session_end_time: chrono::Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            src_port: 12345,
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            uri: "/".to_string(),
+            referer: String::new(),
+            version: "1.1".to_string(),
+            user_agent: "Mozilla".to_string(),
+            request_len: 100,
+            response_len: 200,
+            status_code: 200,
+            status_msg: "OK".to_string(),
+            username: String::new(),
+            password: String::new(),
+            cookie: String::new(),
+            content_encoding: String::new(),
+            content_type: "text/html".to_string(),
+            cache_control: String::new(),
+            orig_filenames: vec![],
+            orig_mime_types: vec![],
+            resp_filenames: vec![],
+            resp_mime_types: vec![],
+            post_body: vec![],
+            state: String::new(),
+            category: crate::EventCategory::InitialAccess,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: tor_event.time,
+            kind: EventKind::TorConnection,
+            fields: bincode::serialize(&tor_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Test CryptocurrencyMiningPool migration (confidence should be 1.0)
+        let crypto_event = CryptocurrencyMiningPoolV0_39 {
+            time: chrono::Utc::now(),
+            sensor: "sensor_1".to_string(),
+            session_end_time: chrono::Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            src_port: 12345,
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_port: 53,
+            proto: 17,
+            query: "example.com".to_string(),
+            answer: vec!["1.2.3.4".to_string()],
+            trans_id: 12345,
+            rtt: 100,
+            qclass: 1,
+            qtype: 1,
+            rcode: 0,
+            aa_flag: false,
+            tc_flag: false,
+            rd_flag: true,
+            ra_flag: true,
+            ttl: vec![3600],
+            coins: vec!["BTC".to_string()],
+            category: crate::EventCategory::CommandAndControl,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: crypto_event.time,
+            kind: EventKind::CryptocurrencyMiningPool,
+            fields: bincode::serialize(&crypto_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Test FtpBruteForce migration (confidence should be 0.3)
+        let ftp_brute_event = FtpBruteForceV0_39 {
+            time: chrono::Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_port: 21,
+            proto: 6,
+            user_list: vec!["admin".to_string(), "root".to_string()],
+            start_time: chrono::Utc::now(),
+            end_time: chrono::Utc::now(),
+            is_internal: false,
+            category: crate::EventCategory::CredentialAccess,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: ftp_brute_event.time,
+            kind: EventKind::FtpBruteForce,
+            fields: bincode::serialize(&ftp_brute_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Test FtpPlainText migration (confidence should be 1.0)
+        let ftp_plain_event = FtpPlainTextV0_39 {
+            time: chrono::Utc::now(),
+            sensor: "sensor_1".to_string(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            src_port: 12345,
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_port: 21,
+            proto: 6,
+            end_time: 1000,
+            user: "testuser".to_string(),
+            password: "testpass".to_string(),
+            command: "RETR".to_string(),
+            reply_code: "226".to_string(),
+            reply_msg: "Transfer complete".to_string(),
+            data_passive: false,
+            data_orig_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            data_resp_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            data_resp_port: 20,
+            file: "test.txt".to_string(),
+            file_size: 1024,
+            file_id: "file123".to_string(),
+            category: crate::EventCategory::Collection,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: ftp_plain_event.time,
+            kind: EventKind::FtpPlainText,
+            fields: bincode::serialize(&ftp_plain_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Test RdpBruteForce migration (confidence should be 0.3)
+        let rdp_brute_event = RdpBruteForceV0_39 {
+            time: chrono::Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            dst_addrs: vec!["192.168.1.2".parse::<IpAddr>().unwrap()],
+            proto: 6,
+            start_time: chrono::Utc::now(),
+            end_time: chrono::Utc::now(),
+            category: crate::EventCategory::CredentialAccess,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: rdp_brute_event.time,
+            kind: EventKind::RdpBruteForce,
+            fields: bincode::serialize(&rdp_brute_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        // Run the migration
+        assert!(super::migrate_0_40_events(&settings.store).is_ok());
+
+        // Verify the migrated events have the correct confidence values
+        let event_db = settings.store.events();
+        let mut count = 0;
+        for item in event_db.raw_iter_forward() {
+            let (k, v) = item.unwrap();
+            let key: [u8; 16] = k.as_ref().try_into().unwrap();
+            let key = i128::from_be_bytes(key);
+            let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+            let event_kind = EventKind::from_i128(kind).unwrap();
+
+            match event_kind {
+                EventKind::TorConnection => {
+                    let event: crate::event::TorConnection = bincode::deserialize(&v).unwrap();
+                    assert!((event.confidence - 1.0).abs() < f32::EPSILON);
+                    count += 1;
+                }
+                EventKind::CryptocurrencyMiningPool => {
+                    let event: crate::event::CryptocurrencyMiningPool =
+                        bincode::deserialize(&v).unwrap();
+                    assert!((event.confidence - 1.0).abs() < f32::EPSILON);
+                    count += 1;
+                }
+                EventKind::FtpBruteForce => {
+                    let event: crate::event::FtpBruteForce = bincode::deserialize(&v).unwrap();
+                    assert!((event.confidence - 0.3).abs() < f32::EPSILON);
+                    count += 1;
+                }
+                EventKind::FtpPlainText => {
+                    let event: crate::event::FtpPlainText = bincode::deserialize(&v).unwrap();
+                    assert!((event.confidence - 1.0).abs() < f32::EPSILON);
+                    count += 1;
+                }
+                EventKind::RdpBruteForce => {
+                    let event: crate::event::RdpBruteForce = bincode::deserialize(&v).unwrap();
+                    assert!((event.confidence - 0.3).abs() < f32::EPSILON);
+                    count += 1;
+                }
+                _ => {
+                    // Other event types should be ignored
+                }
+            }
+        }
+
+        // Verify that all 5 test events were processed
+        assert_eq!(count, 5);
     }
 }
