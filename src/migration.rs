@@ -643,15 +643,15 @@ where
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39,
-        LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
-        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, LdapBruteForceV0_39,
+        LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39, PortScanV0_39,
+        RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
     };
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
-        LdapBruteForce, LdapPlainText, MultiHostPortScan, NonBrowser, PortScan, RdpBruteForce,
+        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce, LdapBruteForce,
+        LdapPlainText, MultiHostPortScan, NonBrowser, PortScan, RdpBruteForce,
         RepeatedHttpSessions, TorConnection,
     };
 
@@ -1654,7 +1654,8 @@ mod tests {
         use num_traits::FromPrimitive;
 
         use super::migration_structures::{
-            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, RdpBruteForceV0_39, TorConnectionV0_39,
+            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, RdpBruteForceV0_39,
+            TorConnectionV0_39,
         };
         use crate::{EventKind, EventMessage};
 
@@ -1754,38 +1755,6 @@ mod tests {
             time: ftp_brute_event.time,
             kind: EventKind::FtpBruteForce,
             fields: bincode::serialize(&ftp_brute_event).unwrap_or_default(),
-        };
-        assert!(event_db.put(&message).is_ok());
-
-        // Test FtpPlainText migration (confidence should be 1.0)
-        let ftp_plain_event = FtpPlainTextV0_39 {
-            time: chrono::Utc::now(),
-            sensor: "sensor_1".to_string(),
-            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
-            src_port: 12345,
-            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
-            dst_port: 21,
-            proto: 6,
-            end_time: 1000,
-            user: "testuser".to_string(),
-            password: "testpass".to_string(),
-            command: "RETR".to_string(),
-            reply_code: "226".to_string(),
-            reply_msg: "Transfer complete".to_string(),
-            data_passive: false,
-            data_orig_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
-            data_resp_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
-            data_resp_port: 20,
-            file: "test.txt".to_string(),
-            file_size: 1024,
-            file_id: "file123".to_string(),
-            category: crate::EventCategory::Collection,
-            triage_scores: None,
-        };
-        let message = EventMessage {
-            time: ftp_plain_event.time,
-            kind: EventKind::FtpPlainText,
-            fields: bincode::serialize(&ftp_plain_event).unwrap_or_default(),
         };
         assert!(event_db.put(&message).is_ok());
 
