@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.40.0-alpha.4,<0.40.0-alpha.5";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.1,<0.41.0-alpha.2";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -220,8 +220,13 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.39.0,<0.40.0")?,
-            Version::parse("0.40.0-alpha.4")?,
+            Version::parse("0.40.0")?,
             migrate_0_39_to_0_40_0,
+        ),
+        (
+            VersionReq::parse(">=0.39.0,<0.41.0")?,
+            Version::parse("0.41.0-alpha.1")?,
+            migrate_0_40_to_0_41_0,
         ),
     ];
 
@@ -298,10 +303,13 @@ fn read_version_file(path: &Path) -> Result<Version> {
     Version::parse(&ver).context("cannot parse VERSION")
 }
 
+fn migrate_0_40_to_0_41_0(store: &super::Store) -> Result<()> {
+    migrate_0_41_events(store)
+}
+
 fn migrate_0_39_to_0_40_0(store: &super::Store) -> Result<()> {
     migrate_0_40_tidb(store)?;
-    migrate_0_40_filter(store)?;
-    migrate_0_40_events(store)
+    migrate_0_40_filter(store)
 }
 
 fn migrate_0_40_tidb(store: &super::Store) -> Result<()> {
@@ -599,7 +607,7 @@ where
     Ok(())
 }
 
-fn migrate_0_40_events(store: &super::Store) -> Result<()> {
+fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
         CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
         LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
@@ -1774,7 +1782,7 @@ mod tests {
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
 
         // Run the migration
-        assert!(super::migrate_0_40_events(&settings.store).is_ok());
+        assert!(super::migrate_0_41_events(&settings.store).is_ok());
 
         // Verify the migrated events have the correct confidence values
         let event_db = settings.store.events();

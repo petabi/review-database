@@ -5,7 +5,7 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.40.0-alpha.4] - 2025-08-13
+## [Unreleased]
 
 ### Added
 
@@ -22,8 +22,6 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `RepeatedHttpSessions` (default 0.3)
   - `TorConnection` (default 1.0)
   - `NonBrowser` (default 1.0)
-- Added database migration from version 0.39.0 to 0.40.0-alpha.4 to update
-  existing events with appropriate default confidence values.
 
 ## [0.40.0] - 2025-08-13
 
@@ -998,6 +996,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.40.0...0.41.0
 [0.40.0]: https://github.com/petabi/review-database/compare/0.39.0...0.40.0
 [0.39.0]: https://github.com/petabi/review-database/compare/v0.38.0...0.39.0
 [0.38.0]: https://github.com/petabi/review-database/compare/0.37.0...0.38.0
