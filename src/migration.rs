@@ -646,9 +646,9 @@ where
 
 fn migrate_0_39_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39,
-        LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
-        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, LdapBruteForceV0_39,
+        LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39, PortScanV0_39,
+        RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
     };
     use num_traits::FromPrimitive;
 
@@ -1842,18 +1842,9 @@ mod tests {
 
         use num_traits::FromPrimitive;
 
-<<<<<<< HEAD
         use crate::event::{
             CryptocurrencyMiningPoolFieldsV0_39, FtpBruteForceFieldsV0_39, HttpEventFieldsV0_39,
             RdpBruteForceFieldsV0_39, RepeatedHttpSessionsFieldsV0_39,
-||||||| parent of 11e7c2b (Update files for issue #510)
-        use super::migration_structures::{
-            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
-            RdpBruteForceV0_39, TorConnectionV0_39,
-=======
-        use super::migration_structures::{
-            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, RdpBruteForceV0_39, TorConnectionV0_39,
->>>>>>> 11e7c2b (Update files for issue #510)
         };
         use crate::{EventKind, EventMessage};
 
