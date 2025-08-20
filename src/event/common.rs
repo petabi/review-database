@@ -1390,7 +1390,7 @@ mod tests {
             dst_port: 80,
             proto: 6,
             conn_state: "SAF".to_string(),
-            duration: 1000,
+            end_time: 1000,
             service: "http".to_string(),
             orig_bytes: 100,
             orig_pkts: 1,
@@ -1810,7 +1810,7 @@ mod tests {
     fn crypto_miining_pool_fields() -> CryptocurrencyMiningPoolFields {
         CryptocurrencyMiningPoolFields {
             sensor: "sensro".to_string(),
-            session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -1870,7 +1870,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            duration: 1000,
+            end_time: 1000,
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -1906,7 +1906,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            session_end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap(),
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -1969,7 +1969,7 @@ mod tests {
     fn dns_event_fields() -> DnsEventFields {
         DnsEventFields {
             sensor: "sensor".to_string(),
-            session_end_time: Utc::now(),
+            end_time: Utc::now(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),

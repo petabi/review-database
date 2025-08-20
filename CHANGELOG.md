@@ -7,6 +7,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed session-related time fields in detection event structures to `end_time` for consistency:
+  - `BlocklistConn`, `TorConnectionConn`: `duration` → `end_time` (with data migration)
+  - `HttpThreat`, `DomainGenerationAlgorithm`: `duration` → `end_time` 
+  - `TorConnection`, `NonBrowser`: `session_end_time` → `end_time`
+  - `DnsCovertChannel`, `LockyRansomware`, `CryptocurrencyMiningPool`: `session_end_time` → `end_time`
+
 ### Added
 
 - Added `confidence` field to various semi-supervised detection event structures:

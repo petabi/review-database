@@ -13,8 +13,9 @@ use crate::{
     Role, Tidb, TidbKind, TidbRule,
     account::{PasswordHashAlgorithm, SaltedPassword},
     event::{
-        BlocklistTlsFields, ExtraThreat, FilterEndpoint, FlowKind, HttpThreatFields,
-        LearningMethod, NetworkThreat, TriageScore, WindowsThreat,
+        BlocklistConn, BlocklistConnFields, BlocklistTlsFields, ExtraThreat, FilterEndpoint,
+        FlowKind, HttpThreatFields, LearningMethod, NetworkThreat, TriageScore,
+        TorConnectionConn, WindowsThreat,
     },
     tables::InnerNode,
     types::Account,
@@ -732,7 +733,7 @@ impl From<TorConnectionV0_39> for crate::event::TorConnection {
         Self {
             time: old.time,
             sensor: old.sensor,
-            session_end_time: old.session_end_time,
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,
@@ -840,7 +841,7 @@ impl From<NonBrowserV0_39> for crate::event::NonBrowser {
         Self {
             time: old.time,
             sensor: old.sensor,
-            session_end_time: old.session_end_time,
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,
@@ -1007,7 +1008,7 @@ impl From<CryptocurrencyMiningPoolV0_39> for crate::event::CryptocurrencyMiningP
         Self {
             time: old.time,
             sensor: old.sensor,
-            session_end_time: old.session_end_time,
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,
@@ -1234,6 +1235,151 @@ impl From<LdapPlainTextV0_39> for crate::event::LdapPlainText {
             object: old.object,
             argument: old.argument,
             confidence: 1.0,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+// V0_40 structures before duration/session_end_time were renamed to end_time
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BlocklistConnFieldsV0_40 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub conn_state: String,
+    pub duration: i64,
+    pub service: String,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<BlocklistConnFieldsV0_40> for BlocklistConnFields {
+    fn from(old: BlocklistConnFieldsV0_40) -> Self {
+        Self {
+            sensor: old.sensor,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            conn_state: old.conn_state,
+            end_time: old.duration,
+            service: old.service,
+            orig_bytes: old.orig_bytes,
+            resp_bytes: old.resp_bytes,
+            orig_pkts: old.orig_pkts,
+            resp_pkts: old.resp_pkts,
+            orig_l2_bytes: old.orig_l2_bytes,
+            resp_l2_bytes: old.resp_l2_bytes,
+            confidence: old.confidence,
+            category: old.category,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BlocklistConnV0_40 {
+    pub sensor: String,
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub conn_state: String,
+    pub duration: i64,
+    pub service: String,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<BlocklistConnV0_40> for BlocklistConn {
+    fn from(old: BlocklistConnV0_40) -> Self {
+        Self {
+            sensor: old.sensor,
+            time: old.time,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            conn_state: old.conn_state,
+            end_time: old.time.timestamp_nanos_opt().unwrap_or(0) + old.duration,
+            service: old.service,
+            orig_bytes: old.orig_bytes,
+            resp_bytes: old.resp_bytes,
+            orig_pkts: old.orig_pkts,
+            resp_pkts: old.resp_pkts,
+            orig_l2_bytes: old.orig_l2_bytes,
+            resp_l2_bytes: old.resp_l2_bytes,
+            confidence: old.confidence,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TorConnectionConnV0_40 {
+    pub sensor: String,
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub conn_state: String,
+    pub duration: i64,
+    pub service: String,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<TorConnectionConnV0_40> for TorConnectionConn {
+    fn from(old: TorConnectionConnV0_40) -> Self {
+        Self {
+            sensor: old.sensor,
+            time: old.time,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            conn_state: old.conn_state,
+            end_time: old.time.timestamp_nanos_opt().unwrap_or(0) + old.duration,
+            service: old.service,
+            orig_bytes: old.orig_bytes,
+            resp_bytes: old.resp_bytes,
+            orig_pkts: old.orig_pkts,
+            resp_pkts: old.resp_pkts,
+            orig_l2_bytes: old.orig_l2_bytes,
+            resp_l2_bytes: old.resp_l2_bytes,
+            confidence: old.confidence,
             category: old.category,
             triage_scores: old.triage_scores,
         }

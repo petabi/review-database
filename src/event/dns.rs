@@ -43,7 +43,7 @@ macro_rules! find_dns_attr_by_kind {
 pub struct DnsEventFields {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
-    pub session_end_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -69,10 +69,10 @@ impl DnsEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
+            "category={:?} sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
-            self.session_end_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -95,10 +95,11 @@ impl DnsEventFields {
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct DnsCovertChannel {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub session_end_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -125,9 +126,9 @@ impl fmt::Display for DnsCovertChannel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
-            self.session_end_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -156,7 +157,7 @@ impl DnsCovertChannel {
         Self {
             time,
             sensor: fields.sensor,
-            session_end_time: fields.session_end_time,
+            end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -232,10 +233,11 @@ impl Match for DnsCovertChannel {
 }
 
 // TODO: Locky ransomware event uses same sruct with DnsCovertChannel. It can be merged.
+#[derive(Deserialize, Serialize)]
 pub struct LockyRansomware {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub session_end_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -262,9 +264,9 @@ impl fmt::Display for LockyRansomware {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} session_end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
-            self.session_end_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -293,7 +295,7 @@ impl LockyRansomware {
         Self {
             time,
             sensor: fields.sensor,
-            session_end_time: fields.session_end_time,
+            end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -377,7 +379,7 @@ pub struct CryptocurrencyMiningPoolFields {
     pub dst_port: u16,
     pub proto: u8,
     #[serde(with = "ts_nanoseconds")]
-    pub session_end_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -399,7 +401,7 @@ impl CryptocurrencyMiningPoolFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -407,7 +409,7 @@ impl CryptocurrencyMiningPoolFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.session_end_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
@@ -430,7 +432,7 @@ impl CryptocurrencyMiningPoolFields {
 pub struct CryptocurrencyMiningPool {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub session_end_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -458,14 +460,14 @@ impl fmt::Display for CryptocurrencyMiningPool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.session_end_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
@@ -489,7 +491,7 @@ impl CryptocurrencyMiningPool {
         Self {
             time,
             sensor: fields.sensor,
-            session_end_time: fields.session_end_time,
+            end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
