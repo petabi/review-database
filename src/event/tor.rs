@@ -21,7 +21,7 @@ macro_rules! find_conn_attr_by_kind {
                 ConnAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
                 ConnAttr::Proto => AttrValue::UInt($event.proto.into()),
                 ConnAttr::ConnState => AttrValue::String(&$event.conn_state),
-                ConnAttr::Duration => AttrValue::SInt($event.duration),
+                ConnAttr::Duration => AttrValue::SInt($event.end_time),
                 ConnAttr::Service => AttrValue::String(&$event.service),
                 ConnAttr::OrigBytes => AttrValue::UInt($event.orig_bytes),
                 ConnAttr::RespBytes => AttrValue::UInt($event.resp_bytes),
@@ -42,7 +42,7 @@ macro_rules! find_conn_attr_by_kind {
 pub struct HttpEventFields {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
-    pub session_end_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -78,7 +78,7 @@ impl HttpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -86,7 +86,7 @@ impl HttpEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.session_end_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.method,
             self.host,
             self.uri,
@@ -119,7 +119,7 @@ impl HttpEventFields {
 pub struct TorConnection {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub session_end_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -156,14 +156,14 @@ impl fmt::Display for TorConnection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} session_end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.session_end_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.method,
             self.host,
             self.uri,
@@ -196,7 +196,7 @@ impl TorConnection {
         TorConnection {
             time,
             sensor: fields.sensor.clone(),
-            session_end_time: fields.session_end_time,
+            end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -282,6 +282,7 @@ impl Match for TorConnection {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Deserialize, Serialize)]
 pub struct TorConnectionConn {
     pub sensor: String,
     pub time: DateTime<Utc>,
@@ -291,7 +292,7 @@ pub struct TorConnectionConn {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
-    pub duration: i64,
+    pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -308,7 +309,7 @@ impl fmt::Display for TorConnectionConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -316,7 +317,7 @@ impl fmt::Display for TorConnectionConn {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.duration.to_string(),
+            self.end_time.to_string(),
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -340,7 +341,7 @@ impl TorConnectionConn {
             dst_port: fields.dst_port,
             proto: fields.proto,
             conn_state: fields.conn_state,
-            duration: fields.duration,
+            end_time: fields.end_time,
             service: fields.service,
             orig_bytes: fields.orig_bytes,
             resp_bytes: fields.resp_bytes,
@@ -426,7 +427,7 @@ mod tests {
             dst_port: 443,
             proto: 6,
             conn_state: "SF".to_string(),
-            duration: 100,
+            end_time: 100,
             service: "https".to_string(),
             orig_bytes: 1024,
             resp_bytes: 2048,
@@ -454,7 +455,7 @@ mod tests {
         assert_eq!(event.dst_port, 443);
         assert_eq!(event.proto, 6);
         assert_eq!(event.conn_state, "SF");
-        assert_eq!(event.duration, 100);
+        assert_eq!(event.end_time, 100);
         assert_eq!(event.service, "https");
         assert_eq!(event.orig_bytes, 1024);
         assert_eq!(event.resp_bytes, 2048);

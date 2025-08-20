@@ -17,7 +17,7 @@ macro_rules! find_conn_attr_by_kind {
                 ConnAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
                 ConnAttr::Proto => AttrValue::UInt($event.proto.into()),
                 ConnAttr::ConnState => AttrValue::String(&$event.conn_state),
-                ConnAttr::Duration => AttrValue::SInt($event.duration),
+                ConnAttr::Duration => AttrValue::SInt($event.end_time),
                 ConnAttr::Service => AttrValue::String(&$event.service),
                 ConnAttr::OrigBytes => AttrValue::UInt($event.orig_bytes),
                 ConnAttr::RespBytes => AttrValue::UInt($event.resp_bytes),
@@ -449,7 +449,7 @@ pub struct BlocklistConnFields {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
-    pub duration: i64,
+    pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -465,7 +465,7 @@ impl BlocklistConnFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -474,7 +474,7 @@ impl BlocklistConnFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.duration.to_string(),
+            self.end_time.to_string(),
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -488,6 +488,7 @@ impl BlocklistConnFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Deserialize, Serialize)]
 pub struct BlocklistConn {
     pub sensor: String,
     pub time: DateTime<Utc>,
@@ -497,7 +498,7 @@ pub struct BlocklistConn {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
-    pub duration: i64,
+    pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -514,7 +515,7 @@ impl fmt::Display for BlocklistConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -522,7 +523,7 @@ impl fmt::Display for BlocklistConn {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.duration.to_string(),
+            self.end_time.to_string(),
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -546,7 +547,7 @@ impl BlocklistConn {
             dst_port: fields.dst_port,
             proto: fields.proto,
             conn_state: fields.conn_state,
-            duration: fields.duration,
+            end_time: fields.end_time,
             service: fields.service,
             orig_bytes: fields.orig_bytes,
             resp_bytes: fields.resp_bytes,
