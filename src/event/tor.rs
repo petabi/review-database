@@ -1,7 +1,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{ConnAttr, HttpAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc, serde::ts_nanoseconds};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -41,8 +41,7 @@ macro_rules! find_conn_attr_by_kind {
 #[allow(clippy::module_name_repetitions)]
 pub struct HttpEventFields {
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -86,7 +85,7 @@ impl HttpEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_rfc3339(),
+            chrono::DateTime::<Utc>::from_timestamp_nanos(self.end_time).to_rfc3339(),
             self.method,
             self.host,
             self.uri,
@@ -119,7 +118,7 @@ impl HttpEventFields {
 pub struct TorConnection {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -163,7 +162,7 @@ impl fmt::Display for TorConnection {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_rfc3339(),
+            chrono::DateTime::<Utc>::from_timestamp_nanos(self.end_time).to_rfc3339(),
             self.method,
             self.host,
             self.uri,
