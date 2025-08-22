@@ -38,8 +38,9 @@ impl LdapBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
@@ -54,6 +55,7 @@ impl LdapBruteForceFields {
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForceFieldsV0_41 {
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
@@ -68,6 +70,7 @@ pub struct LdapBruteForceFieldsV0_41 {
 impl From<LdapBruteForceFieldsV0_39> for LdapBruteForceFieldsV0_41 {
     fn from(value: LdapBruteForceFieldsV0_39) -> Self {
         Self {
+            sensor: String::new(),
             src_addr: value.src_addr,
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
@@ -106,6 +109,7 @@ fn get_user_pw_list(user_pw_list: &[(String, String)]) -> String {
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForce {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
@@ -139,6 +143,7 @@ impl fmt::Display for LdapBruteForce {
 impl LdapBruteForce {
     pub(super) fn new(time: DateTime<Utc>, fields: &LdapBruteForceFields) -> Self {
         LdapBruteForce {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_addr: fields.dst_addr,

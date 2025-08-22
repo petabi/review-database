@@ -3284,6 +3284,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_portscan() {
         let fields = PortScanFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
@@ -3305,7 +3306,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" proto="6" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" proto="6" confidence="0.3""#
         );
 
         let port_scan = Event::PortScan(PortScan::new(
@@ -3322,6 +3323,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_multihostportscan() {
         let fields = MultiHostPortScanFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -3346,7 +3348,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" sensor="" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let multi_host_port_scan = Event::MultiHostPortScan(MultiHostPortScan::new(
@@ -3363,6 +3365,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_externalddos() {
         let fields = ExternalDdosFields {
+            sensor: String::new(),
             src_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
@@ -3385,7 +3388,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" sensor="" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let external_ddos = Event::ExternalDdos(ExternalDdos::new(
@@ -3903,6 +3906,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ftpbruteforce() {
         let fields = FtpBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
@@ -3926,7 +3930,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" is_internal="true" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" is_internal="true" confidence="0.3""#
         );
 
         let ftp_brute_force = Event::FtpBruteForce(FtpBruteForce::new(
@@ -4205,6 +4209,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ldapbruteforce() {
         let fields = LdapBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
@@ -4230,7 +4235,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let ldap_brute_force = Event::LdapBruteForce(LdapBruteForce::new(
@@ -4617,6 +4622,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_rdpbruteforce() {
         let fields = RdpBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -4640,7 +4646,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" proto="6" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" sensor="" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" proto="6" confidence="0.3""#
         );
 
         let rdp_brute_force = Event::RdpBruteForce(RdpBruteForce::new(
