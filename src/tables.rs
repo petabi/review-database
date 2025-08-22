@@ -22,6 +22,7 @@ mod scores;
 mod status;
 mod template;
 mod tidb;
+mod time_series;
 mod tor_exit_node;
 mod traffic_filter;
 mod triage_policy;
@@ -64,6 +65,7 @@ pub use self::template::{
     UnstructuredClusteringAlgorithm,
 };
 pub use self::tidb::{Kind as TidbKind, Rule as TidbRule, RuleKind as TidbRuleKind, Tidb};
+pub use self::time_series::TimeSeries;
 pub use self::tor_exit_node::TorExitNode;
 pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::triage_policy::{
@@ -109,6 +111,7 @@ pub(super) const SCORES: &str = "scores";
 pub(super) const STATUSES: &str = "statuses";
 pub(super) const TEMPLATES: &str = "templates";
 pub(super) const TIDB: &str = "TI database";
+pub(super) const TIME_SERIES: &str = "time series";
 pub(super) const TOR_EXIT_NODES: &str = "Tor exit nodes";
 pub(super) const TRAFFIC_FILTER_RULES: &str = "traffic filter rules";
 pub(super) const TRIAGE_POLICY: &str = "triage policy";
@@ -116,7 +119,7 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 31] = [
+const MAP_NAMES: [&str; 32] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -142,6 +145,7 @@ const MAP_NAMES: [&str; 31] = [
     STATUSES,
     TEMPLATES,
     TIDB,
+    TIME_SERIES,
     TOR_EXIT_NODES,
     TRAFFIC_FILTER_RULES,
     TRIAGE_POLICY,
@@ -354,6 +358,12 @@ impl StateDb {
     pub(crate) fn column_stats(&self) -> Table<'_, ColumnStats> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<ColumnStats>::open(inner).expect("{COLUMN_STATS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn time_series(&self) -> Table<'_, TimeSeries> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<TimeSeries>::open(inner).expect("{TIME_SERIES} table must be present")
     }
 
     #[must_use]

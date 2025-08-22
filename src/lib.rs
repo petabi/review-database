@@ -58,8 +58,8 @@ pub use self::tables::{
     PacketAttr, PeriodForSearch, ProtocolPorts, Response, ResponseKind, SamplingInterval,
     SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
     StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
-    TidbRuleKind, TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate, TriageResponse,
-    TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
+    TidbRuleKind, TimeSeries, TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate,
+    TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
     UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::time_series::*;
@@ -305,6 +305,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn tidb_map(&self) -> Table<'_, Tidb> {
         self.states.tidbs()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn time_series_map(&self) -> Table<'_, TimeSeries> {
+        self.states.time_series()
     }
 
     #[must_use]
