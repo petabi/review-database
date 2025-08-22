@@ -65,6 +65,7 @@ pub use self::tables::{
 pub use self::time_series::*;
 pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
 pub use self::top_n::*;
+#[allow(deprecated)]
 pub use self::top_n::{
     ClusterTrend, ElementCount, LineSegment, Regression, StructuredColumnType, TopColumnsOfCluster,
     TopMultimaps, TopTrendsByColumn,

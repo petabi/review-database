@@ -30,6 +30,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   organized API. Event types are now accessed through the `event::` module path
   instead of directly at the crate root.
 
+### Deprecated
+
+- `LineSegment` and `Regression` structures are deprecated as they are no longer
+  used in the codebase. They will be removed in a future version.
+
 ## [0.40.0] - 2025-08-13
 
 ### Added
