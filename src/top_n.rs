@@ -7,6 +7,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
 pub use self::one_to_n::{TopColumnsOfCluster, TopMultimaps};
+#[allow(deprecated)]
 pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByColumn};
 use super::{Database, Error};
 
