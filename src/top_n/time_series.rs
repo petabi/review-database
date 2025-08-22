@@ -1,3 +1,5 @@
+#![allow(deprecated)] // TODO: Remove this when LineSegment and Regression structs are deleted
+
 use std::{cmp::Reverse, collections::HashMap};
 
 use chrono::{NaiveDateTime, TimeDelta, Utc};
@@ -31,6 +33,10 @@ pub struct ClusterTrend {
     pub series: Vec<TimeCount>,
 }
 
+#[deprecated(
+    since = "0.41.0",
+    note = "This structure is no longer used and will be removed in a future version"
+)]
 #[derive(Clone, Deserialize)]
 pub struct LineSegment {
     pub first_index: usize,
@@ -39,6 +45,10 @@ pub struct LineSegment {
     pub reg_trend: Regression,
 }
 
+#[deprecated(
+    since = "0.41.0",
+    note = "This structure is no longer used and will be removed in a future version"
+)]
 #[derive(Clone, Deserialize)]
 pub struct Regression {
     pub slope: f64,
