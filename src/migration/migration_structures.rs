@@ -74,7 +74,7 @@ impl From<HttpThreatV0_33> for HttpThreatFields {
             dst_addr: input.dst_addr,
             dst_port: input.dst_port,
             proto: input.proto,
-            end_time: input.duration,
+            end_time: chrono::DateTime::from_timestamp_nanos(input.duration),
             method: input.method,
             host: input.host,
             uri: input.uri,
@@ -733,10 +733,7 @@ impl From<TorConnectionV0_39> for crate::event::TorConnection {
         Self {
             time: old.time,
             sensor: old.sensor,
-            end_time: old
-                .session_end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default(),
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,
@@ -844,10 +841,7 @@ impl From<NonBrowserV0_39> for crate::event::NonBrowser {
         Self {
             time: old.time,
             sensor: old.sensor,
-            end_time: old
-                .session_end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default(),
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,
@@ -1014,10 +1008,7 @@ impl From<CryptocurrencyMiningPoolV0_39> for crate::event::CryptocurrencyMiningP
         Self {
             time: old.time,
             sensor: old.sensor,
-            end_time: old
-                .session_end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default(),
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,
@@ -1283,7 +1274,7 @@ impl From<BlocklistConnFieldsV0_40> for BlocklistConnFields {
             dst_port: old.dst_port,
             proto: old.proto,
             conn_state: old.conn_state,
-            end_time: old.duration,
+            end_time: chrono::DateTime::from_timestamp_nanos(old.duration),
             service: old.service,
             orig_bytes: old.orig_bytes,
             resp_bytes: old.resp_bytes,
@@ -1331,7 +1322,7 @@ impl From<BlocklistConnV0_40> for BlocklistConn {
             dst_port: old.dst_port,
             proto: old.proto,
             conn_state: old.conn_state,
-            end_time: old.time.timestamp_nanos_opt().unwrap_or(0) + old.duration,
+            end_time: old.time + chrono::Duration::nanoseconds(old.duration),
             service: old.service,
             orig_bytes: old.orig_bytes,
             resp_bytes: old.resp_bytes,
@@ -1380,7 +1371,7 @@ impl From<TorConnectionConnV0_40> for TorConnectionConn {
             dst_port: old.dst_port,
             proto: old.proto,
             conn_state: old.conn_state,
-            end_time: old.time.timestamp_nanos_opt().unwrap_or(0) + old.duration,
+            end_time: old.time + chrono::Duration::nanoseconds(old.duration),
             service: old.service,
             orig_bytes: old.orig_bytes,
             resp_bytes: old.resp_bytes,

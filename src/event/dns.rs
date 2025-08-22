@@ -2,7 +2,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{DnsAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, HIGH, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -42,7 +42,8 @@ macro_rules! find_dns_attr_by_kind {
 #[derive(Deserialize, Serialize)]
 pub struct DnsEventFields {
     pub sensor: String,
-    pub end_time: i64,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -71,7 +72,7 @@ impl DnsEventFields {
             "category={:?} sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
-            chrono::DateTime::<Utc>::from_timestamp_nanos(self.end_time).to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -98,7 +99,8 @@ impl DnsEventFields {
 pub struct DnsCovertChannel {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: i64,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -127,7 +129,7 @@ impl fmt::Display for DnsCovertChannel {
             f,
             "sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
-            chrono::DateTime::<Utc>::from_timestamp_nanos(self.end_time).to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -236,7 +238,8 @@ impl Match for DnsCovertChannel {
 pub struct LockyRansomware {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: i64,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -265,7 +268,7 @@ impl fmt::Display for LockyRansomware {
             f,
             "sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
-            chrono::DateTime::<Utc>::from_timestamp_nanos(self.end_time).to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
@@ -377,7 +380,8 @@ pub struct CryptocurrencyMiningPoolFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub end_time: i64,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -407,7 +411,7 @@ impl CryptocurrencyMiningPoolFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            chrono::DateTime::<Utc>::from_timestamp_nanos(self.end_time).to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
@@ -430,7 +434,8 @@ impl CryptocurrencyMiningPoolFields {
 pub struct CryptocurrencyMiningPool {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: i64,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -465,7 +470,7 @@ impl fmt::Display for CryptocurrencyMiningPool {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            chrono::DateTime::<Utc>::from_timestamp_nanos(self.end_time).to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
@@ -573,7 +578,8 @@ pub struct BlocklistDnsFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub end_time: i64,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -602,7 +608,10 @@ impl BlocklistDnsFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            self.end_time
+                .timestamp_nanos_opt()
+                .unwrap_or_default()
+                .to_string(),
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
@@ -620,6 +629,7 @@ impl BlocklistDnsFields {
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct BlocklistDns {
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -628,7 +638,8 @@ pub struct BlocklistDns {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub end_time: i64,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -657,7 +668,10 @@ impl fmt::Display for BlocklistDns {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            self.end_time
+                .timestamp_nanos_opt()
+                .unwrap_or_default()
+                .to_string(),
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
