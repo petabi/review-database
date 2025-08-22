@@ -750,7 +750,7 @@ impl Match for DomainGenerationAlgorithm {
 pub struct NonBrowser {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -794,7 +794,7 @@ impl fmt::Display for NonBrowser {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_rfc3339(),
+            chrono::DateTime::<Utc>::from_timestamp_nanos(self.end_time).to_rfc3339(),
             self.method,
             self.host,
             self.uri,
