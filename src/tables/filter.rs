@@ -5,7 +5,11 @@ use chrono::{DateTime, Utc};
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
-use crate::{FilterEndpoint, FlowKind, Iterable, LearningMethod, Map, Table, types::FromKeyValue};
+use crate::{
+    Iterable, Map, Table,
+    event::{FilterEndpoint, FlowKind, LearningMethod},
+    types::FromKeyValue,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PeriodForSearch {

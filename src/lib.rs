@@ -22,6 +22,7 @@ mod test;
 mod time_series;
 mod top_n;
 pub mod types;
+mod util;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -42,25 +43,7 @@ pub use self::cluster::*;
 pub use self::collections::Indexable;
 pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, IterableMap, Map};
 pub use self::column_statistics::*;
-pub use self::event::EventKind;
-pub use self::event::{
-    BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields, BlocklistDceRpc,
-    BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields, BlocklistDns, BlocklistDnsFields,
-    BlocklistFtp, BlocklistHttp, BlocklistHttpFields, BlocklistKerberos, BlocklistKerberosFields,
-    BlocklistLdap, BlocklistMqtt, BlocklistMqttFields, BlocklistNfs, BlocklistNfsFields,
-    BlocklistNtlm, BlocklistNtlmFields, BlocklistRdp, BlocklistRdpFields, BlocklistSmb,
-    BlocklistSmbFields, BlocklistSmtp, BlocklistSmtpFields, BlocklistSsh, BlocklistSshFields,
-    BlocklistTls, BlocklistTlsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
-    DgaFields, Direction, DnsCovertChannel, DnsEventFields, DomainGenerationAlgorithm, Event,
-    EventDb, EventFilter, EventIterator, EventMessage, ExternalDdos, ExternalDdosFields,
-    ExtraThreat, FilterEndpoint, FlowKind, FtpBruteForce, FtpBruteForceFields, FtpEventFields,
-    FtpPlainText, HttpEventFields, HttpThreat, HttpThreatFields, LdapBruteForce,
-    LdapBruteForceFields, LdapEventFields, LdapPlainText, LearningMethod, LockyRansomware,
-    MultiHostPortScan, MultiHostPortScanFields, NetworkThreat, NetworkType, NonBrowser, PortScan,
-    PortScanFields, RdpBruteForce, RdpBruteForceFields, RecordType, RepeatedHttpSessions,
-    RepeatedHttpSessionsFields, SuspiciousTlsTraffic, TorConnection, TrafficDirection, TriageScore,
-    WindowsThreat, find_ip_country,
-};
+pub use self::event::{Event, EventDb, EventKind, EventMessage};
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
 pub use self::scores::Scores;
@@ -87,6 +70,7 @@ pub use self::top_n::{
     TopMultimaps, TopTrendsByColumn,
 };
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
+pub use self::util::find_ip_country;
 
 #[derive(Clone)]
 pub struct Database {

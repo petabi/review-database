@@ -540,23 +540,29 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use serde::Serialize;
 
+    use super::Match;
     use crate::{
-        AttrCmpKind, BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields,
-        BlocklistDceRpc, BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields, BlocklistDns,
-        BlocklistDnsFields, BlocklistFtp, BlocklistHttp, BlocklistHttpFields, BlocklistKerberos,
-        BlocklistKerberosFields, BlocklistLdap, BlocklistMqtt, BlocklistMqttFields, BlocklistNfs,
-        BlocklistNfsFields, BlocklistNtlm, BlocklistNtlmFields, BlocklistRdp, BlocklistRdpFields,
-        BlocklistSmb, BlocklistSmbFields, BlocklistSmtp, BlocklistSmtpFields, BlocklistSsh,
-        BlocklistSshFields, BlocklistTls, BlocklistTlsFields, CryptocurrencyMiningPool,
-        CryptocurrencyMiningPoolFields, Customer, CustomerNetwork, DgaFields, DnsCovertChannel,
-        DnsEventFields, DomainGenerationAlgorithm, Event, EventCategory, EventFilter, ExternalDdos,
-        ExternalDdosFields, ExtraThreat, FlowKind, FtpBruteForce, FtpBruteForceFields,
-        FtpEventFields, FtpPlainText, HostNetworkGroup, HttpEventFields, HttpThreat,
-        HttpThreatFields, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText,
-        LearningMethod, LockyRansomware, MultiHostPortScan, MultiHostPortScanFields, NetworkThreat,
-        NetworkType, NonBrowser, PacketAttr, PortScan, PortScanFields, RdpBruteForce,
-        RdpBruteForceFields, RecordType, RepeatedHttpSessions, RepeatedHttpSessionsFields,
-        SuspiciousTlsTraffic, TorConnection, ValueKind, WindowsThreat, event::common::Match,
+        AttrCmpKind, Customer, CustomerNetwork, EventCategory, HostNetworkGroup, PacketAttr,
+        ValueKind,
+        event::{
+            BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields,
+            BlocklistDceRpc, BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields,
+            BlocklistDns, BlocklistDnsFields, BlocklistFtp, BlocklistHttp, BlocklistHttpFields,
+            BlocklistKerberos, BlocklistKerberosFields, BlocklistLdap, BlocklistMqtt,
+            BlocklistMqttFields, BlocklistNfs, BlocklistNfsFields, BlocklistNtlm,
+            BlocklistNtlmFields, BlocklistRdp, BlocklistRdpFields, BlocklistSmb,
+            BlocklistSmbFields, BlocklistSmtp, BlocklistSmtpFields, BlocklistSsh,
+            BlocklistSshFields, BlocklistTls, BlocklistTlsFields, CryptocurrencyMiningPool,
+            CryptocurrencyMiningPoolFields, DgaFields, DnsCovertChannel, DnsEventFields,
+            DomainGenerationAlgorithm, Event, EventFilter, ExternalDdos, ExternalDdosFields,
+            ExtraThreat, FlowKind, FtpBruteForce, FtpBruteForceFields, FtpEventFields,
+            FtpPlainText, HttpEventFields, HttpThreat, HttpThreatFields, LdapBruteForce,
+            LdapBruteForceFields, LdapEventFields, LdapPlainText, LearningMethod, LockyRansomware,
+            MultiHostPortScan, MultiHostPortScanFields, NetworkThreat, NetworkType, NonBrowser,
+            PortScan, PortScanFields, RdpBruteForce, RdpBruteForceFields, RecordType,
+            RepeatedHttpSessions, RepeatedHttpSessionsFields, SuspiciousTlsTraffic, TorConnection,
+            WindowsThreat,
+        },
         types::Endpoint,
     };
 

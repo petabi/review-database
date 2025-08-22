@@ -22,6 +22,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `RepeatedHttpSessions` (default 0.3)
   - `TorConnection` (default 1.0)
   - `NonBrowser` (default 1.0)
+- Added `find_ip_county` utility function in new `util` module.
+
+### Changed
+
+- Removed re-exports of event types from the crate's top level for cleaner, more
+  organized API. Event types are now accessed through the `event::` module path
+  instead of directly at the crate root.
 
 ## [0.40.0] - 2025-08-13
 

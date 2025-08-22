@@ -190,7 +190,7 @@ mod tests {
         }
 
         let res: anyhow::Result<Vec<_>> = table
-            .iter(crate::Direction::Forward, None)
+            .iter(rocksdb::Direction::Forward, None)
             .map(|r| r.map(|mi| mi.name))
             .collect();
         assert!(res.is_ok());
