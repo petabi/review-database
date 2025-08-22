@@ -19,9 +19,9 @@ use super::{
 const MAX_CSV_COLUMNS: usize = 200;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct TimeSeries {
-    count_index: Option<usize>, // if None, count just rows. If Some, count values of the column.
-    series: Vec<TimeCount>,
+pub struct TimeSeries {
+    pub count_index: Option<usize>, // if None, count just rows. If Some, count values of the column.
+    pub series: Vec<TimeCount>,
 }
 
 #[allow(clippy::module_name_repetitions)]
