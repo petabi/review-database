@@ -1390,7 +1390,7 @@ mod tests {
             dst_port: 80,
             proto: 6,
             conn_state: "SAF".to_string(),
-            end_time: 1000,
+            end_time: chrono::DateTime::from_timestamp_nanos(1000),
             service: "http".to_string(),
             orig_bytes: 100,
             orig_pkts: 1,
@@ -1461,7 +1461,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
-            end_time: 100,
+            end_time: chrono::DateTime::from_timestamp_nanos(100),
             query: "foo.com".to_string(),
             answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
             trans_id: 123,
@@ -1487,7 +1487,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            end_time: 600,
+            end_time: chrono::DateTime::from_timestamp_nanos(600),
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -1810,11 +1810,7 @@ mod tests {
     fn crypto_miining_pool_fields() -> CryptocurrencyMiningPoolFields {
         CryptocurrencyMiningPoolFields {
             sensor: "sensro".to_string(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 1, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap_or_default(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -1874,7 +1870,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            end_time: 1000,
+            end_time: chrono::DateTime::from_timestamp_nanos(1000),
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -1910,11 +1906,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 10, 10)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap_or_default(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap(),
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -1977,7 +1969,7 @@ mod tests {
     fn dns_event_fields() -> DnsEventFields {
         DnsEventFields {
             sensor: "sensor".to_string(),
-            end_time: Utc::now().timestamp_nanos_opt().unwrap_or_default(),
+            end_time: Utc::now(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -2072,7 +2064,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            end_time: 1000,
+            end_time: chrono::DateTime::from_timestamp_nanos(1000),
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
