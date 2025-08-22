@@ -39,6 +39,7 @@ macro_rules! find_ftp_attr_by_kind {
 
 #[derive(Serialize, Deserialize)]
 pub struct FtpBruteForceFields {
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
@@ -72,6 +73,7 @@ impl FtpBruteForceFields {
 
 #[derive(Serialize, Deserialize)]
 pub struct FtpBruteForce {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
@@ -107,6 +109,7 @@ impl fmt::Display for FtpBruteForce {
 impl FtpBruteForce {
     pub(super) fn new(time: DateTime<Utc>, fields: &FtpBruteForceFields) -> Self {
         FtpBruteForce {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_addr: fields.dst_addr,

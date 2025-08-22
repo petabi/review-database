@@ -3264,6 +3264,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_portscan() {
         let fields = PortScanFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
@@ -3302,6 +3303,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_multihostportscan() {
         let fields = MultiHostPortScanFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -3343,6 +3345,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_externalddos() {
         let fields = ExternalDdosFields {
+            sensor: String::new(),
             src_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
@@ -3883,6 +3886,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ftpbruteforce() {
         let fields = FtpBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
@@ -4185,6 +4189,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ldapbruteforce() {
         let fields = LdapBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
@@ -4597,6 +4602,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_rdpbruteforce() {
         let fields = RdpBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),

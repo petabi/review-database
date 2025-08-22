@@ -31,6 +31,7 @@ macro_rules! find_rdp_attr_by_kind {
 }
 #[derive(Serialize, Deserialize)]
 pub struct RdpBruteForceFields {
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addrs: Vec<IpAddr>,
     pub start_time: DateTime<Utc>,
@@ -58,6 +59,7 @@ impl RdpBruteForceFields {
 
 #[derive(Serialize, Deserialize)]
 pub struct RdpBruteForce {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addrs: Vec<IpAddr>,
@@ -87,6 +89,7 @@ impl fmt::Display for RdpBruteForce {
 impl RdpBruteForce {
     pub(super) fn new(time: DateTime<Utc>, fields: &RdpBruteForceFields) -> Self {
         RdpBruteForce {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_addrs: fields.dst_addrs.clone(),
