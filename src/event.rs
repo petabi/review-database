@@ -1007,10 +1007,10 @@ impl Event {
         let mut dst_country = "ZZ".to_string();
         if let Some(locator) = locator {
             if let Some(src_addr) = addr_pair.0 {
-                src_country = find_ip_country(locator, src_addr);
+                src_country = crate::util::find_ip_country(locator, src_addr);
             }
             if let Some(dst_addr) = addr_pair.1 {
-                dst_country = find_ip_country(locator, dst_addr);
+                dst_country = crate::util::find_ip_country(locator, dst_addr);
             }
         }
 
@@ -2733,36 +2733,9 @@ pub enum TrafficDirection {
     To,
 }
 
-#[must_use]
-pub fn find_ip_country(locator: &ip2location::DB, addr: IpAddr) -> String {
-    locator
-        .ip_lookup(addr)
-        .map(|r| get_record_country_short_name(&r))
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| "XX".to_string())
-}
-
 fn eq_ip_country(locator: &ip2location::DB, addr: IpAddr, country: [u8; 2]) -> bool {
-    locator
-        .ip_lookup(addr)
-        .ok()
-        .and_then(|r| get_record_country_short_name(&r))
-        .is_some_and(|c| c.as_bytes() == country)
-}
-
-fn get_record_country_short_name(record: &ip2location::Record) -> Option<String> {
-    use ip2location::Record;
-    match record {
-        Record::ProxyDb(r) => r
-            .country
-            .as_ref()
-            .map(|c| c.short_name.clone().into_owned()),
-        Record::LocationDb(r) => r
-            .country
-            .as_ref()
-            .map(|c| c.short_name.clone().into_owned()),
-    }
+    let country_code = crate::util::find_ip_country(locator, addr);
+    country_code.as_bytes() == country
 }
 
 #[cfg(test)]
@@ -2777,17 +2750,27 @@ mod tests {
     use chrono::{TimeZone, Utc};
 
     use crate::{
-        BlocklistBootp, BlocklistBootpFields, BlocklistConnFields, BlocklistDceRpcFields,
-        BlocklistDhcp, BlocklistDhcpFields, BlocklistDnsFields, BlocklistHttp, BlocklistHttpFields,
-        BlocklistKerberosFields, BlocklistMqttFields, BlocklistNfsFields, BlocklistNtlmFields,
-        BlocklistRdpFields, BlocklistSmbFields, BlocklistSmtpFields, BlocklistSshFields,
-        BlocklistTlsFields, CryptocurrencyMiningPoolFields, DgaFields, DnsEventFields,
-        DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
-        ExternalDdosFields, ExtraThreat, FtpBruteForceFields, FtpEventFields, HttpEventFields,
-        HttpThreat, HttpThreatFields, LdapBruteForceFields, LdapEventFields,
-        MultiHostPortScanFields, NetworkThreat, PortScanFields, RdpBruteForceFields, RecordType,
-        RepeatedHttpSessionsFields, Store, SuspiciousTlsTraffic, TriageScore, WindowsThreat,
-        event::LOCKY_RANSOMWARE, types::EventCategory,
+        Store,
+        event::{
+            BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields,
+            BlocklistDceRpc, BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields,
+            BlocklistDns, BlocklistDnsFields, BlocklistFtp, BlocklistHttp, BlocklistHttpFields,
+            BlocklistKerberos, BlocklistKerberosFields, BlocklistLdap, BlocklistMqtt,
+            BlocklistMqttFields, BlocklistNfs, BlocklistNfsFields, BlocklistNtlm,
+            BlocklistNtlmFields, BlocklistRdp, BlocklistRdpFields, BlocklistSmb,
+            BlocklistSmbFields, BlocklistSmtp, BlocklistSmtpFields, BlocklistSsh,
+            BlocklistSshFields, BlocklistTls, BlocklistTlsFields, CryptocurrencyMiningPool,
+            CryptocurrencyMiningPoolFields, DgaFields, DnsCovertChannel, DnsEventFields,
+            DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
+            ExternalDdosFields, ExtraThreat, FtpBruteForce, FtpBruteForceFields, FtpEventFields,
+            FtpPlainText, HttpEventFields, HttpThreat, HttpThreatFields, LOCKY_RANSOMWARE,
+            LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText, LockyRansomware,
+            MultiHostPortScan, MultiHostPortScanFields, NetworkThreat, NonBrowser, PortScan,
+            PortScanFields, RdpBruteForce, RdpBruteForceFields, RecordType, RepeatedHttpSessions,
+            RepeatedHttpSessionsFields, SuspiciousTlsTraffic, TorConnection, TriageScore,
+            WindowsThreat,
+        },
+        types::EventCategory,
     };
 
     fn example_message(kind: EventKind, category: EventCategory) -> EventMessage {
@@ -3157,7 +3140,7 @@ mod tests {
             r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" session_end_time="1970-01-01T00:10:10+00:00" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="1""#
         );
 
-        let non_browser = Event::NonBrowser(crate::NonBrowser::new(
+        let non_browser = Event::NonBrowser(NonBrowser::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             &fields,
         ))
@@ -3266,7 +3249,7 @@ mod tests {
             r#"time="1970-01-01T00:01:01+00:00" event_kind="LockyRansomware" category="Impact" sensor="collector1" session_end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.3" src_port="10000" dst_addr="127.0.0.4" dst_port="53" proto="17" query="locky.com" answer="1.1.1.100" trans_id="1100" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="true" rd_flag="false" ra_flag="false" ttl="120,120,120,120,120" confidence="0.8""#
         );
 
-        let locky_ransomware = Event::LockyRansomware(crate::LockyRansomware::new(
+        let locky_ransomware = Event::LockyRansomware(LockyRansomware::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             fields,
         ))
@@ -3305,7 +3288,7 @@ mod tests {
             r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" proto="6" confidence="0.3""#
         );
 
-        let port_scan = Event::PortScan(crate::PortScan::new(
+        let port_scan = Event::PortScan(PortScan::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             &fields,
         ))
@@ -3346,7 +3329,7 @@ mod tests {
             r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
-        let multi_host_port_scan = Event::MultiHostPortScan(crate::MultiHostPortScan::new(
+        let multi_host_port_scan = Event::MultiHostPortScan(MultiHostPortScan::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             &fields,
         ))
@@ -3554,7 +3537,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" confidence="1""#
         );
 
-        let blocklist_conn = Event::Blocklist(RecordType::Conn(crate::BlocklistConn::new(
+        let blocklist_conn = Event::Blocklist(RecordType::Conn(BlocklistConn::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -3597,7 +3580,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" end_time="100" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" confidence="1""#
         );
 
-        let blocklist_dce_rpc = Event::Blocklist(RecordType::DceRpc(crate::BlocklistDceRpc::new(
+        let blocklist_dce_rpc = Event::Blocklist(RecordType::DceRpc(BlocklistDceRpc::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -3781,7 +3764,7 @@ mod tests {
             policy_id: 109,
             score: 0.9,
         }];
-        let mut dns_covert_channel = Event::DnsCovertChannel(crate::DnsCovertChannel::new(
+        let mut dns_covert_channel = Event::DnsCovertChannel(DnsCovertChannel::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         ));
@@ -3836,7 +3819,7 @@ mod tests {
         );
 
         let cryptocurrency_mining_pool =
-            Event::CryptocurrencyMiningPool(crate::CryptocurrencyMiningPool::new(
+            Event::CryptocurrencyMiningPool(CryptocurrencyMiningPool::new(
                 Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
                 fields,
             ))
@@ -3886,7 +3869,7 @@ mod tests {
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" end_time="100" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="1""#
         );
-        let blocklist_dns = Event::Blocklist(RecordType::Dns(crate::BlocklistDns::new(
+        let blocklist_dns = Event::Blocklist(RecordType::Dns(BlocklistDns::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -3926,7 +3909,7 @@ mod tests {
             r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" is_internal="true" confidence="0.3""#
         );
 
-        let ftp_brute_force = Event::FtpBruteForce(crate::FtpBruteForce::new(
+        let ftp_brute_force = Event::FtpBruteForce(FtpBruteForce::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             &fields,
         ))
@@ -3978,7 +3961,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" confidence="1""#
         );
 
-        let ftp_plain_text = Event::FtpPlainText(crate::FtpPlainText::new(
+        let ftp_plain_text = Event::FtpPlainText(FtpPlainText::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         ))
@@ -4033,7 +4016,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" confidence="1""#
         );
 
-        let blocklist_ftp = Event::Blocklist(RecordType::Ftp(crate::BlocklistFtp::new(
+        let blocklist_ftp = Event::Blocklist(RecordType::Ftp(BlocklistFtp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4139,7 +4122,7 @@ mod tests {
             &syslog_message,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" confidence="0.3""#
         );
-        let repeated_http_sessions = Event::RepeatedHttpSessions(crate::RepeatedHttpSessions::new(
+        let repeated_http_sessions = Event::RepeatedHttpSessions(RepeatedHttpSessions::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             &fields,
         ))
@@ -4187,12 +4170,11 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" end_time="100" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" confidence="1""#
         );
 
-        let blocklist_kerberos =
-            Event::Blocklist(RecordType::Kerberos(crate::BlocklistKerberos::new(
-                Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-                fields,
-            )))
-            .to_string();
+        let blocklist_kerberos = Event::Blocklist(RecordType::Kerberos(BlocklistKerberos::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
 
         assert_eq!(
             &blocklist_kerberos,
@@ -4231,7 +4213,7 @@ mod tests {
             r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
-        let ldap_brute_force = Event::LdapBruteForce(crate::LdapBruteForce::new(
+        let ldap_brute_force = Event::LdapBruteForce(LdapBruteForce::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             &fields,
         ))
@@ -4278,7 +4260,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" end_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" confidence="1""#
         );
 
-        let ldap_plain_text = Event::LdapPlainText(crate::LdapPlainText::new(
+        let ldap_plain_text = Event::LdapPlainText(LdapPlainText::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         ))
@@ -4329,7 +4311,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" end_time="100" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" confidence="1""#
         );
 
-        let blocklist_ldap = Event::Blocklist(RecordType::Ldap(crate::BlocklistLdap::new(
+        let blocklist_ldap = Event::Blocklist(RecordType::Ldap(BlocklistLdap::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4475,7 +4457,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" end_time="100" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" confidence="1""#
         );
 
-        let blocklist_mqtt = Event::Blocklist(RecordType::Mqtt(crate::BlocklistMqtt::new(
+        let blocklist_mqtt = Event::Blocklist(RecordType::Mqtt(BlocklistMqtt::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4555,7 +4537,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" end_time="100" read_files="/etc/passwd" write_files="/etc/shadow" confidence="1""#
         );
 
-        let blocklist_nfs = Event::Blocklist(RecordType::Nfs(crate::BlocklistNfs::new(
+        let blocklist_nfs = Event::Blocklist(RecordType::Nfs(BlocklistNfs::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4600,7 +4582,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" end_time="100" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" confidence="1""#
         );
 
-        let blocklist_ntlm = Event::Blocklist(RecordType::Ntlm(crate::BlocklistNtlm::new(
+        let blocklist_ntlm = Event::Blocklist(RecordType::Ntlm(BlocklistNtlm::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4641,7 +4623,7 @@ mod tests {
             r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" proto="6" confidence="0.3""#
         );
 
-        let rdp_brute_force = Event::RdpBruteForce(crate::RdpBruteForce::new(
+        let rdp_brute_force = Event::RdpBruteForce(RdpBruteForce::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             &fields,
         ))
@@ -4682,7 +4664,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" end_time="100" cookie="cookie" confidence="1""#
         );
 
-        let blocklist_rdp = Event::Blocklist(RecordType::Rdp(crate::BlocklistRdp::new(
+        let blocklist_rdp = Event::Blocklist(RecordType::Rdp(BlocklistRdp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4733,7 +4715,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" end_time="100" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" confidence="1""#
         );
 
-        let blocklist_smb = Event::Blocklist(RecordType::Smb(crate::BlocklistSmb::new(
+        let blocklist_smb = Event::Blocklist(RecordType::Smb(BlocklistSmb::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4780,7 +4762,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" end_time="100" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" confidence="1""#
         );
 
-        let blocklist_smtp = Event::Blocklist(RecordType::Smtp(crate::BlocklistSmtp::new(
+        let blocklist_smtp = Event::Blocklist(RecordType::Smtp(BlocklistSmtp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4833,7 +4815,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" end_time="100" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" confidence="1""#
         );
 
-        let blocklist_ssh = Event::Blocklist(RecordType::Ssh(crate::BlocklistSsh::new(
+        let blocklist_ssh = Event::Blocklist(RecordType::Ssh(BlocklistSsh::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -4948,7 +4930,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
         );
 
-        let blocklist_tls = Event::Blocklist(RecordType::Tls(crate::BlocklistTls::new(
+        let blocklist_tls = Event::Blocklist(RecordType::Tls(BlocklistTls::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             fields,
         )))
@@ -5014,7 +4996,7 @@ mod tests {
             r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" session_end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" confidence="1""#
         );
 
-        let tor_connection = Event::TorConnection(crate::TorConnection::new(
+        let tor_connection = Event::TorConnection(TorConnection::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             &fields,
         ))

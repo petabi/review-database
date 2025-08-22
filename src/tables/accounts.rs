@@ -357,7 +357,7 @@ impl<'d> Table<'d, Account> {
         use crate::Iterable;
 
         let mut accounts = Vec::new();
-        let iter = self.iter(crate::Direction::Forward, None);
+        let iter = self.iter(rocksdb::Direction::Forward, None);
 
         for account in iter {
             accounts.push(account?);
@@ -375,7 +375,7 @@ impl<'d> Table<'d, Account> {
 mod tests {
     use std::sync::Arc;
 
-    use crate::{Direction, Role, Store, types::Account};
+    use crate::{Role, Store, tables::Direction, types::Account};
 
     #[test]
     fn put_delete() {

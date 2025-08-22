@@ -78,7 +78,10 @@ mod tests {
     use bincode::Options;
     use chrono::Utc;
 
-    use crate::{EventKind, EventMessage, Store, event::DnsEventFields};
+    use crate::{
+        Store,
+        event::{DnsEventFields, EventKind, EventMessage},
+    };
 
     fn example_message() -> EventMessage {
         let codec = bincode::DefaultOptions::new();

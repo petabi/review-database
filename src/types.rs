@@ -8,8 +8,8 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use strum_macros::Display;
 
-use super::TrafficDirection;
 pub use crate::account::{Account, Role};
+use crate::event::TrafficDirection;
 
 pub trait FromKeyValue: Sized + private::Sealed {
     /// Creates a new instance from the given key and value.

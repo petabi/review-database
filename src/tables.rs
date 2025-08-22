@@ -32,6 +32,7 @@ mod trusted_user_agent;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
+use rocksdb::Direction;
 use serde::{Deserialize, Serialize};
 
 pub use self::access_token::AccessToken;
@@ -74,7 +75,7 @@ pub use self::trusted_domain::TrustedDomain;
 pub use self::trusted_user_agent::TrustedUserAgent;
 use super::{IndexedMap, Map, event};
 use crate::{
-    Direction, Indexable, IndexedMapUpdate,
+    Indexable, IndexedMapUpdate,
     batch_info::BatchInfo,
     category::Category,
     collections::{Indexed, IndexedSet},

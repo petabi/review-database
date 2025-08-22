@@ -9,10 +9,13 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    Agent, BlocklistTlsFields, EventCategory, ExternalServiceConfig, ExternalServiceStatus,
-    ExtraThreat, FilterEndpoint, FlowKind, HttpThreatFields, Indexable, LearningMethod,
-    NetworkThreat, NodeProfile, Role, Tidb, TidbKind, TidbRule, TriageScore, WindowsThreat,
+    Agent, EventCategory, ExternalServiceConfig, ExternalServiceStatus, Indexable, NodeProfile,
+    Role, Tidb, TidbKind, TidbRule,
     account::{PasswordHashAlgorithm, SaltedPassword},
+    event::{
+        BlocklistTlsFields, ExtraThreat, FilterEndpoint, FlowKind, HttpThreatFields,
+        LearningMethod, NetworkThreat, TriageScore, WindowsThreat,
+    },
     tables::InnerNode,
     types::Account,
 };

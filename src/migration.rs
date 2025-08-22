@@ -1492,8 +1492,10 @@ mod tests {
         use bincode::Options;
 
         use crate::{
-            Filter, FilterEndpoint, FlowKind, LearningMethod, PeriodForSearch,
-            migration::migration_structures::FilterValueV0_39, types::FromKeyValue,
+            Filter, PeriodForSearch,
+            event::{FilterEndpoint, FlowKind, LearningMethod},
+            migration::migration_structures::FilterValueV0_39,
+            types::FromKeyValue,
         };
 
         let settings = TestSchema::new();
