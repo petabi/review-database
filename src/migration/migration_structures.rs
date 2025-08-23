@@ -14,8 +14,8 @@ use crate::{
     account::{PasswordHashAlgorithm, SaltedPassword},
     event::{
         BlocklistConn, BlocklistConnFields, BlocklistTlsFields, ExtraThreat, FilterEndpoint,
-        FlowKind, HttpThreatFields, LearningMethod, NetworkThreat, TriageScore,
-        TorConnectionConn, WindowsThreat,
+        FlowKind, HttpThreatFields, LearningMethod, NetworkThreat, TorConnectionConn, TriageScore,
+        WindowsThreat,
     },
     tables::InnerNode,
     types::Account,
