@@ -3511,7 +3511,7 @@ mod tests {
             dst_port: 80,
             proto: 6,
             conn_state: "SAF".to_string(),
-            end_time: chrono::DateTime::from_timestamp_nanos(1000),
+            end_time: 1000,
             service: "http".to_string(),
             orig_bytes: 100,
             orig_pkts: 1,

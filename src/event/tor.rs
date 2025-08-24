@@ -21,9 +21,9 @@ macro_rules! find_conn_attr_by_kind {
                 ConnAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
                 ConnAttr::Proto => AttrValue::UInt($event.proto.into()),
                 ConnAttr::ConnState => AttrValue::String(&$event.conn_state),
-                ConnAttr::Duration => {
-                    AttrValue::SInt($event.end_time.timestamp_nanos_opt().unwrap_or_default())
-                }
+                ConnAttr::Duration => AttrValue::SInt(
+                    $event.end_time - $event.time.timestamp_nanos_opt().unwrap_or_default(),
+                ),
                 ConnAttr::Service => AttrValue::String(&$event.service),
                 ConnAttr::OrigBytes => AttrValue::UInt($event.orig_bytes),
                 ConnAttr::RespBytes => AttrValue::UInt($event.resp_bytes),
@@ -295,8 +295,7 @@ pub struct TorConnectionConn {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -423,6 +422,7 @@ mod tests {
     };
 
     fn tor_connection_conn_fields() -> BlocklistConnFields {
+        let end_time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 1).unwrap();
         BlocklistConnFields {
             sensor: "test-sensor".to_string(),
             src_addr: "192.168.1.100".parse().unwrap(),
@@ -431,7 +431,7 @@ mod tests {
             dst_port: 443,
             proto: 6,
             conn_state: "SF".to_string(),
-            end_time: chrono::DateTime::from_timestamp_nanos(100),
+            end_time: end_time.timestamp_nanos_opt().expect("valid time"),
             service: "https".to_string(),
             orig_bytes: 1024,
             resp_bytes: 2048,
@@ -447,6 +447,7 @@ mod tests {
     #[test]
     fn tor_connection_conn_new() {
         let time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
+        let end_time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 1).unwrap();
         let fields = tor_connection_conn_fields();
 
         let event = TorConnectionConn::new(time, fields);
@@ -459,7 +460,7 @@ mod tests {
         assert_eq!(event.dst_port, 443);
         assert_eq!(event.proto, 6);
         assert_eq!(event.conn_state, "SF");
-        assert_eq!(event.end_time, chrono::DateTime::from_timestamp_nanos(100));
+        assert_eq!(Utc.timestamp_nanos(event.end_time), end_time);
         assert_eq!(event.service, "https");
         assert_eq!(event.orig_bytes, 1024);
         assert_eq!(event.resp_bytes, 2048);
@@ -552,7 +553,7 @@ mod tests {
         // Test finding duration attribute
         let duration_attr = RawEventAttrKind::Conn(ConnAttr::Duration);
         if let Some(AttrValue::SInt(duration)) = event.find_attr_by_kind(duration_attr) {
-            assert_eq!(duration, 100);
+            assert_eq!(duration, 1_000_000_000);
         } else {
             panic!("Expected Duration attribute");
         }

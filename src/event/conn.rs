@@ -1,7 +1,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{ConnAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc, serde::ts_nanoseconds};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -17,9 +17,9 @@ macro_rules! find_conn_attr_by_kind {
                 ConnAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
                 ConnAttr::Proto => AttrValue::UInt($event.proto.into()),
                 ConnAttr::ConnState => AttrValue::String(&$event.conn_state),
-                ConnAttr::Duration => {
-                    AttrValue::SInt($event.end_time.timestamp_nanos_opt().unwrap_or_default())
-                }
+                ConnAttr::Duration => AttrValue::SInt(
+                    $event.end_time - $event.time.timestamp_nanos_opt().unwrap_or_default(),
+                ),
                 ConnAttr::Service => AttrValue::String(&$event.service),
                 ConnAttr::OrigBytes => AttrValue::UInt($event.orig_bytes),
                 ConnAttr::RespBytes => AttrValue::UInt($event.resp_bytes),
@@ -451,8 +451,7 @@ pub struct BlocklistConnFields {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -477,10 +476,7 @@ impl BlocklistConnFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default()
-                .to_string(),
+            self.end_time.to_string(),
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -504,8 +500,7 @@ pub struct BlocklistConn {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -530,10 +525,7 @@ impl fmt::Display for BlocklistConn {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default()
-                .to_string(),
+            self.end_time.to_string(),
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
