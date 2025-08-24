@@ -225,13 +225,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.39.0,<0.41.0")?,
-            Version::parse("0.41.0-alpha.1")?,
-            migrate_0_40_to_0_41_0,
-        ),
-        (
-            VersionReq::parse(">=0.41.0-alpha.1,<0.41.0-alpha.2")?,
             Version::parse("0.41.0-alpha.2")?,
-            migrate_0_41_alpha1_to_0_41_alpha2,
+            migrate_0_40_to_0_41_0,
         ),
     ];
 
@@ -306,10 +301,6 @@ fn read_version_file(path: &Path) -> Result<Version> {
         .read_to_string(&mut ver)
         .context("cannot read VERSION")?;
     Version::parse(&ver).context("cannot parse VERSION")
-}
-
-fn migrate_0_41_alpha1_to_0_41_alpha2(store: &super::Store) -> Result<()> {
-    migrate_0_41_alpha2_events(store)
 }
 
 fn migrate_0_40_to_0_41_0(store: &super::Store) -> Result<()> {
@@ -618,17 +609,17 @@ where
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
-        LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
-        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+        BlocklistConnV0_40, CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39,
+        FtpPlainTextV0_39, LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39,
+        NonBrowserV0_39, PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39,
+        TorConnectionConnV0_40, TorConnectionV0_39,
     };
     use num_traits::FromPrimitive;
 
-    use crate::event::NonBrowser;
     use crate::event::{
-        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce, FtpPlainText,
-        LdapBruteForce, LdapPlainText, MultiHostPortScan, PortScan, RdpBruteForce,
-        RepeatedHttpSessions, TorConnection,
+        BlocklistConn, CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
+        FtpPlainText, LdapBruteForce, LdapPlainText, MultiHostPortScan, NonBrowser, PortScan,
+        RdpBruteForce, RepeatedHttpSessions, TorConnection, TorConnectionConn,
     };
 
     let event_db = store.events();
@@ -648,6 +639,11 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
         };
 
         match event_kind {
+            EventKind::BlocklistConn => {
+                update_event_db_with_new_event::<BlocklistConnV0_40, BlocklistConn>(
+                    &k, &v, &event_db,
+                )?;
+            }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<TorConnectionV0_39, TorConnection>(
                     &k, &v, &event_db,
@@ -705,71 +701,13 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
-            _ => {
-                // No migration needed for other event types
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn migrate_0_41_alpha2_events(store: &super::Store) -> Result<()> {
-    use migration_structures::{
-        BlocklistConnV0_40, CryptocurrencyMiningPoolV0_39, NonBrowserV0_39, TorConnectionConnV0_40,
-        TorConnectionV0_39,
-    };
-    use num_traits::FromPrimitive;
-
-    use crate::event::{
-        BlocklistConn, CryptocurrencyMiningPool, EventKind, NonBrowser, TorConnection,
-        TorConnectionConn,
-    };
-
-    let event_db = store.events();
-    let iter = event_db.raw_iter_forward();
-
-    for event in iter {
-        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
-        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
-            key
-        } else {
-            return Err(anyhow!("Failed to migrate events: invalid event key"));
-        };
-        let key = i128::from_be_bytes(key);
-        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
-        let Some(event_kind) = EventKind::from_i128(kind) else {
-            return Err(anyhow!("Failed to migrate events: invalid event kind"));
-        };
-
-        match event_kind {
-            EventKind::BlocklistConn => {
-                update_event_db_with_new_event::<BlocklistConnV0_40, BlocklistConn>(
-                    &k, &v, &event_db,
-                )?;
-            }
             EventKind::TorConnectionConn => {
                 update_event_db_with_new_event::<TorConnectionConnV0_40, TorConnectionConn>(
                     &k, &v, &event_db,
                 )?;
             }
-            EventKind::TorConnection => {
-                update_event_db_with_new_event::<TorConnectionV0_39, TorConnection>(
-                    &k, &v, &event_db,
-                )?;
-            }
-            EventKind::NonBrowser => {
-                update_event_db_with_new_event::<NonBrowserV0_39, NonBrowser>(&k, &v, &event_db)?;
-            }
-            EventKind::CryptocurrencyMiningPool => {
-                update_event_db_with_new_event::<
-                    CryptocurrencyMiningPoolV0_39,
-                    CryptocurrencyMiningPool,
-                >(&k, &v, &event_db)?;
-            }
             _ => {
-                // For other event types that don't need migration, we don't need to do anything
-                // as they will be processed as-is
+                // No migration needed for other event types
             }
         }
     }
