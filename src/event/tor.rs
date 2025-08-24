@@ -121,7 +121,6 @@ impl HttpEventFields {
 pub struct TorConnection {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -285,7 +284,6 @@ impl Match for TorConnection {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Deserialize, Serialize)]
 pub struct TorConnectionConn {
     pub sensor: String,
     pub time: DateTime<Utc>,
