@@ -609,17 +609,16 @@ where
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        BlocklistConnV0_40, CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39,
-        FtpPlainTextV0_39, LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39,
-        NonBrowserV0_39, PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39,
-        TorConnectionConnV0_40, TorConnectionV0_39,
+        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
+        LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
+        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
     };
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        BlocklistConn, CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
+        BlocklistConnFields, CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
         FtpPlainText, LdapBruteForce, LdapPlainText, MultiHostPortScan, NonBrowser, PortScan,
-        RdpBruteForce, RepeatedHttpSessions, TorConnection, TorConnectionConn,
+        RdpBruteForce, RepeatedHttpSessions, TorConnection,
     };
 
     let event_db = store.events();
@@ -633,6 +632,7 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
             return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         let key = i128::from_be_bytes(key);
+        let time_nanos: i64 = (key >> 64).try_into().expect("valid i64");
         let kind = (key & 0xffff_ffff_0000_0000) >> 32;
         let Some(event_kind) = EventKind::from_i128(kind) else {
             return Err(anyhow!("Failed to migrate events: invalid event kind"));
@@ -640,9 +640,12 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
 
         match event_kind {
             EventKind::BlocklistConn => {
-                update_event_db_with_new_event::<BlocklistConnV0_40, BlocklistConn>(
-                    &k, &v, &event_db,
-                )?;
+                let Ok(mut fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate BlocklistConn: invalid value"));
+                };
+                fields.end_time += time_nanos; // old `end_time` was duration
+                let new_value = bincode::serialize(&fields).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new_value))?;
             }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<TorConnectionV0_39, TorConnection>(
@@ -702,9 +705,14 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::TorConnectionConn => {
-                update_event_db_with_new_event::<TorConnectionConnV0_40, TorConnectionConn>(
-                    &k, &v, &event_db,
-                )?;
+                let Ok(mut fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
+                    return Err(anyhow!(
+                        "Failed to migrate TorConnectionConn: invalid value"
+                    ));
+                };
+                fields.end_time += time_nanos; // old `end_time` was duration
+                let new_value = bincode::serialize(&fields).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new_value))?;
             }
             _ => {
                 // No migration needed for other event types
