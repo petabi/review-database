@@ -490,7 +490,6 @@ impl BlocklistConnFields {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Deserialize, Serialize)]
 pub struct BlocklistConn {
     pub sensor: String,
     pub time: DateTime<Utc>,

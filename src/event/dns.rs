@@ -99,7 +99,6 @@ impl DnsEventFields {
 pub struct DnsCovertChannel {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -234,11 +233,9 @@ impl Match for DnsCovertChannel {
 }
 
 // TODO: Locky ransomware event uses same sruct with DnsCovertChannel. It can be merged.
-#[derive(Deserialize, Serialize)]
 pub struct LockyRansomware {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -434,7 +431,6 @@ impl CryptocurrencyMiningPoolFields {
 pub struct CryptocurrencyMiningPool {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -578,8 +574,7 @@ pub struct BlocklistDnsFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -608,10 +603,7 @@ impl BlocklistDnsFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default()
-                .to_string(),
+            self.end_time.to_string(),
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
@@ -629,7 +621,6 @@ impl BlocklistDnsFields {
     }
 }
 
-#[derive(Deserialize, Serialize)]
 pub struct BlocklistDns {
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -638,8 +629,7 @@ pub struct BlocklistDns {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -668,10 +658,7 @@ impl fmt::Display for BlocklistDns {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default()
-                .to_string(),
+            self.end_time.to_string(),
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),

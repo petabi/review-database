@@ -200,8 +200,7 @@ pub struct HttpThreatFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub method: String,
     pub host: String,
     pub uri: String,
@@ -245,7 +244,7 @@ impl HttpThreatFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_rfc3339(),
+            chrono::DateTime::from_timestamp_nanos(self.end_time).to_rfc3339(),
             self.method,
             self.host,
             self.uri,
@@ -304,8 +303,7 @@ pub struct HttpThreat {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub method: String,
     pub host: String,
     pub uri: String,
@@ -512,8 +510,7 @@ pub struct DgaFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub method: String,
     pub host: String,
     pub uri: String,
@@ -552,10 +549,7 @@ impl DgaFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default()
-                .to_string(),
+            self.end_time.to_string(),
             self.method,
             self.host,
             self.uri,
@@ -593,8 +587,7 @@ pub struct DomainGenerationAlgorithm {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub method: String,
     pub host: String,
     pub uri: String,
@@ -633,10 +626,7 @@ impl fmt::Display for DomainGenerationAlgorithm {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default()
-                .to_string(),
+            self.end_time.to_string(),
             self.method,
             self.host,
             self.uri,
@@ -760,7 +750,6 @@ impl Match for DomainGenerationAlgorithm {
 pub struct NonBrowser {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -931,8 +920,7 @@ pub struct BlocklistHttpFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub method: String,
     pub host: String,
     pub uri: String,
@@ -971,10 +959,7 @@ impl BlocklistHttpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time
-                .timestamp_nanos_opt()
-                .unwrap_or_default()
-                .to_string(),
+            self.end_time.to_string(),
             self.method,
             self.host,
             self.uri,
@@ -1012,8 +997,7 @@ pub struct BlocklistHttp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub method: String,
     pub host: String,
     pub uri: String,
