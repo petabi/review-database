@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
+use crate::event::{HttpEventBase, HttpEventVariant, UnifiedHttpEventFields};
 use crate::{
     Agent, EventCategory, ExternalServiceConfig, ExternalServiceStatus, Indexable, NodeProfile,
     Role, Tidb, TidbKind, TidbRule,
@@ -1236,6 +1237,336 @@ impl From<LdapPlainTextV0_39> for crate::event::LdapPlainText {
             confidence: 1.0,
             category: old.category,
             triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub struct HttpEventFieldsV0_40 {
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub session_end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<HttpEventFieldsV0_40> for UnifiedHttpEventFields {
+    fn from(old: HttpEventFieldsV0_40) -> Self {
+        let base = HttpEventBase {
+            sensor: old.sensor,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            method: old.method,
+            host: old.host,
+            uri: old.uri,
+            referer: old.referer,
+            version: old.version,
+            user_agent: old.user_agent,
+            request_len: old.request_len,
+            response_len: old.response_len,
+            status_code: old.status_code,
+            status_msg: old.status_msg,
+            username: old.username,
+            password: old.password,
+            cookie: old.cookie,
+            content_encoding: old.content_encoding,
+            content_type: old.content_type,
+            cache_control: old.cache_control,
+            orig_filenames: old.orig_filenames,
+            orig_mime_types: old.orig_mime_types,
+            resp_filenames: old.resp_filenames,
+            resp_mime_types: old.resp_mime_types,
+            post_body: old.post_body,
+            state: old.state,
+            confidence: old.confidence,
+            category: old.category,
+        };
+
+        UnifiedHttpEventFields {
+            base,
+            variant: HttpEventVariant::Basic {
+                session_end_time: old.session_end_time,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct HttpThreatFieldsV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: Option<usize>,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<HttpThreatFieldsV0_40> for UnifiedHttpEventFields {
+    fn from(old: HttpThreatFieldsV0_40) -> Self {
+        let base = HttpEventBase {
+            sensor: old.sensor,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            method: old.method,
+            host: old.host,
+            uri: old.uri,
+            referer: old.referer,
+            version: old.version,
+            user_agent: old.user_agent,
+            request_len: old.request_len,
+            response_len: old.response_len,
+            status_code: old.status_code,
+            status_msg: old.status_msg,
+            username: old.username,
+            password: old.password,
+            cookie: old.cookie,
+            content_encoding: old.content_encoding,
+            content_type: old.content_type,
+            cache_control: old.cache_control,
+            orig_filenames: old.orig_filenames,
+            orig_mime_types: old.orig_mime_types,
+            resp_filenames: old.resp_filenames,
+            resp_mime_types: old.resp_mime_types,
+            post_body: old.post_body,
+            state: old.state,
+            confidence: old.confidence,
+            category: old.category,
+        };
+
+        UnifiedHttpEventFields {
+            base,
+            variant: HttpEventVariant::Threat {
+                end_time: old.end_time,
+                db_name: old.db_name,
+                rule_id: old.rule_id,
+                matched_to: old.matched_to,
+                cluster_id: old.cluster_id,
+                attack_kind: old.attack_kind,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DgaFieldsV0_40 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub duration: i64,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<DgaFieldsV0_40> for UnifiedHttpEventFields {
+    fn from(old: DgaFieldsV0_40) -> Self {
+        let base = HttpEventBase {
+            sensor: old.sensor,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            method: old.method,
+            host: old.host,
+            uri: old.uri,
+            referer: old.referer,
+            version: old.version,
+            user_agent: old.user_agent,
+            request_len: old.request_len,
+            response_len: old.response_len,
+            status_code: old.status_code,
+            status_msg: old.status_msg,
+            username: old.username,
+            password: old.password,
+            cookie: old.cookie,
+            content_encoding: old.content_encoding,
+            content_type: old.content_type,
+            cache_control: old.cache_control,
+            orig_filenames: old.orig_filenames,
+            orig_mime_types: old.orig_mime_types,
+            resp_filenames: old.resp_filenames,
+            resp_mime_types: old.resp_mime_types,
+            post_body: old.post_body,
+            state: old.state,
+            confidence: old.confidence,
+            category: old.category,
+        };
+
+        UnifiedHttpEventFields {
+            base,
+            variant: HttpEventVariant::Dga {
+                duration: old.duration,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BlocklistHttpFieldsV0_40 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<BlocklistHttpFieldsV0_40> for UnifiedHttpEventFields {
+    fn from(old: BlocklistHttpFieldsV0_40) -> Self {
+        let base = HttpEventBase {
+            sensor: old.sensor,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            method: old.method,
+            host: old.host,
+            uri: old.uri,
+            referer: old.referer,
+            version: old.version,
+            user_agent: old.user_agent,
+            request_len: old.request_len,
+            response_len: old.response_len,
+            status_code: old.status_code,
+            status_msg: old.status_msg,
+            username: old.username,
+            password: old.password,
+            cookie: old.cookie,
+            content_encoding: old.content_encoding,
+            content_type: old.content_type,
+            cache_control: old.cache_control,
+            orig_filenames: old.orig_filenames,
+            orig_mime_types: old.orig_mime_types,
+            resp_filenames: old.resp_filenames,
+            resp_mime_types: old.resp_mime_types,
+            post_body: old.post_body,
+            state: old.state,
+            confidence: old.confidence,
+            category: old.category,
+        };
+
+        UnifiedHttpEventFields {
+            base,
+            variant: HttpEventVariant::Blocklist {
+                end_time: old.end_time,
+            },
         }
     }
 }

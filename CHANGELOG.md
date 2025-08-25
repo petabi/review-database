@@ -23,6 +23,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `TorConnection` (default 1.0)
   - `NonBrowser` (default 1.0)
 - Added `find_ip_county` utility function in new `util` module.
+- Added unified HTTP event structure (`UnifiedHttpEvent`) that consolidates
+  common HTTP fields across different HTTP-related event types for improved
+  consistency and reduced code duplication.
 
 ### Changed
 
