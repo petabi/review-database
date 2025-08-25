@@ -39,6 +39,7 @@ macro_rules! find_ftp_attr_by_kind {
 
 #[derive(Serialize, Deserialize)]
 pub struct FtpBruteForceFields {
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
@@ -55,8 +56,9 @@ impl FtpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
@@ -72,6 +74,7 @@ impl FtpBruteForceFields {
 
 #[derive(Serialize, Deserialize)]
 pub struct FtpBruteForce {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
@@ -90,7 +93,8 @@ impl fmt::Display for FtpBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} triage_scores={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
@@ -107,6 +111,7 @@ impl fmt::Display for FtpBruteForce {
 impl FtpBruteForce {
     pub(super) fn new(time: DateTime<Utc>, fields: &FtpBruteForceFields) -> Self {
         FtpBruteForce {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_addr: fields.dst_addr,

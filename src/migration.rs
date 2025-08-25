@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.1,<0.41.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.2,<0.41.0-alpha.3";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -224,8 +224,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
             migrate_0_39_to_0_40_0,
         ),
         (
-            VersionReq::parse(">=0.39.0,<0.41.0")?,
-            Version::parse("0.41.0-alpha.1")?,
+            VersionReq::parse(">=0.40.0,<0.41.0")?,
+            Version::parse("0.41.0-alpha.2")?,
             migrate_0_40_to_0_41_0,
         ),
     ];
@@ -609,9 +609,9 @@ where
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
-        LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
-        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_40, FtpBruteForceV0_40, FtpPlainTextV0_39,
+        LdapBruteForceV0_40, LdapPlainTextV0_39, MultiHostPortScanV0_40, NonBrowserV0_39,
+        PortScanV0_40, RdpBruteForceV0_40, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
     };
     use num_traits::FromPrimitive;
 
@@ -653,15 +653,15 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::PortScan => {
-                update_event_db_with_new_event::<PortScanV0_39, PortScan>(&k, &v, &event_db)?;
+                update_event_db_with_new_event::<PortScanV0_40, PortScan>(&k, &v, &event_db)?;
             }
             EventKind::MultiHostPortScan => {
-                update_event_db_with_new_event::<MultiHostPortScanV0_39, MultiHostPortScan>(
+                update_event_db_with_new_event::<MultiHostPortScanV0_40, MultiHostPortScan>(
                     &k, &v, &event_db,
                 )?;
             }
             EventKind::ExternalDdos => {
-                update_event_db_with_new_event::<ExternalDdosV0_39, ExternalDdos>(
+                update_event_db_with_new_event::<ExternalDdosV0_40, ExternalDdos>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -672,7 +672,7 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 >(&k, &v, &event_db)?;
             }
             EventKind::FtpBruteForce => {
-                update_event_db_with_new_event::<FtpBruteForceV0_39, FtpBruteForce>(
+                update_event_db_with_new_event::<FtpBruteForceV0_40, FtpBruteForce>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -682,12 +682,12 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::RdpBruteForce => {
-                update_event_db_with_new_event::<RdpBruteForceV0_39, RdpBruteForce>(
+                update_event_db_with_new_event::<RdpBruteForceV0_40, RdpBruteForce>(
                     &k, &v, &event_db,
                 )?;
             }
             EventKind::LdapBruteForce => {
-                update_event_db_with_new_event::<LdapBruteForceV0_39, LdapBruteForce>(
+                update_event_db_with_new_event::<LdapBruteForceV0_40, LdapBruteForce>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -1626,8 +1626,8 @@ mod tests {
         use num_traits::FromPrimitive;
 
         use super::migration_structures::{
-            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
-            RdpBruteForceV0_39, TorConnectionV0_39,
+            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_40, FtpPlainTextV0_39,
+            RdpBruteForceV0_40, TorConnectionV0_39,
         };
         use crate::{EventKind, EventMessage};
 
@@ -1710,7 +1710,7 @@ mod tests {
         assert!(event_db.put(&message).is_ok());
 
         // Test FtpBruteForce migration (confidence should be 0.3)
-        let ftp_brute_event = FtpBruteForceV0_39 {
+        let ftp_brute_event = FtpBruteForceV0_40 {
             time: chrono::Utc::now(),
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
             dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
@@ -1720,6 +1720,7 @@ mod tests {
             start_time: chrono::Utc::now(),
             end_time: chrono::Utc::now(),
             is_internal: false,
+            confidence: 0.3,
             category: crate::EventCategory::CredentialAccess,
             triage_scores: None,
         };
@@ -1763,13 +1764,14 @@ mod tests {
         assert!(event_db.put(&message).is_ok());
 
         // Test RdpBruteForce migration (confidence should be 0.3)
-        let rdp_brute_event = RdpBruteForceV0_39 {
+        let rdp_brute_event = RdpBruteForceV0_40 {
             time: chrono::Utc::now(),
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
             dst_addrs: vec!["192.168.1.2".parse::<IpAddr>().unwrap()],
             proto: 6,
             start_time: chrono::Utc::now(),
             end_time: chrono::Utc::now(),
+            confidence: 0.3,
             category: crate::EventCategory::CredentialAccess,
             triage_scores: None,
         };
@@ -1831,5 +1833,214 @@ mod tests {
 
         // Verify that all 5 test events were processed
         assert_eq!(count, 5);
+    }
+
+    #[test]
+    fn migrate_0_40_to_0_41_sensor_field() {
+        use std::net::IpAddr;
+
+        use chrono::Utc;
+        use num_traits::FromPrimitive;
+
+        use super::migration_structures::{
+            ExternalDdosV0_40, FtpBruteForceV0_40, LdapBruteForceV0_40, MultiHostPortScanV0_40,
+            PortScanV0_40, RdpBruteForceV0_40,
+        };
+        use crate::{EventKind, EventMessage};
+
+        let settings = TestSchema::new();
+        let event_db = settings.store.events();
+
+        // Create test data for PortScan (V0_40 - no sensor field)
+        let port_scan_event = PortScanV0_40 {
+            time: Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_ports: vec![80, 443],
+            start_time: Utc::now(),
+            end_time: Utc::now(),
+            proto: 6,
+            confidence: 0.9,
+            category: crate::EventCategory::Discovery,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: port_scan_event.time,
+            kind: EventKind::PortScan,
+            fields: bincode::serialize(&port_scan_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Create test data for MultiHostPortScan (V0_40 - no sensor field)
+        let multi_port_scan_event = MultiHostPortScanV0_40 {
+            time: Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            dst_port: 22,
+            dst_addrs: vec![
+                "192.168.1.2".parse::<IpAddr>().unwrap(),
+                "192.168.1.3".parse::<IpAddr>().unwrap(),
+            ],
+            proto: 6,
+            start_time: Utc::now(),
+            end_time: Utc::now(),
+            confidence: 0.8,
+            category: crate::EventCategory::Discovery,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: multi_port_scan_event.time,
+            kind: EventKind::MultiHostPortScan,
+            fields: bincode::serialize(&multi_port_scan_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Create test data for ExternalDdos (V0_40 - no sensor field)
+        let external_ddos_event = ExternalDdosV0_40 {
+            time: Utc::now(),
+            src_addrs: vec![
+                "192.168.1.1".parse::<IpAddr>().unwrap(),
+                "192.168.1.2".parse::<IpAddr>().unwrap(),
+            ],
+            dst_addr: "192.168.1.100".parse::<IpAddr>().unwrap(),
+            proto: 6,
+            start_time: Utc::now(),
+            end_time: Utc::now(),
+            confidence: 0.95,
+            category: crate::EventCategory::Impact,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: external_ddos_event.time,
+            kind: EventKind::ExternalDdos,
+            fields: bincode::serialize(&external_ddos_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Create test data for RdpBruteForce (V0_40 - no sensor field)
+        let rdp_brute_event = RdpBruteForceV0_40 {
+            time: Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            dst_addrs: vec!["192.168.1.2".parse::<IpAddr>().unwrap()],
+            start_time: Utc::now(),
+            end_time: Utc::now(),
+            proto: 6,
+            confidence: 0.85,
+            category: crate::EventCategory::CredentialAccess,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: rdp_brute_event.time,
+            kind: EventKind::RdpBruteForce,
+            fields: bincode::serialize(&rdp_brute_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Create test data for FtpBruteForce (V0_40 - no sensor field)
+        let ftp_brute_event = FtpBruteForceV0_40 {
+            time: Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_port: 21,
+            proto: 6,
+            user_list: vec!["admin".to_string(), "user".to_string()],
+            start_time: Utc::now(),
+            end_time: Utc::now(),
+            is_internal: false,
+            confidence: 0.75,
+            category: crate::EventCategory::CredentialAccess,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: ftp_brute_event.time,
+            kind: EventKind::FtpBruteForce,
+            fields: bincode::serialize(&ftp_brute_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        // Create test data for LdapBruteForce (V0_40 - no sensor field)
+        let ldap_brute_event = LdapBruteForceV0_40 {
+            time: Utc::now(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_port: 389,
+            proto: 6,
+            user_pw_list: vec![("admin".to_string(), "password".to_string())],
+            start_time: Utc::now(),
+            end_time: Utc::now(),
+            confidence: 0.88,
+            category: crate::EventCategory::CredentialAccess,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: ldap_brute_event.time,
+            kind: EventKind::LdapBruteForce,
+            fields: bincode::serialize(&ldap_brute_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
+        let (db_dir, backup_dir) = settings.close();
+        let settings = TestSchema::new_with_dir(db_dir, backup_dir);
+
+        // Run the migration
+        assert!(super::migrate_0_41_events(&settings.store).is_ok());
+
+        // Verify the migrated events have the sensor field with empty string
+        let event_db = settings.store.events();
+        let mut migrated_events = 0;
+        for item in event_db.raw_iter_forward() {
+            let (k, v) = item.unwrap();
+            let key: [u8; 16] = k.as_ref().try_into().unwrap();
+            let key = i128::from_be_bytes(key);
+            let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+            let Some(event_kind) = EventKind::from_i128(kind) else {
+                continue;
+            };
+
+            match event_kind {
+                EventKind::PortScan => {
+                    let port_scan: crate::event::PortScan = bincode::deserialize(&v).unwrap();
+                    assert_eq!(port_scan.sensor, "");
+                    assert!((port_scan.confidence - 0.9).abs() < f32::EPSILON);
+                    migrated_events += 1;
+                }
+                EventKind::MultiHostPortScan => {
+                    let multi_scan: crate::event::MultiHostPortScan =
+                        bincode::deserialize(&v).unwrap();
+                    assert_eq!(multi_scan.sensor, "");
+                    assert!((multi_scan.confidence - 0.8).abs() < f32::EPSILON);
+                    migrated_events += 1;
+                }
+                EventKind::ExternalDdos => {
+                    let ddos: crate::event::ExternalDdos = bincode::deserialize(&v).unwrap();
+                    assert_eq!(ddos.sensor, "");
+                    assert!((ddos.confidence - 0.95).abs() < f32::EPSILON);
+                    migrated_events += 1;
+                }
+                EventKind::RdpBruteForce => {
+                    let rdp: crate::event::RdpBruteForce = bincode::deserialize(&v).unwrap();
+                    assert_eq!(rdp.sensor, "");
+                    assert!((rdp.confidence - 0.85).abs() < f32::EPSILON);
+                    migrated_events += 1;
+                }
+                EventKind::FtpBruteForce => {
+                    let ftp: crate::event::FtpBruteForce = bincode::deserialize(&v).unwrap();
+                    assert_eq!(ftp.sensor, "");
+                    assert!((ftp.confidence - 0.75).abs() < f32::EPSILON);
+                    migrated_events += 1;
+                }
+                EventKind::LdapBruteForce => {
+                    let ldap: crate::event::LdapBruteForce = bincode::deserialize(&v).unwrap();
+                    assert_eq!(ldap.sensor, "");
+                    assert!((ldap.confidence - 0.88).abs() < f32::EPSILON);
+                    migrated_events += 1;
+                }
+                _ => {
+                    // Other event types are not migrated in this test
+                }
+            }
+        }
+
+        // Verify that all 6 test events were processed
+        assert_eq!(migrated_events, 6);
     }
 }

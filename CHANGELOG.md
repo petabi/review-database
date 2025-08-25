@@ -23,6 +23,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `TorConnection` (default 1.0)
   - `NonBrowser` (default 1.0)
 - Added `find_ip_county` utility function in new `util` module.
+- Added `sensor` field to detection event structures for packet information display:
+  - `PortScan`
+  - `MultiHostPortScan`
+  - `ExternalDdos`
+  - `RdpBruteForce`
+  - `FtpBruteForce`
+  - `LdapBruteForce`
 
 ### Changed
 
