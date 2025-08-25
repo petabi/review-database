@@ -735,10 +735,15 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 )?;
             }
             EventKind::RepeatedHttpSessions => {
-                update_event_db_with_new_event::<
-                    RepeatedHttpSessionsFieldsV0_39,
-                    RepeatedHttpSessionsFieldsV0_41,
-                >(&k, &v, &event_db)?;
+                let Ok(from_event) = bincode::deserialize::<RepeatedHttpSessionsFieldsV0_39>(&v)
+                else {
+                    return Err(anyhow!("Failed to migrate events: invalid event value"));
+                };
+                let mut to_event: RepeatedHttpSessionsFieldsV0_41 = from_event.into();
+                to_event.start_time = chrono::DateTime::from_timestamp_nanos(time_nanos);
+                to_event.end_time = chrono::DateTime::from_timestamp_nanos(time_nanos);
+                let new = bincode::serialize(&to_event).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new))?;
             }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<HttpEventFieldsV0_39, HttpEventFieldsV0_41>(
@@ -1755,7 +1760,7 @@ mod tests {
 
         use crate::event::{
             CryptocurrencyMiningPoolFieldsV0_39, FtpBruteForceFieldsV0_39, HttpEventFieldsV0_39,
-            RdpBruteForceFieldsV0_39,
+            RdpBruteForceFieldsV0_39, RepeatedHttpSessionsFieldsV0_39,
         };
         use crate::{EventKind, EventMessage};
 
@@ -1872,6 +1877,23 @@ mod tests {
         };
         assert!(event_db.put(&message).is_ok());
 
+        // Test RepeatedHttpSessions migration (confidence should be 0.3, start_time and end_time should be set)
+        let repeated_http_event = RepeatedHttpSessionsFieldsV0_39 {
+            sensor: "sensor_1".to_string(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            src_port: 8080,
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            category: crate::EventCategory::CommandAndControl,
+        };
+        let message = EventMessage {
+            time: chrono::Utc::now(),
+            kind: EventKind::RepeatedHttpSessions,
+            fields: bincode::serialize(&repeated_http_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
 
@@ -1885,7 +1907,9 @@ mod tests {
             let (k, v) = item.unwrap();
             let key: [u8; 16] = k.as_ref().try_into().unwrap();
             let key = i128::from_be_bytes(key);
-            let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+            let event_time =
+                chrono::DateTime::from_timestamp_nanos((key >> 64).try_into().expect("valid i64"));
+            let kind: i128 = (key & 0xffff_ffff_0000_0000) >> 32;
             let event_kind = EventKind::from_i128(kind).unwrap();
 
             match event_kind {
@@ -1913,6 +1937,15 @@ mod tests {
                     assert!((event.confidence - 0.3).abs() < f32::EPSILON);
                     count += 1;
                 }
+                EventKind::RepeatedHttpSessions => {
+                    let event: crate::event::RepeatedHttpSessionsFieldsV0_41 =
+                        bincode::deserialize(&v).unwrap();
+                    assert!((event.confidence - 0.3).abs() < f32::EPSILON);
+                    // Verify that start_time and end_time are set (should be equal to the event time)
+                    assert_eq!(event.start_time, event_time);
+                    assert_eq!(event.end_time, event_time);
+                    count += 1;
+                }
                 _ => {
                     // Other event types should be ignored
                 }
@@ -1920,7 +1953,7 @@ mod tests {
         }
 
         // Verify that all 5 test events were processed
-        assert_eq!(count, 4);
+        assert_eq!(count, 5);
     }
 
     #[test]

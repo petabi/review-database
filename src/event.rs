@@ -4122,6 +4122,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_repeatedhttpsessions() {
+        let now = Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap();
         let fields = RepeatedHttpSessionsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4129,6 +4130,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
+            start_time: now,
+            end_time: now,
             confidence: 0.3,
             category: EventCategory::Exfiltration,
         };
@@ -4144,7 +4147,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" confidence="0.3""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" confidence="0.3""#
         );
         let repeated_http_sessions = Event::RepeatedHttpSessions(RepeatedHttpSessions::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),

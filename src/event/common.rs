@@ -1854,6 +1854,7 @@ mod tests {
     }
 
     fn repeated_http_sessions_fiedls() -> RepeatedHttpSessionsFields {
+        let now = chrono::Utc::now();
         RepeatedHttpSessionsFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1861,6 +1862,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
+            start_time: now,
+            end_time: now,
             confidence: 0.3,
             category: EventCategory::Exfiltration,
         }
