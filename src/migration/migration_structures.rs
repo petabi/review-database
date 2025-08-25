@@ -20,7 +20,7 @@ use crate::{
     types::Account,
 };
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub struct HttpThreatV0_33 {
     #[serde(with = "ts_nanoseconds")]
@@ -767,6 +767,63 @@ impl From<TorConnectionV0_39> for crate::event::TorConnection {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FtpEventFieldsV0_39 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub user: String,
+    pub password: String,
+    pub command: String,
+    pub reply_code: String,
+    pub reply_msg: String,
+    pub data_passive: bool,
+    pub data_orig_addr: IpAddr,
+    pub data_resp_addr: IpAddr,
+    pub data_resp_port: u16,
+    pub file: String,
+    pub file_size: u64,
+    pub file_id: String,
+    pub category: EventCategory,
+}
+
+impl From<FtpEventFieldsV0_39> for crate::event::FtpEventFields {
+    fn from(input: FtpEventFieldsV0_39) -> Self {
+        use crate::FtpCommand;
+
+        let command = FtpCommand {
+            command: input.command,
+            reply_code: input.reply_code,
+            reply_msg: input.reply_msg,
+            data_passive: input.data_passive,
+            data_orig_addr: input.data_orig_addr,
+            data_resp_addr: input.data_resp_addr,
+            data_resp_port: input.data_resp_port,
+            file: input.file,
+            file_size: input.file_size,
+            file_id: input.file_id,
+        };
+
+        Self {
+            sensor: input.sensor,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            end_time: input.end_time,
+            user: input.user,
+            password: input.password,
+            commands: vec![command],
+            category: input.category,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RepeatedHttpSessionsV0_39 {
     pub time: DateTime<Utc>,
@@ -1070,9 +1127,8 @@ impl From<FtpBruteForceV0_39> for crate::event::FtpBruteForce {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct FtpPlainTextV0_39 {
-    #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -1098,31 +1154,36 @@ pub struct FtpPlainTextV0_39 {
 }
 
 impl From<FtpPlainTextV0_39> for crate::event::FtpPlainText {
-    fn from(old: FtpPlainTextV0_39) -> Self {
+    fn from(input: FtpPlainTextV0_39) -> Self {
+        use crate::FtpCommand;
+
+        let command = FtpCommand {
+            command: input.command,
+            reply_code: input.reply_code,
+            reply_msg: input.reply_msg,
+            data_passive: input.data_passive,
+            data_orig_addr: input.data_orig_addr,
+            data_resp_addr: input.data_resp_addr,
+            data_resp_port: input.data_resp_port,
+            file: input.file,
+            file_size: input.file_size,
+            file_id: input.file_id,
+        };
+
         Self {
-            time: old.time,
-            sensor: old.sensor,
-            src_addr: old.src_addr,
-            src_port: old.src_port,
-            dst_addr: old.dst_addr,
-            dst_port: old.dst_port,
-            proto: old.proto,
-            end_time: old.end_time,
-            user: old.user,
-            password: old.password,
-            command: old.command,
-            reply_code: old.reply_code,
-            reply_msg: old.reply_msg,
-            data_passive: old.data_passive,
-            data_orig_addr: old.data_orig_addr,
-            data_resp_addr: old.data_resp_addr,
-            data_resp_port: old.data_resp_port,
-            file: old.file,
-            file_size: old.file_size,
-            file_id: old.file_id,
-            confidence: 1.0,
-            category: old.category,
-            triage_scores: old.triage_scores,
+            time: input.time,
+            sensor: input.sensor,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            end_time: input.end_time,
+            user: input.user,
+            password: input.password,
+            commands: vec![command],
+            category: input.category,
+            triage_scores: input.triage_scores,
         }
     }
 }
@@ -1215,6 +1276,32 @@ pub struct LdapPlainTextV0_39 {
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct BlocklistFtpV0_39 {
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub user: String,
+    pub password: String,
+    pub command: String,
+    pub reply_code: String,
+    pub reply_msg: String,
+    pub data_passive: bool,
+    pub data_orig_addr: IpAddr,
+    pub data_resp_addr: IpAddr,
+    pub data_resp_port: u16,
+    pub file: String,
+    pub file_size: u64,
+    pub file_id: String,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
 impl From<LdapPlainTextV0_39> for crate::event::LdapPlainText {
     fn from(old: LdapPlainTextV0_39) -> Self {
         Self {
@@ -1236,6 +1323,41 @@ impl From<LdapPlainTextV0_39> for crate::event::LdapPlainText {
             confidence: 1.0,
             category: old.category,
             triage_scores: old.triage_scores,
+        }
+    }
+}
+
+impl From<BlocklistFtpV0_39> for crate::event::BlocklistFtp {
+    fn from(input: BlocklistFtpV0_39) -> Self {
+        use crate::FtpCommand;
+
+        let command = FtpCommand {
+            command: input.command,
+            reply_code: input.reply_code,
+            reply_msg: input.reply_msg,
+            data_passive: input.data_passive,
+            data_orig_addr: input.data_orig_addr,
+            data_resp_addr: input.data_resp_addr,
+            data_resp_port: input.data_resp_port,
+            file: input.file,
+            file_size: input.file_size,
+            file_id: input.file_id,
+        };
+
+        Self {
+            time: input.time,
+            sensor: input.sensor,
+            src_addr: input.src_addr,
+            src_port: input.src_port,
+            dst_addr: input.dst_addr,
+            dst_port: input.dst_port,
+            proto: input.proto,
+            end_time: input.end_time,
+            user: input.user,
+            password: input.password,
+            commands: vec![command],
+            category: input.category,
+            triage_scores: input.triage_scores,
         }
     }
 }
