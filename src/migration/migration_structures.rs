@@ -732,7 +732,7 @@ impl From<TorConnectionV0_39> for crate::event::TorConnection {
         Self {
             time: old.time,
             sensor: old.sensor,
-            session_end_time: old.session_end_time,
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,
@@ -840,7 +840,7 @@ impl From<NonBrowserV0_39> for crate::event::NonBrowser {
         Self {
             time: old.time,
             sensor: old.sensor,
-            session_end_time: old.session_end_time,
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,
@@ -1007,7 +1007,7 @@ impl From<CryptocurrencyMiningPoolV0_39> for crate::event::CryptocurrencyMiningP
         Self {
             time: old.time,
             sensor: old.sensor,
-            session_end_time: old.session_end_time,
+            end_time: old.session_end_time,
             src_addr: old.src_addr,
             src_port: old.src_port,
             dst_addr: old.dst_addr,

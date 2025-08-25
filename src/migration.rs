@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.1,<0.41.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.2,<0.41.0-alpha.3";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -225,7 +225,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.39.0,<0.41.0")?,
-            Version::parse("0.41.0-alpha.1")?,
+            Version::parse("0.41.0-alpha.2")?,
             migrate_0_40_to_0_41_0,
         ),
     ];
@@ -615,11 +615,10 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     };
     use num_traits::FromPrimitive;
 
-    use crate::event::NonBrowser;
     use crate::event::{
-        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce, FtpPlainText,
-        LdapBruteForce, LdapPlainText, MultiHostPortScan, PortScan, RdpBruteForce,
-        RepeatedHttpSessions, TorConnection,
+        BlocklistConnFields, CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
+        FtpPlainText, LdapBruteForce, LdapPlainText, MultiHostPortScan, NonBrowser, PortScan,
+        RdpBruteForce, RepeatedHttpSessions, TorConnection,
     };
 
     let event_db = store.events();
@@ -633,12 +632,21 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
             return Err(anyhow!("Failed to migrate events: invalid event key"));
         };
         let key = i128::from_be_bytes(key);
+        let time_nanos: i64 = (key >> 64).try_into().expect("valid i64");
         let kind = (key & 0xffff_ffff_0000_0000) >> 32;
         let Some(event_kind) = EventKind::from_i128(kind) else {
             return Err(anyhow!("Failed to migrate events: invalid event kind"));
         };
 
         match event_kind {
+            EventKind::BlocklistConn => {
+                let Ok(mut fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
+                    return Err(anyhow!("Failed to migrate BlocklistConn: invalid value"));
+                };
+                fields.end_time += time_nanos; // old `end_time` was duration
+                let new_value = bincode::serialize(&fields).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new_value))?;
+            }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<TorConnectionV0_39, TorConnection>(
                     &k, &v, &event_db,
@@ -695,6 +703,16 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 update_event_db_with_new_event::<LdapPlainTextV0_39, LdapPlainText>(
                     &k, &v, &event_db,
                 )?;
+            }
+            EventKind::TorConnectionConn => {
+                let Ok(mut fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
+                    return Err(anyhow!(
+                        "Failed to migrate TorConnectionConn: invalid value"
+                    ));
+                };
+                fields.end_time += time_nanos; // old `end_time` was duration
+                let new_value = bincode::serialize(&fields).unwrap_or_default();
+                event_db.update((&k, &v), (&k, &new_value))?;
             }
             _ => {
                 // No migration needed for other event types

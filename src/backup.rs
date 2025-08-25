@@ -87,7 +87,7 @@ mod tests {
         let codec = bincode::DefaultOptions::new();
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
-            session_end_time: Utc::now(),
+            end_time: Utc::now(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
