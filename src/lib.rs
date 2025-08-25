@@ -58,7 +58,7 @@ pub use self::event::{
     MultiHostPortScan, MultiHostPortScanFields, NetworkThreat, NetworkType, NonBrowser, PortScan,
     PortScanFields, RdpBruteForce, RdpBruteForceFields, RecordType, RepeatedHttpSessions,
     RepeatedHttpSessionsFields, SuspiciousTlsTraffic, TorConnection, TrafficDirection, TriageScore,
-    WindowsThreat, find_ip_country,
+    WindowsThreat,
 };
 pub use self::migration::{migrate_backend, migrate_data_dir};
 pub use self::model::{Digest as ModelDigest, Model};
