@@ -616,10 +616,9 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        BlocklistConnFields, CryptocurrencyMiningPool, DgaFields, EventKind, ExternalDdos,
-        FtpBruteForce, FtpPlainText, HttpThreatFields, LdapBruteForce, LdapPlainText,
-        MultiHostPortScan, NonBrowser, PortScan, RdpBruteForce, RepeatedHttpSessions,
-        TorConnection,
+        BlocklistConnFields, CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
+        FtpPlainText, LdapBruteForce, LdapPlainText, MultiHostPortScan, NonBrowser, PortScan,
+        RdpBruteForce, RepeatedHttpSessions, TorConnection,
     };
 
     let event_db = store.events();
@@ -642,24 +641,6 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
         match event_kind {
             EventKind::BlocklistConn => {
                 let Ok(mut fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
-                    return Err(anyhow!("Failed to migrate BlocklistConn: invalid value"));
-                };
-                fields.end_time += time_nanos; // old `end_time` was duration
-                let new_value = bincode::serialize(&fields).unwrap_or_default();
-                event_db.update((&k, &v), (&k, &new_value))?;
-            }
-            EventKind::DomainGenerationAlgorithm => {
-                let Ok(mut fields) = bincode::deserialize::<DgaFields>(v.as_ref()) else {
-                    return Err(anyhow!(
-                        "Failed to migrate DomainGenerationAlgorithm: invalid value"
-                    ));
-                };
-                fields.end_time += time_nanos; // old `end_time` was duration
-                let new_value = bincode::serialize(&fields).unwrap_or_default();
-                event_db.update((&k, &v), (&k, &new_value))?;
-            }
-            EventKind::HttpThreat => {
-                let Ok(mut fields) = bincode::deserialize::<HttpThreatFields>(v.as_ref()) else {
                     return Err(anyhow!("Failed to migrate BlocklistConn: invalid value"));
                 };
                 fields.end_time += time_nanos; // old `end_time` was duration
