@@ -790,7 +790,9 @@ impl From<RepeatedHttpSessionsV0_39> for crate::event::RepeatedHttpSessions {
             dst_addr: old.dst_addr,
             dst_port: old.dst_port,
             proto: old.proto,
-            confidence: 0.3, // default value for RepeatedHttpSessions
+            start_time: old.time, // Use the event time as start_time for backward compatibility
+            end_time: old.time,   // Use the event time as end_time for backward compatibility
+            confidence: 0.3,      // default value for RepeatedHttpSessions
             category: old.category,
             triage_scores: old.triage_scores,
         }
