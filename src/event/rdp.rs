@@ -45,8 +45,9 @@ impl RdpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.start_time.to_rfc3339(),
@@ -75,7 +76,8 @@ impl fmt::Display for RdpBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} triage_scores={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.start_time.to_rfc3339(),

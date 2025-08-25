@@ -50,8 +50,9 @@ impl LdapBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
@@ -96,7 +97,8 @@ impl fmt::Display for LdapBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} triage_scores={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
