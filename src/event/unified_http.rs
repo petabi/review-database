@@ -310,6 +310,7 @@ impl fmt::Display for UnifiedHttpEvent {
 }
 
 impl UnifiedHttpEvent {
+    #[cfg(test)]
     pub(super) fn new(time: DateTime<Utc>, fields: UnifiedHttpEventFields) -> Self {
         Self {
             time,
