@@ -30,6 +30,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `RdpBruteForce`
   - `FtpBruteForce`
   - `LdapBruteForce`
+- Added `start_time` and `end_time` fields to `RepeatedHttpSessions` detection
+  event structure for consistency with other multi-raw event-based detection
+  events and to provide necessary information for packet information requests
+  in the UI.
 
 ### Changed
 
