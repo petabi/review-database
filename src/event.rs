@@ -21,6 +21,7 @@ mod ssh;
 mod sysmon;
 mod tls;
 mod tor;
+mod unified_http;
 
 use std::{
     collections::HashMap,
@@ -73,6 +74,7 @@ pub use self::{
     sysmon::WindowsThreat,
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
     tor::{HttpEventFields, TorConnection, TorConnectionConn},
+    unified_http::{HttpEventBase, HttpEventVariant, UnifiedHttpEvent, UnifiedHttpEventFields},
 };
 use super::{
     Customer, EventCategory, Network, TriagePolicy,
