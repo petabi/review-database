@@ -894,6 +894,7 @@ pub struct PortScanV0_39 {
 impl From<PortScanV0_39> for crate::event::PortScan {
     fn from(old: PortScanV0_39) -> Self {
         Self {
+            sensor: String::new(),
             time: old.time,
             src_addr: old.src_addr,
             dst_addr: old.dst_addr,
@@ -927,6 +928,7 @@ pub struct MultiHostPortScanV0_39 {
 impl From<MultiHostPortScanV0_39> for crate::event::MultiHostPortScan {
     fn from(old: MultiHostPortScanV0_39) -> Self {
         Self {
+            sensor: String::new(),
             time: old.time,
             src_addr: old.src_addr,
             dst_port: old.dst_port,
@@ -959,6 +961,7 @@ pub struct ExternalDdosV0_39 {
 impl From<ExternalDdosV0_39> for crate::event::ExternalDdos {
     fn from(old: ExternalDdosV0_39) -> Self {
         Self {
+            sensor: String::new(),
             time: old.time,
             src_addrs: old.src_addrs,
             dst_addr: old.dst_addr,
@@ -1054,6 +1057,7 @@ pub struct FtpBruteForceV0_39 {
 impl From<FtpBruteForceV0_39> for crate::event::FtpBruteForce {
     fn from(old: FtpBruteForceV0_39) -> Self {
         Self {
+            sensor: String::new(),
             time: old.time,
             src_addr: old.src_addr,
             dst_addr: old.dst_addr,
@@ -1145,6 +1149,7 @@ pub struct RdpBruteForceV0_39 {
 impl From<RdpBruteForceV0_39> for crate::event::RdpBruteForce {
     fn from(old: RdpBruteForceV0_39) -> Self {
         Self {
+            sensor: String::new(),
             time: old.time,
             src_addr: old.src_addr,
             dst_addrs: old.dst_addrs,
@@ -1178,6 +1183,7 @@ pub struct LdapBruteForceV0_39 {
 impl From<LdapBruteForceV0_39> for crate::event::LdapBruteForce {
     fn from(old: LdapBruteForceV0_39) -> Self {
         Self {
+            sensor: String::new(),
             time: old.time,
             src_addr: old.src_addr,
             dst_addr: old.dst_addr,
@@ -1234,6 +1240,218 @@ impl From<LdapPlainTextV0_39> for crate::event::LdapPlainText {
             object: old.object,
             argument: old.argument,
             confidence: 1.0,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PortScanV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_ports: Vec<u16>,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<PortScanV0_40> for crate::event::PortScan {
+    fn from(old: PortScanV0_40) -> Self {
+        Self {
+            sensor: String::new(),
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addr: old.dst_addr,
+            dst_ports: old.dst_ports,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            proto: old.proto,
+            confidence: old.confidence,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MultiHostPortScanV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_port: u16,
+    pub dst_addrs: Vec<IpAddr>,
+    pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<MultiHostPortScanV0_40> for crate::event::MultiHostPortScan {
+    fn from(old: MultiHostPortScanV0_40) -> Self {
+        Self {
+            sensor: String::new(),
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_port: old.dst_port,
+            dst_addrs: old.dst_addrs,
+            proto: old.proto,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            confidence: old.confidence,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ExternalDdosV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addrs: Vec<IpAddr>,
+    pub dst_addr: IpAddr,
+    pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<ExternalDdosV0_40> for crate::event::ExternalDdos {
+    fn from(old: ExternalDdosV0_40) -> Self {
+        Self {
+            sensor: String::new(),
+            time: old.time,
+            src_addrs: old.src_addrs,
+            dst_addr: old.dst_addr,
+            proto: old.proto,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            confidence: old.confidence,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RdpBruteForceV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addrs: Vec<IpAddr>,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<RdpBruteForceV0_40> for crate::event::RdpBruteForce {
+    fn from(old: RdpBruteForceV0_40) -> Self {
+        Self {
+            sensor: String::new(),
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addrs: old.dst_addrs,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            proto: old.proto,
+            confidence: old.confidence,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FtpBruteForceV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_list: Vec<String>,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub is_internal: bool,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<FtpBruteForceV0_40> for crate::event::FtpBruteForce {
+    fn from(old: FtpBruteForceV0_40) -> Self {
+        Self {
+            sensor: String::new(),
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            user_list: old.user_list,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            is_internal: old.is_internal,
+            confidence: old.confidence,
+            category: old.category,
+            triage_scores: old.triage_scores,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LdapBruteForceV0_40 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_pw_list: Vec<(String, String)>,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+    pub triage_scores: Option<Vec<TriageScore>>,
+}
+
+impl From<LdapBruteForceV0_40> for crate::event::LdapBruteForce {
+    fn from(old: LdapBruteForceV0_40) -> Self {
+        Self {
+            sensor: String::new(),
+            time: old.time,
+            src_addr: old.src_addr,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            user_pw_list: old.user_pw_list,
+            start_time: old.start_time,
+            end_time: old.end_time,
+            confidence: old.confidence,
             category: old.category,
             triage_scores: old.triage_scores,
         }

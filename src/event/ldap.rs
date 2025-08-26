@@ -34,6 +34,7 @@ macro_rules! find_ldap_attr_by_kind {
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForceFields {
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
@@ -49,8 +50,9 @@ impl LdapBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
@@ -77,6 +79,7 @@ fn get_user_pw_list(user_pw_list: &[(String, String)]) -> String {
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForce {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
@@ -94,7 +97,8 @@ impl fmt::Display for LdapBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} triage_scores={:?}",
+            self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
@@ -110,6 +114,7 @@ impl fmt::Display for LdapBruteForce {
 impl LdapBruteForce {
     pub(super) fn new(time: DateTime<Utc>, fields: &LdapBruteForceFields) -> Self {
         LdapBruteForce {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_addr: fields.dst_addr,
