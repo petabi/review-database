@@ -1,6 +1,10 @@
-mod load;
-mod save;
+use chrono::NaiveDateTime;
+use serde::Serialize;
+use structured::ColumnStatistics;
 
-pub use load::Statistics;
-#[allow(clippy::module_name_repetitions)]
-pub use save::statistics::ColumnStatisticsUpdate;
+#[derive(Serialize)]
+pub struct Statistics {
+    pub(crate) batch_ts: NaiveDateTime,
+    pub(crate) column_index: i32,
+    pub(crate) column_stats: ColumnStatistics,
+}
