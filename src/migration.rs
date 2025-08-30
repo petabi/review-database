@@ -1798,6 +1798,25 @@ mod tests {
         };
         assert!(event_db.put(&message).is_ok());
 
+        // Test RepeatedHttpSessions migration (confidence should be 0.3, start_time and end_time should be set)
+        let repeated_http_event = super::migration_structures::RepeatedHttpSessionsV0_39 {
+            time: chrono::Utc::now(),
+            sensor: "sensor_1".to_string(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            src_port: 8080,
+            dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            category: crate::EventCategory::CommandAndControl,
+            triage_scores: None,
+        };
+        let message = EventMessage {
+            time: repeated_http_event.time,
+            kind: EventKind::RepeatedHttpSessions,
+            fields: bincode::serialize(&repeated_http_event).unwrap_or_default(),
+        };
+        assert!(event_db.put(&message).is_ok());
+
         let (db_dir, backup_dir) = settings.close();
         let settings = TestSchema::new_with_dir(db_dir, backup_dir);
 
@@ -1841,13 +1860,22 @@ mod tests {
                     assert!((event.confidence - 0.3).abs() < f32::EPSILON);
                     count += 1;
                 }
+                EventKind::RepeatedHttpSessions => {
+                    let event: crate::event::RepeatedHttpSessions =
+                        bincode::deserialize(&v).unwrap();
+                    assert!((event.confidence - 0.3).abs() < f32::EPSILON);
+                    // Verify that start_time and end_time are set (should be equal to the event time)
+                    assert_eq!(event.start_time, event.time);
+                    assert_eq!(event.end_time, event.time);
+                    count += 1;
+                }
                 _ => {
                     // Other event types should be ignored
                 }
             }
         }
 
-        // Verify that all 5 test events were processed
-        assert_eq!(count, 5);
+        // Verify that all 6 test events were processed (added RepeatedHttpSessions)
+        assert_eq!(count, 6);
     }
 }
