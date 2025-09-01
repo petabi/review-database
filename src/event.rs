@@ -41,7 +41,7 @@ use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
 use serde::{Deserialize, Serialize};
 
 use self::common::Match;
-pub(crate) use self::tor::{HttpEventFieldsV0_39, HttpEventFieldsV0_41};
+pub(crate) use self::http::{HttpEventFieldsV0_39, HttpEventFieldsV0_41};
 pub use self::{
     bootp::{BlocklistBootp, BlocklistBootpFields},
     common::TriageScore,
@@ -57,8 +57,8 @@ pub use self::{
     },
     ftp::{BlocklistFtp, FtpBruteForce, FtpBruteForceFields, FtpEventFields, FtpPlainText},
     http::{
-        BlocklistHttp, BlocklistHttpFields, DgaFields, DomainGenerationAlgorithm, HttpThreat,
-        HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
+        BlocklistHttp, BlocklistHttpFields, DgaFields, DomainGenerationAlgorithm, HttpEventFields,
+        HttpThreat, HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
     },
     kerberos::{BlocklistKerberos, BlocklistKerberosFields},
     ldap::{BlocklistLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
@@ -73,7 +73,7 @@ pub use self::{
     ssh::{BlocklistSsh, BlocklistSshFields},
     sysmon::WindowsThreat,
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
-    tor::{HttpEventFields, TorConnection, TorConnectionConn},
+    tor::{TorConnection, TorConnectionConn},
 };
 use super::{
     Customer, EventCategory, Network, TriagePolicy,
