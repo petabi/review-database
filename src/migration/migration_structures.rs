@@ -692,63 +692,6 @@ impl From<FilterValueV0_39> for crate::Filter {
 // V0_39 event structures before confidence field was added
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct FtpPlainTextV0_39 {
-    #[serde(with = "ts_nanoseconds")]
-    pub time: DateTime<Utc>,
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub user: String,
-    pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
-    pub category: EventCategory,
-    pub triage_scores: Option<Vec<TriageScore>>,
-}
-
-impl From<FtpPlainTextV0_39> for crate::event::FtpPlainText {
-    fn from(old: FtpPlainTextV0_39) -> Self {
-        Self {
-            time: old.time,
-            sensor: old.sensor,
-            src_addr: old.src_addr,
-            src_port: old.src_port,
-            dst_addr: old.dst_addr,
-            dst_port: old.dst_port,
-            proto: old.proto,
-            end_time: old.end_time,
-            user: old.user,
-            password: old.password,
-            command: old.command,
-            reply_code: old.reply_code,
-            reply_msg: old.reply_msg,
-            data_passive: old.data_passive,
-            data_orig_addr: old.data_orig_addr,
-            data_resp_addr: old.data_resp_addr,
-            data_resp_port: old.data_resp_port,
-            file: old.file,
-            file_size: old.file_size,
-            file_id: old.file_id,
-            confidence: 1.0,
-            category: old.category,
-            triage_scores: old.triage_scores,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct RdpBruteForceV0_39 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,

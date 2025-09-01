@@ -80,7 +80,10 @@ pub(crate) use self::{
         MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39, PortScanFieldsV0_41,
     },
     dns::{CryptocurrencyMiningPoolFieldsV0_39, CryptocurrencyMiningPoolFieldsV0_41},
-    ftp::{FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41},
+    ftp::{
+        FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41, FtpEventFieldsV0_39,
+        FtpEventFieldsV0_41,
+    },
     http::{
         HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
         RepeatedHttpSessionsFieldsV0_41,

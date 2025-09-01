@@ -608,18 +608,16 @@ where
 }
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
-    use migration_structures::{
-        FtpPlainTextV0_39, LdapBruteForceV0_39, LdapPlainTextV0_39, RdpBruteForceV0_39,
-    };
+    use migration_structures::{LdapBruteForceV0_39, LdapPlainTextV0_39, RdpBruteForceV0_39};
     use num_traits::FromPrimitive;
 
     use crate::event::{
         BlocklistConnFields, CryptocurrencyMiningPoolFieldsV0_39,
         CryptocurrencyMiningPoolFieldsV0_41, EventKind, ExternalDdosFieldsV0_39,
-        ExternalDdosFieldsV0_41, FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41, FtpPlainText,
-        HttpEventFieldsV0_39, HttpEventFieldsV0_41, LdapBruteForce, LdapPlainText,
-        MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39,
-        PortScanFieldsV0_41, RdpBruteForce, RepeatedHttpSessionsFieldsV0_39,
+        ExternalDdosFieldsV0_41, FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41,
+        FtpEventFieldsV0_39, FtpEventFieldsV0_41, HttpEventFieldsV0_39, HttpEventFieldsV0_41,
+        LdapBruteForce, LdapPlainText, MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41,
+        PortScanFieldsV0_39, PortScanFieldsV0_41, RdpBruteForce, RepeatedHttpSessionsFieldsV0_39,
         RepeatedHttpSessionsFieldsV0_41,
     };
 
@@ -665,6 +663,11 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
+            EventKind::FtpPlainText => {
+                update_event_db_with_new_event::<FtpEventFieldsV0_39, FtpEventFieldsV0_41>(
+                    &k, &v, &event_db,
+                )?;
+            }
             EventKind::MultiHostPortScan => {
                 update_event_db_with_new_event::<
                     MultiHostPortScanFieldsV0_39,
@@ -689,11 +692,6 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
             }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<HttpEventFieldsV0_39, HttpEventFieldsV0_41>(
-                    &k, &v, &event_db,
-                )?;
-            }
-            EventKind::FtpPlainText => {
-                update_event_db_with_new_event::<FtpPlainTextV0_39, FtpPlainText>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -1651,9 +1649,10 @@ mod tests {
 
         use num_traits::FromPrimitive;
 
-        use super::migration_structures::{FtpPlainTextV0_39, RdpBruteForceV0_39};
+        use super::migration_structures::RdpBruteForceV0_39;
         use crate::event::{
-            CryptocurrencyMiningPoolFieldsV0_39, FtpBruteForceFieldsV0_39, HttpEventFieldsV0_39,
+            CryptocurrencyMiningPoolFieldsV0_39, FtpBruteForceFieldsV0_39, FtpEventFieldsV0_39,
+            HttpEventFieldsV0_39,
         };
         use crate::{EventKind, EventMessage};
 
@@ -1754,8 +1753,7 @@ mod tests {
         assert!(event_db.put(&message).is_ok());
 
         // Test FtpPlainText migration (confidence should be 1.0)
-        let ftp_plain_event = FtpPlainTextV0_39 {
-            time: chrono::Utc::now(),
+        let ftp_plain_event = FtpEventFieldsV0_39 {
             sensor: "sensor_1".to_string(),
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
             src_port: 12345,
@@ -1776,10 +1774,9 @@ mod tests {
             file_size: 1024,
             file_id: "file123".to_string(),
             category: crate::EventCategory::Collection,
-            triage_scores: None,
         };
         let message = EventMessage {
-            time: ftp_plain_event.time,
+            time: now,
             kind: EventKind::FtpPlainText,
             fields: bincode::serialize(&ftp_plain_event).unwrap_or_default(),
         };
@@ -1839,7 +1836,8 @@ mod tests {
                     count += 1;
                 }
                 EventKind::FtpPlainText => {
-                    let event: crate::event::FtpPlainText = bincode::deserialize(&v).unwrap();
+                    let event: crate::event::FtpEventFieldsV0_41 =
+                        bincode::deserialize(&v).unwrap();
                     assert!((event.confidence - 1.0).abs() < f32::EPSILON);
                     count += 1;
                 }
