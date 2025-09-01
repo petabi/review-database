@@ -692,37 +692,6 @@ impl From<FilterValueV0_39> for crate::Filter {
 // V0_39 event structures before confidence field was added
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ExternalDdosV0_39 {
-    #[serde(with = "ts_nanoseconds")]
-    pub time: DateTime<Utc>,
-    pub src_addrs: Vec<IpAddr>,
-    pub dst_addr: IpAddr,
-    pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
-    pub category: EventCategory,
-    pub triage_scores: Option<Vec<TriageScore>>,
-}
-
-impl From<ExternalDdosV0_39> for crate::event::ExternalDdos {
-    fn from(old: ExternalDdosV0_39) -> Self {
-        Self {
-            time: old.time,
-            src_addrs: old.src_addrs,
-            dst_addr: old.dst_addr,
-            proto: old.proto,
-            start_time: old.start_time,
-            end_time: old.end_time,
-            confidence: 0.3,
-            category: old.category,
-            triage_scores: old.triage_scores,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct CryptocurrencyMiningPoolV0_39 {
     #[serde(with = "ts_nanoseconds")]

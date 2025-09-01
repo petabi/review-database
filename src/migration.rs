@@ -609,17 +609,17 @@ where
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
-        LdapBruteForceV0_39, LdapPlainTextV0_39, RdpBruteForceV0_39,
+        CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39, LdapBruteForceV0_39,
+        LdapPlainTextV0_39, RdpBruteForceV0_39,
     };
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        BlocklistConnFields, CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
-        FtpPlainText, HttpEventFieldsV0_39, HttpEventFieldsV0_41, LdapBruteForce, LdapPlainText,
-        MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39,
-        PortScanFieldsV0_41, RdpBruteForce, RepeatedHttpSessionsFieldsV0_39,
-        RepeatedHttpSessionsFieldsV0_41,
+        BlocklistConnFields, CryptocurrencyMiningPool, EventKind, ExternalDdosFieldsV0_39,
+        ExternalDdosFieldsV0_41, FtpBruteForce, FtpPlainText, HttpEventFieldsV0_39,
+        HttpEventFieldsV0_41, LdapBruteForce, LdapPlainText, MultiHostPortScanFieldsV0_39,
+        MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39, PortScanFieldsV0_41, RdpBruteForce,
+        RepeatedHttpSessionsFieldsV0_39, RepeatedHttpSessionsFieldsV0_41,
     };
 
     let event_db = store.events();
@@ -648,6 +648,11 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 let new_value = bincode::serialize(&fields).unwrap_or_default();
                 event_db.update((&k, &v), (&k, &new_value))?;
             }
+            EventKind::ExternalDdos => {
+                update_event_db_with_new_event::<ExternalDdosFieldsV0_39, ExternalDdosFieldsV0_41>(
+                    &k, &v, &event_db,
+                )?;
+            }
             EventKind::MultiHostPortScan => {
                 update_event_db_with_new_event::<
                     MultiHostPortScanFieldsV0_39,
@@ -672,11 +677,6 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
             }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<HttpEventFieldsV0_39, HttpEventFieldsV0_41>(
-                    &k, &v, &event_db,
-                )?;
-            }
-            EventKind::ExternalDdos => {
-                update_event_db_with_new_event::<ExternalDdosV0_39, ExternalDdos>(
                     &k, &v, &event_db,
                 )?;
             }

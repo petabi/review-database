@@ -367,16 +367,7 @@ impl Match for MultiHostPortScan {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ExternalDdosFields {
-    pub src_addrs: Vec<IpAddr>,
-    pub dst_addr: IpAddr,
-    pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type ExternalDdosFields = ExternalDdosFieldsV0_41;
 
 impl ExternalDdosFields {
     #[must_use]
@@ -392,6 +383,41 @@ impl ExternalDdosFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ExternalDdosFieldsV0_41 {
+    pub src_addrs: Vec<IpAddr>,
+    pub dst_addr: IpAddr,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<ExternalDdosFieldsV0_39> for ExternalDdosFieldsV0_41 {
+    fn from(value: ExternalDdosFieldsV0_39) -> Self {
+        Self {
+            src_addrs: value.src_addrs,
+            dst_addr: value.dst_addr,
+            proto: value.proto,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            confidence: 0.3, // default value for ExternalDdos
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ExternalDdosFieldsV0_39 {
+    pub src_addrs: Vec<IpAddr>,
+    pub dst_addr: IpAddr,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
 }
 
 #[allow(clippy::module_name_repetitions)]
