@@ -692,41 +692,6 @@ impl From<FilterValueV0_39> for crate::Filter {
 // V0_39 event structures before confidence field was added
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct LdapBruteForceV0_39 {
-    #[serde(with = "ts_nanoseconds")]
-    pub time: DateTime<Utc>,
-    pub src_addr: IpAddr,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub user_pw_list: Vec<(String, String)>,
-    #[serde(with = "ts_nanoseconds")]
-    pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
-    pub category: EventCategory,
-    pub triage_scores: Option<Vec<TriageScore>>,
-}
-
-impl From<LdapBruteForceV0_39> for crate::event::LdapBruteForce {
-    fn from(old: LdapBruteForceV0_39) -> Self {
-        Self {
-            time: old.time,
-            src_addr: old.src_addr,
-            dst_addr: old.dst_addr,
-            dst_port: old.dst_port,
-            proto: old.proto,
-            user_pw_list: old.user_pw_list,
-            start_time: old.start_time,
-            end_time: old.end_time,
-            confidence: 0.3,
-            category: old.category,
-            triage_scores: old.triage_scores,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct LdapPlainTextV0_39 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,

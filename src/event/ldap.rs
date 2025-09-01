@@ -32,18 +32,7 @@ macro_rules! find_ldap_attr_by_kind {
     }};
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct LdapBruteForceFields {
-    pub src_addr: IpAddr,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub user_pw_list: Vec<(String, String)>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type LdapBruteForceFields = LdapBruteForceFieldsV0_41;
 
 impl LdapBruteForceFields {
     #[must_use]
@@ -61,6 +50,46 @@ impl LdapBruteForceFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct LdapBruteForceFieldsV0_41 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_pw_list: Vec<(String, String)>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<LdapBruteForceFieldsV0_39> for LdapBruteForceFieldsV0_41 {
+    fn from(value: LdapBruteForceFieldsV0_39) -> Self {
+        Self {
+            src_addr: value.src_addr,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            user_pw_list: value.user_pw_list,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            confidence: 0.3, // default value for LdapBruteForce
+            category: value.category,
+        }
+    }
+}
+#[derive(Serialize, Deserialize)]
+pub struct LdapBruteForceFieldsV0_39 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_pw_list: Vec<(String, String)>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
 }
 
 fn get_user_pw_list(user_pw_list: &[(String, String)]) -> String {
