@@ -200,17 +200,7 @@ pub(crate) struct HttpEventFieldsV0_39 {
     pub category: EventCategory,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct RepeatedHttpSessionsFields {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type RepeatedHttpSessionsFields = RepeatedHttpSessionsFieldsV0_41;
 
 impl RepeatedHttpSessionsFields {
     #[must_use]
@@ -227,6 +217,44 @@ impl RepeatedHttpSessionsFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RepeatedHttpSessionsFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<RepeatedHttpSessionsFieldsV0_39> for RepeatedHttpSessionsFieldsV0_41 {
+    fn from(value: RepeatedHttpSessionsFieldsV0_39) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            confidence: 0.3, // default value for RepeatedHttpSessions
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct RepeatedHttpSessionsFieldsV0_39 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]

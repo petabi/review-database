@@ -692,36 +692,6 @@ impl From<FilterValueV0_39> for crate::Filter {
 // V0_39 event structures before confidence field was added
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct RepeatedHttpSessionsV0_39 {
-    pub time: DateTime<Utc>,
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub category: EventCategory,
-    pub triage_scores: Option<Vec<TriageScore>>,
-}
-
-impl From<RepeatedHttpSessionsV0_39> for crate::event::RepeatedHttpSessions {
-    fn from(old: RepeatedHttpSessionsV0_39) -> Self {
-        Self {
-            time: old.time,
-            sensor: old.sensor,
-            src_addr: old.src_addr,
-            src_port: old.src_port,
-            dst_addr: old.dst_addr,
-            dst_port: old.dst_port,
-            proto: old.proto,
-            confidence: 0.3, // default value for RepeatedHttpSessions
-            category: old.category,
-            triage_scores: old.triage_scores,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct PortScanV0_39 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,

@@ -41,7 +41,10 @@ use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
 use serde::{Deserialize, Serialize};
 
 use self::common::Match;
-pub(crate) use self::http::{HttpEventFieldsV0_39, HttpEventFieldsV0_41};
+pub(crate) use self::http::{
+    HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
+    RepeatedHttpSessionsFieldsV0_41,
+};
 pub use self::{
     bootp::{BlocklistBootp, BlocklistBootpFields},
     common::TriageScore,

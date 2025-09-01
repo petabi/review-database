@@ -611,14 +611,15 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
         CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
         LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, PortScanV0_39,
-        RdpBruteForceV0_39, RepeatedHttpSessionsV0_39,
+        RdpBruteForceV0_39,
     };
     use num_traits::FromPrimitive;
 
     use crate::event::{
         BlocklistConnFields, CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
         FtpPlainText, HttpEventFieldsV0_39, HttpEventFieldsV0_41, LdapBruteForce, LdapPlainText,
-        MultiHostPortScan, PortScan, RdpBruteForce, RepeatedHttpSessions,
+        MultiHostPortScan, PortScan, RdpBruteForce, RepeatedHttpSessionsFieldsV0_39,
+        RepeatedHttpSessionsFieldsV0_41,
     };
 
     let event_db = store.events();
@@ -652,13 +653,14 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
+            EventKind::RepeatedHttpSessions => {
+                update_event_db_with_new_event::<
+                    RepeatedHttpSessionsFieldsV0_39,
+                    RepeatedHttpSessionsFieldsV0_41,
+                >(&k, &v, &event_db)?;
+            }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<HttpEventFieldsV0_39, HttpEventFieldsV0_41>(
-                    &k, &v, &event_db,
-                )?;
-            }
-            EventKind::RepeatedHttpSessions => {
-                update_event_db_with_new_event::<RepeatedHttpSessionsV0_39, RepeatedHttpSessions>(
                     &k, &v, &event_db,
                 )?;
             }
