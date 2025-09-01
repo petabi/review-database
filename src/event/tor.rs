@@ -39,9 +39,10 @@ macro_rules! find_conn_attr_by_kind {
     }};
 }
 
+pub type HttpEventFields = HttpEventFieldsV0_41;
+
 #[derive(Deserialize, Serialize)]
-#[allow(clippy::module_name_repetitions)]
-pub struct HttpEventFields {
+pub struct HttpEventFieldsV0_41 {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
@@ -76,7 +77,45 @@ pub struct HttpEventFields {
     pub category: EventCategory,
 }
 
-impl HttpEventFields {
+impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
+    fn from(value: HttpEventFieldsV0_39) -> Self {
+        Self {
+            sensor: value.sensor,
+            end_time: value.end_time,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            method: value.method,
+            host: value.host,
+            uri: value.uri,
+            referer: value.referer,
+            version: value.version,
+            user_agent: value.user_agent,
+            request_len: value.request_len,
+            response_len: value.response_len,
+            status_code: value.status_code,
+            status_msg: value.status_msg,
+            username: value.username,
+            password: value.password,
+            cookie: value.cookie,
+            content_encoding: value.content_encoding,
+            content_type: value.content_type,
+            cache_control: value.cache_control,
+            orig_filenames: value.orig_filenames,
+            orig_mime_types: value.orig_mime_types,
+            resp_filenames: value.resp_filenames,
+            resp_mime_types: value.resp_mime_types,
+            post_body: value.post_body,
+            state: value.state,
+            confidence: 1.0, // default value for TorConnection
+            category: value.category,
+        }
+    }
+}
+
+impl HttpEventFieldsV0_41 {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
@@ -114,6 +153,41 @@ impl HttpEventFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct HttpEventFieldsV0_39 {
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub category: EventCategory,
 }
 
 #[allow(clippy::module_name_repetitions)]

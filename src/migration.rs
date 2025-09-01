@@ -611,14 +611,14 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
         CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
         LdapBruteForceV0_39, LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39,
-        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+        PortScanV0_39, RdpBruteForceV0_39, RepeatedHttpSessionsV0_39,
     };
     use num_traits::FromPrimitive;
 
     use crate::event::{
         BlocklistConnFields, CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
-        FtpPlainText, LdapBruteForce, LdapPlainText, MultiHostPortScan, NonBrowser, PortScan,
-        RdpBruteForce, RepeatedHttpSessions, TorConnection,
+        FtpPlainText, HttpEventFieldsV0_39, HttpEventFieldsV0_41, LdapBruteForce, LdapPlainText,
+        MultiHostPortScan, NonBrowser, PortScan, RdpBruteForce, RepeatedHttpSessions,
     };
 
     let event_db = store.events();
@@ -648,7 +648,7 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 event_db.update((&k, &v), (&k, &new_value))?;
             }
             EventKind::TorConnection => {
-                update_event_db_with_new_event::<TorConnectionV0_39, TorConnection>(
+                update_event_db_with_new_event::<HttpEventFieldsV0_39, HttpEventFieldsV0_41>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -1645,18 +1645,19 @@ mod tests {
 
         use super::migration_structures::{
             CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
-            RdpBruteForceV0_39, TorConnectionV0_39,
+            RdpBruteForceV0_39,
         };
+        use crate::event::HttpEventFieldsV0_39;
         use crate::{EventKind, EventMessage};
 
         let settings = TestSchema::new();
         let event_db = settings.store.events();
 
         // Test TorConnection migration (confidence should be 1.0)
-        let tor_event = TorConnectionV0_39 {
-            time: chrono::Utc::now(),
+        let now = chrono::Utc::now();
+        let tor_event_fields = HttpEventFieldsV0_39 {
             sensor: "sensor_1".to_string(),
-            session_end_time: chrono::Utc::now(),
+            end_time: now,
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
             src_port: 12345,
             dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
@@ -1685,12 +1686,11 @@ mod tests {
             post_body: vec![],
             state: String::new(),
             category: crate::EventCategory::InitialAccess,
-            triage_scores: None,
         };
         let message = EventMessage {
-            time: tor_event.time,
+            time: now,
             kind: EventKind::TorConnection,
-            fields: bincode::serialize(&tor_event).unwrap_or_default(),
+            fields: bincode::serialize(&tor_event_fields).unwrap_or_default(),
         };
         assert!(event_db.put(&message).is_ok());
 
@@ -1816,8 +1816,9 @@ mod tests {
 
             match event_kind {
                 EventKind::TorConnection => {
-                    let event: crate::event::TorConnection = bincode::deserialize(&v).unwrap();
-                    assert!((event.confidence - 1.0).abs() < f32::EPSILON);
+                    let event_fields: crate::event::HttpEventFieldsV0_41 =
+                        bincode::deserialize(&v).unwrap();
+                    assert!((event_fields.confidence - 1.0).abs() < f32::EPSILON);
                     count += 1;
                 }
                 EventKind::CryptocurrencyMiningPool => {
