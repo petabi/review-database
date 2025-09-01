@@ -214,25 +214,7 @@ impl Match for LdapBruteForce {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LdapEventFields {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub message_id: u32,
-    pub version: u8,
-    pub opcode: Vec<String>,
-    pub result: Vec<String>,
-    pub diagnostic_message: Vec<String>,
-    pub object: Vec<String>,
-    pub argument: Vec<String>,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type LdapEventFields = LdapEventFieldsV0_41;
 
 impl LdapEventFields {
     #[must_use]
@@ -257,6 +239,68 @@ impl LdapEventFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LdapEventFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<LdapEventFieldsV0_39> for LdapEventFieldsV0_41 {
+    fn from(value: LdapEventFieldsV0_39) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            message_id: value.message_id,
+            version: value.version,
+            opcode: value.opcode,
+            result: value.result,
+            diagnostic_message: value.diagnostic_message,
+            object: value.object,
+            argument: value.argument,
+            confidence: 1.0, // default value for LdapPlainText
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LdapEventFieldsV0_39 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
+    pub category: EventCategory,
 }
 
 #[derive(Deserialize, Serialize)]

@@ -608,7 +608,6 @@ where
 }
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
-    use migration_structures::LdapPlainTextV0_39;
     use num_traits::FromPrimitive;
 
     use crate::event::{
@@ -616,10 +615,10 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
         CryptocurrencyMiningPoolFieldsV0_41, EventKind, ExternalDdosFieldsV0_39,
         ExternalDdosFieldsV0_41, FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41,
         FtpEventFieldsV0_39, FtpEventFieldsV0_41, HttpEventFieldsV0_39, HttpEventFieldsV0_41,
-        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, LdapPlainText,
-        MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39,
-        PortScanFieldsV0_41, RdpBruteForceFieldsV0_39, RdpBruteForceFieldsV0_41,
-        RepeatedHttpSessionsFieldsV0_39, RepeatedHttpSessionsFieldsV0_41,
+        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, LdapEventFieldsV0_39,
+        LdapEventFieldsV0_41, MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41,
+        PortScanFieldsV0_39, PortScanFieldsV0_41, RdpBruteForceFieldsV0_39,
+        RdpBruteForceFieldsV0_41, RepeatedHttpSessionsFieldsV0_39, RepeatedHttpSessionsFieldsV0_41,
     };
 
     let event_db = store.events();
@@ -675,6 +674,11 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                     LdapBruteForceFieldsV0_41,
                 >(&k, &v, &event_db)?;
             }
+            EventKind::LdapPlainText => {
+                update_event_db_with_new_event::<LdapEventFieldsV0_39, LdapEventFieldsV0_41>(
+                    &k, &v, &event_db,
+                )?;
+            }
             EventKind::MultiHostPortScan => {
                 update_event_db_with_new_event::<
                     MultiHostPortScanFieldsV0_39,
@@ -704,11 +708,6 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
             }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<HttpEventFieldsV0_39, HttpEventFieldsV0_41>(
-                    &k, &v, &event_db,
-                )?;
-            }
-            EventKind::LdapPlainText => {
-                update_event_db_with_new_event::<LdapPlainTextV0_39, LdapPlainText>(
                     &k, &v, &event_db,
                 )?;
             }

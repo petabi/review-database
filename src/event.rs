@@ -88,7 +88,10 @@ pub(crate) use self::{
         HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
         RepeatedHttpSessionsFieldsV0_41,
     },
-    ldap::{LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41},
+    ldap::{
+        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, LdapEventFieldsV0_39,
+        LdapEventFieldsV0_41,
+    },
     rdp::{RdpBruteForceFieldsV0_39, RdpBruteForceFieldsV0_41},
 };
 use super::{
