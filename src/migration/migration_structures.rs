@@ -692,67 +692,6 @@ impl From<FilterValueV0_39> for crate::Filter {
 // V0_39 event structures before confidence field was added
 
 #[derive(Debug, Deserialize, Serialize)]
-#[allow(clippy::struct_excessive_bools)]
-pub struct CryptocurrencyMiningPoolV0_39 {
-    #[serde(with = "ts_nanoseconds")]
-    pub time: DateTime<Utc>,
-    pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub session_end_time: DateTime<Utc>,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub query: String,
-    pub answer: Vec<String>,
-    pub trans_id: u16,
-    pub rtt: i64,
-    pub qclass: u16,
-    pub qtype: u16,
-    pub rcode: u16,
-    pub aa_flag: bool,
-    pub tc_flag: bool,
-    pub rd_flag: bool,
-    pub ra_flag: bool,
-    pub ttl: Vec<i32>,
-    pub coins: Vec<String>,
-    pub category: EventCategory,
-    pub triage_scores: Option<Vec<TriageScore>>,
-}
-
-impl From<CryptocurrencyMiningPoolV0_39> for crate::event::CryptocurrencyMiningPool {
-    fn from(old: CryptocurrencyMiningPoolV0_39) -> Self {
-        Self {
-            time: old.time,
-            sensor: old.sensor,
-            end_time: old.session_end_time,
-            src_addr: old.src_addr,
-            src_port: old.src_port,
-            dst_addr: old.dst_addr,
-            dst_port: old.dst_port,
-            proto: old.proto,
-            query: old.query,
-            answer: old.answer,
-            trans_id: old.trans_id,
-            rtt: old.rtt,
-            qclass: old.qclass,
-            qtype: old.qtype,
-            rcode: old.rcode,
-            aa_flag: old.aa_flag,
-            tc_flag: old.tc_flag,
-            rd_flag: old.rd_flag,
-            ra_flag: old.ra_flag,
-            ttl: old.ttl,
-            coins: old.coins,
-            confidence: 1.0,
-            category: old.category,
-            triage_scores: old.triage_scores,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct FtpBruteForceV0_39 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,

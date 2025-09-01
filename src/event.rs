@@ -79,6 +79,7 @@ pub(crate) use self::{
         ExternalDdosFieldsV0_39, ExternalDdosFieldsV0_41, MultiHostPortScanFieldsV0_39,
         MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39, PortScanFieldsV0_41,
     },
+    dns::{CryptocurrencyMiningPoolFieldsV0_39, CryptocurrencyMiningPoolFieldsV0_41},
     http::{
         HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
         RepeatedHttpSessionsFieldsV0_41,

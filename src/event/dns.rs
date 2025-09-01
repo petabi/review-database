@@ -369,32 +369,7 @@ impl Match for LockyRansomware {
     }
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct CryptocurrencyMiningPoolFields {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
-    pub query: String,
-    pub answer: Vec<String>,
-    pub trans_id: u16,
-    pub rtt: i64,
-    pub qclass: u16,
-    pub qtype: u16,
-    pub rcode: u16,
-    pub aa_flag: bool,
-    pub tc_flag: bool,
-    pub rd_flag: bool,
-    pub ra_flag: bool,
-    pub ttl: Vec<i32>,
-    pub coins: Vec<String>,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type CryptocurrencyMiningPoolFields = CryptocurrencyMiningPoolFieldsV0_41;
 
 impl CryptocurrencyMiningPoolFields {
     #[must_use]
@@ -425,6 +400,88 @@ impl CryptocurrencyMiningPoolFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct CryptocurrencyMiningPoolFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub coins: Vec<String>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<CryptocurrencyMiningPoolFieldsV0_39> for CryptocurrencyMiningPoolFieldsV0_41 {
+    fn from(value: CryptocurrencyMiningPoolFieldsV0_39) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            query: value.query,
+            answer: value.answer,
+            trans_id: value.trans_id,
+            rtt: value.rtt,
+            qclass: value.qclass,
+            qtype: value.qtype,
+            rcode: value.rcode,
+            aa_flag: value.aa_flag,
+            tc_flag: value.tc_flag,
+            rd_flag: value.rd_flag,
+            ra_flag: value.ra_flag,
+            ttl: value.ttl,
+            coins: value.coins,
+            confidence: 1.0, // default value for CryptocurrencyMiningPool
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct CryptocurrencyMiningPoolFieldsV0_39 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub coins: Vec<String>,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]

@@ -609,13 +609,14 @@ where
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
-        CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39, LdapBruteForceV0_39,
-        LdapPlainTextV0_39, RdpBruteForceV0_39,
+        FtpBruteForceV0_39, FtpPlainTextV0_39, LdapBruteForceV0_39, LdapPlainTextV0_39,
+        RdpBruteForceV0_39,
     };
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        BlocklistConnFields, CryptocurrencyMiningPool, EventKind, ExternalDdosFieldsV0_39,
+        BlocklistConnFields, CryptocurrencyMiningPoolFieldsV0_39,
+        CryptocurrencyMiningPoolFieldsV0_41, EventKind, ExternalDdosFieldsV0_39,
         ExternalDdosFieldsV0_41, FtpBruteForce, FtpPlainText, HttpEventFieldsV0_39,
         HttpEventFieldsV0_41, LdapBruteForce, LdapPlainText, MultiHostPortScanFieldsV0_39,
         MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39, PortScanFieldsV0_41, RdpBruteForce,
@@ -648,6 +649,12 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 let new_value = bincode::serialize(&fields).unwrap_or_default();
                 event_db.update((&k, &v), (&k, &new_value))?;
             }
+            EventKind::CryptocurrencyMiningPool => {
+                update_event_db_with_new_event::<
+                    CryptocurrencyMiningPoolFieldsV0_39,
+                    CryptocurrencyMiningPoolFieldsV0_41,
+                >(&k, &v, &event_db)?;
+            }
             EventKind::ExternalDdos => {
                 update_event_db_with_new_event::<ExternalDdosFieldsV0_39, ExternalDdosFieldsV0_41>(
                     &k, &v, &event_db,
@@ -679,12 +686,6 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 update_event_db_with_new_event::<HttpEventFieldsV0_39, HttpEventFieldsV0_41>(
                     &k, &v, &event_db,
                 )?;
-            }
-            EventKind::CryptocurrencyMiningPool => {
-                update_event_db_with_new_event::<
-                    CryptocurrencyMiningPoolV0_39,
-                    CryptocurrencyMiningPool,
-                >(&k, &v, &event_db)?;
             }
             EventKind::FtpBruteForce => {
                 update_event_db_with_new_event::<FtpBruteForceV0_39, FtpBruteForce>(
@@ -1651,10 +1652,9 @@ mod tests {
         use num_traits::FromPrimitive;
 
         use super::migration_structures::{
-            CryptocurrencyMiningPoolV0_39, FtpBruteForceV0_39, FtpPlainTextV0_39,
-            RdpBruteForceV0_39,
+            FtpBruteForceV0_39, FtpPlainTextV0_39, RdpBruteForceV0_39,
         };
-        use crate::event::HttpEventFieldsV0_39;
+        use crate::event::{CryptocurrencyMiningPoolFieldsV0_39, HttpEventFieldsV0_39};
         use crate::{EventKind, EventMessage};
 
         let settings = TestSchema::new();
@@ -1702,15 +1702,15 @@ mod tests {
         assert!(event_db.put(&message).is_ok());
 
         // Test CryptocurrencyMiningPool migration (confidence should be 1.0)
-        let crypto_event = CryptocurrencyMiningPoolV0_39 {
-            time: chrono::Utc::now(),
+        let now = chrono::Utc::now();
+        let crypto_event = CryptocurrencyMiningPoolFieldsV0_39 {
             sensor: "sensor_1".to_string(),
-            session_end_time: chrono::Utc::now(),
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
             src_port: 12345,
             dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
             dst_port: 53,
             proto: 17,
+            end_time: now,
             query: "example.com".to_string(),
             answer: vec!["1.2.3.4".to_string()],
             trans_id: 12345,
@@ -1725,10 +1725,9 @@ mod tests {
             ttl: vec![3600],
             coins: vec!["BTC".to_string()],
             category: crate::EventCategory::CommandAndControl,
-            triage_scores: None,
         };
         let message = EventMessage {
-            time: crypto_event.time,
+            time: now,
             kind: EventKind::CryptocurrencyMiningPool,
             fields: bincode::serialize(&crypto_event).unwrap_or_default(),
         };
@@ -1829,7 +1828,7 @@ mod tests {
                     count += 1;
                 }
                 EventKind::CryptocurrencyMiningPool => {
-                    let event: crate::event::CryptocurrencyMiningPool =
+                    let event: crate::event::CryptocurrencyMiningPoolFieldsV0_41 =
                         bincode::deserialize(&v).unwrap();
                     assert!((event.confidence - 1.0).abs() < f32::EPSILON);
                     count += 1;
