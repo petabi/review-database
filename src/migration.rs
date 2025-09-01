@@ -608,7 +608,7 @@ where
 }
 
 fn migrate_0_41_events(store: &super::Store) -> Result<()> {
-    use migration_structures::{LdapBruteForceV0_39, LdapPlainTextV0_39, RdpBruteForceV0_39};
+    use migration_structures::{LdapBruteForceV0_39, LdapPlainTextV0_39};
     use num_traits::FromPrimitive;
 
     use crate::event::{
@@ -617,8 +617,8 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
         ExternalDdosFieldsV0_41, FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41,
         FtpEventFieldsV0_39, FtpEventFieldsV0_41, HttpEventFieldsV0_39, HttpEventFieldsV0_41,
         LdapBruteForce, LdapPlainText, MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41,
-        PortScanFieldsV0_39, PortScanFieldsV0_41, RdpBruteForce, RepeatedHttpSessionsFieldsV0_39,
-        RepeatedHttpSessionsFieldsV0_41,
+        PortScanFieldsV0_39, PortScanFieldsV0_41, RdpBruteForceFieldsV0_39,
+        RdpBruteForceFieldsV0_41, RepeatedHttpSessionsFieldsV0_39, RepeatedHttpSessionsFieldsV0_41,
     };
 
     let event_db = store.events();
@@ -684,6 +684,11 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                     &k, &v, &event_db,
                 )?;
             }
+            EventKind::RdpBruteForce => {
+                update_event_db_with_new_event::<RdpBruteForceFieldsV0_39, RdpBruteForceFieldsV0_41>(
+                    &k, &v, &event_db,
+                )?;
+            }
             EventKind::RepeatedHttpSessions => {
                 update_event_db_with_new_event::<
                     RepeatedHttpSessionsFieldsV0_39,
@@ -692,11 +697,6 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
             }
             EventKind::TorConnection => {
                 update_event_db_with_new_event::<HttpEventFieldsV0_39, HttpEventFieldsV0_41>(
-                    &k, &v, &event_db,
-                )?;
-            }
-            EventKind::RdpBruteForce => {
-                update_event_db_with_new_event::<RdpBruteForceV0_39, RdpBruteForce>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -1649,10 +1649,9 @@ mod tests {
 
         use num_traits::FromPrimitive;
 
-        use super::migration_structures::RdpBruteForceV0_39;
         use crate::event::{
             CryptocurrencyMiningPoolFieldsV0_39, FtpBruteForceFieldsV0_39, FtpEventFieldsV0_39,
-            HttpEventFieldsV0_39,
+            HttpEventFieldsV0_39, RdpBruteForceFieldsV0_39,
         };
         use crate::{EventKind, EventMessage};
 
@@ -1783,18 +1782,17 @@ mod tests {
         assert!(event_db.put(&message).is_ok());
 
         // Test RdpBruteForce migration (confidence should be 0.3)
-        let rdp_brute_event = RdpBruteForceV0_39 {
-            time: chrono::Utc::now(),
+        let now = chrono::Utc::now();
+        let rdp_brute_event = RdpBruteForceFieldsV0_39 {
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
             dst_addrs: vec!["192.168.1.2".parse::<IpAddr>().unwrap()],
             proto: 6,
-            start_time: chrono::Utc::now(),
-            end_time: chrono::Utc::now(),
+            start_time: now,
+            end_time: now,
             category: crate::EventCategory::CredentialAccess,
-            triage_scores: None,
         };
         let message = EventMessage {
-            time: rdp_brute_event.time,
+            time: now,
             kind: EventKind::RdpBruteForce,
             fields: bincode::serialize(&rdp_brute_event).unwrap_or_default(),
         };
@@ -1842,7 +1840,8 @@ mod tests {
                     count += 1;
                 }
                 EventKind::RdpBruteForce => {
-                    let event: crate::event::RdpBruteForce = bincode::deserialize(&v).unwrap();
+                    let event: crate::event::RdpBruteForceFieldsV0_41 =
+                        bincode::deserialize(&v).unwrap();
                     assert!((event.confidence - 0.3).abs() < f32::EPSILON);
                     count += 1;
                 }

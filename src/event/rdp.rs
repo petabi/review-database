@@ -29,16 +29,8 @@ macro_rules! find_rdp_attr_by_kind {
         }
     }};
 }
-#[derive(Serialize, Deserialize)]
-pub struct RdpBruteForceFields {
-    pub src_addr: IpAddr,
-    pub dst_addrs: Vec<IpAddr>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub proto: u8,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+
+pub type RdpBruteForceFields = RdpBruteForceFieldsV0_41;
 
 impl RdpBruteForceFields {
     #[must_use]
@@ -54,6 +46,41 @@ impl RdpBruteForceFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RdpBruteForceFieldsV0_41 {
+    pub src_addr: IpAddr,
+    pub dst_addrs: Vec<IpAddr>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<RdpBruteForceFieldsV0_39> for RdpBruteForceFieldsV0_41 {
+    fn from(value: RdpBruteForceFieldsV0_39) -> Self {
+        Self {
+            src_addr: value.src_addr,
+            dst_addrs: value.dst_addrs,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            proto: value.proto,
+            confidence: 0.3, // default value for RdpBruteForce
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RdpBruteForceFieldsV0_39 {
+    pub src_addr: IpAddr,
+    pub dst_addrs: Vec<IpAddr>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]
