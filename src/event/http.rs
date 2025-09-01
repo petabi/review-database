@@ -166,7 +166,7 @@ impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
 }
 
 #[derive(Deserialize, Serialize)]
-pub(crate) struct HttpEventFieldsV0_39 {
+pub struct HttpEventFieldsV0_39 {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
@@ -247,7 +247,7 @@ impl From<RepeatedHttpSessionsFieldsV0_39> for RepeatedHttpSessionsFieldsV0_41 {
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct RepeatedHttpSessionsFieldsV0_39 {
+pub struct RepeatedHttpSessionsFieldsV0_39 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,

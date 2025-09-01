@@ -41,10 +41,6 @@ use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
 use serde::{Deserialize, Serialize};
 
 use self::common::Match;
-pub(crate) use self::http::{
-    HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
-    RepeatedHttpSessionsFieldsV0_41,
-};
 pub use self::{
     bootp::{BlocklistBootp, BlocklistBootpFields},
     common::TriageScore,
@@ -77,6 +73,13 @@ pub use self::{
     sysmon::WindowsThreat,
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
     tor::{TorConnection, TorConnectionConn},
+};
+pub(crate) use self::{
+    conn::{PortScanFieldsV0_39, PortScanFieldsV0_41},
+    http::{
+        HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
+        RepeatedHttpSessionsFieldsV0_41,
+    },
 };
 use super::{
     Customer, EventCategory, Network, TriagePolicy,
