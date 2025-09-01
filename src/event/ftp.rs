@@ -37,19 +37,7 @@ macro_rules! find_ftp_attr_by_kind {
     }};
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct FtpBruteForceFields {
-    pub src_addr: IpAddr,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub user_list: Vec<String>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub is_internal: bool,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type FtpBruteForceFields = FtpBruteForceFieldsV0_41;
 
 impl FtpBruteForceFields {
     #[must_use]
@@ -68,6 +56,50 @@ impl FtpBruteForceFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FtpBruteForceFieldsV0_41 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_list: Vec<String>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub is_internal: bool,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<FtpBruteForceFieldsV0_39> for FtpBruteForceFieldsV0_41 {
+    fn from(value: FtpBruteForceFieldsV0_39) -> Self {
+        Self {
+            src_addr: value.src_addr,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            user_list: value.user_list,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            is_internal: value.is_internal,
+            confidence: 0.3, // default value for FtpBruteForce
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FtpBruteForceFieldsV0_39 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_list: Vec<String>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub is_internal: bool,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]
