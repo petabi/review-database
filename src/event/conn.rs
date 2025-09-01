@@ -202,17 +202,7 @@ impl Match for PortScan {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct MultiHostPortScanFields {
-    pub src_addr: IpAddr,
-    pub dst_port: u16,
-    pub dst_addrs: Vec<IpAddr>,
-    pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type MultiHostPortScanFields = MultiHostPortScanFieldsV0_41;
 
 impl MultiHostPortScanFields {
     #[must_use]
@@ -229,6 +219,44 @@ impl MultiHostPortScanFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MultiHostPortScanFieldsV0_41 {
+    pub src_addr: IpAddr,
+    pub dst_port: u16,
+    pub dst_addrs: Vec<IpAddr>,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<MultiHostPortScanFieldsV0_39> for MultiHostPortScanFieldsV0_41 {
+    fn from(value: MultiHostPortScanFieldsV0_39) -> Self {
+        Self {
+            src_addr: value.src_addr,
+            dst_port: value.dst_port,
+            dst_addrs: value.dst_addrs,
+            proto: value.proto,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            confidence: 0.3, // default value for MultiHostPortScan
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MultiHostPortScanFieldsV0_39 {
+    pub src_addr: IpAddr,
+    pub dst_port: u16,
+    pub dst_addrs: Vec<IpAddr>,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
 }
 
 #[allow(clippy::module_name_repetitions)]

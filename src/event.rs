@@ -75,7 +75,10 @@ pub use self::{
     tor::{TorConnection, TorConnectionConn},
 };
 pub(crate) use self::{
-    conn::{PortScanFieldsV0_39, PortScanFieldsV0_41},
+    conn::{
+        MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39,
+        PortScanFieldsV0_41,
+    },
     http::{
         HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
         RepeatedHttpSessionsFieldsV0_41,
