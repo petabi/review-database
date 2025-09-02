@@ -216,7 +216,7 @@ impl Match for FtpBruteForce {
     }
 }
 
-pub type FtpEventFields = FtpEventFieldsV0_41;
+pub type FtpEventFields = FtpEventFieldsV0_39;
 
 impl FtpEventFields {
     #[must_use]
@@ -249,7 +249,7 @@ impl FtpEventFields {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct FtpEventFieldsV0_41 {
+pub struct FtpEventFieldsV0_39 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -273,8 +273,8 @@ pub struct FtpEventFieldsV0_41 {
     pub category: EventCategory,
 }
 
-impl From<FtpEventFieldsV0_39> for FtpEventFieldsV0_41 {
-    fn from(value: FtpEventFieldsV0_39) -> Self {
+impl From<FtpEventFieldsV0_38> for FtpEventFieldsV0_39 {
+    fn from(value: FtpEventFieldsV0_38) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -302,7 +302,7 @@ impl From<FtpEventFieldsV0_39> for FtpEventFieldsV0_41 {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct FtpEventFieldsV0_39 {
+pub struct FtpEventFieldsV0_38 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,

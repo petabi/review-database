@@ -81,16 +81,16 @@ pub(crate) use self::{
     },
     dns::{CryptocurrencyMiningPoolFieldsV0_39, CryptocurrencyMiningPoolFieldsV0_41},
     ftp::{
-        FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41, FtpEventFieldsV0_39,
-        FtpEventFieldsV0_41,
+        FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41, FtpEventFieldsV0_38,
+        FtpEventFieldsV0_39,
     },
     http::{
         HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
         RepeatedHttpSessionsFieldsV0_41,
     },
     ldap::{
-        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, LdapEventFieldsV0_39,
-        LdapEventFieldsV0_41,
+        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, LdapEventFieldsV0_38,
+        LdapEventFieldsV0_39,
     },
     rdp::{RdpBruteForceFieldsV0_39, RdpBruteForceFieldsV0_41},
 };

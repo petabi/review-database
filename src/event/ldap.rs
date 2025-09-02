@@ -214,7 +214,7 @@ impl Match for LdapBruteForce {
     }
 }
 
-pub type LdapEventFields = LdapEventFieldsV0_41;
+pub type LdapEventFields = LdapEventFieldsV0_39;
 
 impl LdapEventFields {
     #[must_use]
@@ -242,7 +242,7 @@ impl LdapEventFields {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct LdapEventFieldsV0_41 {
+pub struct LdapEventFieldsV0_39 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -261,8 +261,8 @@ pub struct LdapEventFieldsV0_41 {
     pub category: EventCategory,
 }
 
-impl From<LdapEventFieldsV0_39> for LdapEventFieldsV0_41 {
-    fn from(value: LdapEventFieldsV0_39) -> Self {
+impl From<LdapEventFieldsV0_38> for LdapEventFieldsV0_39 {
+    fn from(value: LdapEventFieldsV0_38) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -285,7 +285,7 @@ impl From<LdapEventFieldsV0_39> for LdapEventFieldsV0_41 {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct LdapEventFieldsV0_39 {
+pub struct LdapEventFieldsV0_38 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
