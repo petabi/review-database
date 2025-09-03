@@ -79,7 +79,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- Migration from version 0.39.0 and earlier is no longer supported.
+- Migration from version 0.29.0 and earlier is no longer supported.
 - `Database::insert_column_statistics` is removed. User is advised to use
   `Table<'d, ColumnStats>::insert_column_statistics`.
 - The `Indexed` trait is no longer necessary in the public API.

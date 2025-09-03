@@ -100,7 +100,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.2,<0.41.0-alpha.3";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.3,<0.41.0-alpha.4";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -225,7 +225,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.40.0,<0.41.0")?,
-            Version::parse("0.41.0-alpha.2")?,
+            Version::parse("0.41.0-alpha.3")?,
             migrate_0_40_to_0_41_0,
         ),
     ];
