@@ -536,6 +536,9 @@ impl<'d, R> Table<'d, R> {
             _phantom: std::marker::PhantomData,
         }
     }
+    pub(crate) fn transaction(&self) -> rocksdb::Transaction<'_, rocksdb::OptimisticTransactionDB> {
+        self.map.db.transaction()
+    }
 }
 
 impl<R: UniqueKey + Value> Table<'_, R> {
