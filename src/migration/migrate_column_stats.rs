@@ -71,7 +71,7 @@ async fn remove_column_stats(database: &Database, models: Vec<i32>) -> Result<()
     Ok(())
 }
 
-async fn retrieve_model_to_migrate(database: &Database) -> Result<Vec<i32>> {
+pub(crate) async fn retrieve_model_to_migrate(database: &Database) -> Result<Vec<i32>> {
     use crate::schema::model::dsl;
     let mut conn = database.pool.get().await?;
     Ok(dsl::model
