@@ -165,12 +165,12 @@ impl Match for RdpBruteForce {
         "rdp brute force"
     }
 
-    fn sensor(&self) -> &'static str {
-        "-"
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

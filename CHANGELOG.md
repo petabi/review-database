@@ -46,6 +46,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Removed re-exports of event types from the crate's top level for cleaner, more
   organized API. Event types are now accessed through the `event::` module path
   instead of directly at the crate root.
+- Updated `Match` trait implementations for detection events to return actual
+  `sensor` and `confidence` field values instead of placeholders.
 
 ### Deprecated
 
