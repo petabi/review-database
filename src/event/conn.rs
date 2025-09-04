@@ -178,12 +178,11 @@ impl Match for PortScan {
         "port scan"
     }
 
-    fn sensor(&self) -> &'static str {
-        "-"
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
-
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -350,12 +349,12 @@ impl Match for MultiHostPortScan {
         "multi host port scan"
     }
 
-    fn sensor(&self) -> &'static str {
-        "-"
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -513,12 +512,12 @@ impl Match for ExternalDdos {
         "external ddos"
     }
 
-    fn sensor(&self) -> &'static str {
-        "-"
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

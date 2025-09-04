@@ -193,12 +193,12 @@ impl Match for FtpBruteForce {
         "ftp brute force"
     }
 
-    fn sensor(&self) -> &'static str {
-        "-"
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -454,7 +454,7 @@ impl Match for FtpPlainText {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -590,7 +590,7 @@ impl Match for BlocklistFtp {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
