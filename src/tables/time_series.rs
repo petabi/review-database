@@ -5,7 +5,6 @@ use chrono::Utc;
 use rocksdb::OptimisticTransactionDB;
 
 use crate::Iterable;
-use crate::time_series::TimeSeries as ColumnTimeSeries;
 use crate::{Map, Table, UniqueKey, tables::Value, types::FromKeyValue};
 
 impl<'d> Table<'d, TimeSeries> {
@@ -23,23 +22,19 @@ impl<'d> Table<'d, TimeSeries> {
         &self,
         model_id: i32,
         batch_ts: i64,
-        series: Vec<(i32, Vec<ColumnTimeSeries>)>,
+        series: Vec<(i32, Vec<Column>)>,
     ) -> Result<()> {
         let txn = self.map.db.transaction();
         for (cluster_id, columns) in series {
             for column in columns {
-                for s in column.series {
+                for (value, count) in column.time_counts {
                     let ts = TimeSeries {
                         model_id,
                         cluster_id,
                         time: batch_ts,
-                        count_index: column.count_index.and_then(|c| i32::try_from(c).ok()),
-                        value: s
-                            .time
-                            .and_utc()
-                            .timestamp_nanos_opt()
-                            .ok_or(anyhow!("illegal time stamp"))?,
-                        count: s.count,
+                        count_index: column.index,
+                        value,
+                        count,
                     };
                     self.insert_with_transaction(&ts, &txn)?;
                 }
@@ -108,7 +103,8 @@ impl<'d> Table<'d, TimeSeries> {
         Ok(((earliest, latest), (start, end)))
     }
 
-    /// Gets the top time series of the given cluster.
+    /// Gets the top time series of the given cluster,
+    /// extrapolation is performed to fill vacant slots.
     ///
     /// # Panics
     ///
@@ -123,7 +119,7 @@ impl<'d> Table<'d, TimeSeries> {
         cluster_id: i32,
         start: Option<i64>,
         end: Option<i64>,
-    ) -> Result<(Option<i64>, Option<i64>, Vec<ColumnTS>)> {
+    ) -> Result<(Option<i64>, Option<i64>, Vec<Column>)> {
         use rocksdb::Direction;
 
         let mut prefix = model_id.to_be_bytes().to_vec();
@@ -149,10 +145,13 @@ impl<'d> Table<'d, TimeSeries> {
                 let mut top_n = top_n.into_iter().collect::<Vec<_>>();
                 top_n.sort_by_key(|t| t.0);
                 let top_n = fill_vacant_time_slots(&top_n);
-                (column, top_n)
+                Column {
+                    index: column,
+                    time_counts: top_n,
+                }
             })
             .collect::<Vec<_>>();
-        columns.sort_by_key(|(c, _)| *c);
+        columns.sort_by_key(|c| c.index);
 
         Ok((earliest, latest, columns))
     }
@@ -172,7 +171,7 @@ impl<'d> Table<'d, TimeSeries> {
         time: Option<i64>,
         start: Option<i64>,
         end: Option<i64>,
-    ) -> Result<Vec<ColumnTrends>> {
+    ) -> Result<Vec<(Option<i32>, Vec<Cluster>)>> {
         let series = self.time_series_of_model(model_id, time, start, end)?;
         let mut columns: HashMap<Option<i32>, HashMap<i32, HashMap<i64, usize>>> = HashMap::new();
         for ts in series {
@@ -196,7 +195,10 @@ impl<'d> Table<'d, TimeSeries> {
                         } else {
                             let mut series: Vec<_> = series.into_iter().collect();
                             series.sort_by_key(|v| v.0);
-                            Some((cluster_id, series))
+                            Some(Cluster {
+                                id: cluster_id,
+                                time_counts: series,
+                            })
                         }
                     })
                     .collect();
@@ -204,7 +206,7 @@ impl<'d> Table<'d, TimeSeries> {
             })
             .collect();
         for s in &mut res {
-            s.1.sort_by_key(|v| std::cmp::Reverse(v.1.len()));
+            s.1.sort_by_key(|v| std::cmp::Reverse(v.time_counts.len()));
         }
         Ok(res)
     }
@@ -272,8 +274,16 @@ fn fill_vacant_time_slots(series: &[(i64, usize)]) -> Vec<(i64, usize)> {
     filled_series
 }
 
-pub type ColumnTS = (Option<i32>, Vec<(i64, usize)>);
-pub type ColumnTrends = (Option<i32>, Vec<(i32, Vec<(i64, usize)>)>); // (column index, Vec<(clutser_id, Vec<(value, count)>)>)
+pub type TimeCount = (i64, usize); // (utc_timestamp_nano, count)
+pub struct Column {
+    pub index: Option<i32>,
+    pub time_counts: Vec<TimeCount>, // Vec<(utc_timestamp_nano, count)>,
+}
+
+pub struct Cluster {
+    pub id: i32,
+    pub time_counts: Vec<TimeCount>,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TimeSeries {
@@ -396,28 +406,10 @@ mod tests {
         Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap())
     }
 
-    fn create_test_column_time_series(
-        count_index: usize,
-        series: Vec<(i64, usize)>,
-    ) -> crate::time_series::TimeSeries {
-        use chrono::DateTime;
-
-        use crate::time_series::{TimeCount, TimeSeries};
-
-        let time_series = series
-            .into_iter()
-            .map(|(timestamp, count)| {
-                let naive_time = DateTime::from_timestamp_nanos(timestamp);
-                TimeCount {
-                    time: naive_time.naive_utc(),
-                    count,
-                }
-            })
-            .collect();
-
-        TimeSeries {
-            count_index: Some(count_index),
-            series: time_series,
+    fn create_test_column(count_index: i32, time_counts: Vec<(i64, usize)>) -> Column {
+        Column {
+            index: Some(count_index),
+            time_counts,
         }
     }
 
@@ -432,14 +424,14 @@ mod tests {
         let series = vec![
             (
                 1,
-                vec![create_test_column_time_series(
+                vec![create_test_column(
                     0,
                     vec![(1_640_995_200, 10), (1_640_995_260, 15)],
                 )],
             ),
             (
                 2,
-                vec![create_test_column_time_series(
+                vec![create_test_column(
                     1,
                     vec![(1_640_995_200, 5), (1_640_995_260, 8)],
                 )],
@@ -460,10 +452,7 @@ mod tests {
 
         // This test would need to be adjusted based on how the actual ColumnTimeSeries is structured
         // For now, we'll test the valid case
-        let series = vec![(
-            1,
-            vec![create_test_column_time_series(0, vec![(1_640_995_200, 10)])],
-        )];
+        let series = vec![(1, vec![create_test_column(0, vec![(1_640_995_200, 10)])])];
 
         let result = table.add_time_series(model_id, batch_ts, series);
         assert!(result.is_ok());
@@ -480,7 +469,7 @@ mod tests {
         // Add some time series data
         let series = vec![(
             1,
-            vec![create_test_column_time_series(
+            vec![create_test_column(
                 0,
                 vec![(1_640_995_200, 10), (1_640_995_260, 15)],
             )],
@@ -518,7 +507,7 @@ mod tests {
         // Add time series data
         let series = vec![(
             cluster_id,
-            vec![create_test_column_time_series(
+            vec![create_test_column(
                 0,
                 vec![(1_640_995_200, 10), (1_640_995_260, 15)],
             )],
@@ -548,7 +537,7 @@ mod tests {
         // Add time series data
         let series = vec![(
             cluster_id,
-            vec![create_test_column_time_series(
+            vec![create_test_column(
                 0,
                 vec![(1_640_995_200, 10), (1_640_995_260, 15)],
             )],
@@ -581,14 +570,14 @@ mod tests {
         let series = vec![
             (
                 1,
-                vec![create_test_column_time_series(
+                vec![create_test_column(
                     0,
                     vec![(1_640_995_200, 10), (1_640_995_260, 15)],
                 )],
             ),
             (
                 2,
-                vec![create_test_column_time_series(
+                vec![create_test_column(
                     1,
                     vec![(1_640_995_200, 5), (1_640_995_260, 8)],
                 )],
@@ -617,7 +606,7 @@ mod tests {
         // Add time series data
         let series = vec![(
             1,
-            vec![create_test_column_time_series(
+            vec![create_test_column(
                 0,
                 vec![(1_640_995_200, 10), (1_640_995_260, 15)],
             )],
@@ -642,7 +631,7 @@ mod tests {
         // Add time series data
         let series = vec![(
             1,
-            vec![create_test_column_time_series(
+            vec![create_test_column(
                 0,
                 vec![(1_640_995_200, 10), (1_640_995_260, 15)],
             )],
@@ -827,21 +816,21 @@ mod tests {
         let series = vec![
             (
                 1,
-                vec![create_test_column_time_series(
+                vec![create_test_column(
                     0,
                     vec![(1_640_995_200, 10), (1_640_995_260, 15)],
                 )],
             ),
             (
                 2,
-                vec![create_test_column_time_series(
+                vec![create_test_column(
                     1,
                     vec![(1_640_995_200, 5), (1_640_995_260, 8)],
                 )],
             ),
             (
                 3,
-                vec![create_test_column_time_series(
+                vec![create_test_column(
                     2,
                     vec![(1_640_995_200, 20), (1_640_995_260, 25)],
                 )],
@@ -873,9 +862,9 @@ mod tests {
         let series = vec![(
             cluster_id,
             vec![
-                create_test_column_time_series(0, vec![(1_640_995_200, 10)]),
-                create_test_column_time_series(1, vec![(1_640_995_200, 15)]),
-                create_test_column_time_series(2, vec![(1_640_995_200, 20)]),
+                create_test_column(0, vec![(1_640_995_200, 10)]),
+                create_test_column(1, vec![(1_640_995_200, 15)]),
+                create_test_column(2, vec![(1_640_995_200, 20)]),
             ],
         )];
 
@@ -891,8 +880,8 @@ mod tests {
 
         // Check that columns are sorted by count_index
         for i in 1..columns.len() {
-            let prev_count_index = columns[i - 1].0;
-            let curr_count_index = columns[i].0;
+            let prev_count_index = columns[i - 1].index;
+            let curr_count_index = columns[i].index;
             assert!(prev_count_index <= curr_count_index);
         }
     }

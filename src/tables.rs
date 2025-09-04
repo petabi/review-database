@@ -65,7 +65,7 @@ pub use self::template::{
     UnstructuredClusteringAlgorithm,
 };
 pub use self::tidb::{Kind as TidbKind, Rule as TidbRule, RuleKind as TidbRuleKind, Tidb};
-pub use self::time_series::TimeSeries;
+pub use self::time_series::{Cluster as ClusterTimeSeries, Column as ColumnTimeSeries, TimeSeries};
 pub use self::tor_exit_node::TorExitNode;
 pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::triage_policy::{
