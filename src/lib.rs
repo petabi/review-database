@@ -19,7 +19,6 @@ mod tables;
 mod tags;
 #[cfg(test)]
 mod test;
-mod time_series;
 mod top_n;
 pub mod types;
 mod util;
@@ -50,20 +49,18 @@ pub use self::scores::Scores;
 use self::tables::StateDb;
 pub use self::tables::{
     AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
-    AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, ColumnStats, Confidence,
-    CsvColumnExtra as CsvColumnExtraConfig, Customer, CustomerNetwork, CustomerUpdate, DataSource,
-    DataSourceUpdate, DataType, ExternalService, ExternalServiceConfig, ExternalServiceKind,
-    ExternalServiceStatus, Filter, IndexedTable, Iterable, ModelIndicator, Network, NetworkUpdate,
-    Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey, OutlierInfoValue,
-    PacketAttr, PeriodForSearch, ProtocolPorts, Response, ResponseKind, SamplingInterval,
-    SamplingKind, SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
-    StructuredClusteringAlgorithm, Table, Template, Ti, TiCmpKind, Tidb, TidbKind, TidbRule,
-    TidbRuleKind, TimeSeries, TorExitNode, TrafficFilter, TriagePolicy, TriagePolicyUpdate,
-    TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
-    UnstructuredClusteringAlgorithm, ValueKind,
+    AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, ClusterTimeSeries,
+    ColumnStats, ColumnTimeSeries, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
+    CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, ExternalService,
+    ExternalServiceConfig, ExternalServiceKind, ExternalServiceStatus, Filter, IndexedTable,
+    Iterable, ModelIndicator, Network, NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate,
+    OutlierInfo, OutlierInfoKey, OutlierInfoValue, PacketAttr, PeriodForSearch, ProtocolPorts,
+    Response, ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
+    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, Ti,
+    TiCmpKind, Tidb, TidbKind, TidbRule, TidbRuleKind, TimeSeries, TorExitNode, TrafficFilter,
+    TriagePolicy, TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, TrustedDomain,
+    TrustedUserAgent, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
 };
-pub use self::time_series::*;
-pub use self::time_series::{ColumnTimeSeries, TimeCount, TimeSeriesResult};
 pub use self::top_n::*;
 #[allow(deprecated)]
 pub use self::top_n::{

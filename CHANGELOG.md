@@ -48,11 +48,20 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   instead of directly at the crate root.
 - Updated `Match` trait implementations for detection events to return actual
   `sensor` and `confidence` field values instead of placeholders.
+- Time series data is now stored in RocksDB instead of PostgreSQL. A built-in
+  migration will automatically move existing time series data from PostgreSQL
+  to RocksDB.
+
+### Removed
+
+- Legacy PostgreSQL-based time series tables and APIs have been removed.
 
 ### Deprecated
 
 - `LineSegment` and `Regression` structures are deprecated as they are no longer
   used in the codebase. They will be removed in a future version.
+- Old helper structures (`TopTrendsByColumn`, `ClusterTrend`, `TimeCount`) are
+  deprecated and will be fully removed in the future.
 
 ### Fixed
 

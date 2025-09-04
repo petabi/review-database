@@ -34,7 +34,7 @@ async fn migrate_time_series_for_model(
     let map = store.time_series_map();
     let txn = map.transaction();
     for ts in time_series {
-        map.insert_with_transaction(&ts, &txn)?;
+        map.put_with_transaction(&ts, &txn)?;
     }
     txn.commit()?;
     Ok(())
