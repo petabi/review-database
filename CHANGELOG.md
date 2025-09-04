@@ -22,6 +22,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `RepeatedHttpSessions` (default 0.3)
   - `TorConnection` (default 1.0)
   - `NonBrowser` (default 1.0)
+  - `BlocklistFtp`
+  - `BlocklistLdap`
 - Added `find_ip_county` utility function in new `util` module.
 - Added `sensor` field to the following detection event structures:
   - `PortScan`

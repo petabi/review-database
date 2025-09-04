@@ -446,6 +446,7 @@ pub struct BlocklistLdap {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -492,6 +493,7 @@ impl BlocklistLdap {
             diagnostic_message: fields.diagnostic_message,
             object: fields.object,
             argument: fields.argument,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }

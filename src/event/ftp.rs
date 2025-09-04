@@ -488,6 +488,7 @@ pub struct BlocklistFtp {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -544,6 +545,7 @@ impl BlocklistFtp {
             file: fields.file,
             file_size: fields.file_size,
             file_id: fields.file_id,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
