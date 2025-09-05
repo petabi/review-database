@@ -8,7 +8,10 @@ use super::{
     EventCategory, LearningMethod, MEDIUM, TriageScore,
     common::{AttrValue, Match},
 };
-use crate::event::common::{to_hardware_address, triage_scores_to_string, vector_to_string};
+use crate::{
+    event::common::{to_hardware_address, triage_scores_to_string, vector_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_dhcp_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -51,8 +54,10 @@ macro_rules! find_dhcp_attr_by_kind {
     }};
 }
 
+pub type BlocklistDhcpFields = BlocklistDhcpFieldsV0_42;
+
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistDhcpFields {
+pub struct BlocklistDhcpFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -79,7 +84,72 @@ pub struct BlocklistDhcpFields {
     pub client_id_type: u8,
     pub client_id: Vec<u8>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
+}
+
+impl From<BlocklistDhcpFieldsV0_41> for BlocklistDhcpFieldsV0_42 {
+    fn from(value: BlocklistDhcpFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            msg_type: value.msg_type,
+            ciaddr: value.ciaddr,
+            yiaddr: value.yiaddr,
+            siaddr: value.siaddr,
+            giaddr: value.giaddr,
+            subnet_mask: value.subnet_mask,
+            router: value.router,
+            domain_name_server: value.domain_name_server,
+            req_ip_addr: value.req_ip_addr,
+            lease_time: value.lease_time,
+            server_id: value.server_id,
+            param_req_list: value.param_req_list,
+            message: value.message,
+            renewal_time: value.renewal_time,
+            rebinding_time: value.rebinding_time,
+            class_id: value.class_id,
+            client_id_type: value.client_id_type,
+            client_id: value.client_id,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistDhcpFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub msg_type: u8,
+    pub ciaddr: IpAddr,
+    pub yiaddr: IpAddr,
+    pub siaddr: IpAddr,
+    pub giaddr: IpAddr,
+    pub subnet_mask: IpAddr,
+    pub router: Vec<IpAddr>,
+    pub domain_name_server: Vec<IpAddr>,
+    pub req_ip_addr: IpAddr,
+    pub lease_time: u32,
+    pub server_id: IpAddr,
+    pub param_req_list: Vec<u8>,
+    pub message: String,
+    pub renewal_time: u32,
+    pub rebinding_time: u32,
+    pub class_id: Vec<u8>,
+    pub client_id_type: u8,
+    pub client_id: Vec<u8>,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
 }
 
 // TODO: DHCP client identifier type.
@@ -92,7 +162,10 @@ impl BlocklistDhcpFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -154,7 +227,7 @@ pub struct BlocklistDhcp {
     pub client_id_type: u8,
     pub client_id: Vec<u8>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistDhcp {
@@ -251,7 +324,7 @@ impl Match for BlocklistDhcp {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

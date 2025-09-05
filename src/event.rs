@@ -74,6 +74,46 @@ pub use self::{
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
     tor::{TorConnection, TorConnectionConn},
 };
+pub(crate) use self::{
+    bootp::{BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42},
+    conn::{
+        BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42, ExternalDdosFieldsV0_41,
+        ExternalDdosFieldsV0_42, MultiHostPortScanFieldsV0_41, MultiHostPortScanFieldsV0_42,
+        PortScanFieldsV0_41, PortScanFieldsV0_42,
+    },
+    dcerpc::{BlocklistDceRpcFieldsV0_41, BlocklistDceRpcFieldsV0_42},
+    dhcp::{BlocklistDhcpFieldsV0_41, BlocklistDhcpFieldsV0_42},
+    dns::{
+        BlocklistDnsFieldsV0_41, BlocklistDnsFieldsV0_42,
+        CryptocurrencyMiningPoolFields as CryptocurrencyMiningPoolFieldsV0_42,
+        CryptocurrencyMiningPoolFieldsV0_41, DnsEventFieldsV0_41, DnsEventFieldsV0_42,
+    },
+    ftp::{
+        FtpBruteForceFields as FtpBruteForceFieldsV0_42, FtpBruteForceFieldsV0_41,
+        FtpEventFieldsV0_41, FtpEventFieldsV0_42,
+    },
+    http::{
+        BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42, DgaFieldsV0_41, DgaFieldsV0_42,
+        HttpEventFieldsV0_41, HttpEventFieldsV0_42, HttpThreatFieldsV0_41, HttpThreatFieldsV0_42,
+        RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42,
+    },
+    kerberos::{BlocklistKerberosFieldsV0_41, BlocklistKerberosFieldsV0_42},
+    ldap::{
+        LdapBruteForceFieldsV0_41, LdapBruteForceFieldsV0_42, LdapEventFieldsV0_39,
+        LdapEventFieldsV0_42,
+    },
+    mqtt::{BlocklistMqttFieldsV0_41, BlocklistMqttFieldsV0_42},
+    nfs::{BlocklistNfsFieldsV0_41, BlocklistNfsFieldsV0_42},
+    ntlm::{BlocklistNtlmFieldsV0_41, BlocklistNtlmFieldsV0_42},
+    rdp::{
+        BlocklistRdpFieldsV0_41, BlocklistRdpFieldsV0_42, RdpBruteForceFieldsV0_41,
+        RdpBruteForceFieldsV0_42,
+    },
+    smb::{BlocklistSmbFieldsV0_41, BlocklistSmbFieldsV0_42},
+    smtp::{BlocklistSmtpFieldsV0_41, BlocklistSmtpFieldsV0_42},
+    ssh::{BlocklistSshFieldsV0_41, BlocklistSshFieldsV0_42},
+    tls::{BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42},
+};
 use super::{
     Customer, EventCategory, Network, TriagePolicy,
     types::{Endpoint, HostNetworkGroup},
@@ -181,7 +221,9 @@ impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let (event_kind, category) = self.kind_and_category();
         let event_kind = format!("{event_kind:?}");
-        let category = format!("{category:?}");
+        let category = category
+            .as_ref()
+            .map_or_else(|| "Unspecified".to_string(), |c| format!("{c:?}"));
 
         match self {
             Event::DnsCovertChannel(event) => {
@@ -931,7 +973,7 @@ impl Event {
         Ok(kind)
     }
 
-    fn kind_and_category(&self) -> (EventKind, EventCategory) {
+    fn kind_and_category(&self) -> (EventKind, Option<EventCategory>) {
         match self {
             Event::DnsCovertChannel(e) => (EventKind::DnsCovertChannel, e.category()),
             Event::HttpThreat(e) => (EventKind::HttpThreat, e.category()),
@@ -1054,194 +1096,194 @@ impl Event {
         match self {
             Event::DnsCovertChannel(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::HttpThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::RdpBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::RepeatedHttpSessions(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::TorConnection(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::TorConnectionConn(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::DomainGenerationAlgorithm(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::FtpBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::FtpPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::PortScan(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::MultiHostPortScan(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::NonBrowser(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::LdapBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::LdapPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::CryptocurrencyMiningPool(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     if bootp_event.matches(locator, filter)?.0 {
-                        category = Some(bootp_event.category());
+                        category = bootp_event.category();
                     }
                 }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
-                        category = Some(conn_event.category());
+                        category = conn_event.category();
                     }
                 }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
-                        category = Some(dcerpc_event.category());
+                        category = dcerpc_event.category();
                     }
                 }
                 RecordType::Dhcp(dhcp_event) => {
                     if dhcp_event.matches(locator, filter)?.0 {
-                        category = Some(dhcp_event.category());
+                        category = dhcp_event.category();
                     }
                 }
                 RecordType::Dns(dns_event) => {
                     if dns_event.matches(locator, filter)?.0 {
-                        category = Some(dns_event.category());
+                        category = dns_event.category();
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
                     if ftp_event.matches(locator, filter)?.0 {
-                        category = Some(ftp_event.category());
+                        category = ftp_event.category();
                     }
                 }
                 RecordType::Http(http_event) => {
                     if http_event.matches(locator, filter)?.0 {
-                        category = Some(http_event.category());
+                        category = http_event.category();
                     }
                 }
                 RecordType::Kerberos(kerberos_event) => {
                     if kerberos_event.matches(locator, filter)?.0 {
-                        category = Some(kerberos_event.category());
+                        category = kerberos_event.category();
                     }
                 }
                 RecordType::Ldap(ldap_event) => {
                     if ldap_event.matches(locator, filter)?.0 {
-                        category = Some(ldap_event.category());
+                        category = ldap_event.category();
                     }
                 }
                 RecordType::Mqtt(mqtt_event) => {
                     if mqtt_event.matches(locator, filter)?.0 {
-                        category = Some(mqtt_event.category());
+                        category = mqtt_event.category();
                     }
                 }
                 RecordType::Nfs(nfs_event) => {
                     if nfs_event.matches(locator, filter)?.0 {
-                        category = Some(nfs_event.category());
+                        category = nfs_event.category();
                     }
                 }
                 RecordType::Ntlm(ntlm_event) => {
                     if ntlm_event.matches(locator, filter)?.0 {
-                        category = Some(ntlm_event.category());
+                        category = ntlm_event.category();
                     }
                 }
                 RecordType::Rdp(rdp_event) => {
                     if rdp_event.matches(locator, filter)?.0 {
-                        category = Some(rdp_event.category());
+                        category = rdp_event.category();
                     }
                 }
                 RecordType::Smb(smb_event) => {
                     if smb_event.matches(locator, filter)?.0 {
-                        category = Some(smb_event.category());
+                        category = smb_event.category();
                     }
                 }
                 RecordType::Smtp(smtp_event) => {
                     if smtp_event.matches(locator, filter)?.0 {
-                        category = Some(smtp_event.category());
+                        category = smtp_event.category();
                     }
                 }
                 RecordType::Ssh(ssh_event) => {
                     if ssh_event.matches(locator, filter)?.0 {
-                        category = Some(ssh_event.category());
+                        category = ssh_event.category();
                     }
                 }
                 RecordType::Tls(tls_event) => {
                     if tls_event.matches(locator, filter)?.0 {
-                        category = Some(tls_event.category());
+                        category = tls_event.category();
                     }
                 }
             },
             Event::WindowsThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::NetworkThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::ExtraThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::LockyRansomware(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::SuspiciousTlsTraffic(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
         }
@@ -1828,50 +1870,48 @@ impl EventKind {
     #[must_use]
     #[allow(clippy::match_same_arms)]
     pub fn categories(&self) -> &'static [EventCategory] {
-        use EventCategory::{
-            CommandAndControl, CredentialAccess, Discovery, Exfiltration, Impact, InitialAccess,
-            LateralMovement, Reconnaissance,
-        };
-
         match self {
-            Self::DnsCovertChannel => &[CommandAndControl, Exfiltration],
-            Self::HttpThreat => &[Reconnaissance],
-            Self::RdpBruteForce => &[Discovery],
-            Self::RepeatedHttpSessions => &[Exfiltration],
-            Self::ExtraThreat => &[Reconnaissance],
-            Self::TorConnection => &[CommandAndControl],
-            Self::TorConnectionConn => &[CommandAndControl],
-            Self::DomainGenerationAlgorithm => &[CommandAndControl],
-            Self::FtpBruteForce => &[CredentialAccess],
-            Self::FtpPlainText => &[LateralMovement],
-            Self::PortScan => &[Reconnaissance],
-            Self::MultiHostPortScan => &[Reconnaissance],
-            Self::NonBrowser => &[CommandAndControl],
-            Self::LdapBruteForce => &[CredentialAccess],
-            Self::LdapPlainText => &[LateralMovement],
-            Self::ExternalDdos => &[Impact],
-            Self::CryptocurrencyMiningPool => &[CommandAndControl],
-            Self::BlocklistConn => &[InitialAccess],
-            Self::BlocklistDns => &[InitialAccess],
-            Self::BlocklistDceRpc => &[InitialAccess],
-            Self::BlocklistFtp => &[InitialAccess],
-            Self::BlocklistHttp => &[InitialAccess],
-            Self::BlocklistKerberos => &[InitialAccess],
-            Self::BlocklistLdap => &[InitialAccess],
-            Self::BlocklistMqtt => &[InitialAccess],
-            Self::BlocklistNfs => &[InitialAccess],
-            Self::BlocklistNtlm => &[InitialAccess],
-            Self::BlocklistRdp => &[InitialAccess],
-            Self::BlocklistSmb => &[InitialAccess],
-            Self::BlocklistSmtp => &[InitialAccess],
-            Self::BlocklistSsh => &[InitialAccess],
-            Self::BlocklistTls => &[InitialAccess],
-            Self::WindowsThreat => &[Reconnaissance],
-            Self::NetworkThreat => &[Reconnaissance],
-            Self::LockyRansomware => &[Impact],
-            Self::SuspiciousTlsTraffic => &[CommandAndControl],
-            Self::BlocklistBootp => &[InitialAccess],
-            Self::BlocklistDhcp => &[InitialAccess],
+            Self::DnsCovertChannel => &[
+                EventCategory::CommandAndControl,
+                EventCategory::Exfiltration,
+            ],
+            Self::HttpThreat => &[EventCategory::Reconnaissance],
+            Self::RdpBruteForce => &[EventCategory::Discovery],
+            Self::RepeatedHttpSessions => &[EventCategory::Exfiltration],
+            Self::ExtraThreat => &[EventCategory::Reconnaissance],
+            Self::TorConnection => &[EventCategory::CommandAndControl],
+            Self::TorConnectionConn => &[EventCategory::CommandAndControl],
+            Self::DomainGenerationAlgorithm => &[EventCategory::CommandAndControl],
+            Self::FtpBruteForce => &[EventCategory::CredentialAccess],
+            Self::FtpPlainText => &[EventCategory::LateralMovement],
+            Self::PortScan => &[EventCategory::Reconnaissance],
+            Self::MultiHostPortScan => &[EventCategory::Reconnaissance],
+            Self::NonBrowser => &[EventCategory::CommandAndControl],
+            Self::LdapBruteForce => &[EventCategory::CredentialAccess],
+            Self::LdapPlainText => &[EventCategory::LateralMovement],
+            Self::ExternalDdos => &[EventCategory::Impact],
+            Self::CryptocurrencyMiningPool => &[EventCategory::CommandAndControl],
+            Self::BlocklistConn => &[EventCategory::InitialAccess],
+            Self::BlocklistDns => &[EventCategory::InitialAccess],
+            Self::BlocklistDceRpc => &[EventCategory::InitialAccess],
+            Self::BlocklistFtp => &[EventCategory::InitialAccess],
+            Self::BlocklistHttp => &[EventCategory::InitialAccess],
+            Self::BlocklistKerberos => &[EventCategory::InitialAccess],
+            Self::BlocklistLdap => &[EventCategory::InitialAccess],
+            Self::BlocklistMqtt => &[EventCategory::InitialAccess],
+            Self::BlocklistNfs => &[EventCategory::InitialAccess],
+            Self::BlocklistNtlm => &[EventCategory::InitialAccess],
+            Self::BlocklistRdp => &[EventCategory::InitialAccess],
+            Self::BlocklistSmb => &[EventCategory::InitialAccess],
+            Self::BlocklistSmtp => &[EventCategory::InitialAccess],
+            Self::BlocklistSsh => &[EventCategory::InitialAccess],
+            Self::BlocklistTls => &[EventCategory::InitialAccess],
+            Self::WindowsThreat => &[EventCategory::Reconnaissance],
+            Self::NetworkThreat => &[EventCategory::Reconnaissance],
+            Self::LockyRansomware => &[EventCategory::Impact],
+            Self::SuspiciousTlsTraffic => &[EventCategory::CommandAndControl],
+            Self::BlocklistBootp => &[EventCategory::InitialAccess],
+            Self::BlocklistDhcp => &[EventCategory::InitialAccess],
         }
     }
 }
@@ -2239,6 +2279,16 @@ impl<'a> EventDb<'a> {
     pub fn iter_forward(&self) -> EventIterator<'_> {
         let iter = self.inner.iterator(IteratorMode::Start);
         EventIterator { inner: iter }
+    }
+
+    /// Creates an raw iterator over key-value pairs for the entire events.
+    ///
+    /// Used for migration.
+    #[must_use]
+    pub(crate) fn raw_iter_forward(
+        &self,
+    ) -> rocksdb::DBIteratorWithThreadMode<'_, rocksdb::OptimisticTransactionDB> {
+        self.inner.iterator(IteratorMode::Start)
     }
 
     /// Stores a new event into the database.
@@ -2787,7 +2837,7 @@ mod tests {
             ra_flag: false,
             ttl: vec![1; 5],
             confidence: 0.8,
-            category,
+            category: Some(category),
         };
         EventMessage {
             time: Utc::now(),
@@ -2906,7 +2956,7 @@ mod tests {
             body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 0.8,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         };
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
@@ -3052,7 +3102,7 @@ mod tests {
             matched_to: "match".to_string(),
             attack_kind: "attack".to_string(),
             confidence: 0.8,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
         };
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
@@ -3109,7 +3159,7 @@ mod tests {
             body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 1.0,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         };
 
         let message = EventMessage {
@@ -3166,7 +3216,7 @@ mod tests {
             body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -3216,7 +3266,7 @@ mod tests {
             ra_flag: false,
             ttl: vec![120; 5],
             confidence: 0.8,
-            category: EventCategory::Impact,
+            category: Some(EventCategory::Impact),
         };
 
         let message = EventMessage {
@@ -3256,7 +3306,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
         };
 
         let message = EventMessage {
@@ -3298,7 +3348,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
         };
 
         let message = EventMessage {
@@ -3339,7 +3389,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
-            category: EventCategory::Impact,
+            category: Some(EventCategory::Impact),
         };
 
         let message = EventMessage {
@@ -3387,7 +3437,7 @@ mod tests {
             sname: "server_name".to_string(),
             file: "boot_file_name".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -3507,7 +3557,7 @@ mod tests {
             orig_l2_bytes: 122,
             resp_l2_bytes: 122,
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -3550,7 +3600,7 @@ mod tests {
             endpoint: "epmapper".to_string(),
             operation: "bind".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -3606,7 +3656,7 @@ mod tests {
             client_id_type: 1,
             client_id: vec![7, 8, 9],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -3730,7 +3780,7 @@ mod tests {
             ra_flag: true,
             ttl: vec![120; 5],
             confidence: 0.9,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         };
 
         let message = EventMessage {
@@ -3788,7 +3838,7 @@ mod tests {
             ttl: vec![120; 5],
             coins: vec!["bitcoin".to_string(), "monero".to_string()],
             confidence: 1.0,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         };
 
         let message = EventMessage {
@@ -3840,7 +3890,7 @@ mod tests {
             ra_flag: true,
             ttl: vec![120; 5],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -3880,7 +3930,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             is_internal: true,
             confidence: 0.3,
-            category: EventCategory::CredentialAccess,
+            category: Some(EventCategory::CredentialAccess),
         };
 
         let message = EventMessage {
@@ -3932,7 +3982,7 @@ mod tests {
             file_size: 5000,
             file_id: "123".to_string(),
             confidence: 1.0,
-            category: EventCategory::LateralMovement,
+            category: Some(EventCategory::LateralMovement),
         };
 
         let message = EventMessage {
@@ -3982,7 +4032,7 @@ mod tests {
             file_size: 5000,
             file_id: "123".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -4097,7 +4147,7 @@ mod tests {
             start_time: now,
             end_time: now,
             confidence: 0.3,
-            category: EventCategory::Exfiltration,
+            category: Some(EventCategory::Exfiltration),
         };
 
         let message = EventMessage {
@@ -4144,7 +4194,7 @@ mod tests {
             sname_type: 1,
             service_name: vec!["krbtgt/EXAMPLE.COM".to_string()],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4188,7 +4238,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             confidence: 0.3,
-            category: EventCategory::CredentialAccess,
+            category: Some(EventCategory::CredentialAccess),
         };
 
         let message = EventMessage {
@@ -4235,7 +4285,7 @@ mod tests {
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
             confidence: 1.0,
-            category: EventCategory::LateralMovement,
+            category: Some(EventCategory::LateralMovement),
         };
 
         let message = EventMessage {
@@ -4281,7 +4331,7 @@ mod tests {
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -4396,7 +4446,7 @@ mod tests {
             cluster_id: Some(1),
             attack_kind: "attack_kind".to_string(),
             confidence: 0.9,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
             triage_scores: None,
         };
 
@@ -4432,7 +4482,7 @@ mod tests {
             subscribe: vec!["topic".to_string()],
             suback_reason: "error".to_string().into_bytes(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4481,7 +4531,7 @@ mod tests {
             attack_kind: "attack_kind".to_string(),
             confidence: 0.9,
             triage_scores: None,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
         };
 
         let message = EventMessage {
@@ -4512,7 +4562,7 @@ mod tests {
             read_files: vec!["/etc/passwd".to_string()],
             write_files: vec!["/etc/shadow".to_string()],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4557,7 +4607,7 @@ mod tests {
             domainname: "domain1".to_string(),
             success: "true".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4599,7 +4649,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
-            category: EventCategory::Discovery,
+            category: Some(EventCategory::Discovery),
         };
 
         let message = EventMessage {
@@ -4640,7 +4690,7 @@ mod tests {
             end_time: 100,
             cookie: "cookie".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4691,7 +4741,7 @@ mod tests {
             write_time: 300,
             change_time: 400,
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4738,7 +4788,7 @@ mod tests {
             agent: "agent".to_string(),
             state: "state".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4791,7 +4841,7 @@ mod tests {
             client_shka: "client_shka".to_string(),
             server_shka: "server_shka".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4840,7 +4890,7 @@ mod tests {
             attack_kind: "Ransomware_Alcatraz".to_string(),
             confidence: 0.9,
             triage_scores: None,
-            category: EventCategory::Impact,
+            category: Some(EventCategory::Impact),
         };
 
         let message = EventMessage {
@@ -4906,7 +4956,7 @@ mod tests {
             issuer_common_name: "common".to_string(),
             last_alert: 1,
             confidence: 0.9,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         };
 
         let message = EventMessage {
@@ -4965,7 +5015,7 @@ mod tests {
             body: "post_body".as_bytes().to_vec(),
             state: "state".to_string(),
             confidence: 1.0,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         }
     }
 
@@ -5098,7 +5148,7 @@ mod tests {
             issuer_common_name: "common".to_string(),
             last_alert: 1,
             confidence: 0.9,
-            category: EventCategory::Unknown,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -5118,7 +5168,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
         );
 
         let suspicious_tls_traffic =
@@ -5131,7 +5181,10 @@ mod tests {
             suspicious_tls_traffic.dst_addrs(),
             &[IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))]
         );
-        assert_eq!(suspicious_tls_traffic.category(), EventCategory::Unknown);
+        assert_eq!(
+            suspicious_tls_traffic.category(),
+            Some(EventCategory::InitialAccess)
+        );
         assert_eq!(suspicious_tls_traffic.src_port(), 10000);
         assert_eq!(suspicious_tls_traffic.dst_port(), 443);
         assert_eq!(suspicious_tls_traffic.proto(), 6);
@@ -5140,7 +5193,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_tls,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
         );
     }
 
@@ -5151,7 +5204,8 @@ mod tests {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
 
-        let fields = blocklist_tls_fields();
+        let mut fields = blocklist_tls_fields();
+        fields.category = None;
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             kind: EventKind::SuspiciousTlsTraffic,
@@ -5200,7 +5254,7 @@ mod tests {
 
         let mut counter = HashMap::new();
         event.count_category(&mut counter, None, &filter).unwrap();
-        assert_eq!(counter.get(&EventCategory::Unknown), Some(&1));
+        assert_eq!(counter.len(), 0);
 
         let mut counter = HashMap::new();
         event

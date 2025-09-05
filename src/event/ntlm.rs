@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_ntlm_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -29,8 +32,10 @@ macro_rules! find_ntlm_attr_by_kind {
     }};
 }
 
+pub type BlocklistNtlmFields = BlocklistNtlmFieldsV0_42;
+
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistNtlmFields {
+pub struct BlocklistNtlmFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -44,7 +49,46 @@ pub struct BlocklistNtlmFields {
     pub domainname: String,
     pub success: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
+}
+
+impl From<BlocklistNtlmFieldsV0_41> for BlocklistNtlmFieldsV0_42 {
+    fn from(value: BlocklistNtlmFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            protocol: value.protocol,
+            username: value.username,
+            hostname: value.hostname,
+            domainname: value.domainname,
+            success: value.success,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistNtlmFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub protocol: String,
+    pub username: String,
+    pub hostname: String,
+    pub domainname: String,
+    pub success: String,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
 }
 
 impl BlocklistNtlmFields {
@@ -52,7 +96,10 @@ impl BlocklistNtlmFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -86,7 +133,7 @@ pub struct BlocklistNtlm {
     pub domainname: String,
     pub success: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistNtlm {
@@ -154,7 +201,7 @@ impl Match for BlocklistNtlm {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

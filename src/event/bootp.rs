@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, to_hardware_address, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, to_hardware_address, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_bootp_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -35,36 +38,17 @@ macro_rules! find_bootp_attr_by_kind {
     }};
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct BlocklistBootpFields {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub op: u8,
-    pub htype: u8,
-    pub hops: u8,
-    pub xid: u32,
-    pub ciaddr: IpAddr,
-    pub yiaddr: IpAddr,
-    pub siaddr: IpAddr,
-    pub giaddr: IpAddr,
-    pub chaddr: Vec<u8>,
-    pub sname: String,
-    pub file: String,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type BlocklistBootpFields = BlocklistBootpFieldsV0_42;
 
 impl BlocklistBootpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} op={:?} htype={:?} hops={:?} xid={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} chaddr={:?} sname={:?} file={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -86,6 +70,81 @@ impl BlocklistBootpFields {
             self.confidence.to_string(),
         )
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BlocklistBootpFieldsV0_42 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub op: u8,
+    pub htype: u8,
+    pub hops: u8,
+    pub xid: u32,
+    pub ciaddr: IpAddr,
+    pub yiaddr: IpAddr,
+    pub siaddr: IpAddr,
+    pub giaddr: IpAddr,
+    pub chaddr: Vec<u8>,
+    pub sname: String,
+    pub file: String,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+impl From<BlocklistBootpFieldsV0_41> for BlocklistBootpFields {
+    fn from(value: BlocklistBootpFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            op: value.op,
+            htype: value.htype,
+            hops: value.hops,
+            xid: value.xid,
+            ciaddr: value.ciaddr,
+            yiaddr: value.yiaddr,
+            siaddr: value.siaddr,
+            giaddr: value.giaddr,
+            chaddr: value.chaddr,
+            sname: value.sname,
+            file: value.file,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistBootpFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub op: u8,
+    pub htype: u8,
+    pub hops: u8,
+    pub xid: u32,
+    pub ciaddr: IpAddr,
+    pub yiaddr: IpAddr,
+    pub siaddr: IpAddr,
+    pub giaddr: IpAddr,
+    pub chaddr: Vec<u8>,
+    pub sname: String,
+    pub file: String,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -110,7 +169,7 @@ pub struct BlocklistBootp {
     pub sname: String,
     pub file: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistBootp {
@@ -191,7 +250,7 @@ impl Match for BlocklistBootp {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
