@@ -99,7 +99,7 @@ pub enum EventCategory {
 #[derive(Deserialize)]
 pub struct Cluster {
     pub id: i32,
-    pub cluster_id: String,
+    pub cluster_id: i32,
     pub category_id: i32,
     pub detector_id: i32,
     pub event_ids: Vec<Timestamp>,

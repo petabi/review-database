@@ -8,7 +8,7 @@ use crate::{Database, Error, schema::cluster::dsl, types::Cluster};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UpdateClusterRequest {
-    pub cluster_id: String,
+    pub cluster_id: i32,
     pub detector_id: i32,
     pub signature: String,
     pub score: Option<f64>,
@@ -21,7 +21,7 @@ pub struct UpdateClusterRequest {
 #[derive(Queryable)]
 struct ClusterDbSchema {
     id: i32,
-    cluster_id: String,
+    cluster_id: i32,
     category_id: i32,
     detector_id: i32,
     event_ids: Vec<Option<i64>>,
@@ -274,8 +274,8 @@ impl Database {
     pub async fn cluster_name_to_ids(
         &self,
         model_id: i32,
-        names: &[&str],
-    ) -> Result<Vec<(i32, String)>, Error> {
+        names: &[i32],
+    ) -> Result<Vec<(i32, i32)>, Error> {
         let query = dsl::cluster
             .select((dsl::id, dsl::cluster_id))
             .filter(dsl::model_id.eq(&model_id))
@@ -293,7 +293,7 @@ async fn upsert(
     use diesel::sql_types::{Array, BigInt, Double, Integer, Nullable, Text};
 
     let query = "SELECT attempt_cluster_upsert(
-        $1::text, $2::int4, $3::int8[], $4::text[], $5::int4, $6::text, $7::int8, $8::int4, $9::text[], $10::float8)";
+        $1::int4, $2::int4, $3::int8[], $4::text[], $5::int4, $6::text, $7::int8, $8::int4, $9::text[], $10::float8)";
     let (timestamps, sensors) =
         cluster
             .event_ids
@@ -305,7 +305,7 @@ async fn upsert(
             });
 
     diesel::sql_query(query)
-        .bind::<Text, _>(&cluster.cluster_id)
+        .bind::<Integer, _>(&cluster.cluster_id)
         .bind::<Integer, _>(&cluster.detector_id)
         .bind::<Array<BigInt>, _>(&timestamps)
         .bind::<Array<Text>, _>(&sensors)
