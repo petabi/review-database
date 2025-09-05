@@ -44,7 +44,10 @@ impl FtpBruteForceFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -71,7 +74,7 @@ pub struct FtpBruteForceFieldsV0_41 {
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<FtpBruteForceFieldsV0_39> for FtpBruteForceFieldsV0_41 {
@@ -102,7 +105,7 @@ pub struct FtpBruteForceFieldsV0_39 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -118,7 +121,7 @@ pub struct FtpBruteForce {
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -182,7 +185,7 @@ impl Match for FtpBruteForce {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -228,7 +231,10 @@ impl FtpEventFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -275,7 +281,7 @@ pub struct FtpEventFieldsV0_39 {
     pub file_size: u64,
     pub file_id: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<FtpEventFieldsV0_38> for FtpEventFieldsV0_39 {
@@ -327,7 +333,7 @@ pub struct FtpEventFieldsV0_38 {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -353,7 +359,7 @@ pub struct FtpPlainText {
     pub file_size: u64,
     pub file_id: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -438,7 +444,7 @@ impl Match for FtpPlainText {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -489,7 +495,7 @@ pub struct BlocklistFtp {
     pub file_size: u64,
     pub file_id: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -574,7 +580,7 @@ impl Match for BlocklistFtp {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {

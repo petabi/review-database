@@ -21,7 +21,7 @@ pub struct BlocklistDceRpcFields {
     pub endpoint: String,
     pub operation: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistDceRpcFields {
@@ -29,7 +29,10 @@ impl BlocklistDceRpcFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} rtt={:?} named_pipe={:?} endpoint={:?} operation={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -60,7 +63,7 @@ pub struct BlocklistDceRpc {
     pub endpoint: String,
     pub operation: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -129,7 +132,7 @@ impl Match for BlocklistDceRpc {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {

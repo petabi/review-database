@@ -73,7 +73,7 @@ pub struct TorConnection {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -178,7 +178,7 @@ impl Match for TorConnection {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -225,7 +225,7 @@ pub struct TorConnectionConn {
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -302,7 +302,7 @@ impl Match for TorConnectionConn {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -361,7 +361,7 @@ mod tests {
             orig_l2_bytes: 1100,
             resp_l2_bytes: 2200,
             confidence: 0.95,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         }
     }
 
@@ -390,7 +390,7 @@ mod tests {
         assert_eq!(event.orig_l2_bytes, 1100);
         assert_eq!(event.resp_l2_bytes, 2200);
         assert!((event.confidence - 0.95).abs() < f32::EPSILON);
-        assert_eq!(event.category, EventCategory::CommandAndControl);
+        assert_eq!(event.category, Some(EventCategory::CommandAndControl));
         assert!(event.triage_scores.is_none());
     }
 

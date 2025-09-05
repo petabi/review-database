@@ -42,7 +42,10 @@ impl PortScanFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -65,7 +68,7 @@ pub struct PortScanFieldsV0_41 {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<PortScanFieldsV0_39> for PortScanFieldsV0_41 {
@@ -92,7 +95,7 @@ pub struct PortScanFieldsV0_39 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -107,7 +110,7 @@ pub struct PortScan {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -167,7 +170,7 @@ impl Match for PortScan {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -213,7 +216,10 @@ impl MultiHostPortScanFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
@@ -236,7 +242,7 @@ pub struct MultiHostPortScanFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<MultiHostPortScanFieldsV0_39> for MultiHostPortScanFieldsV0_41 {
@@ -263,7 +269,7 @@ pub struct MultiHostPortScanFieldsV0_39 {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -278,7 +284,7 @@ pub struct MultiHostPortScan {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -338,7 +344,7 @@ impl Match for MultiHostPortScan {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -383,7 +389,10 @@ impl ExternalDdosFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
@@ -404,7 +413,7 @@ pub struct ExternalDdosFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<ExternalDdosFieldsV0_39> for ExternalDdosFieldsV0_41 {
@@ -429,7 +438,7 @@ pub struct ExternalDdosFieldsV0_39 {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -443,7 +452,7 @@ pub struct ExternalDdos {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -501,7 +510,7 @@ impl Match for ExternalDdos {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -556,7 +565,7 @@ pub struct BlocklistConnFields {
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistConnFields {
@@ -564,7 +573,10 @@ impl BlocklistConnFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -604,7 +616,7 @@ pub struct BlocklistConn {
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -681,7 +693,7 @@ impl Match for BlocklistConn {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {

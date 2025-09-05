@@ -37,7 +37,10 @@ impl RdpBruteForceFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
@@ -58,7 +61,7 @@ pub struct RdpBruteForceFieldsV0_41 {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<RdpBruteForceFieldsV0_39> for RdpBruteForceFieldsV0_41 {
@@ -83,7 +86,7 @@ pub struct RdpBruteForceFieldsV0_39 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -96,7 +99,7 @@ pub struct RdpBruteForce {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -154,7 +157,7 @@ impl Match for RdpBruteForce {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -202,7 +205,7 @@ pub struct BlocklistRdpFields {
     pub end_time: i64,
     pub cookie: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistRdpFields {
@@ -210,7 +213,10 @@ impl BlocklistRdpFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} cookie={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -235,7 +241,7 @@ pub struct BlocklistRdp {
     pub end_time: i64,
     pub cookie: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistRdp {
@@ -297,7 +303,7 @@ impl Match for BlocklistRdp {
     }
 
     fn category(&self) -> EventCategory {
-        self.category
+        self.category.unwrap_or(EventCategory::Unknown)
     }
 
     fn level(&self) -> NonZeroU8 {
