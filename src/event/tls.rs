@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string, vector_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string, vector_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_tls_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -63,8 +66,10 @@ macro_rules! find_tls_attr_by_kind {
     }};
 }
 
+pub type BlocklistTlsFields = BlocklistTlsFieldsV0_42;
+
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistTlsFields {
+pub struct BlocklistTlsFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -94,7 +99,78 @@ pub struct BlocklistTlsFields {
     pub issuer_common_name: String,
     pub last_alert: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
+}
+
+impl From<BlocklistTlsFieldsV0_41> for BlocklistTlsFieldsV0_42 {
+    fn from(value: BlocklistTlsFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            server_name: value.server_name,
+            alpn_protocol: value.alpn_protocol,
+            ja3: value.ja3,
+            version: value.version,
+            client_cipher_suites: value.client_cipher_suites,
+            client_extensions: value.client_extensions,
+            cipher: value.cipher,
+            extensions: value.extensions,
+            ja3s: value.ja3s,
+            serial: value.serial,
+            subject_country: value.subject_country,
+            subject_org_name: value.subject_org_name,
+            subject_common_name: value.subject_common_name,
+            validity_not_before: value.validity_not_before,
+            validity_not_after: value.validity_not_after,
+            subject_alt_name: value.subject_alt_name,
+            issuer_country: value.issuer_country,
+            issuer_org_name: value.issuer_org_name,
+            issuer_org_unit_name: value.issuer_org_unit_name,
+            issuer_common_name: value.issuer_common_name,
+            last_alert: value.last_alert,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistTlsFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub server_name: String,
+    pub alpn_protocol: String,
+    pub ja3: String,
+    pub version: String,
+    pub client_cipher_suites: Vec<u16>,
+    pub client_extensions: Vec<u16>,
+    pub cipher: u16,
+    pub extensions: Vec<u16>,
+    pub ja3s: String,
+    pub serial: String,
+    pub subject_country: String,
+    pub subject_org_name: String,
+    pub subject_common_name: String,
+    pub validity_not_before: i64,
+    pub validity_not_after: i64,
+    pub subject_alt_name: String,
+    pub issuer_country: String,
+    pub issuer_org_name: String,
+    pub issuer_org_unit_name: String,
+    pub issuer_common_name: String,
+    pub last_alert: u8,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
 }
 
 impl BlocklistTlsFields {
@@ -102,7 +178,10 @@ impl BlocklistTlsFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -168,7 +247,7 @@ pub struct BlocklistTls {
     pub issuer_common_name: String,
     pub last_alert: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -271,7 +350,7 @@ impl Match for BlocklistTls {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -331,7 +410,7 @@ pub struct SuspiciousTlsTraffic {
     pub issuer_common_name: String,
     pub last_alert: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -434,7 +513,7 @@ impl Match for SuspiciousTlsTraffic {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

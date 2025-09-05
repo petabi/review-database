@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_smb_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -35,8 +38,10 @@ macro_rules! find_smb_attr_by_kind {
     }};
 }
 
+pub type BlocklistSmbFields = BlocklistSmbFieldsV0_42;
+
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistSmbFields {
+pub struct BlocklistSmbFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -56,7 +61,58 @@ pub struct BlocklistSmbFields {
     pub write_time: i64,
     pub change_time: i64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
+}
+
+impl From<BlocklistSmbFieldsV0_41> for BlocklistSmbFieldsV0_42 {
+    fn from(value: BlocklistSmbFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            command: value.command,
+            path: value.path,
+            service: value.service,
+            file_name: value.file_name,
+            file_size: value.file_size,
+            resource_type: value.resource_type,
+            fid: value.fid,
+            create_time: value.create_time,
+            access_time: value.access_time,
+            write_time: value.write_time,
+            change_time: value.change_time,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistSmbFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub command: u8,
+    pub path: String,
+    pub service: String,
+    pub file_name: String,
+    pub file_size: u64,
+    pub resource_type: u16,
+    pub fid: u16,
+    pub create_time: i64,
+    pub access_time: i64,
+    pub write_time: i64,
+    pub change_time: i64,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
 }
 
 impl BlocklistSmbFields {
@@ -64,7 +120,10 @@ impl BlocklistSmbFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} command={:?} path={:?} service={:?} file_name={:?} file_size={:?} resource_type={:?} fid={:?} create_time={:?} access_time={:?} write_time={:?} change_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -110,7 +169,7 @@ pub struct BlocklistSmb {
     pub write_time: i64,
     pub change_time: i64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistSmb {
@@ -190,7 +249,7 @@ impl Match for BlocklistSmb {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

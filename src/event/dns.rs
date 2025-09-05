@@ -6,7 +6,10 @@ use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, HIGH, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string, vector_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string, vector_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_dns_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -39,8 +42,10 @@ macro_rules! find_dns_attr_by_kind {
     }};
 }
 
+pub type DnsEventFields = DnsEventFieldsV0_42;
+
 #[derive(Deserialize, Serialize)]
-pub struct DnsEventFields {
+pub struct DnsEventFieldsV0_42 {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
@@ -62,7 +67,61 @@ pub struct DnsEventFields {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
+}
+
+impl From<DnsEventFieldsV0_41> for DnsEventFieldsV0_42 {
+    fn from(value: DnsEventFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            end_time: value.end_time,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            query: value.query,
+            answer: value.answer,
+            trans_id: value.trans_id,
+            rtt: value.rtt,
+            qclass: value.qclass,
+            qtype: value.qtype,
+            rcode: value.rcode,
+            aa_flag: value.aa_flag,
+            tc_flag: value.tc_flag,
+            rd_flag: value.rd_flag,
+            ra_flag: value.ra_flag,
+            ttl: value.ttl,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct DnsEventFieldsV0_41 {
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
 }
 
 impl DnsEventFields {
@@ -70,7 +129,10 @@ impl DnsEventFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
@@ -118,7 +180,7 @@ pub struct DnsCovertChannel {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -203,7 +265,7 @@ impl Match for DnsCovertChannel {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -255,7 +317,7 @@ pub struct LockyRansomware {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -340,7 +402,7 @@ impl Match for LockyRansomware {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -369,14 +431,44 @@ impl Match for LockyRansomware {
     }
 }
 
-pub type CryptocurrencyMiningPoolFields = CryptocurrencyMiningPoolFieldsV0_41;
+pub type CryptocurrencyMiningPoolFields = CryptocurrencyMiningPoolFieldsV0_42;
+
+#[derive(Deserialize, Serialize)]
+pub struct CryptocurrencyMiningPoolFieldsV0_42 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub coins: Vec<String>,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
 
 impl CryptocurrencyMiningPoolFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -403,7 +495,7 @@ impl CryptocurrencyMiningPoolFields {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct CryptocurrencyMiningPoolFieldsV0_41 {
+pub(crate) struct CryptocurrencyMiningPoolFieldsV0_41 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -426,11 +518,10 @@ pub struct CryptocurrencyMiningPoolFieldsV0_41 {
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
-
-impl From<CryptocurrencyMiningPoolFieldsV0_39> for CryptocurrencyMiningPoolFieldsV0_41 {
-    fn from(value: CryptocurrencyMiningPoolFieldsV0_39) -> Self {
+impl From<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolFieldsV0_42 {
+    fn from(value: CryptocurrencyMiningPoolFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -452,36 +543,10 @@ impl From<CryptocurrencyMiningPoolFieldsV0_39> for CryptocurrencyMiningPoolField
             ra_flag: value.ra_flag,
             ttl: value.ttl,
             coins: value.coins,
-            confidence: 1.0, // default value for CryptocurrencyMiningPool
-            category: value.category,
+            confidence: value.confidence,
+            category: value.category.into(),
         }
     }
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct CryptocurrencyMiningPoolFieldsV0_39 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
-    pub query: String,
-    pub answer: Vec<String>,
-    pub trans_id: u16,
-    pub rtt: i64,
-    pub qclass: u16,
-    pub qtype: u16,
-    pub rcode: u16,
-    pub aa_flag: bool,
-    pub tc_flag: bool,
-    pub rd_flag: bool,
-    pub ra_flag: bool,
-    pub ttl: Vec<i32>,
-    pub coins: Vec<String>,
-    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -508,7 +573,7 @@ pub struct CryptocurrencyMiningPool {
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -594,7 +659,7 @@ impl Match for CryptocurrencyMiningPool {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -623,8 +688,10 @@ impl Match for CryptocurrencyMiningPool {
     }
 }
 
+pub type BlocklistDnsFields = BlocklistDnsFieldsV0_42;
+
 #[derive(Deserialize, Serialize)]
-pub struct BlocklistDnsFields {
+pub struct BlocklistDnsFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -645,7 +712,7 @@ pub struct BlocklistDnsFields {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistDnsFields {
@@ -653,7 +720,10 @@ impl BlocklistDnsFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -675,6 +745,59 @@ impl BlocklistDnsFields {
             vector_to_string(&self.ttl),
             self.confidence.to_string(),
         )
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct BlocklistDnsFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistDnsFieldsV0_41> for BlocklistDnsFieldsV0_42 {
+    fn from(value: BlocklistDnsFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            query: value.query,
+            answer: value.answer,
+            trans_id: value.trans_id,
+            rtt: value.rtt,
+            qclass: value.qclass,
+            qtype: value.qtype,
+            rcode: value.rcode,
+            aa_flag: value.aa_flag,
+            tc_flag: value.tc_flag,
+            rd_flag: value.rd_flag,
+            ra_flag: value.ra_flag,
+            ttl: value.ttl,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }
 
@@ -700,7 +823,7 @@ pub struct BlocklistDns {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -784,7 +907,7 @@ impl Match for BlocklistDns {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
