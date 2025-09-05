@@ -43,4 +43,8 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(cluster, model, time_series,);
+diesel::allow_tables_to_appear_in_same_query!(
+    cluster,
+    model,
+    time_series,
+);
