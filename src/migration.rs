@@ -14,6 +14,7 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use semver::{Version, VersionReq};
+use serde::{Deserialize, Serialize};
 use tracing::info;
 
 /// The range of versions that use the current database format.
@@ -191,7 +192,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<Migration> = vec![];
+    let migration: Vec<Migration> = vec![(
+        VersionReq::parse(">=0.41.0,<0.42.0-alpha.1")?,
+        Version::parse("0.42.0-alpha.1")?,
+        migrate_0_41_to_0_42,
+    )];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
     store.backup(false, 1)?;
@@ -211,6 +216,153 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
 
     store.purge_old_backups(0)?;
     Err(anyhow!("migration from {version} is not supported",))
+}
+
+fn migrate_0_41_to_0_42(store: &super::Store) -> Result<()> {
+    migrate_0_41_events(store)?;
+    Ok(())
+}
+
+fn migrate_0_41_events(store: &super::Store) -> Result<()> {
+    use num_traits::FromPrimitive;
+
+    use crate::event::EventKind;
+
+    let event_db = store.events();
+    for row in event_db.raw_iter_forward() {
+        let (k, v) = row.map_err(|e| anyhow!("Failed to read event: {e}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        // For events with EventCategory field, migrate the category value 0 (Unknown) to None
+        // All other event types require migration of their category field
+        if needs_category_migration(event_kind) {
+            migrate_event_category(&k, &v, &event_db)?;
+        }
+    }
+    Ok(())
+}
+
+fn needs_category_migration(event_kind: crate::event::EventKind) -> bool {
+    use crate::event::EventKind::{
+        BlocklistBootp, BlocklistConn, BlocklistDceRpc, BlocklistDhcp, BlocklistDns, BlocklistFtp,
+        BlocklistHttp, BlocklistKerberos, BlocklistLdap, BlocklistMqtt, BlocklistNfs,
+        BlocklistNtlm, BlocklistRdp, BlocklistSmb, BlocklistSmtp, BlocklistSsh, BlocklistTls,
+        CryptocurrencyMiningPool, DnsCovertChannel, DomainGenerationAlgorithm, ExternalDdos,
+        ExtraThreat, FtpBruteForce, FtpPlainText, HttpThreat, LdapBruteForce, LdapPlainText,
+        LockyRansomware, MultiHostPortScan, NetworkThreat, NonBrowser, PortScan, RdpBruteForce,
+        RepeatedHttpSessions, SuspiciousTlsTraffic, TorConnection, TorConnectionConn,
+        WindowsThreat,
+    };
+    matches!(
+        event_kind,
+        BlocklistBootp
+            | BlocklistConn
+            | BlocklistDceRpc
+            | BlocklistDhcp
+            | BlocklistDns
+            | BlocklistFtp
+            | BlocklistHttp
+            | BlocklistKerberos
+            | BlocklistLdap
+            | BlocklistMqtt
+            | BlocklistNfs
+            | BlocklistNtlm
+            | BlocklistRdp
+            | BlocklistSmb
+            | BlocklistSmtp
+            | BlocklistSsh
+            | BlocklistTls
+            | CryptocurrencyMiningPool
+            | DnsCovertChannel
+            | DomainGenerationAlgorithm
+            | ExternalDdos
+            | ExtraThreat
+            | FtpBruteForce
+            | FtpPlainText
+            | HttpThreat
+            | LdapBruteForce
+            | LdapPlainText
+            | LockyRansomware
+            | MultiHostPortScan
+            | NetworkThreat
+            | NonBrowser
+            | PortScan
+            | RdpBruteForce
+            | RepeatedHttpSessions
+            | SuspiciousTlsTraffic
+            | TorConnection
+            | TorConnectionConn
+            | WindowsThreat
+    )
+}
+
+fn migrate_event_category(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Result<()> {
+    use num_traits::FromPrimitive;
+
+    use crate::event::{
+        BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42, BlocklistConnFieldsV0_41,
+        BlocklistConnFieldsV0_42, EventKind,
+    };
+
+    // Try to deserialize as JSON first for testing/debugging
+    if let Ok(mut json_value) = serde_json::from_slice::<serde_json::Value>(v) {
+        // If the event has a "category" field with value 0, change it to null
+        if let Some(obj) = json_value.as_object_mut()
+            && let Some(serde_json::Value::Number(n)) = obj.get("category")
+            && n.as_u64() == Some(0)
+        {
+            obj.insert("category".to_string(), serde_json::Value::Null);
+            let new = serde_json::to_vec(&json_value)
+                .map_err(|e| anyhow!("Failed to serialize JSON event: {e}"))?;
+            event_db.update((k, v), (k, &new))?;
+            return Ok(());
+        }
+    }
+
+    // For bincode serialization, handle each event type
+    let key: [u8; 16] = if let Ok(key) = k.try_into() {
+        key
+    } else {
+        return Ok(());
+    };
+    let key = i128::from_be_bytes(key);
+    let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+
+    match EventKind::from_i128(kind_num) {
+        Some(EventKind::BlocklistBootp) => {
+            migrate_event::<BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistConn | EventKind::TorConnectionConn) => {
+            migrate_event::<BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42>(k, v, event_db)?;
+        }
+        // Add other event types as we implement their V0_41/V0_42 structs
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn migrate_event<'a, T, K>(k: &[u8], v: &'a [u8], event_db: &crate::EventDb) -> Result<()>
+where
+    T: Deserialize<'a> + Into<K>,
+    K: Serialize,
+{
+    let from_event =
+        bincode::deserialize::<T>(v).map_err(|e| anyhow!("Failed to deserialize event: {e}"))?;
+    let to_event: K = from_event.into();
+    let new =
+        bincode::serialize(&to_event).map_err(|e| anyhow!("Failed to serialize event: {e}"))?;
+    event_db.update((k, v), (k, &new))?;
+    Ok(())
 }
 
 /// Recursively creates `path` if not existed, creates the VERSION file
@@ -271,7 +423,7 @@ mod tests {
     use semver::{Version, VersionReq};
 
     use super::COMPATIBLE_VERSION_REQ;
-    use crate::Store;
+    use crate::{Event, EventKind, EventMessage, Store, event::RecordType};
 
     #[allow(dead_code)]
     struct TestSchema {
@@ -307,6 +459,172 @@ mod tests {
         fn close(self) -> (tempfile::TempDir, tempfile::TempDir) {
             (self.db_dir, self.backup_dir)
         }
+    }
+
+    #[test]
+    fn migrate_0_41_to_0_42_events() {
+        use std::net::IpAddr;
+
+        use chrono::{DateTime, Duration};
+
+        use crate::event::{BlocklistBootpFieldsV0_41, BlocklistConnFieldsV0_41};
+        use crate::types::{EventCategoryV0_41, EventCategoryV0_42};
+
+        let schema = TestSchema::new();
+        let event_db = schema.store.events();
+        let mut time = DateTime::UNIX_EPOCH;
+
+        // Test BlocklistBootp migration with non-Unknown category
+        time += Duration::minutes(1);
+        let bootp_value = BlocklistBootpFieldsV0_41 {
+            sensor: "test-sensor".to_string(),
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            src_port: 8080,
+            dst_addr: "10.0.0.1".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            end_time: (time + Duration::seconds(1)).timestamp_nanos_opt().unwrap(),
+            op: 1,
+            htype: 1,
+            hops: 1,
+            xid: 1,
+            ciaddr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            yiaddr: "10.0.0.1".parse::<IpAddr>().unwrap(),
+            siaddr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            giaddr: "10.0.0.1".parse::<IpAddr>().unwrap(),
+            chaddr: vec![1, 2, 3, 4, 5, 6],
+            sname: "test-sname".to_string(),
+            file: "test-file".to_string(),
+            confidence: 0.5,
+            category: EventCategoryV0_41::Reconnaissance,
+        };
+        let msg = EventMessage {
+            time,
+            kind: EventKind::BlocklistBootp,
+            fields: bincode::serialize(&bootp_value).unwrap(),
+        };
+        event_db.put(&msg).unwrap();
+
+        // Test BlocklistBootp migration with Unknown category
+        time += Duration::minutes(1);
+        let bootp_value_unknown = BlocklistBootpFieldsV0_41 {
+            sensor: "test-sensor".to_string(),
+            src_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            src_port: 8080,
+            dst_addr: "10.0.0.2".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            end_time: (time + Duration::seconds(1)).timestamp_nanos_opt().unwrap(),
+            op: 1,
+            htype: 1,
+            hops: 1,
+            xid: 1,
+            ciaddr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            yiaddr: "10.0.0.2".parse::<IpAddr>().unwrap(),
+            siaddr: "192.168.1.2".parse::<IpAddr>().unwrap(),
+            giaddr: "10.0.0.2".parse::<IpAddr>().unwrap(),
+            chaddr: vec![1, 2, 3, 4, 5, 6],
+            sname: "test-sname".to_string(),
+            file: "test-file".to_string(),
+            confidence: 0.5,
+            category: EventCategoryV0_41::Unknown,
+        };
+        let msg = EventMessage {
+            time,
+            kind: EventKind::BlocklistBootp,
+            fields: bincode::serialize(&bootp_value_unknown).unwrap(),
+        };
+        event_db.put(&msg).unwrap();
+
+        // Test BlocklistConn migration with non-Unknown category
+        time += Duration::minutes(1);
+        let conn_value = BlocklistConnFieldsV0_41 {
+            sensor: "test-sensor".to_string(),
+            src_addr: "192.168.1.3".parse::<IpAddr>().unwrap(),
+            src_port: 443,
+            dst_addr: "10.0.0.3".parse::<IpAddr>().unwrap(),
+            dst_port: 443,
+            proto: 6,
+            conn_state: "SF".to_string(),
+            end_time: (time + Duration::seconds(1)).timestamp_nanos_opt().unwrap(),
+            service: "https".to_string(),
+            orig_bytes: 1024,
+            resp_bytes: 2048,
+            orig_pkts: 10,
+            resp_pkts: 15,
+            orig_l2_bytes: 1100,
+            resp_l2_bytes: 2200,
+            confidence: 0.7,
+            category: EventCategoryV0_41::CommandAndControl,
+        };
+        let msg = EventMessage {
+            time,
+            kind: EventKind::BlocklistConn,
+            fields: bincode::serialize(&conn_value).unwrap(),
+        };
+        event_db.put(&msg).unwrap();
+
+        // Test BlocklistConn migration with Unknown category
+        time += Duration::minutes(1);
+        let conn_value_unknown = BlocklistConnFieldsV0_41 {
+            sensor: "test-sensor".to_string(),
+            src_addr: "192.168.1.4".parse::<IpAddr>().unwrap(),
+            src_port: 80,
+            dst_addr: "10.0.0.4".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            conn_state: "S0".to_string(),
+            end_time: (time + Duration::seconds(1)).timestamp_nanos_opt().unwrap(),
+            service: "http".to_string(),
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 1,
+            resp_pkts: 0,
+            orig_l2_bytes: 60,
+            resp_l2_bytes: 0,
+            confidence: 0.5,
+            category: EventCategoryV0_41::Unknown,
+        };
+        let msg = EventMessage {
+            time,
+            kind: EventKind::BlocklistConn,
+            fields: bincode::serialize(&conn_value_unknown).unwrap(),
+        };
+        event_db.put(&msg).unwrap();
+
+        // Run migration
+        super::migrate_0_41_events(&schema.store).unwrap();
+
+        // Verify migrations
+        let mut iter = event_db.iter_forward();
+
+        // Verify BlocklistBootp with non-Unknown category
+        let (_, event) = iter.next().unwrap().unwrap();
+        let Event::Blocklist(RecordType::Bootp(event)) = event else {
+            panic!("expected BlocklistBootp event");
+        };
+        assert_eq!(event.category, Some(EventCategoryV0_42::Reconnaissance));
+
+        // Verify BlocklistBootp with Unknown -> None
+        let (_, event) = iter.next().unwrap().unwrap();
+        let Event::Blocklist(RecordType::Bootp(event)) = event else {
+            panic!("expected BlocklistBootp event");
+        };
+        assert_eq!(event.category, None);
+
+        // Verify BlocklistConn with non-Unknown category
+        let (_, event) = iter.next().unwrap().unwrap();
+        let Event::Blocklist(RecordType::Conn(event)) = event else {
+            panic!("expected BlocklistConn event");
+        };
+        assert_eq!(event.category, Some(EventCategoryV0_42::CommandAndControl));
+
+        // Verify BlocklistConn with Unknown -> None
+        let (_, event) = iter.next().unwrap().unwrap();
+        let Event::Blocklist(RecordType::Conn(event)) = event else {
+            panic!("expected BlocklistConn event");
+        };
+        assert_eq!(event.category, None);
     }
 
     #[test]

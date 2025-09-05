@@ -6,7 +6,10 @@ use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, EventFilter, LOW, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_http_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {
@@ -56,7 +59,10 @@ impl HttpEventFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -120,7 +126,7 @@ pub struct HttpEventFieldsV0_41 {
     pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
@@ -162,13 +168,13 @@ impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
             body: value.post_body,
             state: value.state,
             confidence: 1.0, // default value for HTTP events
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct HttpEventFieldsV0_39 {
+pub(crate) struct HttpEventFieldsV0_39 {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
@@ -199,7 +205,7 @@ pub struct HttpEventFieldsV0_39 {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 pub type RepeatedHttpSessionsFields = RepeatedHttpSessionsFieldsV0_41;
@@ -209,7 +215,10 @@ impl RepeatedHttpSessionsFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -234,7 +243,7 @@ pub struct RepeatedHttpSessionsFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<RepeatedHttpSessionsFieldsV0_39> for RepeatedHttpSessionsFieldsV0_41 {
@@ -249,20 +258,20 @@ impl From<RepeatedHttpSessionsFieldsV0_39> for RepeatedHttpSessionsFieldsV0_41 {
             start_time: DateTime::UNIX_EPOCH,
             end_time: DateTime::UNIX_EPOCH,
             confidence: 0.3, // default value for RepeatedHttpSessions
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct RepeatedHttpSessionsFieldsV0_39 {
+pub(crate) struct RepeatedHttpSessionsFieldsV0_39 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -277,7 +286,7 @@ pub struct RepeatedHttpSessions {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -337,7 +346,7 @@ impl Match for RepeatedHttpSessions {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -384,7 +393,10 @@ impl HttpThreatFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -460,7 +472,7 @@ pub struct HttpThreatFieldsV0_41 {
     pub cluster_id: Option<usize>,
     pub attack_kind: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<HttpThreatFieldsV0_34> for HttpThreatFieldsV0_41 {
@@ -508,14 +520,14 @@ impl From<HttpThreatFieldsV0_34> for HttpThreatFieldsV0_41 {
             cluster_id: value.cluster_id,
             attack_kind: value.attack_kind,
             confidence: value.confidence,
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
-pub struct HttpThreatFieldsV0_34 {
+pub(crate) struct HttpThreatFieldsV0_34 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
@@ -553,7 +565,7 @@ pub struct HttpThreatFieldsV0_34 {
     pub cluster_id: Option<usize>,
     pub attack_kind: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 // HTTP Request body has Vec<u8> type, and it's too large to print.
@@ -609,7 +621,7 @@ pub struct HttpThreat {
     pub cluster_id: Option<usize>,
     pub attack_kind: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -720,7 +732,7 @@ impl Match for HttpThreat {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -782,7 +794,10 @@ impl DgaFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -845,7 +860,7 @@ pub struct DgaFieldsV0_41 {
     pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<DgaFieldsV0_40> for DgaFieldsV0_41 {
@@ -887,13 +902,13 @@ impl From<DgaFieldsV0_40> for DgaFieldsV0_41 {
             body: value.post_body,
             state: value.state,
             confidence: value.confidence,
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct DgaFieldsV0_40 {
+pub(crate) struct DgaFieldsV0_40 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -924,7 +939,7 @@ pub struct DgaFieldsV0_40 {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -959,7 +974,7 @@ pub struct DomainGenerationAlgorithm {
     pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -1060,7 +1075,7 @@ impl Match for DomainGenerationAlgorithm {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -1121,7 +1136,7 @@ pub struct NonBrowser {
     pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -1221,7 +1236,7 @@ impl Match for NonBrowser {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -1257,7 +1272,10 @@ impl BlocklistHttpFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -1320,7 +1338,7 @@ pub struct BlocklistHttpFieldsV0_41 {
     pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<BlocklistHttpFieldsV0_40> for BlocklistHttpFieldsV0_41 {
@@ -1362,13 +1380,13 @@ impl From<BlocklistHttpFieldsV0_40> for BlocklistHttpFieldsV0_41 {
             body: value.post_body,
             state: value.state,
             confidence: value.confidence,
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct BlocklistHttpFieldsV0_40 {
+pub(crate) struct BlocklistHttpFieldsV0_40 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1399,7 +1417,7 @@ pub struct BlocklistHttpFieldsV0_40 {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -1434,7 +1452,7 @@ pub struct BlocklistHttp {
     pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -1534,7 +1552,7 @@ impl Match for BlocklistHttp {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -1569,7 +1587,7 @@ mod tests {
 
     use chrono::DateTime;
 
-    use super::{EventCategory, HttpEventFieldsV0_39, HttpEventFieldsV0_41};
+    use super::{EventCategoryV0_41, HttpEventFieldsV0_39, HttpEventFieldsV0_41};
 
     #[test]
     #[allow(clippy::float_cmp)]
@@ -1605,7 +1623,7 @@ mod tests {
             resp_mime_types: vec!["text/html".to_string()],
             post_body: b"test body content".to_vec(),
             state: "active".to_string(),
-            category: EventCategory::InitialAccess,
+            category: EventCategoryV0_41::InitialAccess,
         };
 
         let new_fields_case1: HttpEventFieldsV0_41 = old_fields_case1.into();
@@ -1659,7 +1677,7 @@ mod tests {
             ],
             post_body: b"{\"key\":\"value\"}".to_vec(),
             state: "processing".to_string(),
-            category: EventCategory::Collection,
+            category: EventCategoryV0_41::Collection,
         };
 
         let new_fields_case2: HttpEventFieldsV0_41 = old_fields_case2.into();
@@ -1712,7 +1730,7 @@ mod tests {
             resp_mime_types: Vec::new(),
             post_body: Vec::new(),
             state: "idle".to_string(),
-            category: EventCategory::Discovery,
+            category: EventCategoryV0_41::Discovery,
         };
 
         let new_fields: HttpEventFieldsV0_41 = old_fields.into();
