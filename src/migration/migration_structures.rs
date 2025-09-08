@@ -90,11 +90,17 @@ impl From<HttpThreatV0_33> for HttpThreatFields {
             content_encoding: input.content_encoding,
             content_type: input.content_type,
             cache_control: input.cache_control,
-            orig_filenames: input.orig_filenames,
-            orig_mime_types: input.orig_mime_types,
-            resp_filenames: input.resp_filenames,
-            resp_mime_types: input.resp_mime_types,
-            post_body: input.post_body,
+            filenames: {
+                let mut filenames = input.orig_filenames;
+                filenames.extend(input.resp_filenames);
+                filenames
+            },
+            mime_types: {
+                let mut mime_types = input.orig_mime_types;
+                mime_types.extend(input.resp_mime_types);
+                mime_types
+            },
+            body: input.post_body,
             state: input.state,
             db_name: input.db_name,
             rule_id: input.rule_id,

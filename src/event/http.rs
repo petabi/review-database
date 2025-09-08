@@ -35,11 +35,11 @@ macro_rules! find_http_attr_by_kind {
                 HttpAttr::ContentEncoding => Some(AttrValue::String(&$event.content_encoding)),
                 HttpAttr::ContentType => Some(AttrValue::String(&$event.content_type)),
                 HttpAttr::CacheControl => Some(AttrValue::String(&$event.cache_control)),
-                HttpAttr::OrigFilenames => Some(AttrValue::VecString(&$event.orig_filenames)),
-                HttpAttr::OrigMimeTypes => Some(AttrValue::VecString(&$event.orig_mime_types)),
-                HttpAttr::RespFilenames => Some(AttrValue::VecString(&$event.resp_filenames)),
-                HttpAttr::RespMimeTypes => Some(AttrValue::VecString(&$event.resp_mime_types)),
-                HttpAttr::PostBody => Some(AttrValue::VecRaw(&$event.post_body)),
+                HttpAttr::OrigFilenames => Some(AttrValue::VecString(&$event.filenames)),
+                HttpAttr::OrigMimeTypes => Some(AttrValue::VecString(&$event.mime_types)),
+                HttpAttr::RespFilenames => Some(AttrValue::VecString(&$event.filenames)),
+                HttpAttr::RespMimeTypes => Some(AttrValue::VecString(&$event.mime_types)),
+                HttpAttr::PostBody => Some(AttrValue::VecRaw(&$event.body)),
                 HttpAttr::State => Some(AttrValue::String(&$event.state)),
             }
         } else {
@@ -55,7 +55,7 @@ impl HttpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -80,11 +80,9 @@ impl HttpEventFields {
             self.content_encoding,
             self.content_type,
             self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
+            self.filenames.join(","),
+            self.mime_types.join(","),
+            get_post_body(&self.body),
             self.state,
             self.confidence.to_string()
         )
@@ -93,6 +91,40 @@ impl HttpEventFields {
 
 #[derive(Deserialize, Serialize)]
 pub struct HttpEventFieldsV0_41 {
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
+    pub state: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct HttpEventFieldsV0_41Old {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
@@ -127,6 +159,48 @@ pub struct HttpEventFieldsV0_41 {
     pub category: EventCategory,
 }
 
+impl From<HttpEventFieldsV0_41Old> for HttpEventFieldsV0_41 {
+    fn from(old: HttpEventFieldsV0_41Old) -> Self {
+        let mut filenames = old.orig_filenames;
+        filenames.extend(old.resp_filenames);
+
+        let mut mime_types = old.orig_mime_types;
+        mime_types.extend(old.resp_mime_types);
+
+        Self {
+            sensor: old.sensor,
+            end_time: old.end_time,
+            src_addr: old.src_addr,
+            src_port: old.src_port,
+            dst_addr: old.dst_addr,
+            dst_port: old.dst_port,
+            proto: old.proto,
+            method: old.method,
+            host: old.host,
+            uri: old.uri,
+            referer: old.referer,
+            version: old.version,
+            user_agent: old.user_agent,
+            request_len: old.request_len,
+            response_len: old.response_len,
+            status_code: old.status_code,
+            status_msg: old.status_msg,
+            username: old.username,
+            password: old.password,
+            cookie: old.cookie,
+            content_encoding: old.content_encoding,
+            content_type: old.content_type,
+            cache_control: old.cache_control,
+            filenames,
+            mime_types,
+            body: old.post_body,
+            state: old.state,
+            confidence: old.confidence,
+            category: old.category,
+        }
+    }
+}
+
 impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
     fn from(value: HttpEventFieldsV0_39) -> Self {
         Self {
@@ -153,11 +227,17 @@ impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
             content_encoding: value.content_encoding,
             content_type: value.content_type,
             cache_control: value.cache_control,
-            orig_filenames: value.orig_filenames,
-            orig_mime_types: value.orig_mime_types,
-            resp_filenames: value.resp_filenames,
-            resp_mime_types: value.resp_mime_types,
-            post_body: value.post_body,
+            filenames: {
+                let mut filenames = value.orig_filenames;
+                filenames.extend(value.resp_filenames);
+                filenames
+            },
+            mime_types: {
+                let mut mime_types = value.orig_mime_types;
+                mime_types.extend(value.resp_mime_types);
+                mime_types
+            },
+            body: value.post_body,
             state: value.state,
             confidence: 1.0, // default value for HTTP events
             category: value.category,
@@ -403,11 +483,9 @@ pub struct HttpThreatFields {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
     pub state: String,
     pub db_name: String,
     pub rule_id: u32,
@@ -422,7 +500,7 @@ impl HttpThreatFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -447,11 +525,9 @@ impl HttpThreatFields {
             self.content_encoding,
             self.content_type,
             self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
+            self.filenames.join(","),
+            self.mime_types.join(","),
+            get_post_body(&self.body),
             self.state,
             self.db_name,
             self.rule_id.to_string(),
@@ -506,11 +582,9 @@ pub struct HttpThreat {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
     pub state: String,
     pub db_name: String,
     pub rule_id: u32,
@@ -526,7 +600,7 @@ impl fmt::Display for HttpThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -550,11 +624,9 @@ impl fmt::Display for HttpThreat {
             self.content_encoding,
             self.content_type,
             self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
+            self.filenames.join(","),
+            self.mime_types.join(","),
+            get_post_body(&self.body),
             self.state,
             self.db_name,
             self.rule_id.to_string(),
@@ -594,11 +666,9 @@ impl HttpThreat {
             content_encoding: fields.content_encoding,
             content_type: fields.content_type,
             cache_control: fields.cache_control,
-            orig_filenames: fields.orig_filenames,
-            orig_mime_types: fields.orig_mime_types,
-            resp_filenames: fields.resp_filenames,
-            resp_mime_types: fields.resp_mime_types,
-            post_body: fields.post_body,
+            filenames: fields.filenames,
+            mime_types: fields.mime_types,
+            body: fields.body,
             state: fields.state,
             db_name: fields.db_name,
             rule_id: fields.rule_id,
@@ -713,11 +783,9 @@ pub struct DgaFields {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
     pub category: EventCategory,
@@ -727,7 +795,7 @@ impl DgaFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -752,11 +820,9 @@ impl DgaFields {
             self.content_encoding,
             self.content_type,
             self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
+            self.filenames.join(","),
+            self.mime_types.join(","),
+            get_post_body(&self.body),
             self.state,
             self.confidence.to_string()
         )
@@ -790,11 +856,9 @@ pub struct DomainGenerationAlgorithm {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
     pub category: EventCategory,
@@ -805,7 +869,7 @@ impl fmt::Display for DomainGenerationAlgorithm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -829,11 +893,9 @@ impl fmt::Display for DomainGenerationAlgorithm {
             self.content_encoding,
             self.content_type,
             self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
+            self.filenames.join(","),
+            self.mime_types.join(","),
+            get_post_body(&self.body),
             self.state,
             self.confidence.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref()),
@@ -868,11 +930,9 @@ impl DomainGenerationAlgorithm {
             content_encoding: fields.content_encoding,
             content_type: fields.content_type,
             cache_control: fields.cache_control,
-            orig_filenames: fields.orig_filenames,
-            orig_mime_types: fields.orig_mime_types,
-            resp_filenames: fields.resp_filenames,
-            resp_mime_types: fields.resp_mime_types,
-            post_body: fields.post_body,
+            filenames: fields.filenames,
+            mime_types: fields.mime_types,
+            body: fields.body,
             state: fields.state,
             confidence: fields.confidence,
             category: fields.category,
@@ -958,11 +1018,9 @@ pub struct NonBrowser {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
     pub category: EventCategory,
@@ -973,7 +1031,7 @@ impl fmt::Display for NonBrowser {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -997,11 +1055,9 @@ impl fmt::Display for NonBrowser {
             self.content_encoding,
             self.content_type,
             self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
+            self.filenames.join(","),
+            self.mime_types.join(","),
+            get_post_body(&self.body),
             self.state,
             triage_scores_to_string(self.triage_scores.as_ref()),
         )
@@ -1035,11 +1091,9 @@ impl NonBrowser {
             content_encoding: fields.content_encoding.clone(),
             content_type: fields.content_type.clone(),
             cache_control: fields.cache_control.clone(),
-            orig_filenames: fields.orig_filenames.clone(),
-            orig_mime_types: fields.orig_mime_types.clone(),
-            resp_filenames: fields.resp_filenames.clone(),
-            resp_mime_types: fields.resp_mime_types.clone(),
-            post_body: fields.post_body.clone(),
+            filenames: fields.filenames.clone(),
+            mime_types: fields.mime_types.clone(),
+            body: fields.body.clone(),
             state: fields.state.clone(),
             confidence: fields.confidence,
             category: fields.category,
@@ -1123,11 +1177,9 @@ pub struct BlocklistHttpFields {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
     pub category: EventCategory,
@@ -1137,7 +1189,7 @@ impl BlocklistHttpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -1162,11 +1214,9 @@ impl BlocklistHttpFields {
             self.content_encoding,
             self.content_type,
             self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
+            self.filenames.join(","),
+            self.mime_types.join(","),
+            get_post_body(&self.body),
             self.state,
             self.confidence.to_string(),
         )
@@ -1200,11 +1250,9 @@ pub struct BlocklistHttp {
     pub content_encoding: String,
     pub content_type: String,
     pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
     pub category: EventCategory,
@@ -1215,7 +1263,7 @@ impl fmt::Display for BlocklistHttp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -1239,11 +1287,9 @@ impl fmt::Display for BlocklistHttp {
             self.content_encoding,
             self.content_type,
             self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
+            self.filenames.join(","),
+            self.mime_types.join(","),
+            get_post_body(&self.body),
             self.state,
             triage_scores_to_string(self.triage_scores.as_ref()),
         )
@@ -1277,11 +1323,9 @@ impl BlocklistHttp {
             content_encoding: fields.content_encoding.clone(),
             content_type: fields.content_type.clone(),
             cache_control: fields.cache_control.clone(),
-            orig_filenames: fields.orig_filenames.clone(),
-            orig_mime_types: fields.orig_mime_types.clone(),
-            resp_filenames: fields.resp_filenames.clone(),
-            resp_mime_types: fields.resp_mime_types.clone(),
-            post_body: fields.post_body.clone(),
+            filenames: fields.filenames.clone(),
+            mime_types: fields.mime_types.clone(),
+            body: fields.body.clone(),
             state: fields.state.clone(),
             confidence: fields.confidence,
             category: fields.category,
@@ -1337,5 +1381,181 @@ impl Match for BlocklistHttp {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_http_attr_by_kind!(self, raw_event_attr)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::IpAddr;
+
+    use chrono::DateTime;
+
+    use super::{
+        EventCategory, HttpEventFieldsV0_39, HttpEventFieldsV0_41, HttpEventFieldsV0_41Old,
+    };
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_http_event_fields_migration_from_old_to_new() {
+        // Create a test instance of the old format with the original field structure
+        let old_fields = HttpEventFieldsV0_41Old {
+            sensor: "test-sensor".to_string(),
+            end_time: DateTime::UNIX_EPOCH,
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            src_port: 8080,
+            dst_addr: "10.0.0.1".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            uri: "/test".to_string(),
+            referer: "https://referer.com".to_string(),
+            version: "1.1".to_string(),
+            user_agent: "test-agent".to_string(),
+            request_len: 100,
+            response_len: 200,
+            status_code: 200,
+            status_msg: "OK".to_string(),
+            username: "testuser".to_string(),
+            password: "testpass".to_string(),
+            cookie: "session=123".to_string(),
+            content_encoding: "gzip".to_string(),
+            content_type: "text/html".to_string(),
+            cache_control: "no-cache".to_string(),
+            orig_filenames: vec!["file1.txt".to_string(), "file2.txt".to_string()],
+            orig_mime_types: vec!["text/plain".to_string(), "application/json".to_string()],
+            resp_filenames: vec!["response1.html".to_string()],
+            resp_mime_types: vec!["text/html".to_string()],
+            post_body: b"test body content".to_vec(),
+            state: "active".to_string(),
+            confidence: 0.9,
+            category: EventCategory::InitialAccess,
+        };
+
+        // Convert to the new format
+        let new_fields: HttpEventFieldsV0_41 = old_fields.into();
+
+        // Verify that fields were merged correctly
+        assert_eq!(new_fields.filenames.len(), 3); // 2 + 1
+        assert_eq!(new_fields.filenames[0], "file1.txt");
+        assert_eq!(new_fields.filenames[1], "file2.txt");
+        assert_eq!(new_fields.filenames[2], "response1.html");
+
+        assert_eq!(new_fields.mime_types.len(), 3); // 2 + 1
+        assert_eq!(new_fields.mime_types[0], "text/plain");
+        assert_eq!(new_fields.mime_types[1], "application/json");
+        assert_eq!(new_fields.mime_types[2], "text/html");
+
+        // Verify that post_body was renamed to body
+        assert_eq!(new_fields.body, b"test body content".to_vec());
+
+        // Verify that all other fields are preserved
+        assert_eq!(new_fields.sensor, "test-sensor");
+        assert_eq!(new_fields.method, "GET");
+        assert_eq!(new_fields.host, "example.com");
+        assert_eq!(new_fields.confidence, 0.9);
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_http_event_fields_migration_from_v0_39() {
+        // Test the existing migration from V0_39 to V0_41
+        let v0_39_fields = HttpEventFieldsV0_39 {
+            sensor: "test-sensor".to_string(),
+            end_time: DateTime::UNIX_EPOCH,
+            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
+            src_port: 8080,
+            dst_addr: "10.0.0.1".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            method: "POST".to_string(),
+            host: "api.example.com".to_string(),
+            uri: "/api/v1/test".to_string(),
+            referer: "https://app.example.com".to_string(),
+            version: "2.0".to_string(),
+            user_agent: "api-client".to_string(),
+            request_len: 150,
+            response_len: 300,
+            status_code: 201,
+            status_msg: "Created".to_string(),
+            username: "apiuser".to_string(),
+            password: "apipass".to_string(),
+            cookie: "token=abc123".to_string(),
+            content_encoding: "deflate".to_string(),
+            content_type: "application/json".to_string(),
+            cache_control: "max-age=3600".to_string(),
+            orig_filenames: vec!["upload1.dat".to_string()],
+            orig_mime_types: vec!["application/octet-stream".to_string()],
+            resp_filenames: vec!["result.json".to_string(), "metadata.xml".to_string()],
+            resp_mime_types: vec![
+                "application/json".to_string(),
+                "application/xml".to_string(),
+            ],
+            post_body: b"{\"key\":\"value\"}".to_vec(),
+            state: "processing".to_string(),
+            category: EventCategory::Collection,
+        };
+
+        // Convert to V0_41
+        let v0_41_fields: HttpEventFieldsV0_41 = v0_39_fields.into();
+
+        // Verify migration worked correctly
+        assert_eq!(v0_41_fields.filenames.len(), 3); // 1 + 2
+        assert_eq!(v0_41_fields.filenames[0], "upload1.dat");
+        assert_eq!(v0_41_fields.filenames[1], "result.json");
+        assert_eq!(v0_41_fields.filenames[2], "metadata.xml");
+
+        assert_eq!(v0_41_fields.mime_types.len(), 3); // 1 + 2
+        assert_eq!(v0_41_fields.mime_types[0], "application/octet-stream");
+        assert_eq!(v0_41_fields.mime_types[1], "application/json");
+        assert_eq!(v0_41_fields.mime_types[2], "application/xml");
+
+        assert_eq!(v0_41_fields.body, b"{\"key\":\"value\"}".to_vec());
+        assert_eq!(v0_41_fields.confidence, 1.0); // Default value for HTTP events
+    }
+
+    #[test]
+    fn test_empty_collections_migration() {
+        // Test migration with empty filename and mime type collections
+        let old_fields = HttpEventFieldsV0_41Old {
+            sensor: "test-sensor".to_string(),
+            end_time: DateTime::UNIX_EPOCH,
+            src_addr: "127.0.0.1".parse::<IpAddr>().unwrap(),
+            src_port: 3000,
+            dst_addr: "127.0.0.1".parse::<IpAddr>().unwrap(),
+            dst_port: 8000,
+            proto: 6,
+            method: "HEAD".to_string(),
+            host: "localhost".to_string(),
+            uri: "/health".to_string(),
+            referer: String::new(),
+            version: "1.0".to_string(),
+            user_agent: "health-check".to_string(),
+            request_len: 0,
+            response_len: 0,
+            status_code: 204,
+            status_msg: "No Content".to_string(),
+            username: String::new(),
+            password: String::new(),
+            cookie: String::new(),
+            content_encoding: String::new(),
+            content_type: String::new(),
+            cache_control: String::new(),
+            orig_filenames: Vec::new(),
+            orig_mime_types: Vec::new(),
+            resp_filenames: Vec::new(),
+            resp_mime_types: Vec::new(),
+            post_body: Vec::new(),
+            state: "idle".to_string(),
+            confidence: 0.5,
+            category: EventCategory::Discovery,
+        };
+
+        let new_fields: HttpEventFieldsV0_41 = old_fields.into();
+
+        // Verify empty collections remain empty after merge
+        assert!(new_fields.filenames.is_empty());
+        assert!(new_fields.mime_types.is_empty());
+        assert!(new_fields.body.is_empty());
     }
 }
