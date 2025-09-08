@@ -101,7 +101,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.3,<0.41.0-alpha.4";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.4,<0.41.0-alpha.5";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -227,7 +227,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.40.0,<0.41.0")?,
-            Version::parse("0.41.0-alpha.3")?,
+            Version::parse("0.41.0-alpha.4")?,
             migrate_0_40_to_0_41_0,
         ),
     ];
@@ -2152,5 +2152,104 @@ mod tests {
 
         // Verify that all 6 test events were processed
         assert_eq!(migrated_events, 6);
+    }
+
+    #[test]
+    fn cluster_migration_conversion() {
+        use crate::cluster::UpdateClusterRequest;
+        use crate::migration::migration_structures::{ClusterV0_41, UpdateClusterRequestV0_41};
+        use crate::types::Cluster;
+
+        // Test ClusterV0_41 to Cluster conversion
+        let old_cluster = ClusterV0_41 {
+            id: 1,
+            cluster_id: "reconverge-123".to_string(),
+            category_id: 2,
+            detector_id: 3,
+            event_ids: vec![100, 200],
+            sensors: vec!["sensor1".to_string(), "sensor2".to_string()],
+            labels: Some(vec!["label1".to_string()]),
+            qualifier_id: 4,
+            status_id: 5,
+            signature: "test_sig".to_string(),
+            size: 10,
+            score: Some(0.75),
+            last_modification_time: None,
+            model_id: 6,
+        };
+
+        let new_cluster: Cluster = old_cluster.into();
+        assert_eq!(new_cluster.id, 1);
+        assert_eq!(new_cluster.cluster_id, 123); // Extracted numerical part
+        assert_eq!(new_cluster.category_id, 2);
+        assert_eq!(new_cluster.detector_id, 3);
+        assert_eq!(new_cluster.event_ids, vec![100, 200]);
+        assert_eq!(
+            new_cluster.sensors,
+            vec!["sensor1".to_string(), "sensor2".to_string()]
+        );
+        assert_eq!(new_cluster.labels, Some(vec!["label1".to_string()]));
+        assert_eq!(new_cluster.qualifier_id, 4);
+        assert_eq!(new_cluster.status_id, 5);
+        assert_eq!(new_cluster.signature, "test_sig".to_string());
+        assert_eq!(new_cluster.size, 10);
+        assert_eq!(new_cluster.score, Some(0.75));
+        assert_eq!(new_cluster.model_id, 6);
+
+        // Test UpdateClusterRequestV0_41 to UpdateClusterRequest conversion
+        let old_request = UpdateClusterRequestV0_41 {
+            cluster_id: "cluster-456".to_string(),
+            detector_id: 7,
+            signature: "test_sig2".to_string(),
+            score: Some(0.85),
+            size: 20,
+            event_ids: vec![(300, "sensor3".to_string()), (400, "sensor4".to_string())],
+            status_id: 8,
+            labels: Some(vec!["label2".to_string()]),
+        };
+
+        let new_request: UpdateClusterRequest = old_request.into();
+        assert_eq!(new_request.cluster_id, 456); // Extracted numerical part
+        assert_eq!(new_request.detector_id, 7);
+        assert_eq!(new_request.signature, "test_sig2".to_string());
+        assert_eq!(new_request.score, Some(0.85));
+        assert_eq!(new_request.size, 20);
+        assert_eq!(
+            new_request.event_ids,
+            vec![(300, "sensor3".to_string()), (400, "sensor4".to_string())]
+        );
+        assert_eq!(new_request.status_id, 8);
+        assert_eq!(new_request.labels, Some(vec!["label2".to_string()]));
+
+        // Test edge cases for cluster_id parsing
+        let edge_cases = vec![
+            ("simple-789", 789),
+            ("prefix-with-dashes-999", 999), // Should extract the last part
+            ("no-number-here", 0),           // Should default to 0
+            ("", 0),                         // Empty string should default to 0
+            ("just-text", 0),                // No number should default to 0
+            ("multiple-123-456", 456),       // Should extract the last numerical part
+        ];
+
+        for (input, expected) in edge_cases {
+            let test_cluster = ClusterV0_41 {
+                id: 1,
+                cluster_id: input.to_string(),
+                category_id: 1,
+                detector_id: 1,
+                event_ids: vec![],
+                sensors: vec![],
+                labels: None,
+                qualifier_id: 1,
+                status_id: 1,
+                signature: "test".to_string(),
+                size: 1,
+                score: None,
+                last_modification_time: None,
+                model_id: 1,
+            };
+            let converted: Cluster = test_cluster.into();
+            assert_eq!(converted.cluster_id, expected, "Failed for input: {input}");
+        }
     }
 }

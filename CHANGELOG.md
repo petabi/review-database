@@ -39,6 +39,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Changed `cluster_id` field from `String` to `i64` in database schema and related
+  data structures. The migration automatically extracts numerical parts from
+  existing string cluster IDs (format: "prefix-number") and stores them as
+  numerical values. This change improves storage efficiency and query
+  performance.
 - Renamed session-related time fields in detection event structures to
   `end_time` for consistency: `BlocklistConn`, `TorConnectionConn`,
   `HttpThreat`, `DomainGenerationAlgorithm`, `TorConnection`, `NonBrowser`,

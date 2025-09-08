@@ -63,7 +63,7 @@ impl Database {
     /// - `cluster_id`: Optional cluster ID to filter clusters by.
     ///
     /// Returns a vector of tuples containing the cluster ID
-    ///     and its corresponding string ID in ascending order of `id` and `cluster_id`.
+    ///     and its corresponding numerical ID in ascending order of `id` and `cluster_id`.
     ///
     /// # Errors
     ///
@@ -71,8 +71,8 @@ impl Database {
     pub async fn load_cluster_ids(
         &self,
         model: i32,
-        cluster_id: Option<&str>,
-    ) -> Result<Vec<(i32, String)>, Error> {
+        cluster_id: Option<i64>,
+    ) -> Result<Vec<(i32, i64)>, Error> {
         use diesel_async::RunQueryDsl;
 
         use crate::schema::cluster::dsl;
@@ -86,7 +86,7 @@ impl Database {
         if let Some(cluster_id) = cluster_id {
             query = query.filter(dsl::cluster_id.eq(cluster_id));
         }
-        Ok(query.load::<(i32, String)>(&mut conn).await?)
+        Ok(query.load::<(i32, i64)>(&mut conn).await?)
     }
 
     /// Loads `id` for all the clusters in the model that satisfy the given conditions.

@@ -4,7 +4,7 @@ diesel::table! {
     cluster (id) {
         id -> Int4,
         category_id -> Int4,
-        cluster_id -> Text,
+        cluster_id -> Int8,
         detector_id -> Int4,
         event_ids -> Array<Nullable<Int8>>,
         labels -> Nullable<Array<Nullable<Text>>>,

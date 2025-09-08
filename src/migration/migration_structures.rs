@@ -17,7 +17,7 @@ use crate::{
         LearningMethod, NetworkThreat, TriageScore, WindowsThreat,
     },
     tables::InnerNode,
-    types::Account,
+    types::{Account, Id, Sensor, Timestamp},
 };
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -685,6 +685,90 @@ impl From<FilterValueV0_39> for crate::Filter {
             learning_methods: old_value.learning_methods,
             confidence: old_value.confidence,
             period: PeriodForSearch::Recent("1 hour".to_string()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct UpdateClusterRequestV0_41 {
+    pub cluster_id: String,
+    pub detector_id: i32,
+    pub signature: String,
+    pub score: Option<f64>,
+    pub size: i64,
+    pub event_ids: Vec<Id>,
+    pub status_id: i32,
+    pub labels: Option<Vec<String>>,
+}
+
+#[derive(Deserialize)]
+pub struct ClusterV0_41 {
+    pub id: i32,
+    pub cluster_id: String,
+    pub category_id: i32,
+    pub detector_id: i32,
+    pub event_ids: Vec<Timestamp>,
+    pub sensors: Vec<Sensor>,
+    pub labels: Option<Vec<String>>,
+    pub qualifier_id: i32,
+    pub status_id: i32,
+    pub signature: String,
+    pub size: i64,
+    pub score: Option<f64>,
+    pub last_modification_time: Option<chrono::NaiveDateTime>,
+    pub model_id: i32,
+}
+
+impl From<ClusterV0_41> for crate::types::Cluster {
+    fn from(input: ClusterV0_41) -> Self {
+        // Parse the string cluster_id to extract the numerical part
+        // Format: "[prefix]-numerical_id"
+        let cluster_id = input
+            .cluster_id
+            .split('-')
+            .next_back()
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(0); // Default to 0 if parsing fails
+
+        Self {
+            id: input.id,
+            cluster_id,
+            category_id: input.category_id,
+            detector_id: input.detector_id,
+            event_ids: input.event_ids,
+            sensors: input.sensors,
+            labels: input.labels,
+            qualifier_id: input.qualifier_id,
+            status_id: input.status_id,
+            signature: input.signature,
+            size: input.size,
+            score: input.score,
+            last_modification_time: input.last_modification_time,
+            model_id: input.model_id,
+        }
+    }
+}
+
+impl From<UpdateClusterRequestV0_41> for crate::cluster::UpdateClusterRequest {
+    fn from(input: UpdateClusterRequestV0_41) -> Self {
+        // Parse the string cluster_id to extract the numerical part
+        // Format: "[prefix]-numerical_id"
+        let cluster_id = input
+            .cluster_id
+            .split('-')
+            .next_back()
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(0); // Default to 0 if parsing fails
+
+        Self {
+            cluster_id,
+            detector_id: input.detector_id,
+            signature: input.signature,
+            score: input.score,
+            size: input.size,
+            event_ids: input.event_ids,
+            status_id: input.status_id,
+            labels: input.labels,
         }
     }
 }
