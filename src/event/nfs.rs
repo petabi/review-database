@@ -140,8 +140,8 @@ impl Match for BlocklistNfs {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {

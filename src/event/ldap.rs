@@ -183,8 +183,8 @@ impl Match for LdapBruteForce {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -406,8 +406,8 @@ impl Match for LdapPlainText {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -527,8 +527,8 @@ impl Match for BlocklistLdap {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {

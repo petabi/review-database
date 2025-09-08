@@ -953,50 +953,160 @@ impl Event {
 
     fn kind_and_category(&self) -> (EventKind, EventCategory) {
         match self {
-            Event::DnsCovertChannel(e) => (EventKind::DnsCovertChannel, e.category()),
-            Event::HttpThreat(e) => (EventKind::HttpThreat, e.category()),
-            Event::RdpBruteForce(e) => (EventKind::RdpBruteForce, e.category()),
-            Event::RepeatedHttpSessions(e) => (EventKind::RepeatedHttpSessions, e.category()),
-            Event::TorConnection(e) => (EventKind::TorConnection, e.category()),
-            Event::TorConnectionConn(e) => (EventKind::TorConnectionConn, e.category()),
-            Event::DomainGenerationAlgorithm(e) => {
-                (EventKind::DomainGenerationAlgorithm, e.category())
-            }
-            Event::FtpBruteForce(e) => (EventKind::FtpBruteForce, e.category()),
-            Event::FtpPlainText(e) => (EventKind::FtpPlainText, e.category()),
-            Event::PortScan(e) => (EventKind::PortScan, e.category()),
-            Event::MultiHostPortScan(e) => (EventKind::MultiHostPortScan, e.category()),
-            Event::ExternalDdos(e) => (EventKind::ExternalDdos, e.category()),
-            Event::NonBrowser(e) => (EventKind::NonBrowser, e.category()),
-            Event::LdapBruteForce(e) => (EventKind::LdapBruteForce, e.category()),
-            Event::LdapPlainText(e) => (EventKind::LdapPlainText, e.category()),
-            Event::CryptocurrencyMiningPool(e) => {
-                (EventKind::CryptocurrencyMiningPool, e.category())
-            }
+            Event::DnsCovertChannel(e) => (
+                EventKind::DnsCovertChannel,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::HttpThreat(e) => (
+                EventKind::HttpThreat,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::RdpBruteForce(e) => (
+                EventKind::RdpBruteForce,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::RepeatedHttpSessions(e) => (
+                EventKind::RepeatedHttpSessions,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::TorConnection(e) => (
+                EventKind::TorConnection,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::TorConnectionConn(e) => (
+                EventKind::TorConnectionConn,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::DomainGenerationAlgorithm(e) => (
+                EventKind::DomainGenerationAlgorithm,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::FtpBruteForce(e) => (
+                EventKind::FtpBruteForce,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::FtpPlainText(e) => (
+                EventKind::FtpPlainText,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::PortScan(e) => (
+                EventKind::PortScan,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::MultiHostPortScan(e) => (
+                EventKind::MultiHostPortScan,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::ExternalDdos(e) => (
+                EventKind::ExternalDdos,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::NonBrowser(e) => (
+                EventKind::NonBrowser,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::LdapBruteForce(e) => (
+                EventKind::LdapBruteForce,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::LdapPlainText(e) => (
+                EventKind::LdapPlainText,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::CryptocurrencyMiningPool(e) => (
+                EventKind::CryptocurrencyMiningPool,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
             Event::Blocklist(record_type) => match record_type {
-                RecordType::Bootp(e) => (EventKind::BlocklistBootp, e.category()),
-                RecordType::Conn(e) => (EventKind::BlocklistConn, e.category()),
-                RecordType::DceRpc(e) => (EventKind::BlocklistDceRpc, e.category()),
-                RecordType::Dhcp(e) => (EventKind::BlocklistDhcp, e.category()),
-                RecordType::Dns(e) => (EventKind::BlocklistDns, e.category()),
-                RecordType::Ftp(e) => (EventKind::BlocklistFtp, e.category()),
-                RecordType::Http(e) => (EventKind::BlocklistHttp, e.category()),
-                RecordType::Kerberos(e) => (EventKind::BlocklistKerberos, e.category()),
-                RecordType::Ldap(e) => (EventKind::BlocklistLdap, e.category()),
-                RecordType::Mqtt(e) => (EventKind::BlocklistMqtt, e.category()),
-                RecordType::Nfs(e) => (EventKind::BlocklistNfs, e.category()),
-                RecordType::Ntlm(e) => (EventKind::BlocklistNtlm, e.category()),
-                RecordType::Rdp(e) => (EventKind::BlocklistRdp, e.category()),
-                RecordType::Smb(e) => (EventKind::BlocklistSmb, e.category()),
-                RecordType::Smtp(e) => (EventKind::BlocklistSmtp, e.category()),
-                RecordType::Ssh(e) => (EventKind::BlocklistSsh, e.category()),
-                RecordType::Tls(e) => (EventKind::BlocklistTls, e.category()),
+                RecordType::Bootp(e) => (
+                    EventKind::BlocklistBootp,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Conn(e) => (
+                    EventKind::BlocklistConn,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::DceRpc(e) => (
+                    EventKind::BlocklistDceRpc,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Dhcp(e) => (
+                    EventKind::BlocklistDhcp,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Dns(e) => (
+                    EventKind::BlocklistDns,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Ftp(e) => (
+                    EventKind::BlocklistFtp,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Http(e) => (
+                    EventKind::BlocklistHttp,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Kerberos(e) => (
+                    EventKind::BlocklistKerberos,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Ldap(e) => (
+                    EventKind::BlocklistLdap,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Mqtt(e) => (
+                    EventKind::BlocklistMqtt,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Nfs(e) => (
+                    EventKind::BlocklistNfs,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Ntlm(e) => (
+                    EventKind::BlocklistNtlm,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Rdp(e) => (
+                    EventKind::BlocklistRdp,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Smb(e) => (
+                    EventKind::BlocklistSmb,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Smtp(e) => (
+                    EventKind::BlocklistSmtp,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Ssh(e) => (
+                    EventKind::BlocklistSsh,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
+                RecordType::Tls(e) => (
+                    EventKind::BlocklistTls,
+                    e.category().unwrap_or(EventCategory::Reconnaissance),
+                ),
             },
-            Event::WindowsThreat(e) => (EventKind::WindowsThreat, e.category()),
-            Event::NetworkThreat(e) => (EventKind::NetworkThreat, e.category()),
-            Event::ExtraThreat(e) => (EventKind::ExtraThreat, e.category()),
-            Event::LockyRansomware(e) => (EventKind::LockyRansomware, e.category()),
-            Event::SuspiciousTlsTraffic(e) => (EventKind::SuspiciousTlsTraffic, e.category()),
+            Event::WindowsThreat(e) => (
+                EventKind::WindowsThreat,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::NetworkThreat(e) => (
+                EventKind::NetworkThreat,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::ExtraThreat(e) => (
+                EventKind::ExtraThreat,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::LockyRansomware(e) => (
+                EventKind::LockyRansomware,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
+            Event::SuspiciousTlsTraffic(e) => (
+                EventKind::SuspiciousTlsTraffic,
+                e.category().unwrap_or(EventCategory::Reconnaissance),
+            ),
         }
     }
 
@@ -1074,194 +1184,194 @@ impl Event {
         match self {
             Event::DnsCovertChannel(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::HttpThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::RdpBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::RepeatedHttpSessions(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::TorConnection(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::TorConnectionConn(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::DomainGenerationAlgorithm(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::FtpBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::FtpPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::PortScan(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::MultiHostPortScan(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::ExternalDdos(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::NonBrowser(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::LdapBruteForce(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::LdapPlainText(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::CryptocurrencyMiningPool(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::Blocklist(record_type) => match record_type {
                 RecordType::Bootp(bootp_event) => {
                     if bootp_event.matches(locator, filter)?.0 {
-                        category = Some(bootp_event.category());
+                        category = bootp_event.category();
                     }
                 }
                 RecordType::Conn(conn_event) => {
                     if conn_event.matches(locator, filter)?.0 {
-                        category = Some(conn_event.category());
+                        category = conn_event.category();
                     }
                 }
                 RecordType::DceRpc(dcerpc_event) => {
                     if dcerpc_event.matches(locator, filter)?.0 {
-                        category = Some(dcerpc_event.category());
+                        category = dcerpc_event.category();
                     }
                 }
                 RecordType::Dhcp(dhcp_event) => {
                     if dhcp_event.matches(locator, filter)?.0 {
-                        category = Some(dhcp_event.category());
+                        category = dhcp_event.category();
                     }
                 }
                 RecordType::Dns(dns_event) => {
                     if dns_event.matches(locator, filter)?.0 {
-                        category = Some(dns_event.category());
+                        category = dns_event.category();
                     }
                 }
                 RecordType::Ftp(ftp_event) => {
                     if ftp_event.matches(locator, filter)?.0 {
-                        category = Some(ftp_event.category());
+                        category = ftp_event.category();
                     }
                 }
                 RecordType::Http(http_event) => {
                     if http_event.matches(locator, filter)?.0 {
-                        category = Some(http_event.category());
+                        category = http_event.category();
                     }
                 }
                 RecordType::Kerberos(kerberos_event) => {
                     if kerberos_event.matches(locator, filter)?.0 {
-                        category = Some(kerberos_event.category());
+                        category = kerberos_event.category();
                     }
                 }
                 RecordType::Ldap(ldap_event) => {
                     if ldap_event.matches(locator, filter)?.0 {
-                        category = Some(ldap_event.category());
+                        category = ldap_event.category();
                     }
                 }
                 RecordType::Mqtt(mqtt_event) => {
                     if mqtt_event.matches(locator, filter)?.0 {
-                        category = Some(mqtt_event.category());
+                        category = mqtt_event.category();
                     }
                 }
                 RecordType::Nfs(nfs_event) => {
                     if nfs_event.matches(locator, filter)?.0 {
-                        category = Some(nfs_event.category());
+                        category = nfs_event.category();
                     }
                 }
                 RecordType::Ntlm(ntlm_event) => {
                     if ntlm_event.matches(locator, filter)?.0 {
-                        category = Some(ntlm_event.category());
+                        category = ntlm_event.category();
                     }
                 }
                 RecordType::Rdp(rdp_event) => {
                     if rdp_event.matches(locator, filter)?.0 {
-                        category = Some(rdp_event.category());
+                        category = rdp_event.category();
                     }
                 }
                 RecordType::Smb(smb_event) => {
                     if smb_event.matches(locator, filter)?.0 {
-                        category = Some(smb_event.category());
+                        category = smb_event.category();
                     }
                 }
                 RecordType::Smtp(smtp_event) => {
                     if smtp_event.matches(locator, filter)?.0 {
-                        category = Some(smtp_event.category());
+                        category = smtp_event.category();
                     }
                 }
                 RecordType::Ssh(ssh_event) => {
                     if ssh_event.matches(locator, filter)?.0 {
-                        category = Some(ssh_event.category());
+                        category = ssh_event.category();
                     }
                 }
                 RecordType::Tls(tls_event) => {
                     if tls_event.matches(locator, filter)?.0 {
-                        category = Some(tls_event.category());
+                        category = tls_event.category();
                     }
                 }
             },
             Event::WindowsThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::NetworkThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::ExtraThreat(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::LockyRansomware(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
             Event::SuspiciousTlsTraffic(event) => {
                 if event.matches(locator, filter)?.0 {
-                    category = Some(event.category());
+                    category = event.category();
                 }
             }
         }
@@ -5136,7 +5246,7 @@ mod tests {
             issuer_common_name: "common".to_string(),
             last_alert: 1,
             confidence: 0.9,
-            category: Some(EventCategory::Unknown),
+            category: Some(EventCategory::Reconnaissance),
         }
     }
 
@@ -5156,7 +5266,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Reconnaissance" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
         );
 
         let suspicious_tls_traffic =
@@ -5169,7 +5279,10 @@ mod tests {
             suspicious_tls_traffic.dst_addrs(),
             &[IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))]
         );
-        assert_eq!(suspicious_tls_traffic.category(), EventCategory::Unknown);
+        assert_eq!(
+            suspicious_tls_traffic.category(),
+            Some(EventCategory::Reconnaissance)
+        );
         assert_eq!(suspicious_tls_traffic.src_port(), 10000);
         assert_eq!(suspicious_tls_traffic.dst_port(), 443);
         assert_eq!(suspicious_tls_traffic.proto(), 6);
@@ -5178,7 +5291,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_tls,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Unknown" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="Reconnaissance" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="100" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
         );
     }
 
@@ -5238,7 +5351,7 @@ mod tests {
 
         let mut counter = HashMap::new();
         event.count_category(&mut counter, None, &filter).unwrap();
-        assert_eq!(counter.get(&EventCategory::Unknown), Some(&1));
+        assert_eq!(counter.get(&EventCategory::Reconnaissance), Some(&1));
 
         let mut counter = HashMap::new();
         event

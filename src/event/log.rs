@@ -92,8 +92,8 @@ impl Match for ExtraThreat {
         0
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {

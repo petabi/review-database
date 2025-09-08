@@ -206,8 +206,8 @@ impl Match for DnsCovertChannel {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -343,8 +343,8 @@ impl Match for LockyRansomware {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -600,8 +600,8 @@ impl Match for CryptocurrencyMiningPool {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -793,8 +793,8 @@ impl Match for BlocklistDns {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {

@@ -177,8 +177,8 @@ impl Match for TorConnection {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -301,8 +301,8 @@ impl Match for TorConnectionConn {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
-        self.category.unwrap_or(EventCategory::Unknown)
+    fn category(&self) -> Option<EventCategory> {
+        self.category
     }
 
     fn level(&self) -> NonZeroU8 {
@@ -423,7 +423,7 @@ mod tests {
         );
         assert_eq!(event.dst_port(), 443);
         assert_eq!(event.proto(), 6);
-        assert_eq!(event.category(), EventCategory::CommandAndControl);
+        assert_eq!(event.category(), Some(EventCategory::CommandAndControl));
         assert_eq!(event.level(), MEDIUM);
         assert_eq!(event.kind(), "tor exit nodes");
         assert_eq!(event.sensor(), "test-sensor");

@@ -26,7 +26,7 @@ pub(super) trait Match {
     fn dst_port(&self) -> u16;
     #[allow(dead_code)] // for future use
     fn proto(&self) -> u8;
-    fn category(&self) -> EventCategory;
+    fn category(&self) -> Option<EventCategory>;
     fn level(&self) -> NonZeroU8;
     fn kind(&self) -> &str;
     fn sensor(&self) -> &str;
@@ -197,7 +197,7 @@ pub(super) trait Match {
         if let Some(categories) = &filter.categories
             && categories
                 .iter()
-                .all(|category| *category != self.category())
+                .all(|category| Some(*category) != self.category())
         {
             return Ok((false, None));
         }
@@ -264,7 +264,7 @@ pub(super) trait Match {
 
     fn score_by_confidence(&self, confidence: &[Confidence]) -> f64 {
         confidence.iter().fold(0.0, |score, conf| {
-            if conf.threat_category == self.category()
+            if Some(conf.threat_category) == self.category()
                 && conf.threat_kind.to_lowercase() == self.kind().to_lowercase()
                 && self
                     .confidence()
