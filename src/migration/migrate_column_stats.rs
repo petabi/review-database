@@ -8,6 +8,17 @@ use diesel_async::RunQueryDsl;
 use crate::{Database, column_statistics::Statistics};
 
 pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()> {
+    use crate::schema::column_description::dsl as cd;
+    let mut conn = database.pool.get().await?;
+
+    // First check if there are any column descriptions to migrate
+    let record_count: i64 = cd::column_description.count().get_result(&mut conn).await?;
+
+    // No column descriptions found in PostgreSQL, skipping migration
+    if record_count == 0 {
+        return Ok(());
+    }
+
     let models = retrieve_model_to_migrate(database).await?;
     tracing::info!(
         "Migrating column statistics for a total of {} models from PostgreSQL to RocksDb",
