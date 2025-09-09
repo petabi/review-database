@@ -2929,11 +2929,9 @@ mod tests {
             content_encoding: "encoding type".to_string(),
             content_type: "content type".to_string(),
             cache_control: "no cache".to_string(),
-            orig_filenames: vec!["a1".to_string(), "a2".to_string()],
-            orig_mime_types: Vec::new(),
-            resp_filenames: Vec::new(),
-            resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
-            post_body: "12345678901234567890".to_string().into_bytes(),
+            filenames: vec!["a1".to_string(), "a2".to_string()],
+            mime_types: vec!["b1".to_string(), "b2".to_string()],
+            body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 0.8,
             category: EventCategory::CommandAndControl,
@@ -2948,7 +2946,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="0.8""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="0.8""#
         );
 
         let dga = DomainGenerationAlgorithm::new(
@@ -2959,7 +2957,7 @@ mod tests {
         let dga_display = format!("{event}");
         assert_eq!(
             &dga_display,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="0.8" triage_scores="""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="1000" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="0.8" triage_scores="""#
         );
     }
 
@@ -3072,11 +3070,9 @@ mod tests {
             content_encoding: "encoding type".to_string(),
             content_type: "content type".to_string(),
             cache_control: "no cache".to_string(),
-            orig_filenames: vec!["a1".to_string(), "a2".to_string()],
-            orig_mime_types: Vec::new(),
-            resp_filenames: Vec::new(),
-            resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
-            post_body: "12345678901234567890".to_string().into_bytes(),
+            filenames: vec!["a1".to_string(), "a2".to_string()],
+            mime_types: vec!["b1".to_string(), "b2".to_string()],
+            body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             db_name: "db".to_string(),
             rule_id: 12000,
@@ -3098,7 +3094,7 @@ mod tests {
         assert_eq!(
             syslog_message,
             format!(
-                "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"HttpThreat\" category=\"Reconnaissance\" sensor=\"collector1\" src_addr=\"127.0.0.1\" src_port=\"10000\" dst_addr=\"127.0.0.2\" dst_port=\"80\" proto=\"6\" end_time=\"{end_time}\" method=\"GET\" host=\"example.com\" uri=\"/uri/path\" referer=\"-\" version=\"1.1\" user_agent=\"browser\" request_len=\"100\" response_len=\"100\" status_code=\"200\" status_msg=\"-\" username=\"-\" password=\"-\" cookie=\"cookie\" content_encoding=\"encoding type\" content_type=\"content type\" cache_control=\"no cache\" orig_filenames=\"a1,a2\" orig_mime_types=\"\" resp_filenames=\"\" resp_mime_types=\"b1,b2\" post_body=\"1234567890...\" state=\"\" db_name=\"db\" rule_id=\"12000\" matched_to=\"match\" cluster_id=\"1111\" attack_kind=\"attack\" confidence=\"0.8\""
+                "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"HttpThreat\" category=\"Reconnaissance\" sensor=\"collector1\" src_addr=\"127.0.0.1\" src_port=\"10000\" dst_addr=\"127.0.0.2\" dst_port=\"80\" proto=\"6\" end_time=\"{end_time}\" method=\"GET\" host=\"example.com\" uri=\"/uri/path\" referer=\"-\" version=\"1.1\" user_agent=\"browser\" request_len=\"100\" response_len=\"100\" status_code=\"200\" status_msg=\"-\" username=\"-\" password=\"-\" cookie=\"cookie\" content_encoding=\"encoding type\" content_type=\"content type\" cache_control=\"no cache\" filenames=\"a1,a2\" mime_types=\"b1,b2\" body=\"1234567890...\" state=\"\" db_name=\"db\" rule_id=\"12000\" matched_to=\"match\" cluster_id=\"1111\" attack_kind=\"attack\" confidence=\"0.8\""
             )
         );
 
@@ -3106,7 +3102,7 @@ mod tests {
             HttpThreat::new(Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(), fields);
         let event = Event::HttpThreat(http_threat);
         let http_threat_display = format!("{event}");
-        assert!(http_threat_display.contains("post_body=\"1234567890...\""));
+        assert!(http_threat_display.contains("body=\"1234567890...\""));
         assert!(http_threat_display.contains("confidence=\"0.8\""));
     }
 
@@ -3136,11 +3132,9 @@ mod tests {
             content_encoding: "encoding type".to_string(),
             content_type: "content type".to_string(),
             cache_control: "no cache".to_string(),
-            orig_filenames: vec!["a1".to_string(), "a2".to_string()],
-            orig_mime_types: Vec::new(),
-            resp_filenames: Vec::new(),
-            resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
-            post_body: "12345678901234567890".to_string().into_bytes(),
+            filenames: vec!["a1".to_string(), "a2".to_string()],
+            mime_types: vec!["b1".to_string(), "b2".to_string()],
+            body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 1.0,
             category: EventCategory::CommandAndControl,
@@ -3157,7 +3151,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="1970-01-01T00:10:10+00:00" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="1""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="1970-01-01T00:10:10+00:00" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="1""#
         );
 
         let non_browser = Event::NonBrowser(NonBrowser::new(
@@ -3165,7 +3159,7 @@ mod tests {
             &fields,
         ))
         .to_string();
-        assert!(non_browser.contains("post_body=\"1234567890...\""));
+        assert!(non_browser.contains("body=\"1234567890...\""));
         assert!(non_browser.contains("state=\"\""));
     }
 
@@ -3195,11 +3189,9 @@ mod tests {
             content_encoding: "encoding type".to_string(),
             content_type: "content type".to_string(),
             cache_control: "no cache".to_string(),
-            orig_filenames: vec!["a1".to_string(), "a2".to_string()],
-            orig_mime_types: Vec::new(),
-            resp_filenames: Vec::new(),
-            resp_mime_types: vec!["b1".to_string(), "b2".to_string()],
-            post_body: "12345678901234567890".to_string().into_bytes(),
+            filenames: vec!["a1".to_string(), "a2".to_string()],
+            mime_types: vec!["b1".to_string(), "b2".to_string()],
+            body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 1.0,
             category: EventCategory::InitialAccess,
@@ -3216,7 +3208,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlocklistHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="600" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" orig_filenames="a1,a2" orig_mime_types="" resp_filenames="" resp_mime_types="b1,b2" post_body="1234567890..." state="" confidence="1""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlocklistHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="600" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="1""#
         );
 
         let blocklist_http = Event::Blocklist(RecordType::Http(BlocklistHttp::new(
@@ -3225,8 +3217,8 @@ mod tests {
         )))
         .to_string();
 
-        assert!(blocklist_http.contains("post_body=\"1234567890...\""));
-        assert!(blocklist_http.contains("resp_mime_types=\"b1,b2\""));
+        assert!(blocklist_http.contains("body=\"1234567890...\""));
+        assert!(blocklist_http.contains("mime_types=\"b1,b2\""));
     }
 
     #[tokio::test]
@@ -4996,11 +4988,9 @@ mod tests {
             content_encoding: "content_encoding".to_string(),
             content_type: "content_type".to_string(),
             cache_control: "cache_control".to_string(),
-            orig_filenames: vec!["filename".to_string()],
-            orig_mime_types: vec!["mime_type".to_string()],
-            resp_filenames: vec!["filename".to_string()],
-            resp_mime_types: vec!["mime_type".to_string()],
-            post_body: "post_body".as_bytes().to_vec(),
+            filenames: vec!["filename".to_string()],
+            mime_types: vec!["mime_type".to_string()],
+            body: "post_body".as_bytes().to_vec(),
             state: "state".to_string(),
             confidence: 1.0,
             category: EventCategory::CommandAndControl,
@@ -5022,7 +5012,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" filenames="filename" mime_types="mime_type" body="post_body" state="state" confidence="1""#
         );
 
         let tor_connection = Event::TorConnection(TorConnection::new(
@@ -5033,7 +5023,7 @@ mod tests {
 
         assert_eq!(
             &tor_connection,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" orig_filenames="filename" orig_mime_types="mime_type" resp_filenames="filename" resp_mime_types="mime_type" post_body="post_body" state="state" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" filenames="filename" mime_types="mime_type" body="post_body" state="state" triage_scores="""#
         );
     }
 
