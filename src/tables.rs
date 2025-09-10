@@ -6,6 +6,7 @@ mod allow_network;
 mod batch_info;
 mod block_network;
 mod category;
+mod cluster;
 mod column_stats;
 mod csv_column_extra;
 mod customer;
@@ -41,6 +42,7 @@ pub use self::account_policy::AccountPolicy;
 pub use self::agent::{Agent, AgentKind};
 pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
+pub use self::cluster::Cluster;
 pub use self::column_stats::ColumnStats;
 pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::customer::{Customer, Network as CustomerNetwork, Update as CustomerUpdate};
@@ -94,6 +96,7 @@ pub(super) const ALLOW_NETWORKS: &str = "allow networks";
 pub(super) const BATCH_INFO: &str = "batch_info";
 pub(super) const BLOCK_NETWORKS: &str = "block networks";
 pub(super) const CATEGORY: &str = "category";
+pub(super) const CLUSTER: &str = "cluster";
 pub(super) const COLUMN_STATS: &str = "column stats";
 pub(super) const CSV_COLUMN_EXTRAS: &str = "csv column extras";
 pub(super) const CUSTOMERS: &str = "customers";
@@ -119,7 +122,7 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 32] = [
+const MAP_NAMES: [&str; 33] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -128,6 +131,7 @@ const MAP_NAMES: [&str; 32] = [
     BATCH_INFO,
     BLOCK_NETWORKS,
     CATEGORY,
+    CLUSTER,
     COLUMN_STATS,
     CSV_COLUMN_EXTRAS,
     CUSTOMERS,
@@ -364,6 +368,12 @@ impl StateDb {
     pub(crate) fn time_series(&self) -> Table<'_, TimeSeries> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<TimeSeries>::open(inner).expect("{TIME_SERIES} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn clusters(&self) -> Table<'_, Cluster> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<Cluster>::open(inner).expect("{CLUSTER} table must be present")
     }
 
     #[must_use]

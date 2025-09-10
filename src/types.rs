@@ -32,6 +32,7 @@ mod private {
     impl Sealed for crate::BatchInfo {}
     impl Sealed for tables::BlockNetwork {}
     impl Sealed for crate::Category {}
+    impl Sealed for tables::Cluster {}
     impl Sealed for tables::CsvColumnExtra {}
     impl Sealed for tables::Customer {}
     impl Sealed for tables::DataSource {}
