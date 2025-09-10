@@ -44,7 +44,7 @@ pub struct BlocklistNtlmFields {
     pub domainname: String,
     pub success: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistNtlmFields {
@@ -52,7 +52,10 @@ impl BlocklistNtlmFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -86,7 +89,7 @@ pub struct BlocklistNtlm {
     pub domainname: String,
     pub success: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistNtlm {
@@ -154,7 +157,7 @@ impl Match for BlocklistNtlm {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

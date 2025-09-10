@@ -79,7 +79,7 @@ pub struct BlocklistDhcpFields {
     pub client_id_type: u8,
     pub client_id: Vec<u8>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 // TODO: DHCP client identifier type.
@@ -92,7 +92,10 @@ impl BlocklistDhcpFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -154,7 +157,7 @@ pub struct BlocklistDhcp {
     pub client_id_type: u8,
     pub client_id: Vec<u8>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistDhcp {
@@ -251,7 +254,7 @@ impl Match for BlocklistDhcp {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

@@ -79,7 +79,6 @@ pub struct PretrainedModel(pub Vec<u8>);
 )]
 #[repr(u8)]
 pub enum EventCategory {
-    Unknown = 0,
     Reconnaissance = 1,
     InitialAccess,
     Execution,

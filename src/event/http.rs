@@ -56,7 +56,10 @@ impl HttpEventFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -124,7 +127,7 @@ pub struct HttpEventFieldsV0_41 {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
@@ -160,7 +163,7 @@ impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
             post_body: value.post_body,
             state: value.state,
             confidence: 1.0, // default value for HTTP events
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -207,7 +210,10 @@ impl RepeatedHttpSessionsFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -232,7 +238,7 @@ pub struct RepeatedHttpSessionsFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<RepeatedHttpSessionsFieldsV0_39> for RepeatedHttpSessionsFieldsV0_41 {
@@ -247,7 +253,7 @@ impl From<RepeatedHttpSessionsFieldsV0_39> for RepeatedHttpSessionsFieldsV0_41 {
             start_time: DateTime::UNIX_EPOCH,
             end_time: DateTime::UNIX_EPOCH,
             confidence: 0.3, // default value for RepeatedHttpSessions
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -275,7 +281,7 @@ pub struct RepeatedHttpSessions {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -335,7 +341,7 @@ impl Match for RepeatedHttpSessions {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -415,7 +421,7 @@ pub struct HttpThreatFields {
     pub cluster_id: Option<usize>,
     pub attack_kind: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl HttpThreatFields {
@@ -423,7 +429,10 @@ impl HttpThreatFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -518,7 +527,7 @@ pub struct HttpThreat {
     pub cluster_id: Option<usize>,
     pub attack_kind: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -633,7 +642,7 @@ impl Match for HttpThreat {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -720,7 +729,7 @@ pub struct DgaFields {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl DgaFields {
@@ -728,7 +737,10 @@ impl DgaFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -797,7 +809,7 @@ pub struct DomainGenerationAlgorithm {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -902,7 +914,7 @@ impl Match for DomainGenerationAlgorithm {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -965,7 +977,7 @@ pub struct NonBrowser {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -1069,7 +1081,7 @@ impl Match for NonBrowser {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -1130,7 +1142,7 @@ pub struct BlocklistHttpFields {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistHttpFields {
@@ -1138,7 +1150,10 @@ impl BlocklistHttpFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -1207,7 +1222,7 @@ pub struct BlocklistHttp {
     pub post_body: Vec<u8>,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -1311,7 +1326,7 @@ impl Match for BlocklistHttp {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

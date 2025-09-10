@@ -39,7 +39,10 @@ impl LdapBruteForceFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -64,7 +67,7 @@ pub struct LdapBruteForceFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<LdapBruteForceFieldsV0_39> for LdapBruteForceFieldsV0_41 {
@@ -79,7 +82,7 @@ impl From<LdapBruteForceFieldsV0_39> for LdapBruteForceFieldsV0_41 {
             start_time: value.start_time,
             end_time: value.end_time,
             confidence: 0.3, // default value for LdapBruteForce
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -119,7 +122,7 @@ pub struct LdapBruteForce {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -180,7 +183,7 @@ impl Match for LdapBruteForce {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -226,7 +229,7 @@ impl LdapEventFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} confidence={:?}",
-            self.category.to_string(),
+            format!("{:?}", self.category),
             self.sensor.to_string(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -326,7 +329,7 @@ pub struct LdapPlainText {
     pub object: Vec<String>,
     pub argument: Vec<String>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -373,7 +376,7 @@ impl LdapPlainText {
             object: fields.object,
             argument: fields.argument,
             confidence: fields.confidence,
-            category: fields.category,
+            category: Some(fields.category),
             triage_scores: None,
         }
     }
@@ -400,7 +403,7 @@ impl Match for LdapPlainText {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -447,7 +450,7 @@ pub struct BlocklistLdap {
     pub object: Vec<String>,
     pub argument: Vec<String>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -494,7 +497,7 @@ impl BlocklistLdap {
             object: fields.object,
             argument: fields.argument,
             confidence: fields.confidence,
-            category: fields.category,
+            category: Some(fields.category),
             triage_scores: None,
         }
     }
@@ -521,7 +524,7 @@ impl Match for BlocklistLdap {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

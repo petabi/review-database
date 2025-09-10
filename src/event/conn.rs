@@ -42,7 +42,10 @@ impl PortScanFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -65,7 +68,7 @@ pub struct PortScanFieldsV0_41 {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<PortScanFieldsV0_39> for PortScanFieldsV0_41 {
@@ -79,7 +82,7 @@ impl From<PortScanFieldsV0_39> for PortScanFieldsV0_41 {
             end_time: value.end_time,
             proto: value.proto,
             confidence: 0.3, // default value for PortScan
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -107,7 +110,7 @@ pub struct PortScan {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -166,7 +169,7 @@ impl Match for PortScan {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -213,7 +216,10 @@ impl MultiHostPortScanFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
@@ -236,7 +242,7 @@ pub struct MultiHostPortScanFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<MultiHostPortScanFieldsV0_39> for MultiHostPortScanFieldsV0_41 {
@@ -250,7 +256,7 @@ impl From<MultiHostPortScanFieldsV0_39> for MultiHostPortScanFieldsV0_41 {
             start_time: value.start_time,
             end_time: value.end_time,
             confidence: 0.3, // default value for MultiHostPortScan
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -278,7 +284,7 @@ pub struct MultiHostPortScan {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -337,7 +343,7 @@ impl Match for MultiHostPortScan {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -383,7 +389,10 @@ impl ExternalDdosFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
@@ -404,7 +413,7 @@ pub struct ExternalDdosFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<ExternalDdosFieldsV0_39> for ExternalDdosFieldsV0_41 {
@@ -417,7 +426,7 @@ impl From<ExternalDdosFieldsV0_39> for ExternalDdosFieldsV0_41 {
             start_time: value.start_time,
             end_time: value.end_time,
             confidence: 0.3, // default value for ExternalDdos
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -443,7 +452,7 @@ pub struct ExternalDdos {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -500,7 +509,7 @@ impl Match for ExternalDdos {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -556,7 +565,7 @@ pub struct BlocklistConnFields {
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistConnFields {
@@ -564,7 +573,10 @@ impl BlocklistConnFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -604,7 +616,7 @@ pub struct BlocklistConn {
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -680,7 +692,7 @@ impl Match for BlocklistConn {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 

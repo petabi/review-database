@@ -102,7 +102,7 @@ impl From<HttpThreatV0_33> for HttpThreatFields {
             cluster_id: Some(input.cluster_id),
             attack_kind: input.attack_kind,
             confidence: input.confidence,
-            category: input.category,
+            category: Some(input.category),
         }
     }
 }
@@ -172,7 +172,7 @@ impl From<BlocklistTlsFieldsV0_36> for BlocklistTlsFields {
             issuer_common_name: input.issuer_common_name,
             last_alert: input.last_alert,
             confidence: 0.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 }
@@ -220,7 +220,7 @@ impl From<NetworkThreatV0_33> for NetworkThreat {
             attack_kind: input.attack_kind,
             confidence: input.confidence,
             triage_scores: input.triage_scores,
-            category: input.category,
+            category: Some(input.category),
         }
     }
 }
@@ -268,7 +268,7 @@ impl From<WindowsThreatV0_33> for WindowsThreat {
             attack_kind: input.attack_kind,
             confidence: input.confidence,
             triage_scores: input.triage_scores,
-            category: input.category,
+            category: Some(input.category),
         }
     }
 }
@@ -304,7 +304,7 @@ impl From<ExtraThreatV0_33> for ExtraThreat {
             attack_kind: input.attack_kind,
             confidence: input.confidence,
             triage_scores: input.triage_scores,
-            category: input.category,
+            category: Some(input.category),
         }
     }
 }

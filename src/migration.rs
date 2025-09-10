@@ -101,7 +101,7 @@ use crate::{ExternalService, IterableMap, collections::Indexed};
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.3,<0.41.0-alpha.4";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.41.0-alpha.4,<0.42.0";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -227,7 +227,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         ),
         (
             VersionReq::parse(">=0.40.0,<0.41.0")?,
-            Version::parse("0.41.0-alpha.3")?,
+            Version::parse("0.41.0-alpha.4")?,
             migrate_0_40_to_0_41_0,
         ),
     ];
@@ -306,7 +306,8 @@ fn read_version_file(path: &Path) -> Result<Version> {
 }
 
 fn migrate_0_40_to_0_41_0(store: &super::Store) -> Result<()> {
-    migrate_0_41_events(store)
+    migrate_0_41_events(store)?;
+    migrate_0_41_category_to_option(store)
 }
 
 fn migrate_0_39_to_0_40_0(store: &super::Store) -> Result<()> {
@@ -766,6 +767,69 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 // No migration needed for other event types
             }
         }
+    }
+
+    Ok(())
+}
+
+fn migrate_0_41_category_to_option(store: &super::Store) -> Result<()> {
+    // This migration handles the conversion of EventCategory fields to Option<EventCategory>
+    // for all event types. Events with EventCategory::Unknown are converted to None,
+    // all others are converted to Some(category).
+
+    use num_traits::FromPrimitive;
+
+    use crate::event::EventKind;
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            continue; // Skip invalid keys
+        };
+
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(_event_kind) = EventKind::from_i128(kind) else {
+            continue; // Skip invalid event kinds
+        };
+
+        // Try to parse the value as a generic serde_json::Value to inspect the structure
+        if let Ok(mut json_value) = serde_json::from_slice::<serde_json::Value>(v.as_ref()) {
+            if let Some(category_value) = json_value.get_mut("category") {
+                // Check if it's EventCategory::Unknown (value 0)
+                if let Some(category_num) = category_value.as_u64()
+                    && category_num == 0
+                {
+                    // EventCategory::Unknown = 0
+                    *category_value = serde_json::Value::Null;
+                }
+                // For other categories, we keep them as they are since they'll be wrapped in Some() during deserialization
+            }
+
+            if let Ok(new_value) = serde_json::to_vec(&json_value) {
+                event_db.update((&k, &v), (&k, &new_value))?;
+            }
+        } else if let Ok(mut bincode_value) = bincode::deserialize::<serde_json::Value>(v.as_ref())
+        {
+            // Handle bincode serialized events
+            if let Some(category_value) = bincode_value.get_mut("category")
+                && let Some(category_num) = category_value.as_u64()
+                && category_num == 0
+            {
+                // EventCategory::Unknown = 0
+                *category_value = serde_json::Value::Null;
+            }
+
+            if let Ok(new_value) = bincode::serialize(&bincode_value) {
+                event_db.update((&k, &v), (&k, &new_value))?;
+            }
+        }
+        // If we can't parse it as either JSON or bincode, skip this event
     }
 
     Ok(())
@@ -1241,7 +1305,7 @@ mod tests {
                     assert_eq!(message.sensor, value.sensor);
                     assert_eq!(message.src_addr, value.src_addr);
                     assert_eq!(format!("{:.1}", message.confidence), "0.0".to_string());
-                    assert_eq!(message.category, value.category);
+                    assert_eq!(message.category, Some(value.category));
                 }
                 _ => {}
             }

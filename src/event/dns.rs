@@ -62,7 +62,7 @@ pub struct DnsEventFields {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl DnsEventFields {
@@ -70,7 +70,10 @@ impl DnsEventFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
@@ -118,7 +121,7 @@ pub struct DnsCovertChannel {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -203,7 +206,7 @@ impl Match for DnsCovertChannel {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -255,7 +258,7 @@ pub struct LockyRansomware {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -340,7 +343,7 @@ impl Match for LockyRansomware {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -376,7 +379,10 @@ impl CryptocurrencyMiningPoolFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -426,7 +432,7 @@ pub struct CryptocurrencyMiningPoolFieldsV0_41 {
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<CryptocurrencyMiningPoolFieldsV0_39> for CryptocurrencyMiningPoolFieldsV0_41 {
@@ -453,7 +459,7 @@ impl From<CryptocurrencyMiningPoolFieldsV0_39> for CryptocurrencyMiningPoolField
             ttl: value.ttl,
             coins: value.coins,
             confidence: 1.0, // default value for CryptocurrencyMiningPool
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -508,7 +514,7 @@ pub struct CryptocurrencyMiningPool {
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -594,7 +600,7 @@ impl Match for CryptocurrencyMiningPool {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -645,7 +651,7 @@ pub struct BlocklistDnsFields {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistDnsFields {
@@ -653,7 +659,10 @@ impl BlocklistDnsFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -700,7 +709,7 @@ pub struct BlocklistDns {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -784,7 +793,7 @@ impl Match for BlocklistDns {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
