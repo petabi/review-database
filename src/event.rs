@@ -4381,7 +4381,7 @@ mod tests {
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
             confidence: 1.0,
-            category: Some(EventCategory::LateralMovement),
+            category: EventCategory::LateralMovement,
         };
 
         let message = EventMessage {
@@ -4427,7 +4427,7 @@ mod tests {
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
             confidence: 1.0,
-            category: Some(EventCategory::InitialAccess),
+            category: EventCategory::InitialAccess,
         }
     }
 

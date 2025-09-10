@@ -82,7 +82,7 @@ impl From<PortScanFieldsV0_39> for PortScanFieldsV0_41 {
             end_time: value.end_time,
             proto: value.proto,
             confidence: 0.3, // default value for PortScan
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -95,7 +95,7 @@ pub struct PortScanFieldsV0_39 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -256,7 +256,7 @@ impl From<MultiHostPortScanFieldsV0_39> for MultiHostPortScanFieldsV0_41 {
             start_time: value.start_time,
             end_time: value.end_time,
             confidence: 0.3, // default value for MultiHostPortScan
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -269,7 +269,7 @@ pub struct MultiHostPortScanFieldsV0_39 {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -426,7 +426,7 @@ impl From<ExternalDdosFieldsV0_39> for ExternalDdosFieldsV0_41 {
             start_time: value.start_time,
             end_time: value.end_time,
             confidence: 0.3, // default value for ExternalDdos
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -438,7 +438,7 @@ pub struct ExternalDdosFieldsV0_39 {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[allow(clippy::module_name_repetitions)]

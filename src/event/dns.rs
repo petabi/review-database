@@ -459,7 +459,7 @@ impl From<CryptocurrencyMiningPoolFieldsV0_39> for CryptocurrencyMiningPoolField
             ttl: value.ttl,
             coins: value.coins,
             confidence: 1.0, // default value for CryptocurrencyMiningPool
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -487,7 +487,7 @@ pub struct CryptocurrencyMiningPoolFieldsV0_39 {
     pub ra_flag: bool,
     pub ttl: Vec<i32>,
     pub coins: Vec<String>,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]

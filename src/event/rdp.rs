@@ -74,7 +74,7 @@ impl From<RdpBruteForceFieldsV0_39> for RdpBruteForceFieldsV0_41 {
             end_time: value.end_time,
             proto: value.proto,
             confidence: 0.3, // default value for RdpBruteForce
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -86,7 +86,7 @@ pub struct RdpBruteForceFieldsV0_39 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]

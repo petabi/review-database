@@ -163,7 +163,7 @@ impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
             post_body: value.post_body,
             state: value.state,
             confidence: 1.0, // default value for HTTP events
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -200,7 +200,7 @@ pub struct HttpEventFieldsV0_39 {
     pub resp_mime_types: Vec<String>,
     pub post_body: Vec<u8>,
     pub state: String,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 pub type RepeatedHttpSessionsFields = RepeatedHttpSessionsFieldsV0_41;
@@ -253,7 +253,7 @@ impl From<RepeatedHttpSessionsFieldsV0_39> for RepeatedHttpSessionsFieldsV0_41 {
             start_time: DateTime::UNIX_EPOCH,
             end_time: DateTime::UNIX_EPOCH,
             confidence: 0.3, // default value for RepeatedHttpSessions
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -266,7 +266,7 @@ pub struct RepeatedHttpSessionsFieldsV0_39 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]

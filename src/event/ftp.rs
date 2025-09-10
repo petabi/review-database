@@ -90,7 +90,7 @@ impl From<FtpBruteForceFieldsV0_39> for FtpBruteForceFieldsV0_41 {
             end_time: value.end_time,
             is_internal: value.is_internal,
             confidence: 0.3, // default value for FtpBruteForce
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -105,7 +105,7 @@ pub struct FtpBruteForceFieldsV0_39 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -307,7 +307,7 @@ impl From<FtpEventFieldsV0_38> for FtpEventFieldsV0_39 {
             file_size: value.file_size,
             file_id: value.file_id,
             confidence: 1.0, // default value for FtpPlainText
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -333,7 +333,7 @@ pub struct FtpEventFieldsV0_38 {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[derive(Deserialize, Serialize)]

@@ -1733,7 +1733,7 @@ mod tests {
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
             confidence: 1.0,
-            category: Some(EventCategory::LateralMovement),
+            category: EventCategory::LateralMovement,
         }
     }
 

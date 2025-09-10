@@ -775,7 +775,6 @@ fn migrate_0_41_category_to_option(store: &super::Store) -> Result<()> {
     // for all event types. Events with EventCategory::Unknown are converted to None,
     // all others are converted to Some(category).
 
-    use bincode::Options;
     use num_traits::FromPrimitive;
 
     use crate::event::EventKind;
@@ -813,8 +812,7 @@ fn migrate_0_41_category_to_option(store: &super::Store) -> Result<()> {
             if let Ok(new_value) = serde_json::to_vec(&json_value) {
                 event_db.update((&k, &v), (&k, &new_value))?;
             }
-        } else if let Ok(mut bincode_value) =
-            bincode::DefaultOptions::new().deserialize::<serde_json::Value>(v.as_ref())
+        } else if let Ok(mut bincode_value) = bincode::deserialize::<serde_json::Value>(v.as_ref())
         {
             // Handle bincode serialized events
             if let Some(category_value) = bincode_value.get_mut("category")
@@ -825,7 +823,7 @@ fn migrate_0_41_category_to_option(store: &super::Store) -> Result<()> {
                 *category_value = serde_json::Value::Null;
             }
 
-            if let Ok(new_value) = bincode::DefaultOptions::new().serialize(&bincode_value) {
+            if let Ok(new_value) = bincode::serialize(&bincode_value) {
                 event_db.update((&k, &v), (&k, &new_value))?;
             }
         }
@@ -1584,7 +1582,7 @@ mod tests {
             file: "test.txt".to_string(),
             file_size: 1024,
             file_id: "file123".to_string(),
-            category: Some(crate::EventCategory::Collection),
+            category: crate::EventCategory::Collection,
         };
         let message = EventMessage {
             time: chrono::Utc::now(),
@@ -1865,7 +1863,7 @@ mod tests {
             resp_mime_types: vec![],
             post_body: vec![],
             state: String::new(),
-            category: Some(crate::EventCategory::InitialAccess),
+            category: crate::EventCategory::InitialAccess,
         };
         let message = EventMessage {
             time: now,
@@ -1897,7 +1895,7 @@ mod tests {
             ra_flag: true,
             ttl: vec![3600],
             coins: vec!["BTC".to_string()],
-            category: Some(crate::EventCategory::CommandAndControl),
+            category: crate::EventCategory::CommandAndControl,
         };
         let message = EventMessage {
             time: now,
@@ -1917,7 +1915,7 @@ mod tests {
             start_time: now,
             end_time: now,
             is_internal: false,
-            category: Some(crate::EventCategory::CredentialAccess),
+            category: crate::EventCategory::CredentialAccess,
         };
         let message = EventMessage {
             time: now,
@@ -1934,7 +1932,7 @@ mod tests {
             proto: 6,
             start_time: now,
             end_time: now,
-            category: Some(crate::EventCategory::CredentialAccess),
+            category: crate::EventCategory::CredentialAccess,
         };
         let message = EventMessage {
             time: now,
@@ -1951,7 +1949,7 @@ mod tests {
             dst_addr: "192.168.1.2".parse::<IpAddr>().unwrap(),
             dst_port: 80,
             proto: 6,
-            category: Some(crate::EventCategory::CommandAndControl),
+            category: crate::EventCategory::CommandAndControl,
         };
         let message = EventMessage {
             time: chrono::Utc::now(),
@@ -2046,7 +2044,7 @@ mod tests {
             start_time: Utc::now(),
             end_time: Utc::now(),
             proto: 6,
-            category: Some(crate::EventCategory::Discovery),
+            category: crate::EventCategory::Discovery,
         };
         let message = EventMessage {
             time: Utc::now(),
@@ -2066,7 +2064,7 @@ mod tests {
             proto: 6,
             start_time: Utc::now(),
             end_time: Utc::now(),
-            category: Some(crate::EventCategory::Discovery),
+            category: crate::EventCategory::Discovery,
         };
         let message = EventMessage {
             time: Utc::now(),
@@ -2085,7 +2083,7 @@ mod tests {
             proto: 6,
             start_time: Utc::now(),
             end_time: Utc::now(),
-            category: Some(crate::EventCategory::Impact),
+            category: crate::EventCategory::Impact,
         };
         let message = EventMessage {
             time: Utc::now(),
@@ -2101,7 +2099,7 @@ mod tests {
             start_time: Utc::now(),
             end_time: Utc::now(),
             proto: 6,
-            category: Some(crate::EventCategory::CredentialAccess),
+            category: crate::EventCategory::CredentialAccess,
         };
         let message = EventMessage {
             time: Utc::now(),
@@ -2120,7 +2118,7 @@ mod tests {
             start_time: Utc::now(),
             end_time: Utc::now(),
             is_internal: false,
-            category: Some(crate::EventCategory::CredentialAccess),
+            category: crate::EventCategory::CredentialAccess,
         };
         let message = EventMessage {
             time: Utc::now(),
@@ -2138,7 +2136,7 @@ mod tests {
             user_pw_list: vec![("admin".to_string(), "password".to_string())],
             start_time: Utc::now(),
             end_time: Utc::now(),
-            category: Some(crate::EventCategory::CredentialAccess),
+            category: crate::EventCategory::CredentialAccess,
         };
         let message = EventMessage {
             time: Utc::now(),

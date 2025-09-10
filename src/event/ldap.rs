@@ -82,7 +82,7 @@ impl From<LdapBruteForceFieldsV0_39> for LdapBruteForceFieldsV0_41 {
             start_time: value.start_time,
             end_time: value.end_time,
             confidence: 0.3, // default value for LdapBruteForce
-            category: value.category,
+            category: Some(value.category),
         }
     }
 }
@@ -95,7 +95,7 @@ pub struct LdapBruteForceFieldsV0_39 {
     pub user_pw_list: Vec<(String, String)>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 fn get_user_pw_list(user_pw_list: &[(String, String)]) -> String {
@@ -229,10 +229,7 @@ impl LdapEventFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} confidence={:?}",
-            self.category.as_ref().map_or_else(
-                || "Unspecified".to_string(),
-                std::string::ToString::to_string
-            ),
+            format!("{:?}", self.category),
             self.sensor.to_string(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -269,7 +266,7 @@ pub struct LdapEventFieldsV0_39 {
     pub object: Vec<String>,
     pub argument: Vec<String>,
     pub confidence: f32,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 impl From<LdapEventFieldsV0_38> for LdapEventFieldsV0_39 {
@@ -311,7 +308,7 @@ pub struct LdapEventFieldsV0_38 {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
-    pub category: Option<EventCategory>,
+    pub category: EventCategory,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -379,7 +376,7 @@ impl LdapPlainText {
             object: fields.object,
             argument: fields.argument,
             confidence: fields.confidence,
-            category: fields.category,
+            category: Some(fields.category),
             triage_scores: None,
         }
     }
@@ -500,7 +497,7 @@ impl BlocklistLdap {
             object: fields.object,
             argument: fields.argument,
             confidence: fields.confidence,
-            category: fields.category,
+            category: Some(fields.category),
             triage_scores: None,
         }
     }
