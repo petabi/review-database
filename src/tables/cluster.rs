@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{cmp::Reverse, mem::size_of};
 
 use anyhow::{Result, anyhow, bail};
 use chrono::NaiveDateTime;
@@ -6,7 +6,8 @@ use rocksdb::{Direction, OptimisticTransactionDB};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Iterable, Map, Table, UniqueKey, tables::TableIter, tables::Value as ValueTrait,
+    Iterable, Map, Table, UniqueKey,
+    tables::{TableIter, Value as ValueTrait},
     types::FromKeyValue,
 };
 
@@ -94,7 +95,7 @@ impl<'d> Table<'d, Cluster> {
         self.put(&entry)
     }
 
-    /// Updates the clusters with the given cluster IDs.
+    /// Updates the clusters with the given cluster IDs. Retain only the top `max_event_id_num` event IDs per cluster.
     ///
     /// # Errors
     ///
@@ -103,25 +104,25 @@ impl<'d> Table<'d, Cluster> {
         &self,
         updates: Vec<crate::UpdateClusterRequest>,
         model_id: i32,
+        max_event_id_num: usize,
     ) -> Result<()> {
         let txn = self.map.db.transaction();
         let now = chrono::Utc::now().naive_utc();
-        for update in updates {
+        for mut update in updates {
             let key = Key {
                 model_id,
                 cluster_id: update.cluster_id,
             }
             .to_bytes();
-            let (event_ids, sensors) = update.event_ids.into_iter().fold(
-                (Vec::new(), Vec::new()),
-                |(mut ts, mut src), id| {
-                    ts.push(id.0);
-                    src.push(id.1);
-                    (ts, src)
-                },
-            );
+
+            update
+                .event_ids
+                .sort_unstable_by_key(|(id, _)| Reverse(*id));
 
             let Some(value) = self.map.get(&key)? else {
+                let (event_ids, sensors) =
+                    update.event_ids.into_iter().take(max_event_id_num).unzip();
+
                 let entry = Cluster {
                     model_id,
                     id: update.cluster_id,
@@ -142,15 +143,23 @@ impl<'d> Table<'d, Cluster> {
             };
             let mut entry: Cluster = FromKeyValue::from_key_value(&key, value.as_ref())?;
 
+            let mut event_ids: Vec<_> = entry
+                .event_ids
+                .iter()
+                .zip(entry.sensors.iter())
+                .chain(update.event_ids.iter().map(|item| (&item.0, &item.1)))
+                .collect();
+            event_ids.sort_unstable_by_key(|(id, _)| Reverse(**id));
+            let (event_ids, sensors): (Vec<_>, Vec<_>) = event_ids
+                .into_iter()
+                .take(max_event_id_num)
+                .map(|item| (*item.0, item.1.clone()))
+                .unzip();
+
+            entry.event_ids = event_ids;
+            entry.sensors = sensors;
+
             entry.status_id = update.status_id;
-
-            entry.event_ids.extend_from_slice(&event_ids);
-            entry.event_ids.sort_unstable();
-            entry.event_ids.dedup();
-
-            entry.sensors.extend_from_slice(&sensors);
-            entry.sensors.sort_unstable();
-            entry.sensors.dedup();
 
             if let Some(labels) = update.labels {
                 entry.labels = Some(labels);
@@ -551,7 +560,7 @@ mod tests {
             size: 10,
             score: Some(0.5),
         };
-        table.update_clusters(vec![req], 1).unwrap();
+        table.update_clusters(vec![req], 1, 2).unwrap();
 
         let inserted = table
             .load_clusters(1, None, None, None, None, &None, &None, true, 10)
@@ -572,7 +581,7 @@ mod tests {
             size: 5,
             score: None,
         };
-        table.update_clusters(vec![req2], 1).unwrap();
+        table.update_clusters(vec![req2], 1, 1).unwrap();
 
         let merged = table
             .load_clusters(1, None, None, None, None, &None, &None, true, 10)
@@ -580,7 +589,7 @@ mod tests {
         assert_eq!(merged.len(), 1);
         let c = &merged[0];
         assert_eq!(c.status_id, 9);
-        assert!(c.event_ids.contains(&999));
+        assert_eq!(c.event_ids, vec![999]);
         assert!(c.sensors.contains(&"sZ".to_string()));
         assert_eq!(c.size, 15); // 10 + 5
         assert_eq!(c.signature, "merged-sig");
