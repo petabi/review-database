@@ -352,3 +352,288 @@ impl Key {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::*;
+    use crate::Store;
+
+    #[test]
+    fn test_key_bytes_roundtrip() {
+        let key = Key {
+            model_id: 123,
+            cluster_id: 456,
+        };
+        let bytes = key.to_bytes();
+        let decoded = Key::from_be_bytes(&bytes);
+
+        assert_eq!(decoded.model_id, 123);
+        assert_eq!(decoded.cluster_id, 456);
+    }
+
+    #[test]
+    fn test_unique_key_matches_key_bytes() {
+        let cluster = Cluster {
+            model_id: 7,
+            id: 99,
+            category_id: 2,
+            detector_id: 3,
+            event_ids: vec![1, 2, 3],
+            sensors: vec!["s1".to_string(), "s2".to_string()],
+            labels: Some(vec!["a".to_string(), "b".to_string()]),
+            qualifier_id: 5,
+            status_id: 6,
+            signature: "sig".to_string(),
+            size: 42,
+            score: Some(0.75),
+            last_modification_time: None,
+        };
+
+        let unique = cluster.unique_key();
+        let expected = Key {
+            model_id: cluster.model_id,
+            cluster_id: cluster.id,
+        }
+        .to_bytes();
+
+        assert_eq!(unique, expected);
+    }
+
+    #[test]
+    fn test_value_and_from_key_value_roundtrip() -> anyhow::Result<()> {
+        // Create a cluster with None last_modification_time to make equality simple.
+        let original = Cluster {
+            model_id: 1,
+            id: 2,
+            category_id: 10,
+            detector_id: 20,
+            event_ids: vec![1001, 1002],
+            sensors: vec!["src1".into(), "src2".into()],
+            labels: None,
+            qualifier_id: 3,
+            status_id: 4,
+            signature: "abcdef".into(),
+            size: 1234,
+            score: Some(9.87),
+            last_modification_time: None,
+        };
+
+        // Serialize key + value (value uses Cluster::value via ValueTrait impl).
+        let key_bytes = Key {
+            model_id: original.model_id,
+            cluster_id: original.id,
+        }
+        .to_bytes();
+
+        let value_bytes = original.value();
+
+        // Now deserialize using FromKeyValue::from_key_value
+        let decoded = Cluster::from_key_value(&key_bytes, &value_bytes)?;
+
+        // They should be equal
+        assert_eq!(decoded.model_id, original.model_id);
+        assert_eq!(decoded.id, original.id);
+        assert_eq!(decoded.category_id, original.category_id);
+        assert_eq!(decoded.detector_id, original.detector_id);
+        assert_eq!(decoded.event_ids, original.event_ids);
+        assert_eq!(decoded.sensors, original.sensors);
+        assert_eq!(decoded.labels, original.labels);
+        assert_eq!(decoded.qualifier_id, original.qualifier_id);
+        assert_eq!(decoded.status_id, original.status_id);
+        assert_eq!(decoded.signature, original.signature);
+        assert_eq!(decoded.size, original.size);
+        assert_eq!(decoded.score, original.score);
+        assert_eq!(
+            decoded.last_modification_time,
+            original.last_modification_time
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_value_with_last_modification_time_roundtrip() -> anyhow::Result<()> {
+        // Verify last_modification_time serializes & deserializes correctly too.
+        let ts = chrono::DateTime::from_timestamp(1_600_000_000, 0).map(|dt| dt.naive_utc());
+        let original = Cluster {
+            model_id: 11,
+            id: 22,
+            category_id: 33,
+            detector_id: 44,
+            event_ids: vec![9],
+            sensors: vec!["x".into()],
+            labels: Some(vec!["lbl".into()]),
+            qualifier_id: 55,
+            status_id: 66,
+            signature: "sig2".into(),
+            size: 777,
+            score: None,
+            last_modification_time: ts,
+        };
+
+        let key_bytes = Key {
+            model_id: original.model_id,
+            cluster_id: original.id,
+        }
+        .to_bytes();
+        let value_bytes = original.value();
+        let decoded = Cluster::from_key_value(&key_bytes, &value_bytes)?;
+
+        assert_eq!(decoded.last_modification_time, ts);
+        assert_eq!(decoded, original);
+        Ok(())
+    }
+
+    #[test]
+    fn test_insert_and_count_clusters() {
+        let store = setup_store();
+        let table = store.cluster_map();
+
+        // Insert 3 clusters
+        let c1 = make_cluster(1, 1);
+        let c2 = make_cluster(1, 2);
+        let c3 = make_cluster(1, 3);
+        table.insert(&c1).unwrap();
+        table.insert(&c2).unwrap();
+        table.insert(&c3).unwrap();
+
+        // Count all clusters for model 1
+        let count = table.count_clusters(1, None, None, None, None).unwrap();
+        assert_eq!(count, 3);
+
+        // Count with a filter that excludes everything
+        let count = table
+            .count_clusters(1, Some(&[99]), None, None, None)
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_update_cluster_fields() {
+        let store = setup_store();
+        let table = store.cluster_map();
+
+        let mut c1 = make_cluster(1, 42);
+        c1.category_id = 10;
+        table.insert(&c1).unwrap();
+
+        // Update cluster’s category, qualifier, and status
+        table
+            .update_cluster(1, 42, Some(20), Some(30), Some(40))
+            .unwrap();
+
+        let loaded = table
+            .load_clusters(1, None, None, None, None, &None, &None, true, 10)
+            .unwrap();
+        assert_eq!(loaded.len(), 1);
+        let updated = &loaded[0];
+        assert_eq!(updated.category_id, 20);
+        assert_eq!(updated.qualifier_id, 30);
+        assert_eq!(updated.status_id, 40);
+        assert!(updated.last_modification_time.is_some());
+    }
+
+    #[test]
+    fn test_update_clusters_insert_and_merge() {
+        let store = setup_store();
+        let table = store.cluster_map();
+
+        // Case 1: cluster doesn’t exist → should insert
+        let req = crate::UpdateClusterRequest {
+            cluster_id: 7,
+            detector_id: 77,
+            event_ids: vec![(123, "sX".into()), (456, "sY".into())],
+            labels: Some(vec!["lbl".into()]),
+            status_id: 5,
+            signature: "new-sig".into(),
+            size: 10,
+            score: Some(0.5),
+        };
+        table.update_clusters(vec![req], 1).unwrap();
+
+        let inserted = table
+            .load_clusters(1, None, None, None, None, &None, &None, true, 10)
+            .unwrap();
+        assert_eq!(inserted.len(), 1);
+        assert_eq!(inserted[0].id, 7);
+        assert_eq!(inserted[0].detector_id, 77);
+        assert_eq!(inserted[0].event_ids.len(), 2);
+
+        // Case 2: updating same cluster → should merge event_ids/sensors
+        let req2 = crate::UpdateClusterRequest {
+            cluster_id: 7,
+            detector_id: 77,
+            event_ids: vec![(123, "sX".into()), (999, "sZ".into())], // 123 is dup
+            labels: None,
+            status_id: 9,
+            signature: "merged-sig".into(),
+            size: 5,
+            score: None,
+        };
+        table.update_clusters(vec![req2], 1).unwrap();
+
+        let merged = table
+            .load_clusters(1, None, None, None, None, &None, &None, true, 10)
+            .unwrap();
+        assert_eq!(merged.len(), 1);
+        let c = &merged[0];
+        assert_eq!(c.status_id, 9);
+        assert!(c.event_ids.contains(&999));
+        assert!(c.sensors.contains(&"sZ".to_string()));
+        assert_eq!(c.size, 15); // 10 + 5
+        assert_eq!(c.signature, "merged-sig");
+    }
+
+    #[test]
+    fn test_load_clusters_pagination() {
+        let store = setup_store();
+        let table = store.cluster_map();
+
+        for i in 0..5 {
+            let mut c = make_cluster(1, i);
+            c.size = i64::from(i * 10);
+            table.insert(&c).unwrap();
+        }
+
+        // Load with limit
+        let loaded = table
+            .load_clusters(1, None, None, None, None, &None, &None, true, 3)
+            .unwrap();
+        assert_eq!(loaded.len(), 3);
+
+        // Pagination using `after` (simulate cursor)
+        let after = Some((2, 20)); // after cluster id=2 size=20
+        let next = table
+            .load_clusters(1, None, None, None, None, &after, &None, true, 10)
+            .unwrap();
+        for c in next {
+            assert!(c.size < 20 || (c.id < 2 && c.size == 20));
+        }
+    }
+
+    fn make_cluster(model_id: i32, cluster_id: i32) -> Cluster {
+        Cluster {
+            model_id,
+            id: cluster_id,
+            category_id: 1,
+            detector_id: 1,
+            event_ids: vec![10, 20],
+            sensors: vec!["s1".into()],
+            labels: Some(vec!["l1".into()]),
+            qualifier_id: 1,
+            status_id: 1,
+            signature: format!("sig-{cluster_id}"),
+            size: 100,
+            score: Some(1.0),
+            last_modification_time: None,
+        }
+    }
+
+    fn setup_store() -> Arc<Store> {
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap())
+    }
+}
