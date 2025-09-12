@@ -38,6 +38,7 @@ mod private {
     impl Sealed for tables::DataSource {}
     impl Sealed for tables::Filter {}
     impl Sealed for tables::InnerNode {}
+    impl Sealed for tables::Model {}
     impl Sealed for tables::ModelIndicator {}
     impl Sealed for tables::Network {}
     impl Sealed for tables::OutlierInfo {}
