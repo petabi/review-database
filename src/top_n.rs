@@ -1,4 +1,3 @@
-mod one_to_n;
 mod time_series;
 
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
@@ -6,7 +5,6 @@ use diesel_async::pg::AsyncPgConnection;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
-pub use self::one_to_n::{TopColumnsOfCluster, TopMultimaps};
 #[allow(deprecated)]
 pub use self::time_series::{ClusterTrend, LineSegment, Regression, TopTrendsByColumn};
 use super::{Database, Error};
@@ -71,8 +69,8 @@ impl Database {
     pub async fn load_cluster_ids(
         &self,
         model: i32,
-        cluster_id: Option<&str>,
-    ) -> Result<Vec<(i32, String)>, Error> {
+        cluster_id: Option<&i32>,
+    ) -> Result<Vec<(i32, i32)>, Error> {
         use diesel_async::RunQueryDsl;
 
         use crate::schema::cluster::dsl;
@@ -86,7 +84,7 @@ impl Database {
         if let Some(cluster_id) = cluster_id {
             query = query.filter(dsl::cluster_id.eq(cluster_id));
         }
-        Ok(query.load::<(i32, String)>(&mut conn).await?)
+        Ok(query.load::<(i32, i32)>(&mut conn).await?)
     }
 
     /// Loads `id` for all the clusters in the model that satisfy the given conditions.

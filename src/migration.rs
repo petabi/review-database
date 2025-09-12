@@ -2,7 +2,7 @@
 #![allow(clippy::too_many_lines)]
 
 mod migrate_classifiers_to_filesystem;
-mod migrate_column_stats;
+mod migrate_cluster;
 mod migrate_time_series;
 mod migration_structures;
 
@@ -142,8 +142,8 @@ pub async fn migrate_backend<P: AsRef<Path>>(
 
     migrate_classifiers_to_filesystem::run_migration(database).await?;
     if compatible.matches(&version) {
-        migrate_column_stats::run(database, store).await?;
         migrate_time_series::run(database, store).await?;
+        migrate_cluster::run(database, store).await?;
     }
 
     Ok(())

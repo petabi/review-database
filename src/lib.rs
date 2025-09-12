@@ -49,7 +49,7 @@ pub use self::scores::Scores;
 use self::tables::StateDb;
 pub use self::tables::{
     AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
-    AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, ClusterTimeSeries,
+    AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Cluster, ClusterTimeSeries,
     ColumnStats, ColumnTimeSeries, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
     CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, ExternalService,
     ExternalServiceConfig, ExternalServiceKind, ExternalServiceStatus, Filter, IndexedTable,
@@ -64,8 +64,7 @@ pub use self::tables::{
 pub use self::top_n::*;
 #[allow(deprecated)]
 pub use self::top_n::{
-    ClusterTrend, ElementCount, LineSegment, Regression, StructuredColumnType, TopColumnsOfCluster,
-    TopMultimaps, TopTrendsByColumn,
+    ClusterTrend, ElementCount, LineSegment, Regression, StructuredColumnType, TopTrendsByColumn,
 };
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 pub use self::util::find_ip_country;
@@ -178,6 +177,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn category_map(&self) -> IndexedTable<'_, category::Category> {
         self.states.categories()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn cluster_map(&self) -> Table<'_, Cluster> {
+        self.states.clusters()
     }
 
     #[must_use]
