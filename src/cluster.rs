@@ -1,8 +1,8 @@
+#![allow(deprecated)]
 use chrono::NaiveDateTime;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
-use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 use crate::{Database, Error, schema::cluster::dsl, types::Cluster};
 
@@ -68,6 +68,10 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if a database operation fails.
+    #[deprecated(
+        since = "0.41.0",
+        note = "This function is no longer used and will be removed in a future version"
+    )]
     pub async fn count_clusters(
         &self,
         model: i32,
@@ -100,6 +104,10 @@ impl Database {
     ///
     /// Returns an error if a database operation fails.
     #[allow(clippy::too_many_arguments)]
+    #[deprecated(
+        since = "0.41.0",
+        note = "This function is no longer used and will be removed in a future version"
+    )]
     pub async fn load_clusters(
         &self,
         model: i32,
@@ -179,98 +187,15 @@ impl Database {
         }
     }
 
-    /// Updates the cluster with the given ID.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if a database operation fails.
-    pub async fn update_cluster(
-        &self,
-        id: i32,
-        category: Option<i32>,
-        qualifier: Option<i32>,
-        status: Option<i32>,
-    ) -> Result<(), Error> {
-        if category.is_none() && qualifier.is_none() && status.is_none() {
-            return Err(Error::InvalidInput("no column to update".to_string()));
-        }
-
-        let mut conn = self.pool.get().await?;
-        let (category_id, qualifier_id, status_id) = dsl::cluster
-            .select((dsl::category_id, dsl::qualifier_id, dsl::status_id))
-            .filter(dsl::id.eq(id))
-            .get_result(&mut conn)
-            .await?;
-        let category_id = category.unwrap_or(category_id);
-        let qualifier_id = qualifier.unwrap_or(qualifier_id);
-        let status_id = status.unwrap_or(status_id);
-        diesel::update(dsl::cluster.filter(dsl::id.eq(id)))
-            .set((
-                dsl::category_id.eq(category_id),
-                dsl::qualifier_id.eq(qualifier_id),
-                dsl::status_id.eq(status_id),
-            ))
-            .execute(&mut conn)
-            .await?;
-        Ok(())
-    }
-
-    /// Updates the clusters with the given cluster IDs.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if a database operation fails.
-    pub async fn update_clusters(
-        &self,
-        cluster_update: Vec<UpdateClusterRequest>,
-        model_id: i32,
-    ) -> Result<(), Error> {
-        // Execute 1,000 UPSERT operations per transaction
-        let mut chunks: Vec<Vec<UpdateClusterRequest>> =
-            Vec::with_capacity(cluster_update.len() / 1_000 + 1);
-        let mut peekable = cluster_update.into_iter().peekable();
-        while peekable.peek().is_some() {
-            chunks.push(peekable.by_ref().take(1_000).collect::<Vec<_>>());
-        }
-
-        let mut tasks = tokio::task::JoinSet::new();
-
-        for chunk in chunks {
-            let pool = self.pool.clone();
-            tasks.spawn(async move {
-                let mut conn = pool.get().await?;
-                conn.build_transaction()
-                    .run(move |conn| {
-                        Box::pin(async move {
-                            for c in chunk {
-                                upsert(conn, c, model_id).await?;
-                            }
-                            Ok::<_, Error>(())
-                        })
-                    })
-                    .await?;
-                anyhow::Ok(())
-            });
-        }
-
-        while let Some(res) = tasks.join_next().await {
-            match res {
-                Ok(Err(e)) => {
-                    error!("An error occurred while updating clusters: {e:#}");
-                }
-                Err(e) => error!("Failed to execute cluster update: {e:#}"),
-                _ => {}
-            }
-        }
-
-        Ok(())
-    }
-
     /// Find the numerical ids according to string ids of clusters for a model
     ///
     /// # Errors
     ///
     /// Returns an error if a database operation fails.
+    #[deprecated(
+        since = "0.41.0",
+        note = "This function is no longer used and will be removed in a future version"
+    )]
     pub async fn cluster_name_to_ids(
         &self,
         model_id: i32,
@@ -283,38 +208,4 @@ impl Database {
         let mut conn = self.pool.get().await?;
         Ok(query.get_results(&mut conn).await?)
     }
-}
-
-async fn upsert(
-    conn: &mut AsyncPgConnection,
-    cluster: UpdateClusterRequest,
-    model_id: i32,
-) -> Result<usize, diesel::result::Error> {
-    use diesel::sql_types::{Array, BigInt, Double, Integer, Nullable, Text};
-
-    let query = "SELECT attempt_cluster_upsert(
-        $1::int4, $2::int4, $3::int8[], $4::text[], $5::int4, $6::text, $7::int8, $8::int4, $9::text[], $10::float8)";
-    let (timestamps, sensors) =
-        cluster
-            .event_ids
-            .iter()
-            .fold((Vec::new(), Vec::new()), |(mut ts, mut src), id| {
-                ts.push(&id.0);
-                src.push(&id.1);
-                (ts, src)
-            });
-
-    diesel::sql_query(query)
-        .bind::<Integer, _>(&cluster.cluster_id)
-        .bind::<Integer, _>(&cluster.detector_id)
-        .bind::<Array<BigInt>, _>(&timestamps)
-        .bind::<Array<Text>, _>(&sensors)
-        .bind::<Integer, _>(&model_id)
-        .bind::<Text, _>(&cluster.signature)
-        .bind::<BigInt, _>(&cluster.size)
-        .bind::<Integer, _>(&cluster.status_id)
-        .bind::<Nullable<Array<Text>>, _>(&cluster.labels)
-        .bind::<Nullable<Double>, _>(&cluster.score)
-        .execute(conn)
-        .await
 }

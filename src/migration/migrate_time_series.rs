@@ -4,7 +4,7 @@ use chrono::NaiveDateTime;
 use crate::Database;
 use crate::tables::TimeSeries;
 
-async fn retrieve_model_to_migrate(database: &Database) -> Result<Vec<i32>> {
+pub(crate) async fn retrieve_model_to_migrate(database: &Database) -> Result<Vec<i32>> {
     use diesel_async::RunQueryDsl;
 
     use crate::diesel::QueryDsl;

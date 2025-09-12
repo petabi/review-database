@@ -13,19 +13,19 @@ use crate::{
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Cluster {
-    model_id: i32,
-    id: i32,
-    category_id: i32,
-    detector_id: i32,
-    event_ids: Vec<i64>,
-    sensors: Vec<String>,
-    labels: Option<Vec<String>>,
-    qualifier_id: i32,
-    status_id: i32,
-    signature: String,
-    size: i64,
-    score: Option<f64>,
-    last_modification_time: Option<NaiveDateTime>,
+    pub model_id: i32,
+    pub id: i32,
+    pub category_id: i32,
+    pub detector_id: i32,
+    pub event_ids: Vec<i64>,
+    pub sensors: Vec<String>,
+    pub labels: Option<Vec<String>>,
+    pub qualifier_id: i32,
+    pub status_id: i32,
+    pub signature: String,
+    pub size: i64,
+    pub score: Option<f64>,
+    pub last_modification_time: Option<NaiveDateTime>,
 }
 
 impl<'d> Table<'d, Cluster> {
