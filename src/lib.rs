@@ -231,6 +231,12 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
+    pub fn model_map(&self) -> IndexedTable<'_, tables::Model> {
+        self.states.models()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn model_indicator_map(&self) -> Table<'_, ModelIndicator> {
         self.states.model_indicators()
     }
