@@ -123,84 +123,6 @@ pub struct HttpEventFieldsV0_41 {
     pub category: EventCategory,
 }
 
-#[derive(Deserialize, Serialize)]
-pub(crate) struct HttpEventFieldsV0_41Old {
-    pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub method: String,
-    pub host: String,
-    pub uri: String,
-    pub referer: String,
-    pub version: String,
-    pub user_agent: String,
-    pub request_len: usize,
-    pub response_len: usize,
-    pub status_code: u16,
-    pub status_msg: String,
-    pub username: String,
-    pub password: String,
-    pub cookie: String,
-    pub content_encoding: String,
-    pub content_type: String,
-    pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
-    pub state: String,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
-
-impl From<HttpEventFieldsV0_41Old> for HttpEventFieldsV0_41 {
-    fn from(old: HttpEventFieldsV0_41Old) -> Self {
-        let mut filenames = old.orig_filenames;
-        filenames.extend(old.resp_filenames);
-
-        let mut mime_types = old.orig_mime_types;
-        mime_types.extend(old.resp_mime_types);
-
-        Self {
-            sensor: old.sensor,
-            end_time: old.end_time,
-            src_addr: old.src_addr,
-            src_port: old.src_port,
-            dst_addr: old.dst_addr,
-            dst_port: old.dst_port,
-            proto: old.proto,
-            method: old.method,
-            host: old.host,
-            uri: old.uri,
-            referer: old.referer,
-            version: old.version,
-            user_agent: old.user_agent,
-            request_len: old.request_len,
-            response_len: old.response_len,
-            status_code: old.status_code,
-            status_msg: old.status_msg,
-            username: old.username,
-            password: old.password,
-            cookie: old.cookie,
-            content_encoding: old.content_encoding,
-            content_type: old.content_type,
-            cache_control: old.cache_control,
-            filenames,
-            mime_types,
-            body: old.post_body,
-            state: old.state,
-            confidence: old.confidence,
-            category: old.category,
-        }
-    }
-}
-
 impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
     fn from(value: HttpEventFieldsV0_39) -> Self {
         Self {
@@ -1390,15 +1312,13 @@ mod tests {
 
     use chrono::DateTime;
 
-    use super::{
-        EventCategory, HttpEventFieldsV0_39, HttpEventFieldsV0_41, HttpEventFieldsV0_41Old,
-    };
+    use super::{EventCategory, HttpEventFieldsV0_39, HttpEventFieldsV0_41};
 
     #[test]
     #[allow(clippy::float_cmp)]
-    fn test_http_event_fields_migration_from_old_to_new() {
+    fn test_http_event_fields_migration_from_v0_39_to_v0_41() {
         // Create a test instance of the old format with the original field structure
-        let old_fields = HttpEventFieldsV0_41Old {
+        let old_fields = HttpEventFieldsV0_39 {
             sensor: "test-sensor".to_string(),
             end_time: DateTime::UNIX_EPOCH,
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
@@ -1428,7 +1348,6 @@ mod tests {
             resp_mime_types: vec!["text/html".to_string()],
             post_body: b"test body content".to_vec(),
             state: "active".to_string(),
-            confidence: 0.9,
             category: EventCategory::InitialAccess,
         };
 
@@ -1453,7 +1372,7 @@ mod tests {
         assert_eq!(new_fields.sensor, "test-sensor");
         assert_eq!(new_fields.method, "GET");
         assert_eq!(new_fields.host, "example.com");
-        assert_eq!(new_fields.confidence, 0.9);
+        assert_eq!(new_fields.confidence, 1.0);
     }
 
     #[test]
@@ -1517,7 +1436,7 @@ mod tests {
     #[test]
     fn test_empty_collections_migration() {
         // Test migration with empty filename and mime type collections
-        let old_fields = HttpEventFieldsV0_41Old {
+        let old_fields = HttpEventFieldsV0_39 {
             sensor: "test-sensor".to_string(),
             end_time: DateTime::UNIX_EPOCH,
             src_addr: "127.0.0.1".parse::<IpAddr>().unwrap(),
@@ -1547,7 +1466,6 @@ mod tests {
             resp_mime_types: Vec::new(),
             post_body: Vec::new(),
             state: "idle".to_string(),
-            confidence: 0.5,
             category: EventCategory::Discovery,
         };
 
