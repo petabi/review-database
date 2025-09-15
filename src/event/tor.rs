@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
+use crate::TriageExclusion;
 use crate::event::{
     common::{AttrValue, triage_scores_to_string},
     conn::BlocklistConnFields,
@@ -197,6 +198,20 @@ impl Match for TorConnection {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_http_attr_by_kind!(self, raw_event_attr)
+    }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 }
 
