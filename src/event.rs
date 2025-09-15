@@ -117,7 +117,7 @@ pub(crate) use self::{
     tls::{BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42},
 };
 use super::{
-    Customer, EventCategory, Network, TriagePolicy,
+    Customer, EventCategory, Network, TriagePolicy, TriagePolicyInput,
     types::{Endpoint, HostNetworkGroup},
 };
 
@@ -1939,10 +1939,15 @@ pub struct EventFilter {
     learning_methods: Option<Vec<LearningMethod>>,
     sensors: Option<Vec<String>>,
     confidence: Option<f32>,
-    triage_policies: Option<Vec<TriagePolicy>>,
+    triage_policies: Option<Vec<TriagePolicyInput>>,
 }
 
 impl EventFilter {
+    /// Creates a new `EventFilter`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the domain patterns in triage policies cannot be compiled into valid regex patterns.
     #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn new(
@@ -1960,6 +1965,22 @@ impl EventFilter {
         confidence: Option<f32>,
         triage_policies: Option<Vec<TriagePolicy>>,
     ) -> Self {
+        // Convert TriagePolicy to TriagePolicyInput
+        let triage_policies = triage_policies.map(|policies| {
+            policies
+                .into_iter()
+                .map(|policy| TriagePolicyInput {
+                    id: policy.id,
+                    name: policy.name,
+                    creation_time: policy.creation_time,
+                    ti_db: policy.ti_db.into_iter().map(Into::into).collect(),
+                    packet_attr: policy.packet_attr,
+                    confidence: policy.confidence,
+                    response: policy.response,
+                })
+                .collect()
+        });
+
         Self {
             customers,
             endpoints,

@@ -53,13 +53,14 @@ pub use self::tables::{
     ColumnStats, ColumnTimeSeries, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
     CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, ExternalService,
     ExternalServiceConfig, ExternalServiceKind, ExternalServiceStatus, Filter, IndexedTable,
-    Iterable, ModelIndicator, Network, NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate,
-    OutlierInfo, OutlierInfoKey, OutlierInfoValue, PacketAttr, PeriodForSearch, ProtocolPorts,
-    Response, ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod, SamplingPolicy,
-    SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table, Template, Ti,
-    TiCmpKind, Tidb, TidbKind, TidbRule, TidbRuleKind, TimeSeries, TorExitNode, TrafficFilter,
-    TriagePolicy, TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, TrustedDomain,
-    TrustedUserAgent, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
+    Iterable, ModelIndicator, Network, NetworkFilter, NetworkUpdate, Node, NodeProfile, NodeTable,
+    NodeUpdate, OutlierInfo, OutlierInfoKey, OutlierInfoValue, PacketAttr, PeriodForSearch,
+    ProtocolPorts, Response, ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod,
+    SamplingPolicy, SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table,
+    Template, Tidb, TidbKind, TidbRule, TidbRuleKind, TimeSeries, TorExitNode, TrafficFilter,
+    TriageExclusion, TriageExclusionReason, TriagePolicy, TriagePolicyInput, TriagePolicyUpdate,
+    TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
+    UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::top_n::*;
 #[allow(deprecated)]

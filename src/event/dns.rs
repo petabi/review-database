@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, HIGH, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
+    TriageExclusion,
     event::common::{AttrValue, triage_scores_to_string, vector_to_string},
     types::EventCategoryV0_41,
 };
@@ -292,6 +293,26 @@ impl Match for DnsCovertChannel {
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
     }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.query),
+            TriageExclusion::Hostname(hostnames) => {
+                let hostname = self
+                    .query
+                    .split_once('.')
+                    .map_or(self.query.to_string(), |(label, _)| label.to_string());
+                hostnames.contains(&hostname)
+            }
+            TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
+        });
+        if matched { f64::MIN } else { 0.0 }
+    }
 }
 
 // TODO: Locky ransomware event uses same sruct with DnsCovertChannel. It can be merged.
@@ -428,6 +449,26 @@ impl Match for LockyRansomware {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
+    }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.query),
+            TriageExclusion::Hostname(hostnames) => {
+                let hostname = self
+                    .query
+                    .split_once('.')
+                    .map_or(self.query.to_string(), |(label, _)| label.to_string());
+                hostnames.contains(&hostname)
+            }
+            TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 }
 
@@ -686,6 +727,26 @@ impl Match for CryptocurrencyMiningPool {
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
     }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.query),
+            TriageExclusion::Hostname(hostnames) => {
+                let hostname = self
+                    .query
+                    .split_once('.')
+                    .map_or(self.query.to_string(), |(label, _)| label.to_string());
+                hostnames.contains(&hostname)
+            }
+            TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
+        });
+        if matched { f64::MIN } else { 0.0 }
+    }
 }
 
 pub type BlocklistDnsFields = BlocklistDnsFieldsV0_42;
@@ -933,5 +994,25 @@ impl Match for BlocklistDns {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
+    }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.query),
+            TriageExclusion::Hostname(hostnames) => {
+                let hostname = self
+                    .query
+                    .split_once('.')
+                    .map_or(self.query.to_string(), |(label, _)| label.to_string());
+                hostnames.contains(&hostname)
+            }
+            TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 }

@@ -74,8 +74,9 @@ pub use self::time_series::{Cluster as ClusterTimeSeries, Column as ColumnTimeSe
 pub use self::tor_exit_node::TorExitNode;
 pub use self::traffic_filter::{ProtocolPorts, TrafficFilter};
 pub use self::triage_policy::{
-    AttrCmpKind, Confidence, PacketAttr, Response, ResponseKind, Ti, TiCmpKind, TriagePolicy,
-    Update as TriagePolicyUpdate, ValueKind,
+    AttrCmpKind, Confidence, NetworkFilter, PacketAttr, Response, ResponseKind, TriageExclusion,
+    TriageExclusionReason, TriagePolicy, TriagePolicyInput, Update as TriagePolicyUpdate,
+    ValueKind,
 };
 pub use self::triage_response::{TriageResponse, Update as TriageResponseUpdate};
 pub use self::trusted_domain::TrustedDomain;
