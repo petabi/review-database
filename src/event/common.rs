@@ -257,9 +257,16 @@ pub(super) trait Match {
         Ok((true, None))
     }
 
-    fn score_by_ti_db(&self, _ti_db: &[Ti]) -> f64 {
-        // TODO: implement
-        0.0
+    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+        let matched = ti_db.iter().any(|ti| {
+            if let Ti::IpAddress(group) = ti {
+                self.src_addrs().iter().any(|&addr| group.contains(addr))
+                    || self.dst_addrs().iter().any(|&addr| group.contains(addr))
+            } else {
+                false
+            }
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 
     fn score_by_confidence(&self, confidence: &[Confidence]) -> f64 {

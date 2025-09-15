@@ -6,7 +6,10 @@ use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, EventFilter, LOW, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    Ti,
+    event::common::{AttrValue, triage_scores_to_string},
+};
 
 macro_rules! find_http_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {
@@ -1560,6 +1563,22 @@ impl Match for BlocklistHttp {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_http_attr_by_kind!(self, raw_event_attr)
+    }
+
+    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            Ti::IpAddress(group) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| group.contains(ip)),
+            Ti::Domain(domains) => domains
+                .iter()
+                .any(|domain| self.host == *domain || self.host.ends_with(&format!(".{domain}"))),
+            Ti::Hostname(hostnames) => hostnames.contains(&self.host),
+            Ti::Uri(uris) => uris.contains(&self.uri),
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 }
 

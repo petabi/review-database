@@ -12,7 +12,7 @@ use super::UniqueKey;
 use crate::{
     Indexable, IndexedMap, IndexedMapUpdate, IndexedTable,
     collections::Indexed,
-    types::{EventCategory, FromKeyValue},
+    types::{EventCategory, FromKeyValue, HostNetworkGroup},
 };
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -60,14 +60,6 @@ impl Indexable for TriagePolicy {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
-pub enum TiCmpKind {
-    IpAddress,
-    Domain,
-    Hostname,
-    Uri,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
 pub enum ValueKind {
     String,
     Integer,  // range: i64::MAX
@@ -106,10 +98,11 @@ pub enum ResponseKind {
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
-pub struct Ti {
-    pub ti_name: String,
-    pub kind: TiCmpKind,
-    pub weight: Option<f64>,
+pub enum Ti {
+    IpAddress(HostNetworkGroup),
+    Domain(Vec<String>),
+    Hostname(Vec<String>),
+    Uri(Vec<String>),
 }
 
 impl Eq for Ti {}
@@ -122,19 +115,26 @@ impl PartialOrd for Ti {
 
 impl Ord for Ti {
     fn cmp(&self, other: &Self) -> Ordering {
-        let first = self.ti_name.cmp(&other.ti_name);
-        if first != Ordering::Equal {
-            return first;
-        }
-        let second = self.kind.cmp(&other.kind);
-        if second != Ordering::Equal {
-            return second;
-        }
-        match (self.weight, other.weight) {
-            (None, None) => Ordering::Equal,
-            (None, Some(_)) => Ordering::Less,
-            (Some(_), None) => Ordering::Greater,
-            (Some(s), Some(o)) => s.total_cmp(&o),
+        match (self, other) {
+            (Ti::IpAddress(a), Ti::IpAddress(b)) => {
+                // Compare HostNetworkGroup by serializing to bytes
+                // This provides a consistent ordering
+                use bincode;
+                let a_bytes = bincode::serialize(a).unwrap_or_default();
+                let b_bytes = bincode::serialize(b).unwrap_or_default();
+                a_bytes.cmp(&b_bytes)
+            }
+            // Same-variant comparisons for Vec<String> types
+            (Ti::Domain(a), Ti::Domain(b))
+            | (Ti::Hostname(a), Ti::Hostname(b))
+            | (Ti::Uri(a), Ti::Uri(b)) => a.cmp(b),
+            // Cross-variant comparisons: order by discriminant (IpAddress < Domain < Hostname < Uri)
+            // Greater cases: later variants compared to earlier variants
+            (Ti::Domain(_), Ti::IpAddress(_))
+            | (Ti::Hostname(_), Ti::IpAddress(_) | Ti::Domain(_))
+            | (Ti::Uri(_), _) => Ordering::Greater,
+            // Less cases: earlier variants compared to later variants, or same variant compared to later variants
+            (Ti::IpAddress(_) | Ti::Domain(_) | Ti::Hostname(_), _) => Ordering::Less,
         }
     }
 }
