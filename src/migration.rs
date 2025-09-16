@@ -660,14 +660,15 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        BlocklistConnFields, CryptocurrencyMiningPoolFieldsV0_39,
-        CryptocurrencyMiningPoolFieldsV0_41, DgaFieldsV0_40, DgaFieldsV0_41, EventKind,
-        ExternalDdosFieldsV0_39, ExternalDdosFieldsV0_41, FtpBruteForceFieldsV0_39,
-        FtpBruteForceFieldsV0_41, HttpEventFieldsV0_39, HttpEventFieldsV0_41,
-        HttpThreatFieldsV0_34, HttpThreatFieldsV0_41, LdapBruteForceFieldsV0_39,
-        LdapBruteForceFieldsV0_41, MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41,
-        PortScanFieldsV0_39, PortScanFieldsV0_41, RdpBruteForceFieldsV0_39,
-        RdpBruteForceFieldsV0_41, RepeatedHttpSessionsFieldsV0_39, RepeatedHttpSessionsFieldsV0_41,
+        BlocklistConnFields, BlocklistHttpFieldsV0_40, BlocklistHttpFieldsV0_41,
+        CryptocurrencyMiningPoolFieldsV0_39, CryptocurrencyMiningPoolFieldsV0_41, DgaFieldsV0_40,
+        DgaFieldsV0_41, EventKind, ExternalDdosFieldsV0_39, ExternalDdosFieldsV0_41,
+        FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41, HttpEventFieldsV0_39,
+        HttpEventFieldsV0_41, HttpThreatFieldsV0_34, HttpThreatFieldsV0_41,
+        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, MultiHostPortScanFieldsV0_39,
+        MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39, PortScanFieldsV0_41,
+        RdpBruteForceFieldsV0_39, RdpBruteForceFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
+        RepeatedHttpSessionsFieldsV0_41,
     };
 
     let event_db = store.events();
@@ -695,6 +696,11 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
                 fields.end_time += time_nanos; // old `end_time` was duration
                 let new_value = bincode::serialize(&fields).unwrap_or_default();
                 event_db.update((&k, &v), (&k, &new_value))?;
+            }
+            EventKind::BlocklistHttp => {
+                update_event_db_with_new_event::<BlocklistHttpFieldsV0_40, BlocklistHttpFieldsV0_41>(
+                    &k, &v, &event_db,
+                )?;
             }
             EventKind::CryptocurrencyMiningPool => {
                 update_event_db_with_new_event::<
