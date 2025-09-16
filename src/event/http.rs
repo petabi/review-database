@@ -377,46 +377,7 @@ impl Match for RepeatedHttpSessions {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[allow(clippy::module_name_repetitions)]
-pub struct HttpThreatFields {
-    #[serde(with = "ts_nanoseconds")]
-    pub time: DateTime<Utc>,
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub method: String,
-    pub host: String,
-    pub uri: String,
-    pub referer: String,
-    pub version: String,
-    pub user_agent: String,
-    pub request_len: usize,
-    pub response_len: usize,
-    pub status_code: u16,
-    pub status_msg: String,
-    pub username: String,
-    pub password: String,
-    pub cookie: String,
-    pub content_encoding: String,
-    pub content_type: String,
-    pub cache_control: String,
-    pub filenames: Vec<String>,
-    pub mime_types: Vec<String>,
-    pub body: Vec<u8>,
-    pub state: String,
-    pub db_name: String,
-    pub rule_id: u32,
-    pub matched_to: String,
-    pub cluster_id: Option<usize>,
-    pub attack_kind: String,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type HttpThreatFields = HttpThreatFieldsV0_41;
 
 impl HttpThreatFields {
     #[must_use]
@@ -459,6 +420,140 @@ impl HttpThreatFields {
             self.confidence.to_string(),
         )
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub struct HttpThreatFieldsV0_41 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
+    pub state: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: Option<usize>,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<HttpThreatFieldsV0_34> for HttpThreatFieldsV0_41 {
+    fn from(value: HttpThreatFieldsV0_34) -> Self {
+        Self {
+            time: value.time,
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            method: value.method,
+            host: value.host,
+            uri: value.uri,
+            referer: value.referer,
+            version: value.version,
+            user_agent: value.user_agent,
+            request_len: value.request_len,
+            response_len: value.response_len,
+            status_code: value.status_code,
+            status_msg: value.status_msg,
+            username: value.username,
+            password: value.password,
+            cookie: value.cookie,
+            content_encoding: value.content_encoding,
+            content_type: value.content_type,
+            cache_control: value.cache_control,
+            filenames: {
+                let mut filenames = value.orig_filenames;
+                filenames.extend(value.resp_filenames);
+                filenames
+            },
+            mime_types: {
+                let mut mime_types = value.orig_mime_types;
+                mime_types.extend(value.resp_mime_types);
+                mime_types
+            },
+            body: value.post_body,
+            state: value.state,
+            db_name: value.db_name,
+            rule_id: value.rule_id,
+            matched_to: value.matched_to,
+            cluster_id: value.cluster_id,
+            attack_kind: value.attack_kind,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub struct HttpThreatFieldsV0_34 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: Option<usize>,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: EventCategory,
 }
 
 // HTTP Request body has Vec<u8> type, and it's too large to print.

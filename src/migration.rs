@@ -492,7 +492,9 @@ fn migrate_0_34_events(store: &super::Store) -> Result<()> {
     };
     use num_traits::FromPrimitive;
 
-    use crate::event::{EventKind, ExtraThreat, HttpThreatFields, NetworkThreat, WindowsThreat};
+    use crate::event::{
+        EventKind, ExtraThreat, HttpThreatFieldsV0_34, NetworkThreat, WindowsThreat,
+    };
 
     let event_db = store.events();
     let iter = event_db.raw_iter_forward();
@@ -511,7 +513,7 @@ fn migrate_0_34_events(store: &super::Store) -> Result<()> {
 
         match event_kind {
             EventKind::HttpThreat => {
-                update_event_db_with_new_event::<HttpThreatV0_33, HttpThreatFields>(
+                update_event_db_with_new_event::<HttpThreatV0_33, HttpThreatFieldsV0_34>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -661,10 +663,11 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
         BlocklistConnFields, CryptocurrencyMiningPoolFieldsV0_39,
         CryptocurrencyMiningPoolFieldsV0_41, EventKind, ExternalDdosFieldsV0_39,
         ExternalDdosFieldsV0_41, FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41,
-        HttpEventFieldsV0_39, HttpEventFieldsV0_41, LdapBruteForceFieldsV0_39,
-        LdapBruteForceFieldsV0_41, MultiHostPortScanFieldsV0_39, MultiHostPortScanFieldsV0_41,
-        PortScanFieldsV0_39, PortScanFieldsV0_41, RdpBruteForceFieldsV0_39,
-        RdpBruteForceFieldsV0_41, RepeatedHttpSessionsFieldsV0_39, RepeatedHttpSessionsFieldsV0_41,
+        HttpEventFieldsV0_39, HttpEventFieldsV0_41, HttpThreatFieldsV0_34, HttpThreatFieldsV0_41,
+        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, MultiHostPortScanFieldsV0_39,
+        MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39, PortScanFieldsV0_41,
+        RdpBruteForceFieldsV0_39, RdpBruteForceFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
+        RepeatedHttpSessionsFieldsV0_41,
     };
 
     let event_db = store.events();
@@ -706,6 +709,11 @@ fn migrate_0_41_events(store: &super::Store) -> Result<()> {
             }
             EventKind::FtpBruteForce => {
                 update_event_db_with_new_event::<FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::HttpThreat => {
+                update_event_db_with_new_event::<HttpThreatFieldsV0_34, HttpThreatFieldsV0_41>(
                     &k, &v, &event_db,
                 )?;
             }
