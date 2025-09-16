@@ -51,6 +51,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Time series data is now stored in RocksDB instead of PostgreSQL. A built-in
   migration will automatically move existing time series data from PostgreSQL
   to RocksDB.
+- Simplified HTTP-related event structures by merging `orig_filenames` and
+  `resp_filenames` as well as `orig_mime_types` and `resp_mime_types`, and
+  renaming `body` to `post_body`.
 
 ### Removed
 
