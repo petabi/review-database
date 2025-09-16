@@ -3,6 +3,7 @@
 
 mod migrate_classifiers_to_filesystem;
 mod migrate_cluster;
+mod migrate_model;
 mod migrate_time_series;
 
 use std::{
@@ -139,6 +140,7 @@ pub async fn migrate_backend<P: AsRef<Path>>(
     if compatible.matches(&version) {
         migrate_time_series::run(database, store).await?;
         migrate_cluster::run(database, store).await?;
+        migrate_model::run(database, store).await?;
     }
 
     Ok(())

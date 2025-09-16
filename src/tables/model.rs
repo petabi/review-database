@@ -12,13 +12,13 @@ use crate::{
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Model {
-    id: u32,
-    name: String,
-    version: i32,
-    kind: String,
-    max_event_id_num: i32,
-    data_source_id: i32,
-    classification_id: Option<i64>,
+    pub id: u32,
+    pub name: String,
+    pub version: i32,
+    pub kind: String,
+    pub max_event_id_num: i32,
+    pub data_source_id: i32,
+    pub classification_id: Option<i64>,
 }
 
 /// Functions for the `model` indexed map.
