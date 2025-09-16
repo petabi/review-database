@@ -85,8 +85,9 @@ pub(crate) use self::{
         FtpEventFieldsV0_39,
     },
     http::{
-        HttpEventFieldsV0_39, HttpEventFieldsV0_41, HttpThreatFieldsV0_34, HttpThreatFieldsV0_41,
-        RepeatedHttpSessionsFieldsV0_39, RepeatedHttpSessionsFieldsV0_41,
+        DgaFieldsV0_40, DgaFieldsV0_41, HttpEventFieldsV0_39, HttpEventFieldsV0_41,
+        HttpThreatFieldsV0_34, HttpThreatFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
+        RepeatedHttpSessionsFieldsV0_41,
     },
     ldap::{
         LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, LdapEventFieldsV0_38,
