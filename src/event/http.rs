@@ -1250,38 +1250,7 @@ impl Match for NonBrowser {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BlocklistHttpFields {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub method: String,
-    pub host: String,
-    pub uri: String,
-    pub referer: String,
-    pub version: String,
-    pub user_agent: String,
-    pub request_len: usize,
-    pub response_len: usize,
-    pub status_code: u16,
-    pub status_msg: String,
-    pub username: String,
-    pub password: String,
-    pub cookie: String,
-    pub content_encoding: String,
-    pub content_type: String,
-    pub cache_control: String,
-    pub filenames: Vec<String>,
-    pub mime_types: Vec<String>,
-    pub body: Vec<u8>,
-    pub state: String,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type BlocklistHttpFields = BlocklistHttpFieldsV0_41;
 
 impl BlocklistHttpFields {
     #[must_use]
@@ -1319,6 +1288,118 @@ impl BlocklistHttpFields {
             self.confidence.to_string(),
         )
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BlocklistHttpFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub filenames: Vec<String>,
+    pub mime_types: Vec<String>,
+    pub body: Vec<u8>,
+    pub state: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<BlocklistHttpFieldsV0_40> for BlocklistHttpFieldsV0_41 {
+    fn from(value: BlocklistHttpFieldsV0_40) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            method: value.method,
+            host: value.host,
+            uri: value.uri,
+            referer: value.referer,
+            version: value.version,
+            user_agent: value.user_agent,
+            request_len: value.request_len,
+            response_len: value.response_len,
+            status_code: value.status_code,
+            status_msg: value.status_msg,
+            username: value.username,
+            password: value.password,
+            cookie: value.cookie,
+            content_encoding: value.content_encoding,
+            content_type: value.content_type,
+            cache_control: value.cache_control,
+            filenames: {
+                let mut filenames = value.orig_filenames;
+                filenames.extend(value.resp_filenames);
+                filenames
+            },
+            mime_types: {
+                let mut mime_types = value.orig_mime_types;
+                mime_types.extend(value.resp_mime_types);
+                mime_types
+            },
+            body: value.post_body,
+            state: value.state,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BlocklistHttpFieldsV0_40 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub confidence: f32,
+    pub category: EventCategory,
 }
 
 #[allow(clippy::module_name_repetitions)]
