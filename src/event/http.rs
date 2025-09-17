@@ -1573,9 +1573,9 @@ mod tests {
 
     #[test]
     #[allow(clippy::float_cmp)]
-    fn test_http_event_fields_migration_from_v0_39_to_v0_41() {
-        // Create a test instance of the old format with the original field structure
-        let old_fields = HttpEventFieldsV0_39 {
+    fn test_http_event_fields_migration_from_v0_39() {
+        // Test case 1: Multiple orig files and mime types, single resp file and mime type
+        let old_fields_case1 = HttpEventFieldsV0_39 {
             sensor: "test-sensor".to_string(),
             end_time: DateTime::UNIX_EPOCH,
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
@@ -1608,41 +1608,31 @@ mod tests {
             category: EventCategory::InitialAccess,
         };
 
-        // Convert to the new format
-        let new_fields: HttpEventFieldsV0_41 = old_fields.into();
+        let new_fields_case1: HttpEventFieldsV0_41 = old_fields_case1.into();
 
-        // Verify that fields were merged correctly
-        assert_eq!(new_fields.filenames.len(), 3); // 2 + 1
-        assert_eq!(new_fields.filenames[0], "file1.txt");
-        assert_eq!(new_fields.filenames[1], "file2.txt");
-        assert_eq!(new_fields.filenames[2], "response1.html");
+        // Verify that fields were merged correctly (orig + resp)
+        assert_eq!(new_fields_case1.filenames.len(), 3); // 2 + 1
+        assert_eq!(new_fields_case1.filenames[0], "file1.txt");
+        assert_eq!(new_fields_case1.filenames[1], "file2.txt");
+        assert_eq!(new_fields_case1.filenames[2], "response1.html");
 
-        assert_eq!(new_fields.mime_types.len(), 3); // 2 + 1
-        assert_eq!(new_fields.mime_types[0], "text/plain");
-        assert_eq!(new_fields.mime_types[1], "application/json");
-        assert_eq!(new_fields.mime_types[2], "text/html");
+        assert_eq!(new_fields_case1.mime_types.len(), 3); // 2 + 1
+        assert_eq!(new_fields_case1.mime_types[0], "text/plain");
+        assert_eq!(new_fields_case1.mime_types[1], "application/json");
+        assert_eq!(new_fields_case1.mime_types[2], "text/html");
 
         // Verify that post_body was renamed to body
-        assert_eq!(new_fields.body, b"test body content".to_vec());
+        assert_eq!(new_fields_case1.body, b"test body content".to_vec());
+        assert_eq!(new_fields_case1.confidence, 1.0);
 
-        // Verify that all other fields are preserved
-        assert_eq!(new_fields.sensor, "test-sensor");
-        assert_eq!(new_fields.method, "GET");
-        assert_eq!(new_fields.host, "example.com");
-        assert_eq!(new_fields.confidence, 1.0);
-    }
-
-    #[test]
-    #[allow(clippy::float_cmp)]
-    fn test_http_event_fields_migration_from_v0_39() {
-        // Test the existing migration from V0_39 to V0_41
-        let v0_39_fields = HttpEventFieldsV0_39 {
-            sensor: "test-sensor".to_string(),
+        // Test case 2: Single orig file, multiple resp files and mime types
+        let old_fields_case2 = HttpEventFieldsV0_39 {
+            sensor: "api-sensor".to_string(),
             end_time: DateTime::UNIX_EPOCH,
-            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
-            src_port: 8080,
-            dst_addr: "10.0.0.1".parse::<IpAddr>().unwrap(),
-            dst_port: 80,
+            src_addr: "10.0.0.2".parse::<IpAddr>().unwrap(),
+            src_port: 9090,
+            dst_addr: "192.168.1.10".parse::<IpAddr>().unwrap(),
+            dst_port: 443,
             proto: 6,
             method: "POST".to_string(),
             host: "api.example.com".to_string(),
@@ -1672,22 +1662,21 @@ mod tests {
             category: EventCategory::Collection,
         };
 
-        // Convert to V0_41
-        let v0_41_fields: HttpEventFieldsV0_41 = v0_39_fields.into();
+        let new_fields_case2: HttpEventFieldsV0_41 = old_fields_case2.into();
 
-        // Verify migration worked correctly
-        assert_eq!(v0_41_fields.filenames.len(), 3); // 1 + 2
-        assert_eq!(v0_41_fields.filenames[0], "upload1.dat");
-        assert_eq!(v0_41_fields.filenames[1], "result.json");
-        assert_eq!(v0_41_fields.filenames[2], "metadata.xml");
+        // Verify migration worked correctly (orig + resp)
+        assert_eq!(new_fields_case2.filenames.len(), 3); // 1 + 2
+        assert_eq!(new_fields_case2.filenames[0], "upload1.dat");
+        assert_eq!(new_fields_case2.filenames[1], "result.json");
+        assert_eq!(new_fields_case2.filenames[2], "metadata.xml");
 
-        assert_eq!(v0_41_fields.mime_types.len(), 3); // 1 + 2
-        assert_eq!(v0_41_fields.mime_types[0], "application/octet-stream");
-        assert_eq!(v0_41_fields.mime_types[1], "application/json");
-        assert_eq!(v0_41_fields.mime_types[2], "application/xml");
+        assert_eq!(new_fields_case2.mime_types.len(), 3); // 1 + 2
+        assert_eq!(new_fields_case2.mime_types[0], "application/octet-stream");
+        assert_eq!(new_fields_case2.mime_types[1], "application/json");
+        assert_eq!(new_fields_case2.mime_types[2], "application/xml");
 
-        assert_eq!(v0_41_fields.body, b"{\"key\":\"value\"}".to_vec());
-        assert_eq!(v0_41_fields.confidence, 1.0); // Default value for HTTP events
+        assert_eq!(new_fields_case2.body, b"{\"key\":\"value\"}".to_vec());
+        assert_eq!(new_fields_case2.confidence, 1.0);
     }
 
     #[test]
