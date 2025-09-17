@@ -1,6 +1,6 @@
 //! The `TriagePolicy` table.
 
-use std::{borrow::Cow, cmp::Ordering};
+use std::{borrow::Cow, cmp::Ordering, net::IpAddr};
 
 use anyhow::Result;
 use attrievent::attribute::RawEventKind;
@@ -19,7 +19,7 @@ use crate::{
 pub struct TriagePolicy {
     pub id: u32,
     pub name: String,
-    pub ti_db: Vec<Ti>,
+    pub ti_db: Vec<TriageExclusionReason>,
     pub packet_attr: Vec<PacketAttr>,
     pub confidence: Vec<Confidence>,
     pub response: Vec<Response>,
@@ -98,25 +98,25 @@ pub enum ResponseKind {
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
-pub enum Ti {
+pub enum TriageExclusionReason {
     IpAddress(HostNetworkGroup),
     Domain(Vec<String>),
     Hostname(Vec<String>),
     Uri(Vec<String>),
 }
 
-impl Eq for Ti {}
+impl Eq for TriageExclusionReason {}
 
-impl PartialOrd for Ti {
+impl PartialOrd for TriageExclusionReason {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Ti {
+impl Ord for TriageExclusionReason {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (Ti::IpAddress(a), Ti::IpAddress(b)) => {
+            (TriageExclusionReason::IpAddress(a), TriageExclusionReason::IpAddress(b)) => {
                 // Compare HostNetworkGroup by serializing to bytes
                 // This provides a consistent ordering
                 use bincode;
@@ -125,18 +125,63 @@ impl Ord for Ti {
                 a_bytes.cmp(&b_bytes)
             }
             // Same-variant comparisons for Vec<String> types
-            (Ti::Domain(a), Ti::Domain(b))
-            | (Ti::Hostname(a), Ti::Hostname(b))
-            | (Ti::Uri(a), Ti::Uri(b)) => a.cmp(b),
+            (TriageExclusionReason::Domain(a), TriageExclusionReason::Domain(b))
+            | (TriageExclusionReason::Hostname(a), TriageExclusionReason::Hostname(b))
+            | (TriageExclusionReason::Uri(a), TriageExclusionReason::Uri(b)) => a.cmp(b),
             // Cross-variant comparisons: order by discriminant (IpAddress < Domain < Hostname < Uri)
             // Greater cases: later variants compared to earlier variants
-            (Ti::Domain(_), Ti::IpAddress(_))
-            | (Ti::Hostname(_), Ti::IpAddress(_) | Ti::Domain(_))
-            | (Ti::Uri(_), _) => Ordering::Greater,
+            (TriageExclusionReason::Domain(_), TriageExclusionReason::IpAddress(_))
+            | (
+                TriageExclusionReason::Hostname(_),
+                TriageExclusionReason::IpAddress(_) | TriageExclusionReason::Domain(_),
+            )
+            | (TriageExclusionReason::Uri(_), _) => Ordering::Greater,
             // Less cases: earlier variants compared to later variants, or same variant compared to later variants
-            (Ti::IpAddress(_) | Ti::Domain(_) | Ti::Hostname(_), _) => Ordering::Less,
+            (
+                TriageExclusionReason::IpAddress(_)
+                | TriageExclusionReason::Domain(_)
+                | TriageExclusionReason::Hostname(_),
+                _,
+            ) => Ordering::Less,
         }
     }
+}
+
+#[derive(Clone)]
+pub struct NetworkFilter {
+    groups: Vec<HostNetworkGroup>,
+}
+
+impl NetworkFilter {
+    #[must_use]
+    pub fn new(group: HostNetworkGroup) -> Self {
+        Self {
+            groups: vec![group],
+        }
+    }
+
+    #[must_use]
+    pub fn contains(&self, addr: IpAddr) -> bool {
+        self.groups.iter().any(|group| group.contains(addr))
+    }
+}
+
+#[derive(Clone)]
+pub enum TriageExclusion {
+    IpAddress(NetworkFilter),
+    Domain(regex::Regex),
+    Hostname(Vec<String>),
+    Uri(Vec<String>),
+}
+
+#[derive(Clone)]
+pub struct TriagePolicyInput {
+    pub id: u32,
+    pub name: String,
+    pub ti_db: Vec<TriageExclusion>,
+    pub packet_attr: Vec<PacketAttr>,
+    pub confidence: Vec<Confidence>,
+    pub response: Vec<Response>,
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
@@ -276,7 +321,7 @@ impl<'d> IndexedTable<'d, TriagePolicy> {
 #[derive(Clone)]
 pub struct Update {
     pub name: String,
-    pub ti_db: Vec<Ti>,
+    pub ti_db: Vec<TriageExclusionReason>,
     pub packet_attr: Vec<PacketAttr>,
     pub confidence: Vec<Confidence>,
     pub response: Vec<Response>,

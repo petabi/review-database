@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     EventCategory, EventFilter, FlowKind, LearningMethod, TrafficDirection, eq_ip_country,
 };
-use crate::{AttrCmpKind, Confidence, PacketAttr, Ti, ValueKind};
+use crate::{AttrCmpKind, Confidence, PacketAttr, TriageExclusion, ValueKind};
 
 // TODO: Make new Match trait to support Windows Events
 
@@ -257,11 +257,11 @@ pub(super) trait Match {
         Ok((true, None))
     }
 
-    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
         let matched = ti_db.iter().any(|ti| {
-            if let Ti::IpAddress(group) = ti {
-                self.src_addrs().iter().any(|&addr| group.contains(addr))
-                    || self.dst_addrs().iter().any(|&addr| group.contains(addr))
+            if let TriageExclusion::IpAddress(filter) = ti {
+                self.src_addrs().iter().any(|&addr| filter.contains(addr))
+                    || self.dst_addrs().iter().any(|&addr| filter.contains(addr))
             } else {
                 false
             }

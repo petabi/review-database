@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, EventFilter, LOW, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
-    Ti,
+    TriageExclusion,
     event::common::{AttrValue, triage_scores_to_string},
 };
 
@@ -777,18 +777,16 @@ impl Match for HttpThreat {
         true
     }
 
-    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
         let matched = ti_db.iter().any(|ti| match ti {
-            Ti::IpAddress(group) => self
+            TriageExclusion::IpAddress(filter) => self
                 .src_addrs()
                 .iter()
                 .chain(self.dst_addrs().iter())
-                .any(|&ip| group.contains(ip)),
-            Ti::Domain(domains) => domains
-                .iter()
-                .any(|domain| self.host == *domain || self.host.ends_with(&format!(".{domain}"))),
-            Ti::Hostname(hostnames) => hostnames.contains(&self.host),
-            Ti::Uri(uris) => uris.contains(&self.uri),
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex) => regex.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
         });
         if matched { f64::MIN } else { 0.0 }
     }
@@ -1107,18 +1105,16 @@ impl Match for DomainGenerationAlgorithm {
         find_http_attr_by_kind!(self, raw_event_attr)
     }
 
-    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
         let matched = ti_db.iter().any(|ti| match ti {
-            Ti::IpAddress(group) => self
+            TriageExclusion::IpAddress(filter) => self
                 .src_addrs()
                 .iter()
                 .chain(self.dst_addrs().iter())
-                .any(|&ip| group.contains(ip)),
-            Ti::Domain(domains) => domains
-                .iter()
-                .any(|domain| self.host == *domain || self.host.ends_with(&format!(".{domain}"))),
-            Ti::Hostname(hostnames) => hostnames.contains(&self.host),
-            Ti::Uri(uris) => uris.contains(&self.uri),
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex) => regex.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
         });
         if matched { f64::MIN } else { 0.0 }
     }
@@ -1284,18 +1280,16 @@ impl Match for NonBrowser {
         find_http_attr_by_kind!(self, raw_event_attr)
     }
 
-    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
         let matched = ti_db.iter().any(|ti| match ti {
-            Ti::IpAddress(group) => self
+            TriageExclusion::IpAddress(filter) => self
                 .src_addrs()
                 .iter()
                 .chain(self.dst_addrs().iter())
-                .any(|&ip| group.contains(ip)),
-            Ti::Domain(domains) => domains
-                .iter()
-                .any(|domain| self.host == *domain || self.host.ends_with(&format!(".{domain}"))),
-            Ti::Hostname(hostnames) => hostnames.contains(&self.host),
-            Ti::Uri(uris) => uris.contains(&self.uri),
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex) => regex.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
         });
         if matched { f64::MIN } else { 0.0 }
     }
@@ -1613,18 +1607,16 @@ impl Match for BlocklistHttp {
         find_http_attr_by_kind!(self, raw_event_attr)
     }
 
-    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
         let matched = ti_db.iter().any(|ti| match ti {
-            Ti::IpAddress(group) => self
+            TriageExclusion::IpAddress(filter) => self
                 .src_addrs()
                 .iter()
                 .chain(self.dst_addrs().iter())
-                .any(|&ip| group.contains(ip)),
-            Ti::Domain(domains) => domains
-                .iter()
-                .any(|domain| self.host == *domain || self.host.ends_with(&format!(".{domain}"))),
-            Ti::Hostname(hostnames) => hostnames.contains(&self.host),
-            Ti::Uri(uris) => uris.contains(&self.uri),
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex) => regex.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
         });
         if matched { f64::MIN } else { 0.0 }
     }

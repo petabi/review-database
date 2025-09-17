@@ -75,7 +75,8 @@ pub use self::{
     tor::{TorConnection, TorConnectionConn},
 };
 use super::{
-    Customer, EventCategory, Network, TriagePolicy,
+    Customer, EventCategory, Network, NetworkFilter, TriageExclusion, TriagePolicy,
+    TriagePolicyInput,
     types::{Endpoint, HostNetworkGroup},
 };
 
@@ -1897,10 +1898,15 @@ pub struct EventFilter {
     learning_methods: Option<Vec<LearningMethod>>,
     sensors: Option<Vec<String>>,
     confidence: Option<f32>,
-    triage_policies: Option<Vec<TriagePolicy>>,
+    triage_policies: Option<Vec<TriagePolicyInput>>,
 }
 
 impl EventFilter {
+    /// Creates a new `EventFilter`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the domain patterns in triage policies cannot be compiled into valid regex patterns.
     #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn new(
@@ -1918,6 +1924,62 @@ impl EventFilter {
         confidence: Option<f32>,
         triage_policies: Option<Vec<TriagePolicy>>,
     ) -> Self {
+        // Convert TriagePolicy to TriagePolicyInput
+        let triage_policies = triage_policies.map(|policies| {
+            policies
+                .into_iter()
+                .map(|policy| {
+                    let ti_db = policy
+                        .ti_db
+                        .into_iter()
+                        .map(|ti| {
+                            match ti {
+                                super::TriageExclusionReason::IpAddress(group) => {
+                                    TriageExclusion::IpAddress(NetworkFilter::new(group))
+                                }
+                                super::TriageExclusionReason::Domain(domains) => {
+                                    // Create regex pattern for domain matching
+                                    // Supports both exact domain matches and subdomain matches
+                                    let pattern = if domains.is_empty() {
+                                        String::from("(?!)") // Never match pattern
+                                    } else {
+                                        let patterns: Vec<String> = domains
+                                            .iter()
+                                            .map(|domain| {
+                                                // Escape special regex characters in domain
+                                                let escaped = regex::escape(domain);
+                                                // Pattern to match exact domain or subdomain
+                                                format!(r"(^{escaped}$|\.{escaped}$)")
+                                            })
+                                            .collect();
+                                        patterns.join("|")
+                                    };
+                                    let regex =
+                                        regex::Regex::new(&pattern).expect("Valid regex pattern");
+                                    TriageExclusion::Domain(regex)
+                                }
+                                super::TriageExclusionReason::Hostname(hostnames) => {
+                                    TriageExclusion::Hostname(hostnames)
+                                }
+                                super::TriageExclusionReason::Uri(uris) => {
+                                    TriageExclusion::Uri(uris)
+                                }
+                            }
+                        })
+                        .collect();
+
+                    TriagePolicyInput {
+                        id: policy.id,
+                        name: policy.name,
+                        ti_db,
+                        packet_attr: policy.packet_attr,
+                        confidence: policy.confidence,
+                        response: policy.response,
+                    }
+                })
+                .collect()
+        });
+
         Self {
             customers,
             endpoints,
