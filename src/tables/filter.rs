@@ -233,11 +233,6 @@ impl<'d> Table<'d, Filter> {
         })
         .collect()
     }
-
-    /// Provides access to the underlying map for low-level operations.
-    pub(crate) fn raw(&self) -> &Map<'_> {
-        &self.map
-    }
 }
 
 #[cfg(test)]

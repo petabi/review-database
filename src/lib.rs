@@ -40,7 +40,7 @@ pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
 pub use self::cluster::*;
 pub use self::collections::Indexable;
-pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, IterableMap, Map};
+pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, Map};
 pub use self::column_statistics::*;
 pub use self::event::{Event, EventDb, EventKind, EventMessage};
 pub use self::migration::{migrate_backend, migrate_data_dir};

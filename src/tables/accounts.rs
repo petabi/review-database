@@ -365,10 +365,6 @@ impl<'d> Table<'d, Account> {
 
         Ok(accounts)
     }
-
-    pub(crate) fn raw(&self) -> &Map<'_> {
-        &self.map
-    }
 }
 
 #[cfg(test)]

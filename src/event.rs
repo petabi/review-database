@@ -37,7 +37,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::{RngCore, rng};
 pub use rocksdb::Direction;
-use rocksdb::{DBIteratorWithThreadMode, IteratorMode};
+use rocksdb::IteratorMode;
 use serde::{Deserialize, Serialize};
 
 use self::common::Match;
@@ -73,27 +73,6 @@ pub use self::{
     sysmon::WindowsThreat,
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
     tor::{TorConnection, TorConnectionConn},
-};
-pub(crate) use self::{
-    conn::{
-        ExternalDdosFieldsV0_39, ExternalDdosFieldsV0_41, MultiHostPortScanFieldsV0_39,
-        MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39, PortScanFieldsV0_41,
-    },
-    dns::{CryptocurrencyMiningPoolFieldsV0_39, CryptocurrencyMiningPoolFieldsV0_41},
-    ftp::{
-        FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41, FtpEventFieldsV0_38,
-        FtpEventFieldsV0_39,
-    },
-    http::{
-        BlocklistHttpFieldsV0_40, BlocklistHttpFieldsV0_41, DgaFieldsV0_40, DgaFieldsV0_41,
-        HttpEventFieldsV0_39, HttpEventFieldsV0_41, HttpThreatFieldsV0_34, HttpThreatFieldsV0_41,
-        RepeatedHttpSessionsFieldsV0_39, RepeatedHttpSessionsFieldsV0_41,
-    },
-    ldap::{
-        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, LdapEventFieldsV0_38,
-        LdapEventFieldsV0_39,
-    },
-    rdp::{RdpBruteForceFieldsV0_39, RdpBruteForceFieldsV0_41},
 };
 use super::{
     Customer, EventCategory, Network, TriagePolicy,
@@ -2260,14 +2239,6 @@ impl<'a> EventDb<'a> {
     pub fn iter_forward(&self) -> EventIterator<'_> {
         let iter = self.inner.iterator(IteratorMode::Start);
         EventIterator { inner: iter }
-    }
-
-    /// Creates an raw iterator over key-value pairs for the entire events.
-    #[must_use]
-    pub(crate) fn raw_iter_forward(
-        &self,
-    ) -> DBIteratorWithThreadMode<'_, rocksdb::OptimisticTransactionDB> {
-        self.inner.iterator(IteratorMode::Start)
     }
 
     /// Stores a new event into the database.

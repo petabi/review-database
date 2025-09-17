@@ -165,17 +165,9 @@ impl<'d> Table<'d> {
         })
     }
 
-    pub(crate) fn raw(&self) -> &IndexedMap<'_> {
-        self.node.raw()
-    }
-
     #[allow(unused)]
     pub(crate) fn agent_raw(&self) -> &Map<'_> {
         self.agent.raw()
-    }
-
-    pub(crate) fn external_service_raw(&self) -> &Map<'_> {
-        self.external_service.raw()
     }
 
     /// Returns the total count of nodes available.
