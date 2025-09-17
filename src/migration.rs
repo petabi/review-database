@@ -366,9 +366,9 @@ fn migrate_0_40_filter(store: &super::Store) -> Result<()> {
 }
 
 fn migrate_0_40_ftp(store: &super::Store) -> Result<()> {
-    use migration_structures::FtpEventFieldsV0_39;
     use num_traits::FromPrimitive;
 
+    use crate::event::FtpEventFieldsV0_39;
     use crate::event::{EventKind, FtpEventFields};
 
     let event_db = store.events();
@@ -647,15 +647,16 @@ where
 fn migrate_0_39_events(store: &super::Store) -> Result<()> {
     use migration_structures::{
         CryptocurrencyMiningPoolV0_39, ExternalDdosV0_39, FtpBruteForceV0_39, LdapBruteForceV0_39,
-        LdapPlainTextV0_39, MultiHostPortScanV0_39, NonBrowserV0_39, PortScanV0_39,
-        RdpBruteForceV0_39, RepeatedHttpSessionsV0_39, TorConnectionV0_39,
+        MultiHostPortScanV0_39, NonBrowserV0_39, PortScanV0_39, RdpBruteForceV0_39,
+        RepeatedHttpSessionsV0_39, TorConnectionV0_39,
     };
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce,
-        LdapBruteForce, LdapEventFieldsV0_38, LdapEventFieldsV0_39, LdapPlainText, MultiHostPortScan, NonBrowser, PortScan, RdpBruteForce,
-        RepeatedHttpSessions, TorConnection,
+        CryptocurrencyMiningPool, EventKind, ExternalDdos, FtpBruteForce, FtpEventFieldsV0_38,
+        FtpEventFieldsV0_39, LdapBruteForce, LdapEventFieldsV0_38, LdapEventFieldsV0_39,
+        MultiHostPortScan, NonBrowser, PortScan, RdpBruteForce, RepeatedHttpSessions,
+        TorConnection,
     };
 
     let event_db = store.events();
@@ -719,6 +720,11 @@ fn migrate_0_39_events(store: &super::Store) -> Result<()> {
             }
             EventKind::LdapBruteForce => {
                 update_event_db_with_new_event::<LdapBruteForceV0_39, LdapBruteForce>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            EventKind::FtpPlainText => {
+                update_event_db_with_new_event::<FtpEventFieldsV0_38, FtpEventFieldsV0_39>(
                     &k, &v, &event_db,
                 )?;
             }
@@ -2036,8 +2042,8 @@ mod tests {
             }
         }
 
-        // Verify that all 4 test events were processed
-        assert_eq!(count, 4);
+        // Verify that all 5 test events were processed
+        assert_eq!(count, 5);
     }
 
     #[test]
@@ -2051,7 +2057,7 @@ mod tests {
         let event_db = settings.store.events();
 
         // Create test data in the old format
-        let old_ftp_event_fields = super::migration_structures::FtpEventFieldsV0_39 {
+        let old_ftp_event_fields = crate::event::FtpEventFieldsV0_39 {
             sensor: "sensor1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
@@ -2071,6 +2077,7 @@ mod tests {
             file: "/etc/passwd".to_string(),
             file_size: 5000,
             file_id: "123".to_string(),
+            confidence: 1.0,
             category: crate::EventCategory::LateralMovement,
         };
 

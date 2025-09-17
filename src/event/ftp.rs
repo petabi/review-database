@@ -259,7 +259,7 @@ impl FtpEventFields {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FtpEventFieldsV0_39 {
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -307,6 +307,37 @@ impl From<FtpEventFieldsV0_38> for FtpEventFieldsV0_39 {
             file_size: value.file_size,
             file_id: value.file_id,
             confidence: 1.0, // default value for FtpPlainText
+            category: value.category,
+        }
+    }
+}
+
+impl From<FtpEventFieldsV0_39> for FtpEventFields {
+    fn from(value: FtpEventFieldsV0_39) -> Self {
+        let command = FtpCommand {
+            command: value.command,
+            reply_code: value.reply_code,
+            reply_msg: value.reply_msg,
+            data_passive: value.data_passive,
+            data_orig_addr: value.data_orig_addr,
+            data_resp_addr: value.data_resp_addr,
+            data_resp_port: value.data_resp_port,
+            file: value.file,
+            file_size: value.file_size,
+            file_id: value.file_id,
+        };
+
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            user: value.user,
+            password: value.password,
+            commands: vec![command],
             category: value.category,
         }
     }
