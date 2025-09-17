@@ -6,21 +6,11 @@ use std::{borrow::Cow, cmp::Ordering, convert::TryFrom, mem};
 
 use anyhow::{Context, Result, bail};
 use bincode::Options;
-use rocksdb::{Direction, IteratorMode};
 use serde::{Deserialize, Serialize};
 
 pub use self::{indexed_map::IndexedMap, indexed_set::IndexedSet, map::Map};
 use super::types::FromKeyValue;
 use crate::EXCLUSIVE;
-
-pub trait IterableMap<'i, I: Iterator + 'i> {
-    /// Creates an iterator that iterates forward over key-value pairs.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the iterator cannot be created.
-    fn iter_forward(&'i self) -> Result<I>;
-}
 
 #[derive(Deserialize, Serialize)]
 enum KeyIndexEntry {
@@ -223,17 +213,6 @@ pub trait Indexed {
             return Ok(KeyIndex::default());
         };
         KeyIndex::from_bytes(value).context("invalid index in database")
-    }
-
-    /// Returns the iterator over the index.
-    ///
-    /// # Errors
-    ///
-    /// Never fails.
-    fn inner_iterator(&self, mode: IteratorMode) -> Result<IndexedMapIterator<'_>> {
-        let iter = self.db().iterator_cf(self.cf(), mode);
-
-        Ok(IndexedMapIterator { inner: iter })
     }
 
     /// Returns the number of entries in the index.
@@ -689,35 +668,6 @@ pub trait Indexed {
         )
         .context("failed to update database index")?;
         Ok(())
-    }
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub struct IndexedMapIterator<'i> {
-    inner: rocksdb::DBIteratorWithThreadMode<
-        'i,
-        rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
-    >,
-}
-
-impl Iterator for IndexedMapIterator<'_> {
-    type Item = (Box<[u8]>, Box<[u8]>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let item = self.inner.next().transpose().ok().flatten()?;
-        if item.0.is_empty() {
-            return None;
-        }
-        Some(item)
-    }
-}
-
-impl<'i, M> IterableMap<'i, IndexedMapIterator<'i>> for M
-where
-    M: Indexed,
-{
-    fn iter_forward(&self) -> Result<IndexedMapIterator<'_>> {
-        self.inner_iterator(IteratorMode::From(&[0], Direction::Forward))
     }
 }
 

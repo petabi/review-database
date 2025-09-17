@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, anyhow, bail};
 use rocksdb::IteratorMode;
 
-use crate::{EXCLUSIVE, IterableMap};
+use crate::EXCLUSIVE;
 
 #[derive(Clone)]
 pub struct Map<'a> {
@@ -247,12 +247,6 @@ impl<'a> Map<'a> {
         let iter = self.db.iterator_cf(self.cf, mode);
 
         MapIterator { inner: iter }
-    }
-}
-
-impl<'i> IterableMap<'i, MapIterator<'i>> for Map<'i> {
-    fn iter_forward(&self) -> Result<MapIterator<'_>> {
-        Ok(self.inner_iterator(IteratorMode::Start))
     }
 }
 

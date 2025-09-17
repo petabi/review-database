@@ -122,10 +122,6 @@ impl<'d> Table<'d, ExternalService> {
         Map::open(db, super::EXTERNAL_SERVICES).map(Table::new)
     }
 
-    pub(crate) fn raw(&self) -> &Map<'_> {
-        &self.map
-    }
-
     /// Returns an external service with the given `node` and `id`.
     ///
     /// # Errors
