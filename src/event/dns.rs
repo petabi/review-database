@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, HIGH, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::event::common::{AttrValue, triage_scores_to_string, vector_to_string};
+use crate::tables::Ti;
 
 macro_rules! find_dns_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -229,6 +230,22 @@ impl Match for DnsCovertChannel {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
+    }
+
+    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            Ti::IpAddress(group) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| group.contains(ip)),
+            Ti::Domain(domains) => domains
+                .iter()
+                .any(|domain| self.query == *domain || self.query.ends_with(&format!(".{domain}"))),
+            Ti::Hostname(hostnames) => hostnames.contains(&self.query),
+            Ti::Uri(_) => false, // DNS queries don't match URIs
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 }
 
@@ -810,5 +827,21 @@ impl Match for BlocklistDns {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_dns_attr_by_kind!(self, raw_event_attr)
+    }
+
+    fn score_by_ti_db(&self, ti_db: &[Ti]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            Ti::IpAddress(group) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| group.contains(ip)),
+            Ti::Domain(domains) => domains
+                .iter()
+                .any(|domain| self.query == *domain || self.query.ends_with(&format!(".{domain}"))),
+            Ti::Hostname(hostnames) => hostnames.contains(&self.query),
+            Ti::Uri(_) => false, // DNS queries don't match URIs
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 }
