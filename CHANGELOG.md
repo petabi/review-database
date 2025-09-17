@@ -1052,7 +1052,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 [Unreleased]: https://github.com/petabi/review-database/compare/0.41.0...main
 [0.41.0]: https://github.com/petabi/review-database/compare/0.40.0...0.41.0
 [0.40.0]: https://github.com/petabi/review-database/compare/0.39.0...0.40.0
-[0.39.0]: https://github.com/petabi/review-database/compare/v0.38.0...0.39.0
+[0.39.0]: https://github.com/petabi/review-database/compare/0.38.0...0.39.0
 [0.38.0]: https://github.com/petabi/review-database/compare/0.37.0...0.38.0
 [0.37.0]: https://github.com/petabi/review-database/compare/0.36.0...0.37.0
 [0.36.0]: https://github.com/petabi/review-database/compare/0.35.0...0.36.0
