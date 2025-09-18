@@ -98,7 +98,7 @@ use tracing::info;
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.1,<0.42.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.2,<0.42.0-alpha.3";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -193,8 +193,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
     let migration: Vec<Migration> = vec![(
-        VersionReq::parse(">=0.41.0,<0.42.0-alpha.1")?,
-        Version::parse("0.42.0-alpha.1")?,
+        VersionReq::parse(">=0.41.0,<0.42.0-alpha.2")?,
+        Version::parse("0.42.0-alpha.2")?,
         migrate_0_41_to_0_42,
     )];
 
