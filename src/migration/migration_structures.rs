@@ -5,6 +5,7 @@ use strum_macros::{Display, EnumString};
 
 use crate::{ExternalServiceConfig, ExternalServiceStatus};
 
+#[allow(dead_code)]
 #[derive(Deserialize, Serialize, PartialEq)]
 pub struct PigletConfig {
     pub dpdk_args: String,
@@ -27,6 +28,7 @@ pub struct PigletConfig {
     pub pcap_max_size: u32,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Serialize, PartialEq, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum DumpItem {
@@ -36,6 +38,7 @@ pub enum DumpItem {
     Http,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Serialize, PartialEq, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum DumpHttpContentType {
@@ -46,6 +49,7 @@ pub enum DumpHttpContentType {
     Txt,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Serialize, PartialEq)]
 pub struct HogConfig {
     pub active_protocols: Option<Vec<ProtocolForHog>>,
@@ -61,6 +65,7 @@ pub struct HogConfig {
     pub services_path: String,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Serialize, PartialEq, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum ProtocolForHog {
@@ -70,6 +75,7 @@ pub enum ProtocolForHog {
     Http,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Serialize, PartialEq)]
 pub struct GigantoConfig {
     pub ingest_srv_addr: SocketAddr,
@@ -91,6 +97,7 @@ pub struct GigantoConfig {
     pub ack_transmission: u16,
 }
 
+#[allow(dead_code)]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Giganto {
     pub status: ExternalServiceStatus,
