@@ -38,6 +38,7 @@ pub use self::account::Role;
 use self::backends::ConnectionPool;
 pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
+pub use self::classifier_fs::ClassifierFileManager;
 pub use self::cluster::*;
 pub use self::collections::Indexable;
 pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, Map};

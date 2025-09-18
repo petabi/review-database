@@ -12,7 +12,7 @@ pub type Result<T> = std::result::Result<T, ClassifierFsError>;
 /// Stores classifier binary data in a hierarchical directory structure:
 /// `base_dir/classifiers/model_{id}/classifier_{name}.bin`
 #[derive(Clone, Debug)]
-pub(crate) struct ClassifierFileManager {
+pub struct ClassifierFileManager {
     base_dir: PathBuf,
 }
 
@@ -70,12 +70,7 @@ impl ClassifierFileManager {
     /// If storage fails due to insufficient disk space, permission denied, I/O
     /// errors during directory creation, file write, or rename, or concurrent
     /// access conflicts (rare with timestamp-based temp files), etc.
-    pub(crate) async fn store_classifier(
-        &self,
-        model_id: i32,
-        name: &str,
-        data: &[u8],
-    ) -> Result<()> {
+    pub async fn store_classifier(&self, model_id: i32, name: &str, data: &[u8]) -> Result<()> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
         // Create parent directories if they don't exist
@@ -115,7 +110,7 @@ impl ClassifierFileManager {
     /// # Errors
     ///
     /// If loading fails due to permission denied, I/O errors, corrupted file, etc.
-    pub(crate) async fn load_classifier(&self, model_id: i32, name: &str) -> Result<Vec<u8>> {
+    pub async fn load_classifier(&self, model_id: i32, name: &str) -> Result<Vec<u8>> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
         // Return empty vector if file doesn't exist
@@ -134,7 +129,7 @@ impl ClassifierFileManager {
     /// not readability or integrity. The file might exist but be unreadable
     /// due to permission issues.
     #[must_use]
-    pub(crate) fn classifier_exists(&self, model_id: i32, name: &str) -> bool {
+    pub fn classifier_exists(&self, model_id: i32, name: &str) -> bool {
         let Ok(file_path) = self.create_classifier_path(model_id, name) else {
             return false;
         };
@@ -148,7 +143,7 @@ impl ClassifierFileManager {
     /// # Errors
     ///
     /// If deletion fails due to permission denied, I/O errors, etc.
-    pub(crate) async fn delete_classifier(&self, model_id: i32, name: &str) -> Result<()> {
+    pub async fn delete_classifier(&self, model_id: i32, name: &str) -> Result<()> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
         // Only attempt deletion if file exists
