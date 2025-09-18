@@ -5,7 +5,7 @@ mod conn;
 mod dcerpc;
 mod dhcp;
 mod dns;
-mod ftp;
+pub mod ftp;
 mod http;
 mod kerberos;
 mod ldap;
@@ -54,7 +54,9 @@ pub use self::{
         BlocklistDns, BlocklistDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
         DnsCovertChannel, DnsEventFields, LockyRansomware,
     },
-    ftp::{BlocklistFtp, FtpBruteForce, FtpBruteForceFields, FtpEventFields, FtpPlainText},
+    ftp::{
+        BlocklistFtp, FtpBruteForce, FtpBruteForceFields, FtpCommand, FtpEventFields, FtpPlainText,
+    },
     http::{
         BlocklistHttp, BlocklistHttpFields, DgaFields, DomainGenerationAlgorithm, HttpEventFields,
         HttpThreat, HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
@@ -3911,6 +3913,21 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_ftpplaintext() {
+        use crate::event::ftp::FtpCommand;
+
+        let command = FtpCommand {
+            command: "ls".to_string(),
+            reply_code: "200".to_string(),
+            reply_msg: "OK".to_string(),
+            data_passive: false,
+            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
+            data_resp_port: 10001,
+            file: "/etc/passwd".to_string(),
+            file_size: 5000,
+            file_id: "123".to_string(),
+        };
+
         let fields = FtpEventFields {
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
@@ -3920,17 +3937,8 @@ mod tests {
             end_time: 100,
             user: "user1".to_string(),
             password: "password".to_string(),
-            command: "ls".to_string(),
-            reply_code: "200".to_string(),
-            reply_msg: "OK".to_string(),
-            data_passive: false,
-            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            commands: vec![command],
             sensor: "collector1".to_string(),
-            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
-            data_resp_port: 10001,
-            file: "/etc/passwd".to_string(),
-            file_size: 5000,
-            file_id: "123".to_string(),
             confidence: 1.0,
             category: EventCategory::LateralMovement,
         };
@@ -3946,7 +3954,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" commands="ls:200:OK" confidence="1""#
         );
 
         let ftp_plain_text = Event::FtpPlainText(FtpPlainText::new(
@@ -3956,11 +3964,26 @@ mod tests {
         .to_string();
         assert_eq!(
             &ftp_plain_text,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" commands="ls:200:OK" triage_scores="""#
         );
     }
 
     fn ftpeventfields() -> FtpEventFields {
+        use crate::event::ftp::FtpCommand;
+
+        let command = FtpCommand {
+            command: "ls".to_string(),
+            reply_code: "200".to_string(),
+            reply_msg: "OK".to_string(),
+            data_passive: false,
+            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
+            data_resp_port: 10001,
+            file: "/etc/passwd".to_string(),
+            file_size: 5000,
+            file_id: "123".to_string(),
+        };
+
         FtpEventFields {
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
@@ -3970,17 +3993,8 @@ mod tests {
             end_time: 100,
             user: "user1".to_string(),
             password: "password".to_string(),
-            command: "ls".to_string(),
-            reply_code: "200".to_string(),
-            reply_msg: "OK".to_string(),
-            data_passive: false,
-            data_orig_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            commands: vec![command],
             sensor: "collector1".to_string(),
-            data_resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
-            data_resp_port: 10001,
-            file: "/etc/passwd".to_string(),
-            file_size: 5000,
-            file_id: "123".to_string(),
             confidence: 1.0,
             category: EventCategory::InitialAccess,
         }
@@ -4001,7 +4015,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" commands="ls:200:OK" confidence="1""#
         );
 
         let blocklist_ftp = Event::Blocklist(RecordType::Ftp(BlocklistFtp::new(
@@ -4012,7 +4026,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_ftp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" command="ls" reply_code="200" reply_msg="OK" data_passive="false" data_orig_addr="127.0.0.3" data_resp_addr="127.0.0.4" data_resp_port="10001" file="/etc/passwd" file_size="5000" file_id="123" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" end_time="100" user="user1" password="password" commands="ls:200:OK" triage_scores="""#
         );
     }
 

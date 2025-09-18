@@ -7,6 +7,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Modified FTP detection event structures to store multiple commands and
+  responses instead of just the last command. The `FtpEventFields`,
+  `FtpPlainText`, and `BlocklistFtp` structures now use a `commands` field
+  containing a `Vec<FtpCommand>` instead of individual command-related fields
+  (`command`, `reply_code`, `reply_msg`, etc.).
+
 ### Removed
 
 - Legacy PostgreSQL-based column statistics tables and APIs have been removed.
