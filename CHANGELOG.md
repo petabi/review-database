@@ -7,6 +7,20 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- New `FtpCommand` struct containing individual FTP command details (`command`,
+  `reply_code`, `reply_msg`, `data_passive`, `data_orig_addr`, `data_resp_addr`,
+  `data_resp_port`, `file`, `file_size`, `file_id`).
+
+### Changed
+
+- Modified FTP detection event structures to store all commands and responses
+  from an FTP session instead of just the last command. The `FtpEventFields`,
+  `FtpPlainText`, and `BlocklistFtp` structures now use a `commands:
+  Vec<FtpCommand>` field instead of individual command-related fields.
+- Added automatic migration for existing FTP event data from v0.41 to v0.42 format.
+
 ### Removed
 
 - Legacy PostgreSQL-based column statistics tables and APIs have been removed.
