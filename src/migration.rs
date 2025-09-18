@@ -4,7 +4,6 @@
 mod migrate_classifiers_to_filesystem;
 mod migrate_cluster;
 mod migrate_time_series;
-mod migration_structures;
 
 use std::{
     fs::{File, create_dir_all},
