@@ -1,6 +1,6 @@
 //! The `TriagePolicy` table.
 
-use std::{borrow::Cow, cmp::Ordering};
+use std::{borrow::Cow, cmp::Ordering, net::IpAddr};
 
 use anyhow::Result;
 use attrievent::attribute::RawEventKind;
@@ -12,14 +12,14 @@ use super::UniqueKey;
 use crate::{
     Indexable, IndexedMap, IndexedMapUpdate, IndexedTable,
     collections::Indexed,
-    types::{EventCategory, FromKeyValue},
+    types::{EventCategory, FromKeyValue, HostNetworkGroup},
 };
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct TriagePolicy {
     pub id: u32,
     pub name: String,
-    pub ti_db: Vec<Ti>,
+    pub ti_db: Vec<TriageExclusionReason>,
     pub packet_attr: Vec<PacketAttr>,
     pub confidence: Vec<Confidence>,
     pub response: Vec<Response>,
@@ -57,14 +57,6 @@ impl Indexable for TriagePolicy {
     fn set_index(&mut self, index: u32) {
         self.id = index;
     }
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
-pub enum TiCmpKind {
-    IpAddress,
-    Domain,
-    Hostname,
-    Uri,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]
@@ -106,37 +98,130 @@ pub enum ResponseKind {
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
-pub struct Ti {
-    pub ti_name: String,
-    pub kind: TiCmpKind,
-    pub weight: Option<f64>,
+pub enum TriageExclusionReason {
+    IpAddress(HostNetworkGroup),
+    Domain(Vec<String>),
+    Hostname(Vec<String>),
+    Uri(Vec<String>),
 }
 
-impl Eq for Ti {}
+impl Eq for TriageExclusionReason {}
 
-impl PartialOrd for Ti {
+impl PartialOrd for TriageExclusionReason {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Ti {
+impl Ord for TriageExclusionReason {
     fn cmp(&self, other: &Self) -> Ordering {
-        let first = self.ti_name.cmp(&other.ti_name);
-        if first != Ordering::Equal {
-            return first;
-        }
-        let second = self.kind.cmp(&other.kind);
-        if second != Ordering::Equal {
-            return second;
-        }
-        match (self.weight, other.weight) {
-            (None, None) => Ordering::Equal,
-            (None, Some(_)) => Ordering::Less,
-            (Some(_), None) => Ordering::Greater,
-            (Some(s), Some(o)) => s.total_cmp(&o),
+        use std::mem::discriminant;
+
+        // Compare discriminants first
+        if discriminant(self) == discriminant(other) {
+            // Same variant - compare contents
+            match (self, other) {
+                (TriageExclusionReason::IpAddress(a), TriageExclusionReason::IpAddress(b)) => {
+                    a.cmp(b)
+                }
+                (TriageExclusionReason::Domain(a), TriageExclusionReason::Domain(b))
+                | (TriageExclusionReason::Hostname(a), TriageExclusionReason::Hostname(b))
+                | (TriageExclusionReason::Uri(a), TriageExclusionReason::Uri(b)) => a.cmp(b),
+                _ => unreachable!(),
+            }
+        } else {
+            // Different variants - compare by enum declaration order
+            // IpAddress < Domain < Hostname < Uri
+            match (self, other) {
+                (TriageExclusionReason::IpAddress(_), _)
+                | (
+                    TriageExclusionReason::Domain(_),
+                    TriageExclusionReason::Hostname(_) | TriageExclusionReason::Uri(_),
+                )
+                | (TriageExclusionReason::Hostname(_), TriageExclusionReason::Uri(_)) => {
+                    Ordering::Less
+                }
+                (_, TriageExclusionReason::IpAddress(_))
+                | (
+                    TriageExclusionReason::Hostname(_) | TriageExclusionReason::Uri(_),
+                    TriageExclusionReason::Domain(_),
+                )
+                | (TriageExclusionReason::Uri(_), TriageExclusionReason::Hostname(_)) => {
+                    Ordering::Greater
+                }
+                _ => unreachable!(),
+            }
         }
     }
+}
+
+#[derive(Clone)]
+pub struct NetworkFilter {
+    groups: Vec<HostNetworkGroup>,
+}
+
+impl NetworkFilter {
+    #[must_use]
+    pub fn new(group: HostNetworkGroup) -> Self {
+        Self {
+            groups: vec![group],
+        }
+    }
+
+    #[must_use]
+    pub fn contains(&self, addr: IpAddr) -> bool {
+        self.groups.iter().any(|group| group.contains(addr))
+    }
+}
+
+#[derive(Clone)]
+pub enum TriageExclusion {
+    IpAddress(NetworkFilter),
+    Domain(regex::RegexSet),
+    Hostname(Vec<String>),
+    Uri(Vec<String>),
+}
+
+impl From<TriageExclusionReason> for TriageExclusion {
+    fn from(reason: TriageExclusionReason) -> Self {
+        match reason {
+            TriageExclusionReason::IpAddress(group) => {
+                TriageExclusion::IpAddress(NetworkFilter::new(group))
+            }
+            TriageExclusionReason::Domain(domains) => {
+                // Create regex patterns for domain matching
+                // Supports both exact domain matches and subdomain matches
+                let patterns: Vec<String> = if domains.is_empty() {
+                    vec![String::from("(?!)")] // Never match pattern
+                } else {
+                    domains
+                        .iter()
+                        .map(|domain| {
+                            // Escape special regex characters in domain
+                            let escaped = regex::escape(domain);
+                            // Pattern to match exact domain or subdomain
+                            format!(r"(^{escaped}$|\.{escaped}$)")
+                        })
+                        .collect()
+                };
+                let regex_set =
+                    regex::RegexSet::new(&patterns).expect("Valid regex patterns for domains");
+                TriageExclusion::Domain(regex_set)
+            }
+            TriageExclusionReason::Hostname(hostnames) => TriageExclusion::Hostname(hostnames),
+            TriageExclusionReason::Uri(uris) => TriageExclusion::Uri(uris),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct TriagePolicyInput {
+    pub id: u32,
+    pub name: String,
+    pub ti_db: Vec<TriageExclusion>,
+    pub packet_attr: Vec<PacketAttr>,
+    pub confidence: Vec<Confidence>,
+    pub response: Vec<Response>,
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
@@ -276,7 +361,7 @@ impl<'d> IndexedTable<'d, TriagePolicy> {
 #[derive(Clone)]
 pub struct Update {
     pub name: String,
-    pub ti_db: Vec<Ti>,
+    pub ti_db: Vec<TriageExclusionReason>,
     pub packet_attr: Vec<PacketAttr>,
     pub confidence: Vec<Confidence>,
     pub response: Vec<Response>,

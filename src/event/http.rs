@@ -6,7 +6,10 @@ use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, EventFilter, LOW, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    TriageExclusion,
+    event::common::{AttrValue, triage_scores_to_string},
+};
 
 macro_rules! find_http_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {
@@ -773,6 +776,20 @@ impl Match for HttpThreat {
         }
         true
     }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
+        });
+        if matched { f64::MIN } else { 0.0 }
+    }
 }
 
 pub type DgaFields = DgaFieldsV0_41;
@@ -1087,6 +1104,20 @@ impl Match for DomainGenerationAlgorithm {
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_http_attr_by_kind!(self, raw_event_attr)
     }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
+        });
+        if matched { f64::MIN } else { 0.0 }
+    }
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -1247,6 +1278,20 @@ impl Match for NonBrowser {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_http_attr_by_kind!(self, raw_event_attr)
+    }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 }
 
@@ -1560,6 +1605,20 @@ impl Match for BlocklistHttp {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_http_attr_by_kind!(self, raw_event_attr)
+    }
+
+    fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
+        let matched = ti_db.iter().any(|ti| match ti {
+            TriageExclusion::IpAddress(filter) => self
+                .src_addrs()
+                .iter()
+                .chain(self.dst_addrs().iter())
+                .any(|&ip| filter.contains(ip)),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.host),
+            TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
+            TriageExclusion::Uri(uris) => uris.contains(&self.uri),
+        });
+        if matched { f64::MIN } else { 0.0 }
     }
 }
 
