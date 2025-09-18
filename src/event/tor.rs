@@ -207,7 +207,7 @@ impl Match for TorConnection {
                 .iter()
                 .chain(self.dst_addrs().iter())
                 .any(|&ip| filter.contains(ip)),
-            TriageExclusion::Domain(regex) => regex.is_match(&self.host),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.host),
             TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.host),
             TriageExclusion::Uri(uris) => uris.contains(&self.uri),
         });

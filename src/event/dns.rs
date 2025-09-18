@@ -239,7 +239,7 @@ impl Match for DnsCovertChannel {
                 .iter()
                 .chain(self.dst_addrs().iter())
                 .any(|&ip| filter.contains(ip)),
-            TriageExclusion::Domain(regex) => regex.is_match(&self.query),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.query),
             TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.query),
             TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
         });
@@ -834,7 +834,7 @@ impl Match for BlocklistDns {
                 .iter()
                 .chain(self.dst_addrs().iter())
                 .any(|&ip| filter.contains(ip)),
-            TriageExclusion::Domain(regex) => regex.is_match(&self.query),
+            TriageExclusion::Domain(regex_set) => regex_set.is_match(&self.query),
             TriageExclusion::Hostname(hostnames) => hostnames.contains(&self.query),
             TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
         });

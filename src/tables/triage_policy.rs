@@ -115,34 +115,42 @@ impl PartialOrd for TriageExclusionReason {
 
 impl Ord for TriageExclusionReason {
     fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (TriageExclusionReason::IpAddress(a), TriageExclusionReason::IpAddress(b)) => {
-                // Compare HostNetworkGroup by serializing to bytes
-                // This provides a consistent ordering
-                use bincode;
-                let a_bytes = bincode::serialize(a).unwrap_or_default();
-                let b_bytes = bincode::serialize(b).unwrap_or_default();
-                a_bytes.cmp(&b_bytes)
+        use std::mem::discriminant;
+
+        // Compare discriminants first
+        if discriminant(self) == discriminant(other) {
+            // Same variant - compare contents
+            match (self, other) {
+                (TriageExclusionReason::IpAddress(a), TriageExclusionReason::IpAddress(b)) => {
+                    a.cmp(b)
+                }
+                (TriageExclusionReason::Domain(a), TriageExclusionReason::Domain(b))
+                | (TriageExclusionReason::Hostname(a), TriageExclusionReason::Hostname(b))
+                | (TriageExclusionReason::Uri(a), TriageExclusionReason::Uri(b)) => a.cmp(b),
+                _ => unreachable!(),
             }
-            // Same-variant comparisons for Vec<String> types
-            (TriageExclusionReason::Domain(a), TriageExclusionReason::Domain(b))
-            | (TriageExclusionReason::Hostname(a), TriageExclusionReason::Hostname(b))
-            | (TriageExclusionReason::Uri(a), TriageExclusionReason::Uri(b)) => a.cmp(b),
-            // Cross-variant comparisons: order by discriminant (IpAddress < Domain < Hostname < Uri)
-            // Greater cases: later variants compared to earlier variants
-            (TriageExclusionReason::Domain(_), TriageExclusionReason::IpAddress(_))
-            | (
-                TriageExclusionReason::Hostname(_),
-                TriageExclusionReason::IpAddress(_) | TriageExclusionReason::Domain(_),
-            )
-            | (TriageExclusionReason::Uri(_), _) => Ordering::Greater,
-            // Less cases: earlier variants compared to later variants, or same variant compared to later variants
-            (
-                TriageExclusionReason::IpAddress(_)
-                | TriageExclusionReason::Domain(_)
-                | TriageExclusionReason::Hostname(_),
-                _,
-            ) => Ordering::Less,
+        } else {
+            // Different variants - compare by enum declaration order
+            // IpAddress < Domain < Hostname < Uri
+            match (self, other) {
+                (TriageExclusionReason::IpAddress(_), _)
+                | (
+                    TriageExclusionReason::Domain(_),
+                    TriageExclusionReason::Hostname(_) | TriageExclusionReason::Uri(_),
+                )
+                | (TriageExclusionReason::Hostname(_), TriageExclusionReason::Uri(_)) => {
+                    Ordering::Less
+                }
+                (_, TriageExclusionReason::IpAddress(_))
+                | (
+                    TriageExclusionReason::Hostname(_) | TriageExclusionReason::Uri(_),
+                    TriageExclusionReason::Domain(_),
+                )
+                | (TriageExclusionReason::Uri(_), TriageExclusionReason::Hostname(_)) => {
+                    Ordering::Greater
+                }
+                _ => unreachable!(),
+            }
         }
     }
 }
@@ -169,9 +177,41 @@ impl NetworkFilter {
 #[derive(Clone)]
 pub enum TriageExclusion {
     IpAddress(NetworkFilter),
-    Domain(regex::Regex),
+    Domain(regex::RegexSet),
     Hostname(Vec<String>),
     Uri(Vec<String>),
+}
+
+impl From<TriageExclusionReason> for TriageExclusion {
+    fn from(reason: TriageExclusionReason) -> Self {
+        match reason {
+            TriageExclusionReason::IpAddress(group) => {
+                TriageExclusion::IpAddress(NetworkFilter::new(group))
+            }
+            TriageExclusionReason::Domain(domains) => {
+                // Create regex patterns for domain matching
+                // Supports both exact domain matches and subdomain matches
+                let patterns: Vec<String> = if domains.is_empty() {
+                    vec![String::from("(?!)")] // Never match pattern
+                } else {
+                    domains
+                        .iter()
+                        .map(|domain| {
+                            // Escape special regex characters in domain
+                            let escaped = regex::escape(domain);
+                            // Pattern to match exact domain or subdomain
+                            format!(r"(^{escaped}$|\.{escaped}$)")
+                        })
+                        .collect()
+                };
+                let regex_set =
+                    regex::RegexSet::new(&patterns).expect("Valid regex patterns for domains");
+                TriageExclusion::Domain(regex_set)
+            }
+            TriageExclusionReason::Hostname(hostnames) => TriageExclusion::Hostname(hostnames),
+            TriageExclusionReason::Uri(uris) => TriageExclusion::Uri(uris),
+        }
+    }
 }
 
 #[derive(Clone)]

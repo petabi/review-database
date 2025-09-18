@@ -131,6 +131,36 @@ pub struct HostNetworkGroup {
     ip_ranges: Vec<RangeInclusive<IpAddr>>,
 }
 
+impl PartialOrd for HostNetworkGroup {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for HostNetworkGroup {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.hosts.cmp(&other.hosts) {
+            Ordering::Equal => match self.networks.cmp(&other.networks) {
+                Ordering::Equal => {
+                    // Compare ip_ranges element by element
+                    let self_len = self.ip_ranges.len();
+                    let other_len = other.ip_ranges.len();
+                    for (a, b) in self.ip_ranges.iter().zip(other.ip_ranges.iter()) {
+                        match (a.start().cmp(b.start()), a.end().cmp(b.end())) {
+                            (Ordering::Equal, Ordering::Equal) => {}
+                            (Ordering::Equal, end) => return end,
+                            (start, _) => return start,
+                        }
+                    }
+                    self_len.cmp(&other_len)
+                }
+                other => other,
+            },
+            other => other,
+        }
+    }
+}
+
 impl HostNetworkGroup {
     #[must_use]
     pub fn new(
