@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_ntlm_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -183,5 +186,46 @@ impl Match for BlocklistNtlm {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_ntlm_attr_by_kind!(self, raw_event_attr)
+    }
+}
+
+pub(crate) type BlocklistNtlmFieldsV0_42 = BlocklistNtlmFields;
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistNtlmFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub protocol: String,
+    pub username: String,
+    pub hostname: String,
+    pub domainname: String,
+    pub success: String,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistNtlmFieldsV0_41> for BlocklistNtlmFields {
+    fn from(value: BlocklistNtlmFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            protocol: value.protocol,
+            username: value.username,
+            hostname: value.hostname,
+            domainname: value.domainname,
+            success: value.success,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }

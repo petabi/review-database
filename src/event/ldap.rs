@@ -225,7 +225,7 @@ impl Match for LdapBruteForce {
     }
 }
 
-pub type LdapEventFields = LdapEventFieldsV0_39;
+pub type LdapEventFields = LdapEventFieldsV0_42;
 
 impl LdapEventFields {
     #[must_use]
@@ -556,5 +556,51 @@ impl Match for BlocklistLdap {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_ldap_attr_by_kind!(self, raw_event_attr)
+    }
+}
+
+pub(crate) type LdapBruteForceFieldsV0_42 = LdapBruteForceFields;
+pub(crate) type LdapEventFieldsV0_42 = LdapEventFieldsV0_39;
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct LdapEventFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<LdapEventFieldsV0_41> for LdapEventFields {
+    fn from(value: LdapEventFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            message_id: value.message_id,
+            version: value.version,
+            opcode: value.opcode,
+            result: value.result,
+            diagnostic_message: value.diagnostic_message,
+            object: value.object,
+            argument: value.argument,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }

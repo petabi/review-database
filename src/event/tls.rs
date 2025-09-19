@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string, vector_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string, vector_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_tls_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -463,5 +466,78 @@ impl Match for SuspiciousTlsTraffic {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_tls_attr_by_kind!(self, raw_event_attr)
+    }
+}
+
+pub(crate) type BlocklistTlsFieldsV0_42 = BlocklistTlsFields;
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistTlsFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub server_name: String,
+    pub alpn_protocol: String,
+    pub ja3: String,
+    pub version: String,
+    pub client_cipher_suites: Vec<u16>,
+    pub client_extensions: Vec<u16>,
+    pub cipher: u16,
+    pub extensions: Vec<u16>,
+    pub ja3s: String,
+    pub serial: String,
+    pub subject_country: String,
+    pub subject_org_name: String,
+    pub subject_common_name: String,
+    pub validity_not_before: i64,
+    pub validity_not_after: i64,
+    pub subject_alt_name: String,
+    pub issuer_country: String,
+    pub issuer_org_name: String,
+    pub issuer_org_unit_name: String,
+    pub issuer_common_name: String,
+    pub last_alert: u8,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistTlsFieldsV0_41> for BlocklistTlsFields {
+    fn from(value: BlocklistTlsFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            server_name: value.server_name,
+            alpn_protocol: value.alpn_protocol,
+            ja3: value.ja3,
+            version: value.version,
+            client_cipher_suites: value.client_cipher_suites,
+            client_extensions: value.client_extensions,
+            cipher: value.cipher,
+            extensions: value.extensions,
+            ja3s: value.ja3s,
+            serial: value.serial,
+            subject_country: value.subject_country,
+            subject_org_name: value.subject_org_name,
+            subject_common_name: value.subject_common_name,
+            validity_not_before: value.validity_not_before,
+            validity_not_after: value.validity_not_after,
+            subject_alt_name: value.subject_alt_name,
+            issuer_country: value.issuer_country,
+            issuer_org_name: value.issuer_org_name,
+            issuer_org_unit_name: value.issuer_org_unit_name,
+            issuer_common_name: value.issuer_common_name,
+            last_alert: value.last_alert,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }

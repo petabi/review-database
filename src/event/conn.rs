@@ -770,3 +770,7 @@ impl Match for BlocklistConn {
         find_conn_attr_by_kind!(self, raw_event_attr)
     }
 }
+
+pub(crate) type PortScanFieldsV0_42 = PortScanFields;
+pub(crate) type MultiHostPortScanFieldsV0_42 = MultiHostPortScanFields;
+pub(crate) type ExternalDdosFieldsV0_42 = ExternalDdosFields;

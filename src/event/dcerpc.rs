@@ -162,3 +162,44 @@ impl Match for BlocklistDceRpc {
         None
     }
 }
+
+use crate::types::EventCategoryV0_41;
+
+pub(crate) type BlocklistDceRpcFieldsV0_42 = BlocklistDceRpcFields;
+
+#[derive(Deserialize)]
+pub(crate) struct BlocklistDceRpcFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub rtt: i64,
+    pub named_pipe: String,
+    pub endpoint: String,
+    pub operation: String,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistDceRpcFieldsV0_41> for BlocklistDceRpcFieldsV0_42 {
+    fn from(value: BlocklistDceRpcFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            rtt: value.rtt,
+            named_pipe: value.named_pipe,
+            endpoint: value.endpoint,
+            operation: value.operation,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}

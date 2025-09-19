@@ -333,3 +333,37 @@ impl Match for BlocklistRdp {
         find_rdp_attr_by_kind!(self, raw_event_attr)
     }
 }
+
+pub(crate) type RdpBruteForceFieldsV0_42 = RdpBruteForceFieldsV0_41;
+pub(crate) type BlocklistRdpFieldsV0_42 = BlocklistRdpFields;
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistRdpFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub cookie: String,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistRdpFieldsV0_41> for BlocklistRdpFields {
+    fn from(value: BlocklistRdpFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            cookie: value.cookie,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}

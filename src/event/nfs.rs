@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_nfs_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -166,5 +169,40 @@ impl Match for BlocklistNfs {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_nfs_attr_by_kind!(self, raw_event_attr)
+    }
+}
+
+pub(crate) type BlocklistNfsFieldsV0_42 = BlocklistNfsFields;
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistNfsFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub read_files: Vec<String>,
+    pub write_files: Vec<String>,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistNfsFieldsV0_41> for BlocklistNfsFields {
+    fn from(value: BlocklistNfsFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            read_files: value.read_files,
+            write_files: value.write_files,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }

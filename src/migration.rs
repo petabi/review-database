@@ -310,7 +310,24 @@ fn migrate_event_category(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Resu
 
     use crate::event::{
         BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42, BlocklistConnFieldsV0_41,
-        BlocklistConnFieldsV0_42, EventKind,
+        BlocklistConnFieldsV0_42, BlocklistDceRpcFieldsV0_41, BlocklistDceRpcFieldsV0_42,
+        BlocklistDhcpFieldsV0_41, BlocklistDhcpFieldsV0_42, BlocklistDnsFieldsV0_41,
+        BlocklistDnsFieldsV0_42, BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42,
+        BlocklistKerberosFieldsV0_41, BlocklistKerberosFieldsV0_42, BlocklistMqttFieldsV0_41,
+        BlocklistMqttFieldsV0_42, BlocklistNfsFieldsV0_41, BlocklistNfsFieldsV0_42,
+        BlocklistNtlmFieldsV0_41, BlocklistNtlmFieldsV0_42, BlocklistRdpFieldsV0_41,
+        BlocklistRdpFieldsV0_42, BlocklistSmbFieldsV0_41, BlocklistSmbFieldsV0_42,
+        BlocklistSmtpFieldsV0_41, BlocklistSmtpFieldsV0_42, BlocklistSshFieldsV0_41,
+        BlocklistSshFieldsV0_42, BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42,
+        CryptocurrencyMiningPoolFieldsV0_41, CryptocurrencyMiningPoolFieldsV0_42, DgaFieldsV0_41,
+        DgaFieldsV0_42, DnsEventFieldsV0_41, DnsEventFieldsV0_42, EventKind,
+        ExternalDdosFieldsV0_41, ExternalDdosFieldsV0_42, FtpBruteForceFieldsV0_41,
+        FtpBruteForceFieldsV0_42, FtpEventFieldsV0_41, FtpEventFieldsV0_42, HttpEventFieldsV0_41,
+        HttpEventFieldsV0_42, HttpThreatFieldsV0_41, HttpThreatFieldsV0_42,
+        LdapBruteForceFieldsV0_41, LdapBruteForceFieldsV0_42, LdapEventFieldsV0_41,
+        LdapEventFieldsV0_42, MultiHostPortScanFieldsV0_41, MultiHostPortScanFieldsV0_42,
+        PortScanFieldsV0_41, PortScanFieldsV0_42, RdpBruteForceFieldsV0_41,
+        RdpBruteForceFieldsV0_42, RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42,
     };
 
     // Try to deserialize as JSON first for testing/debugging
@@ -337,14 +354,128 @@ fn migrate_event_category(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Resu
     let key = i128::from_be_bytes(key);
     let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
 
+    #[allow(clippy::match_same_arms)]
     match EventKind::from_i128(kind_num) {
         Some(EventKind::BlocklistBootp) => {
             migrate_event::<BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42>(k, v, event_db)?;
         }
-        Some(EventKind::BlocklistConn | EventKind::TorConnectionConn) => {
+        Some(EventKind::BlocklistConn) => {
             migrate_event::<BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42>(k, v, event_db)?;
         }
-        // Add other event types as we implement their V0_41/V0_42 structs
+        Some(EventKind::BlocklistDceRpc) => {
+            migrate_event::<BlocklistDceRpcFieldsV0_41, BlocklistDceRpcFieldsV0_42>(
+                k, v, event_db,
+            )?;
+        }
+        Some(EventKind::BlocklistDhcp) => {
+            migrate_event::<BlocklistDhcpFieldsV0_41, BlocklistDhcpFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistDns) => {
+            migrate_event::<BlocklistDnsFieldsV0_41, BlocklistDnsFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistFtp) => {
+            migrate_event::<FtpEventFieldsV0_41, FtpEventFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistHttp) => {
+            migrate_event::<BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistKerberos) => {
+            migrate_event::<BlocklistKerberosFieldsV0_41, BlocklistKerberosFieldsV0_42>(
+                k, v, event_db,
+            )?;
+        }
+        Some(EventKind::BlocklistLdap) => {
+            migrate_event::<LdapEventFieldsV0_41, LdapEventFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistMqtt) => {
+            migrate_event::<BlocklistMqttFieldsV0_41, BlocklistMqttFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistNfs) => {
+            migrate_event::<BlocklistNfsFieldsV0_41, BlocklistNfsFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistNtlm) => {
+            migrate_event::<BlocklistNtlmFieldsV0_41, BlocklistNtlmFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistRdp) => {
+            migrate_event::<BlocklistRdpFieldsV0_41, BlocklistRdpFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistSmb) => {
+            migrate_event::<BlocklistSmbFieldsV0_41, BlocklistSmbFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistSmtp) => {
+            migrate_event::<BlocklistSmtpFieldsV0_41, BlocklistSmtpFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistSsh) => {
+            migrate_event::<BlocklistSshFieldsV0_41, BlocklistSshFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistTls) => {
+            migrate_event::<BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::CryptocurrencyMiningPool) => {
+            migrate_event::<
+                CryptocurrencyMiningPoolFieldsV0_41,
+                CryptocurrencyMiningPoolFieldsV0_42,
+            >(k, v, event_db)?;
+        }
+        Some(EventKind::DnsCovertChannel) => {
+            migrate_event::<DnsEventFieldsV0_41, DnsEventFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::DomainGenerationAlgorithm) => {
+            migrate_event::<DgaFieldsV0_41, DgaFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::ExternalDdos) => {
+            migrate_event::<ExternalDdosFieldsV0_41, ExternalDdosFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::FtpBruteForce) => {
+            migrate_event::<FtpBruteForceFieldsV0_41, FtpBruteForceFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::FtpPlainText) => {
+            migrate_event::<FtpEventFieldsV0_41, FtpEventFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::HttpThreat) => {
+            migrate_event::<HttpThreatFieldsV0_41, HttpThreatFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::LdapBruteForce) => {
+            migrate_event::<LdapBruteForceFieldsV0_41, LdapBruteForceFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::LdapPlainText) => {
+            migrate_event::<LdapEventFieldsV0_41, LdapEventFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::LockyRansomware) => {
+            migrate_event::<DnsEventFieldsV0_41, DnsEventFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::MultiHostPortScan) => {
+            migrate_event::<MultiHostPortScanFieldsV0_41, MultiHostPortScanFieldsV0_42>(
+                k, v, event_db,
+            )?;
+        }
+        Some(EventKind::NonBrowser) => {
+            migrate_event::<HttpEventFieldsV0_41, HttpEventFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::PortScan) => {
+            migrate_event::<PortScanFieldsV0_41, PortScanFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::RdpBruteForce) => {
+            migrate_event::<RdpBruteForceFieldsV0_41, RdpBruteForceFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::RepeatedHttpSessions) => {
+            migrate_event::<RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42>(
+                k, v, event_db,
+            )?;
+        }
+        Some(EventKind::SuspiciousTlsTraffic) => {
+            migrate_event::<BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42>(k, v, event_db)?;
+        }
+        Some(EventKind::TorConnectionConn) => {
+            migrate_event::<BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42>(k, v, event_db)?;
+        }
+        // Event types that don't have category fields, no migration needed
+        Some(
+            EventKind::TorConnection
+            | EventKind::WindowsThreat
+            | EventKind::NetworkThreat
+            | EventKind::ExtraThreat,
+        ) => {}
         _ => {}
     }
 
@@ -467,7 +598,10 @@ mod tests {
 
         use chrono::{DateTime, Duration};
 
-        use crate::event::{BlocklistBootpFieldsV0_41, BlocklistConnFieldsV0_41};
+        use crate::event::{
+            BlocklistBootpFieldsV0_41, BlocklistConnFieldsV0_41, BlocklistDnsFieldsV0_41,
+            DnsEventFieldsV0_41, HttpThreatFieldsV0_41,
+        };
         use crate::types::{EventCategoryV0_41, EventCategoryV0_42};
 
         let schema = TestSchema::new();
@@ -592,6 +726,116 @@ mod tests {
         };
         event_db.put(&msg).unwrap();
 
+        // Test BlocklistDns migration
+        time += Duration::minutes(1);
+        let dns_value = BlocklistDnsFieldsV0_41 {
+            sensor: "test-sensor".to_string(),
+            src_addr: "192.168.1.5".parse::<IpAddr>().unwrap(),
+            src_port: 53,
+            dst_addr: "8.8.8.8".parse::<IpAddr>().unwrap(),
+            dst_port: 53,
+            proto: 17,
+            end_time: (time + Duration::seconds(1)).timestamp_nanos_opt().unwrap(),
+            query: "example.com".to_string(),
+            answer: vec!["93.184.216.34".to_string()],
+            trans_id: 1234,
+            rtt: 100,
+            qclass: 1,
+            qtype: 1,
+            rcode: 0,
+            aa_flag: false,
+            tc_flag: false,
+            rd_flag: true,
+            ra_flag: true,
+            ttl: vec![3600],
+            confidence: 0.9,
+            category: EventCategoryV0_41::CommandAndControl,
+        };
+        let msg = EventMessage {
+            time,
+            kind: EventKind::BlocklistDns,
+            fields: bincode::serialize(&dns_value).unwrap(),
+        };
+        event_db.put(&msg).unwrap();
+
+        // Test HttpThreat migration with Unknown category
+        time += Duration::minutes(1);
+        let http_threat = HttpThreatFieldsV0_41 {
+            time,
+            sensor: "test-sensor".to_string(),
+            src_addr: "192.168.1.6".parse::<IpAddr>().unwrap(),
+            src_port: 12345,
+            dst_addr: "10.0.0.6".parse::<IpAddr>().unwrap(),
+            dst_port: 80,
+            proto: 6,
+            end_time: (time + Duration::seconds(1)).timestamp_nanos_opt().unwrap(),
+            method: "GET".to_string(),
+            host: "malicious.com".to_string(),
+            uri: "/malware.exe".to_string(),
+            referer: String::new(),
+            version: "HTTP/1.1".to_string(),
+            user_agent: "Mozilla/5.0".to_string(),
+            request_len: 200,
+            response_len: 1200,
+            status_code: 200,
+            status_msg: "OK".to_string(),
+            username: String::new(),
+            password: String::new(),
+            cookie: String::new(),
+            content_encoding: String::new(),
+            content_type: "application/octet-stream".to_string(),
+            cache_control: String::new(),
+            filenames: vec![],
+            mime_types: vec![],
+            body: vec![],
+            state: "closed".to_string(),
+            db_name: String::new(),
+            rule_id: 1001,
+            matched_to: "uri".to_string(),
+            cluster_id: Some(1),
+            attack_kind: "malware".to_string(),
+            confidence: 0.95,
+            category: None, // Will test Unknown -> None migration
+        };
+        let msg = EventMessage {
+            time,
+            kind: EventKind::HttpThreat,
+            fields: bincode::serialize(&http_threat).unwrap(),
+        };
+        event_db.put(&msg).unwrap();
+
+        // Test DnsCovertChannel migration
+        time += Duration::minutes(1);
+        let dns_covert = DnsEventFieldsV0_41 {
+            sensor: "test-sensor".to_string(),
+            end_time: time + Duration::seconds(1),
+            src_addr: "192.168.1.7".parse::<IpAddr>().unwrap(),
+            src_port: 54321,
+            dst_addr: "8.8.4.4".parse::<IpAddr>().unwrap(),
+            dst_port: 53,
+            proto: 17,
+            query: "suspicious-domain.com".to_string(),
+            answer: vec!["1.2.3.4".to_string()],
+            trans_id: 5678,
+            rtt: 50,
+            qclass: 1,
+            qtype: 1,
+            rcode: 0,
+            aa_flag: false,
+            tc_flag: false,
+            rd_flag: true,
+            ra_flag: true,
+            ttl: vec![300],
+            confidence: 0.8,
+            category: EventCategoryV0_41::Exfiltration,
+        };
+        let msg = EventMessage {
+            time,
+            kind: EventKind::DnsCovertChannel,
+            fields: bincode::serialize(&dns_covert).unwrap(),
+        };
+        event_db.put(&msg).unwrap();
+
         // Run migration
         super::migrate_0_41_events(&schema.store).unwrap();
 
@@ -625,6 +869,27 @@ mod tests {
             panic!("expected BlocklistConn event");
         };
         assert_eq!(event.category, None);
+
+        // Verify BlocklistDns with non-Unknown category
+        let (_, event) = iter.next().unwrap().unwrap();
+        let Event::Blocklist(RecordType::Dns(event)) = event else {
+            panic!("expected BlocklistDns event");
+        };
+        assert_eq!(event.category, Some(EventCategoryV0_42::CommandAndControl));
+
+        // Verify HttpThreat with Unknown -> None
+        let (_, event) = iter.next().unwrap().unwrap();
+        let Event::HttpThreat(event) = event else {
+            panic!("expected HttpThreat event");
+        };
+        assert_eq!(event.category, None);
+
+        // Verify DnsCovertChannel with non-Unknown category
+        let (_, event) = iter.next().unwrap().unwrap();
+        let Event::DnsCovertChannel(event) = event else {
+            panic!("expected DnsCovertChannel event");
+        };
+        assert_eq!(event.category, Some(EventCategoryV0_42::Exfiltration));
     }
 
     #[test]

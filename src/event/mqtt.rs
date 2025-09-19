@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_mqtt_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -197,5 +200,48 @@ impl Match for BlocklistMqtt {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_mqtt_attr_by_kind!(self, raw_event_attr)
+    }
+}
+
+pub(crate) type BlocklistMqttFieldsV0_42 = BlocklistMqttFields;
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistMqttFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub protocol: String,
+    pub version: u8,
+    pub client_id: String,
+    pub connack_reason: u8,
+    pub subscribe: Vec<String>,
+    pub suback_reason: Vec<u8>,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistMqttFieldsV0_41> for BlocklistMqttFields {
+    fn from(value: BlocklistMqttFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            protocol: value.protocol,
+            version: value.version,
+            client_id: value.client_id,
+            connack_reason: value.connack_reason,
+            subscribe: value.subscribe,
+            suback_reason: value.suback_reason,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }

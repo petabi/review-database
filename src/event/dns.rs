@@ -824,3 +824,113 @@ impl Match for BlocklistDns {
         find_dns_attr_by_kind!(self, raw_event_attr)
     }
 }
+
+pub(crate) type DnsEventFieldsV0_42 = DnsEventFields;
+pub(crate) type BlocklistDnsFieldsV0_42 = BlocklistDnsFields;
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct DnsEventFieldsV0_41 {
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<DnsEventFieldsV0_41> for DnsEventFields {
+    fn from(value: DnsEventFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            end_time: value.end_time,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            query: value.query,
+            answer: value.answer,
+            trans_id: value.trans_id,
+            rtt: value.rtt,
+            qclass: value.qclass,
+            qtype: value.qtype,
+            rcode: value.rcode,
+            aa_flag: value.aa_flag,
+            tc_flag: value.tc_flag,
+            rd_flag: value.rd_flag,
+            ra_flag: value.ra_flag,
+            ttl: value.ttl,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct BlocklistDnsFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistDnsFieldsV0_41> for BlocklistDnsFields {
+    fn from(value: BlocklistDnsFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            query: value.query,
+            answer: value.answer,
+            trans_id: value.trans_id,
+            rtt: value.rtt,
+            qclass: value.qclass,
+            qtype: value.qtype,
+            rcode: value.rcode,
+            aa_flag: value.aa_flag,
+            tc_flag: value.tc_flag,
+            rd_flag: value.rd_flag,
+            ra_flag: value.ra_flag,
+            ttl: value.ttl,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}

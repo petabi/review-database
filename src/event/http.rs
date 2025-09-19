@@ -1581,6 +1581,12 @@ impl Match for BlocklistHttp {
     }
 }
 
+pub(crate) type HttpEventFieldsV0_42 = HttpEventFields;
+pub(crate) type BlocklistHttpFieldsV0_42 = BlocklistHttpFieldsV0_41;
+pub(crate) type HttpThreatFieldsV0_42 = HttpThreatFieldsV0_41;
+pub(crate) type RepeatedHttpSessionsFieldsV0_42 = RepeatedHttpSessionsFieldsV0_41;
+pub(crate) type DgaFieldsV0_42 = DgaFields;
+
 #[cfg(test)]
 mod tests {
     use std::net::IpAddr;
