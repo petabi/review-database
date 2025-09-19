@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string, vector_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string, vector_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_conn_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -42,7 +45,10 @@ impl PortScanFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -65,7 +71,7 @@ pub struct PortScanFieldsV0_41 {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<PortScanFieldsV0_39> for PortScanFieldsV0_41 {
@@ -79,20 +85,20 @@ impl From<PortScanFieldsV0_39> for PortScanFieldsV0_41 {
             end_time: value.end_time,
             proto: value.proto,
             confidence: 0.3, // default value for PortScan
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct PortScanFieldsV0_39 {
+pub(crate) struct PortScanFieldsV0_39 {
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_ports: Vec<u16>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub proto: u8,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -107,7 +113,7 @@ pub struct PortScan {
     pub end_time: DateTime<Utc>,
     pub proto: u8,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -166,7 +172,7 @@ impl Match for PortScan {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -213,7 +219,10 @@ impl MultiHostPortScanFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
@@ -236,7 +245,7 @@ pub struct MultiHostPortScanFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<MultiHostPortScanFieldsV0_39> for MultiHostPortScanFieldsV0_41 {
@@ -250,20 +259,20 @@ impl From<MultiHostPortScanFieldsV0_39> for MultiHostPortScanFieldsV0_41 {
             start_time: value.start_time,
             end_time: value.end_time,
             confidence: 0.3, // default value for MultiHostPortScan
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MultiHostPortScanFieldsV0_39 {
+pub(crate) struct MultiHostPortScanFieldsV0_39 {
     pub src_addr: IpAddr,
     pub dst_port: u16,
     pub dst_addrs: Vec<IpAddr>,
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -278,7 +287,7 @@ pub struct MultiHostPortScan {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -337,7 +346,7 @@ impl Match for MultiHostPortScan {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -383,7 +392,10 @@ impl ExternalDdosFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
@@ -404,7 +416,7 @@ pub struct ExternalDdosFieldsV0_41 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<ExternalDdosFieldsV0_39> for ExternalDdosFieldsV0_41 {
@@ -417,19 +429,19 @@ impl From<ExternalDdosFieldsV0_39> for ExternalDdosFieldsV0_41 {
             start_time: value.start_time,
             end_time: value.end_time,
             confidence: 0.3, // default value for ExternalDdos
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ExternalDdosFieldsV0_39 {
+pub(crate) struct ExternalDdosFieldsV0_39 {
     pub src_addrs: Vec<IpAddr>,
     pub dst_addr: IpAddr,
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -443,7 +455,7 @@ pub struct ExternalDdos {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -500,7 +512,7 @@ impl Match for ExternalDdos {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -538,8 +550,10 @@ impl Match for ExternalDdos {
     }
 }
 
+pub type BlocklistConnFields = BlocklistConnFieldsV0_42;
+
 #[derive(Deserialize, Serialize)]
-pub struct BlocklistConnFields {
+pub struct BlocklistConnFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -556,15 +570,63 @@ pub struct BlocklistConnFields {
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
-impl BlocklistConnFields {
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistConnFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub conn_state: String,
+    pub end_time: i64,
+    pub service: String,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
+    fn from(value: BlocklistConnFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            conn_state: value.conn_state,
+            end_time: value.end_time,
+            service: value.service,
+            orig_bytes: value.orig_bytes,
+            resp_bytes: value.resp_bytes,
+            orig_pkts: value.orig_pkts,
+            resp_pkts: value.resp_pkts,
+            orig_l2_bytes: value.orig_l2_bytes,
+            resp_l2_bytes: value.resp_l2_bytes,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
+    }
+}
+
+impl BlocklistConnFieldsV0_42 {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -604,7 +666,7 @@ pub struct BlocklistConn {
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -634,7 +696,7 @@ impl fmt::Display for BlocklistConn {
 }
 
 impl BlocklistConn {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistConnFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistConnFieldsV0_42) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -680,7 +742,7 @@ impl Match for BlocklistConn {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -708,3 +770,7 @@ impl Match for BlocklistConn {
         find_conn_attr_by_kind!(self, raw_event_attr)
     }
 }
+
+pub(crate) type PortScanFieldsV0_42 = PortScanFields;
+pub(crate) type MultiHostPortScanFieldsV0_42 = MultiHostPortScanFields;
+pub(crate) type ExternalDdosFieldsV0_42 = ExternalDdosFields;

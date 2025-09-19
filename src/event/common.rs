@@ -26,7 +26,7 @@ pub(super) trait Match {
     fn dst_port(&self) -> u16;
     #[allow(dead_code)] // for future use
     fn proto(&self) -> u8;
-    fn category(&self) -> EventCategory;
+    fn category(&self) -> Option<EventCategory>;
     fn level(&self) -> NonZeroU8;
     fn kind(&self) -> &str;
     fn sensor(&self) -> &str;
@@ -197,7 +197,7 @@ pub(super) trait Match {
         if let Some(categories) = &filter.categories
             && categories
                 .iter()
-                .all(|category| *category != self.category())
+                .all(|category| Some(*category) != self.category())
         {
             return Ok((false, None));
         }
@@ -264,7 +264,7 @@ pub(super) trait Match {
 
     fn score_by_confidence(&self, confidence: &[Confidence]) -> f64 {
         confidence.iter().fold(0.0, |score, conf| {
-            if conf.threat_category == self.category()
+            if Some(conf.threat_category) == self.category()
                 && conf.threat_kind.to_lowercase() == self.kind().to_lowercase()
                 && self
                     .confidence()
@@ -1377,7 +1377,7 @@ mod tests {
             sname: "server_name".to_string(),
             file: "boot_file_name".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1399,7 +1399,7 @@ mod tests {
             orig_l2_bytes: 122,
             resp_l2_bytes: 122,
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1417,7 +1417,7 @@ mod tests {
             endpoint: "epmapper".to_string(),
             operation: "bind".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1449,7 +1449,7 @@ mod tests {
             client_id_type: 1,
             client_id: vec![7, 8, 9],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1475,7 +1475,7 @@ mod tests {
             ra_flag: true,
             ttl: vec![120; 5],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1509,7 +1509,7 @@ mod tests {
             body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1532,7 +1532,7 @@ mod tests {
             sname_type: 1,
             service_name: vec!["krbtgt/EXAMPLE.COM".to_string()],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1552,7 +1552,7 @@ mod tests {
             subscribe: vec!["topic".to_string()],
             suback_reason: "error".to_string().into_bytes(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1568,7 +1568,7 @@ mod tests {
             read_files: vec!["/etc/passwd".to_string()],
             write_files: vec!["/etc/shadow".to_string()],
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1587,7 +1587,7 @@ mod tests {
             domainname: "domain1".to_string(),
             success: "true".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1602,7 +1602,7 @@ mod tests {
             end_time: 100,
             cookie: "cookie".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1627,7 +1627,7 @@ mod tests {
             write_time: 300,
             change_time: 400,
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1648,7 +1648,7 @@ mod tests {
             agent: "agent".to_string(),
             state: "state".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1675,7 +1675,7 @@ mod tests {
             client_shka: "client_shka".to_string(),
             server_shka: "server_shka".to_string(),
             confidence: 1.0,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1710,7 +1710,7 @@ mod tests {
             issuer_common_name: "common".to_string(),
             last_alert: 1,
             confidence: 0.6,
-            category: EventCategory::InitialAccess,
+            category: Some(EventCategory::InitialAccess),
         }
     }
 
@@ -1731,7 +1731,7 @@ mod tests {
             object: vec!["object".to_string()],
             argument: vec!["argument".to_string()],
             confidence: 1.0,
-            category: EventCategory::LateralMovement,
+            category: Some(EventCategory::LateralMovement),
         }
     }
 
@@ -1757,7 +1757,7 @@ mod tests {
             file_size: 5000,
             file_id: "123".to_string(),
             confidence: 1.0,
-            category: EventCategory::LateralMovement,
+            category: Some(EventCategory::LateralMovement),
         }
     }
 
@@ -1771,7 +1771,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
         }
     }
 
@@ -1788,7 +1788,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
         }
     }
 
@@ -1804,7 +1804,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
-            category: EventCategory::Impact,
+            category: Some(EventCategory::Impact),
         }
     }
 
@@ -1831,7 +1831,7 @@ mod tests {
             ttl: vec![120; 5],
             coins: vec!["bitcoin".to_string(), "monero".to_string()],
             confidence: 1.0,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         }
     }
 
@@ -1847,7 +1847,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             is_internal: true,
             confidence: 0.3,
-            category: EventCategory::CredentialAccess,
+            category: Some(EventCategory::CredentialAccess),
         }
     }
 
@@ -1863,7 +1863,7 @@ mod tests {
             start_time: now,
             end_time: now,
             confidence: 0.3,
-            category: EventCategory::Exfiltration,
+            category: Some(EventCategory::Exfiltration),
         }
     }
 
@@ -1897,7 +1897,7 @@ mod tests {
             body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 0.8,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         }
     }
 
@@ -1931,7 +1931,7 @@ mod tests {
             body: "12345678901234567890".to_string().into_bytes(),
             state: String::new(),
             confidence: 1.0,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         }
     }
 
@@ -1949,7 +1949,7 @@ mod tests {
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             confidence: 0.3,
-            category: EventCategory::CredentialAccess,
+            category: Some(EventCategory::CredentialAccess),
         }
     }
 
@@ -1965,7 +1965,7 @@ mod tests {
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
-            category: EventCategory::Discovery,
+            category: Some(EventCategory::Discovery),
         }
     }
 
@@ -1991,7 +1991,7 @@ mod tests {
             ra_flag: false,
             ttl: vec![1, 3, 5, 7],
             confidence: 0.8,
-            category: EventCategory::CommandAndControl,
+            category: Some(EventCategory::CommandAndControl),
         }
     }
 
@@ -2014,7 +2014,7 @@ mod tests {
             attack_kind: "attack_kind".to_string(),
             confidence: 0.9,
             triage_scores: None,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
         }
     }
 
@@ -2030,7 +2030,7 @@ mod tests {
             cluster_id: Some(1),
             attack_kind: "attack_kind".to_string(),
             confidence: 0.9,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
             triage_scores: None,
         }
     }
@@ -2054,7 +2054,7 @@ mod tests {
             attack_kind: "Ransomware_Alcatraz".to_string(),
             confidence: 0.9,
             triage_scores: None,
-            category: EventCategory::Impact,
+            category: Some(EventCategory::Impact),
         }
     }
 
@@ -2094,7 +2094,7 @@ mod tests {
             matched_to: "match".to_string(),
             attack_kind: "attack".to_string(),
             confidence: 0.8,
-            category: EventCategory::Reconnaissance,
+            category: Some(EventCategory::Reconnaissance),
         }
     }
 }

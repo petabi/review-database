@@ -6,7 +6,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_ftp_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -44,7 +47,10 @@ impl FtpBruteForceFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
@@ -71,7 +77,7 @@ pub struct FtpBruteForceFieldsV0_41 {
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<FtpBruteForceFieldsV0_39> for FtpBruteForceFieldsV0_41 {
@@ -87,13 +93,13 @@ impl From<FtpBruteForceFieldsV0_39> for FtpBruteForceFieldsV0_41 {
             end_time: value.end_time,
             is_internal: value.is_internal,
             confidence: 0.3, // default value for FtpBruteForce
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct FtpBruteForceFieldsV0_39 {
+pub(crate) struct FtpBruteForceFieldsV0_39 {
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
@@ -102,7 +108,7 @@ pub struct FtpBruteForceFieldsV0_39 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -118,7 +124,7 @@ pub struct FtpBruteForce {
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -181,7 +187,7 @@ impl Match for FtpBruteForce {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -221,14 +227,17 @@ impl Match for FtpBruteForce {
     }
 }
 
-pub type FtpEventFields = FtpEventFieldsV0_39;
+pub type FtpEventFields = FtpEventFieldsV0_42;
 
 impl FtpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} user={:?} password={:?} command={:?} reply_code={:?} reply_msg={:?} data_passive={:?} data_orig_addr={:?} data_resp_addr={:?} data_resp_port={:?} file={:?} file_size={:?} file_id={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -275,7 +284,7 @@ pub struct FtpEventFieldsV0_39 {
     pub file_size: u64,
     pub file_id: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl From<FtpEventFieldsV0_38> for FtpEventFieldsV0_39 {
@@ -301,13 +310,13 @@ impl From<FtpEventFieldsV0_38> for FtpEventFieldsV0_39 {
             file_size: value.file_size,
             file_id: value.file_id,
             confidence: 1.0, // default value for FtpPlainText
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct FtpEventFieldsV0_38 {
+pub(crate) struct FtpEventFieldsV0_38 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -327,7 +336,7 @@ pub struct FtpEventFieldsV0_38 {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
-    pub category: EventCategory,
+    pub category: EventCategoryV0_41,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -353,7 +362,7 @@ pub struct FtpPlainText {
     pub file_size: u64,
     pub file_id: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -437,7 +446,7 @@ impl Match for FtpPlainText {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -489,7 +498,7 @@ pub struct BlocklistFtp {
     pub file_size: u64,
     pub file_id: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -573,7 +582,7 @@ impl Match for BlocklistFtp {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -599,5 +608,60 @@ impl Match for BlocklistFtp {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_ftp_attr_by_kind!(self, raw_event_attr)
+    }
+}
+
+pub(crate) type FtpEventFieldsV0_42 = FtpEventFieldsV0_39;
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct FtpEventFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub user: String,
+    pub password: String,
+    pub command: String,
+    pub reply_code: String,
+    pub reply_msg: String,
+    pub data_passive: bool,
+    pub data_orig_addr: IpAddr,
+    pub data_resp_addr: IpAddr,
+    pub data_resp_port: u16,
+    pub file: String,
+    pub file_size: u64,
+    pub file_id: String,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<FtpEventFieldsV0_41> for FtpEventFields {
+    fn from(value: FtpEventFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            user: value.user,
+            password: value.password,
+            command: value.command,
+            reply_code: value.reply_code,
+            reply_msg: value.reply_msg,
+            data_passive: value.data_passive,
+            data_orig_addr: value.data_orig_addr,
+            data_resp_addr: value.data_resp_addr,
+            data_resp_port: value.data_resp_port,
+            file: value.file,
+            file_size: value.file_size,
+            file_id: value.file_id,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }

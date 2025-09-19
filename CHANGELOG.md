@@ -45,6 +45,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Changed `category` field type from `EventCategory` to `Option<EventCategory>`
+  in all detection event structures to maintain compatibility with MITRE
+  categories. Events with `EventCategory::Unknown` are migrated to `None` and
+  display as "Unspecified" in syslog messages.
 - Renamed session-related time fields in detection event structures to
   `end_time` for consistency: `BlocklistConn`, `TorConnectionConn`,
   `HttpThreat`, `DomainGenerationAlgorithm`, `TorConnection`, `NonBrowser`,

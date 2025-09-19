@@ -21,7 +21,7 @@ pub struct BlocklistDceRpcFields {
     pub endpoint: String,
     pub operation: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistDceRpcFields {
@@ -29,7 +29,10 @@ impl BlocklistDceRpcFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} rtt={:?} named_pipe={:?} endpoint={:?} operation={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -60,7 +63,7 @@ pub struct BlocklistDceRpc {
     pub endpoint: String,
     pub operation: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -128,7 +131,7 @@ impl Match for BlocklistDceRpc {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -157,5 +160,46 @@ impl Match for BlocklistDceRpc {
     // proceed with this part after the collection and notation of dcerpc events is finalized.
     fn find_attr_by_kind(&self, _raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         None
+    }
+}
+
+use crate::types::EventCategoryV0_41;
+
+pub(crate) type BlocklistDceRpcFieldsV0_42 = BlocklistDceRpcFields;
+
+#[derive(Deserialize)]
+pub(crate) struct BlocklistDceRpcFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub rtt: i64,
+    pub named_pipe: String,
+    pub endpoint: String,
+    pub operation: String,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistDceRpcFieldsV0_41> for BlocklistDceRpcFieldsV0_42 {
+    fn from(value: BlocklistDceRpcFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            rtt: value.rtt,
+            named_pipe: value.named_pipe,
+            endpoint: value.endpoint,
+            operation: value.operation,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }

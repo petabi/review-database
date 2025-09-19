@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::{
+    event::common::{AttrValue, triage_scores_to_string},
+    types::EventCategoryV0_41,
+};
 
 macro_rules! find_smtp_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -48,7 +51,7 @@ pub struct BlocklistSmtpFields {
     pub agent: String,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
 }
 
 impl BlocklistSmtpFields {
@@ -56,7 +59,10 @@ impl BlocklistSmtpFields {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} confidence={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -94,7 +100,7 @@ pub struct BlocklistSmtp {
     pub agent: String,
     pub state: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 impl fmt::Display for BlocklistSmtp {
@@ -167,7 +173,7 @@ impl Match for BlocklistSmtp {
         self.proto
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
@@ -193,5 +199,50 @@ impl Match for BlocklistSmtp {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         find_smtp_attr_by_kind!(self, raw_event_attr)
+    }
+}
+
+pub(crate) type BlocklistSmtpFieldsV0_42 = BlocklistSmtpFields;
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistSmtpFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub mailfrom: String,
+    pub date: String,
+    pub from: String,
+    pub to: String,
+    pub subject: String,
+    pub agent: String,
+    pub state: String,
+    pub confidence: f32,
+    pub category: EventCategoryV0_41,
+}
+
+impl From<BlocklistSmtpFieldsV0_41> for BlocklistSmtpFields {
+    fn from(value: BlocklistSmtpFieldsV0_41) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            mailfrom: value.mailfrom,
+            date: value.date,
+            from: value.from,
+            to: value.to,
+            subject: value.subject,
+            agent: value.agent,
+            state: value.state,
+            confidence: value.confidence,
+            category: value.category.into(),
+        }
     }
 }

@@ -53,7 +53,7 @@ pub struct WindowsThreat {
     pub cluster_id: Option<usize>,
     pub attack_kind: String,
     pub confidence: f32,
-    pub category: EventCategory,
+    pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
 
@@ -63,7 +63,10 @@ impl WindowsThreat {
     pub fn syslog_rfc5424(&self) -> String {
         format!(
             "category={:?} sensor={:?} service={:?} agent_name={:?} agent_id={:?} process_guid={:?} process_id={:?} image=\"{}\" user=\"{}\" content=\"{}\" db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
-            self.category.to_string(),
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
             self.sensor,
             self.service,
             self.agent_name,
@@ -135,7 +138,7 @@ impl Match for WindowsThreat {
         0
     }
 
-    fn category(&self) -> EventCategory {
+    fn category(&self) -> Option<EventCategory> {
         self.category
     }
 
