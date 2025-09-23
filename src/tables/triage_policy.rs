@@ -1,10 +1,17 @@
 //! The `TriagePolicy` table.
 
-use std::{borrow::Cow, cmp::Ordering, net::IpAddr};
+use std::{
+    borrow::Cow,
+    cmp::Ordering,
+    collections::HashMap,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    ops::{BitAnd, RangeInclusive},
+};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use attrievent::attribute::RawEventKind;
 use chrono::{DateTime, Utc};
+use ipnet::{IpNet, Ipv4Net, Ipv6Net};
 use rocksdb::OptimisticTransactionDB;
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +21,9 @@ use crate::{
     collections::Indexed,
     types::{EventCategory, FromKeyValue, HostNetworkGroup},
 };
+
+const IP_V4_MAX_PREFIX_LEN: u8 = 32;
+const IP_V6_MAX_PREFIX_LEN: u8 = 128;
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct TriagePolicy {
@@ -113,64 +123,116 @@ impl PartialOrd for TriageExclusionReason {
     }
 }
 
+#[allow(clippy::match_same_arms)]
 impl Ord for TriageExclusionReason {
     fn cmp(&self, other: &Self) -> Ordering {
-        use std::mem::discriminant;
-
-        // Compare discriminants first
-        if discriminant(self) == discriminant(other) {
-            // Same variant - compare contents
-            match (self, other) {
-                (TriageExclusionReason::IpAddress(a), TriageExclusionReason::IpAddress(b)) => {
-                    a.cmp(b)
-                }
-                (TriageExclusionReason::Domain(a), TriageExclusionReason::Domain(b))
-                | (TriageExclusionReason::Hostname(a), TriageExclusionReason::Hostname(b))
-                | (TriageExclusionReason::Uri(a), TriageExclusionReason::Uri(b)) => a.cmp(b),
-                _ => unreachable!(),
+        match (self, other) {
+            (TriageExclusionReason::IpAddress(a), TriageExclusionReason::IpAddress(b)) => a.cmp(b),
+            (TriageExclusionReason::Domain(a), TriageExclusionReason::Domain(b)) => a.cmp(b),
+            (TriageExclusionReason::Hostname(a), TriageExclusionReason::Hostname(b)) => a.cmp(b),
+            (TriageExclusionReason::Uri(a), TriageExclusionReason::Uri(b)) => a.cmp(b),
+            (TriageExclusionReason::IpAddress(_), _) => Ordering::Less,
+            (TriageExclusionReason::Domain(_), TriageExclusionReason::IpAddress(_)) => {
+                Ordering::Greater
             }
-        } else {
-            // Different variants - compare by enum declaration order
-            // IpAddress < Domain < Hostname < Uri
-            match (self, other) {
-                (TriageExclusionReason::IpAddress(_), _)
-                | (
-                    TriageExclusionReason::Domain(_),
-                    TriageExclusionReason::Hostname(_) | TriageExclusionReason::Uri(_),
-                )
-                | (TriageExclusionReason::Hostname(_), TriageExclusionReason::Uri(_)) => {
-                    Ordering::Less
-                }
-                (_, TriageExclusionReason::IpAddress(_))
-                | (
-                    TriageExclusionReason::Hostname(_) | TriageExclusionReason::Uri(_),
-                    TriageExclusionReason::Domain(_),
-                )
-                | (TriageExclusionReason::Uri(_), TriageExclusionReason::Hostname(_)) => {
-                    Ordering::Greater
-                }
-                _ => unreachable!(),
-            }
+            (TriageExclusionReason::Domain(_), _) => Ordering::Less,
+            (
+                TriageExclusionReason::Hostname(_),
+                TriageExclusionReason::IpAddress(_) | TriageExclusionReason::Domain(_),
+            ) => Ordering::Greater,
+            (TriageExclusionReason::Hostname(_), _) => Ordering::Less,
+            (TriageExclusionReason::Uri(_), _) => Ordering::Greater,
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+pub enum CompareIp {
+    Network(IpNet),
+    Iprange(RangeInclusive<IpAddr>),
+}
+
+impl CompareIp {
+    fn detect(&self, ip: IpAddr) -> bool {
+        match self {
+            CompareIp::Network(net) => net.contains(&ip),
+            CompareIp::Iprange(range) => range.contains(&ip),
+        }
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Clone, Debug)]
 pub struct NetworkFilter {
-    groups: Vec<HostNetworkGroup>,
+    netmask: IpAddr,
+    tree: HashMap<IpAddr, Vec<CompareIp>>,
+}
+
+impl Default for NetworkFilter {
+    fn default() -> Self {
+        Self {
+            // This ipv4 is always parsable.
+            netmask: Ipv4Net::new(Ipv4Addr::UNSPECIFIED, 0)
+                .map(|net| IpNet::V4(net).netmask())
+                .expect("Failed to parse default ip address"),
+            tree: HashMap::new(),
+        }
+    }
 }
 
 impl NetworkFilter {
-    #[must_use]
-    pub fn new(group: HostNetworkGroup) -> Self {
-        Self {
-            groups: vec![group],
+    /// Creates a new `NetworkFilter` from a `HostNetworkGroup`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if network construction fails due to invalid IP addresses or network configurations.
+    pub fn new(host_network_group: &mut HostNetworkGroup) -> Result<Self> {
+        let mut networks = Vec::new();
+        network_by_hosts_network_group(host_network_group, &mut networks)?;
+
+        networks.sort_by_key(|(net, _)| net.prefix_len());
+        let min_netmask = if let Some((first, _)) = networks.first() {
+            let min_prefix_len = first.prefix_len();
+            if first.addr().is_ipv4() {
+                Ipv4Net::new(Ipv4Addr::UNSPECIFIED, min_prefix_len)
+                    .map(|net| IpNet::V4(net).netmask())?
+            } else {
+                Ipv6Net::new(Ipv6Addr::UNSPECIFIED, min_prefix_len)
+                    .map(|net| IpNet::V6(net).netmask())?
+            }
+        } else {
+            Ipv4Net::new(Ipv4Addr::UNSPECIFIED, 0).map(|net| IpNet::V4(net).netmask())?
+        };
+
+        let networks: Vec<_> = networks
+            .into_iter()
+            .filter_map(|(net, compare_ip)| {
+                netmask_by_ipnet(&net, min_netmask).map(|netmask| (netmask, compare_ip))
+            })
+            .collect();
+
+        let mut compare_tree: HashMap<IpAddr, Vec<CompareIp>> = HashMap::new();
+        for (netmask, compare_ip) in networks {
+            compare_tree
+                .entry(netmask)
+                .and_modify(|v| v.push(compare_ip.clone()))
+                .or_insert_with(|| vec![compare_ip]);
         }
+        Ok(Self {
+            netmask: min_netmask,
+            tree: compare_tree,
+        })
     }
 
     #[must_use]
-    pub fn contains(&self, addr: IpAddr) -> bool {
-        self.groups.iter().any(|group| group.contains(addr))
+    pub fn contains(&self, ip: IpAddr) -> bool {
+        let Some(key) = netmask_by_ipaddr(ip, self.netmask) else {
+            return false;
+        };
+        let Some(networks) = self.tree.get(&key) else {
+            return false;
+        };
+        networks.iter().any(|net| net.detect(ip))
     }
 }
 
@@ -185,8 +247,8 @@ pub enum TriageExclusion {
 impl From<TriageExclusionReason> for TriageExclusion {
     fn from(reason: TriageExclusionReason) -> Self {
         match reason {
-            TriageExclusionReason::IpAddress(group) => {
-                TriageExclusion::IpAddress(NetworkFilter::new(group))
+            TriageExclusionReason::IpAddress(mut group) => {
+                TriageExclusion::IpAddress(NetworkFilter::new(&mut group).unwrap_or_default())
             }
             TriageExclusionReason::Domain(domains) => {
                 // Create regex patterns for domain matching
@@ -423,6 +485,75 @@ impl IndexedMapUpdate for Update {
             return false;
         }
         true
+    }
+}
+
+fn network_by_hosts_network_group(
+    host_network_group: &mut HostNetworkGroup,
+    networks: &mut Vec<(IpNet, CompareIp)>,
+) -> Result<()> {
+    for host in host_network_group.hosts() {
+        let host_net = match host {
+            IpAddr::V4(ipv4) => IpNet::V4(Ipv4Net::new(*ipv4, IP_V4_MAX_PREFIX_LEN)?),
+            IpAddr::V6(ipv6) => IpNet::V6(Ipv6Net::new(*ipv6, IP_V6_MAX_PREFIX_LEN)?),
+        };
+        networks.push((host_net, CompareIp::Network(host_net)));
+    }
+
+    let network: Vec<_> = host_network_group
+        .networks()
+        .iter()
+        .map(|net| (*net, CompareIp::Network(*net)))
+        .collect();
+    networks.extend_from_slice(&network);
+
+    for range in host_network_group.ip_ranges() {
+        let super_net: IpNet = match (range.start(), range.end()) {
+            (IpAddr::V4(start_ipv4), IpAddr::V4(end_ipv4)) => {
+                let mut supernet = Ipv4Net::new(*start_ipv4, IP_V4_MAX_PREFIX_LEN)?;
+                loop {
+                    let Some(s) = supernet.supernet() else {
+                        return Err(anyhow!("Failed to generate ipv4's super net."));
+                    };
+                    if s.contains(end_ipv4) {
+                        break s.into();
+                    }
+                    supernet = s;
+                }
+            }
+            (IpAddr::V6(start_ipv6), IpAddr::V6(end_ipv6)) => {
+                let mut supernet = Ipv6Net::new(*start_ipv6, IP_V6_MAX_PREFIX_LEN)?;
+                loop {
+                    let Some(s) = supernet.supernet() else {
+                        return Err(anyhow!("Failed to generate ipv6's super net."));
+                    };
+                    if s.contains(end_ipv6) {
+                        break s.into();
+                    }
+                    supernet = s;
+                }
+            }
+            _ => return Err(anyhow!("Invalid ip address format")),
+        };
+        networks.push((super_net, CompareIp::Iprange(range.clone())));
+    }
+
+    Ok(())
+}
+
+fn netmask_by_ipnet(ipnet: &IpNet, netmask: IpAddr) -> Option<IpAddr> {
+    match (ipnet, netmask) {
+        (IpNet::V4(x), IpAddr::V4(y)) => Some(IpAddr::V4(x.addr().bitand(y))),
+        (IpNet::V6(x), IpAddr::V6(y)) => Some(IpAddr::V6(x.addr().bitand(y))),
+        _ => None,
+    }
+}
+
+fn netmask_by_ipaddr(ipaddr: IpAddr, netmask: IpAddr) -> Option<IpAddr> {
+    match (ipaddr, netmask) {
+        (IpAddr::V4(x), IpAddr::V4(y)) => Some(IpAddr::V4(x.bitand(y))),
+        (IpAddr::V6(x), IpAddr::V6(y)) => Some(IpAddr::V6(x.bitand(y))),
+        _ => None,
     }
 }
 

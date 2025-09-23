@@ -139,25 +139,10 @@ impl PartialOrd for HostNetworkGroup {
 
 impl Ord for HostNetworkGroup {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.hosts.cmp(&other.hosts) {
-            Ordering::Equal => match self.networks.cmp(&other.networks) {
-                Ordering::Equal => {
-                    // Compare ip_ranges element by element
-                    let self_len = self.ip_ranges.len();
-                    let other_len = other.ip_ranges.len();
-                    for (a, b) in self.ip_ranges.iter().zip(other.ip_ranges.iter()) {
-                        match (a.start().cmp(b.start()), a.end().cmp(b.end())) {
-                            (Ordering::Equal, Ordering::Equal) => {}
-                            (Ordering::Equal, end) => return end,
-                            (start, _) => return start,
-                        }
-                    }
-                    self_len.cmp(&other_len)
-                }
-                other => other,
-            },
-            other => other,
-        }
+        self.hosts
+            .cmp(&other.hosts)
+            .then_with(|| self.networks.cmp(&other.networks))
+            .then_with(|| compare_ip_ranges(&self.ip_ranges, &other.ip_ranges))
     }
 }
 
@@ -231,6 +216,26 @@ impl HostNetworkGroup {
     pub fn contains_network(&self, network: &IpNet) -> bool {
         self.networks.binary_search(network).is_ok()
     }
+}
+
+fn compare_ip_ranges(
+    a: &[std::ops::RangeInclusive<std::net::IpAddr>],
+    b: &[std::ops::RangeInclusive<std::net::IpAddr>],
+) -> Ordering {
+    let len_cmp = a.len().cmp(&b.len());
+    if len_cmp != Ordering::Equal {
+        return len_cmp;
+    }
+    for (range_a, range_b) in a.iter().zip(b.iter()) {
+        let cmp = range_a
+            .start()
+            .cmp(range_b.start())
+            .then_with(|| range_a.end().cmp(range_b.end()));
+        if cmp != Ordering::Equal {
+            return cmp;
+        }
+    }
+    Ordering::Equal
 }
 
 #[derive(Deserialize)]
