@@ -103,6 +103,7 @@ const EXCLUSIVE: bool = true;
 pub struct Store {
     states: StateDb,
     pretrained: PathBuf,
+    classifier_fm: classifier_fs::ClassifierFileManager,
 }
 
 impl Store {
@@ -122,7 +123,12 @@ impl Store {
         {
             return Err(anyhow::anyhow!("{e}"));
         }
-        let store = Self { states, pretrained };
+        let classifier_fm = classifier_fs::ClassifierFileManager::new(path)?;
+        let store = Self {
+            states,
+            pretrained,
+            classifier_fm,
+        };
         Ok(store)
     }
 
@@ -388,82 +394,217 @@ impl Store {
         Ok(types::PretrainedModel(buf))
     }
 
+    /// Adds a new model and related statistics to the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model already exists or if a database operation fails.
+    pub async fn add_model(&self, model: crate::model::Model) -> Result<i32> {
+        self.upsert_model(model, false).await
+    }
+
+    /// Updates the model and related statistics with given id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model does not exist or if a database operation fails.
+    pub async fn update_model(&self, model: crate::model::Model) -> Result<i32> {
+        self.upsert_model(model, true).await
+    }
+
+    async fn upsert_model(&self, model: crate::model::Model, is_update: bool) -> Result<i32> {
+        let classifier = model.serialized_classifier;
+        let batch_info = model.batch_info;
+        let scores = model.scores;
+        let name = model.name.clone();
+        let model_id = if is_update { model.id } else { 0 };
+        let model = tables::Model {
+            id: u32::try_from(model_id)?,
+            name: model.name,
+            version: model.version,
+            kind: model.kind,
+            max_event_id_num: model.max_event_id_num,
+            data_source_id: model.data_source_id,
+            classification_id: Some(model.classification_id),
+        };
+
+        let mut table = self.model_map();
+        let model_id = i32::try_from(if is_update {
+            table.update_model(&model)?
+        } else {
+            table.add_model(model)?
+        })?;
+
+        self.classifier_fm
+            .store_classifier(model_id, &name, &classifier)
+            .await?;
+
+        let table = self.batch_info_map();
+        for batch in batch_info {
+            let record = BatchInfo {
+                model: model_id,
+                inner: batch.clone(),
+            };
+            if is_update {
+                table.put(&record)?;
+            } else {
+                table.insert(&record)?;
+            }
+        }
+
+        let record = Scores::new(model_id, scores);
+        if is_update {
+            self.scores_map().put(&record)?;
+        } else {
+            self.scores_map().insert(&record)?;
+        }
+
+        Ok(model_id)
+    }
+
+    /// Delete model data given `name` and related statistics
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if database operation fails or the data is invalid.
+    pub async fn delete_model(&self, name: &str) -> Result<()> {
+        let table = self.model_map();
+        let model_id = i32::try_from(table.delete_model(name)?)?;
+        self.delete_stats(model_id)?;
+        self.classifier_fm.delete_classifier(model_id, name).await?;
+        Ok(())
+    }
+
     /// Delete statistics of `model_id`
     ///
     /// # Errors
     ///
     /// Returns an error if database operation fails or the data is invalid.
-    pub fn delete_stats(&self, model_id: i32) -> Result<()> {
+    fn delete_stats(&self, model_id: i32) -> Result<()> {
         let cluster_map = self.cluster_map();
-        let iter =
-            cluster_map.prefix_iter(rocksdb::Direction::Reverse, None, &model_id.to_be_bytes());
+        let to_remove = cluster_map
+            .prefix_iter(rocksdb::Direction::Forward, None, &model_id.to_be_bytes())
+            .filter_map(|e| {
+                let cluster = e.ok()?;
+                Some(cluster.unique_key())
+            });
         let txn = cluster_map.transaction();
-        for entry in iter {
-            let cluster = entry?;
-            cluster_map.delete_with_transaction(&cluster.unique_key(), &txn)?;
+        for key in to_remove {
+            cluster_map.delete_with_transaction(&key, &txn)?;
         }
         txn.commit()?;
 
         let batch_info_map = self.batch_info_map();
         batch_info_map.delete_all_for(model_id)?;
 
+        let score_map = self.scores_map();
+        score_map.delete(model_id)?;
+
         let column_stats_map = self.column_stats_map();
-        let iter = column_stats_map.iter(rocksdb::Direction::Reverse, None);
+        let to_remove: Vec<_> = column_stats_map
+            .iter(rocksdb::Direction::Forward, None)
+            .filter_map(|e| {
+                let cs = e.ok()?;
+                if cs.model_id == model_id {
+                    Some(cs.unique_key())
+                } else {
+                    None
+                }
+            })
+            .collect();
         let txn = column_stats_map.transaction();
-        for entry in iter {
-            let col_stat = entry?;
-            if col_stat.model_id == model_id {
-                column_stats_map.delete_with_transaction(&col_stat.unique_key(), &txn)?;
-            }
+        for key in to_remove {
+            column_stats_map.delete_with_transaction(&key, &txn)?;
         }
         txn.commit()?;
 
         let csv_column_extra_map = self.csv_column_extra_map();
-        let iter = csv_column_extra_map.prefix_iter(
-            rocksdb::Direction::Reverse,
-            None,
-            &model_id.to_be_bytes(),
-        );
-        for entry in iter {
-            let col_extra = entry?;
-            csv_column_extra_map.remove(col_extra.id)?;
+        let to_remove: Vec<_> = csv_column_extra_map
+            .prefix_iter(rocksdb::Direction::Forward, None, &model_id.to_be_bytes())
+            .filter_map(|e| {
+                let col_extra = e.ok()?;
+                Some(col_extra.id)
+            })
+            .collect();
+        for id in to_remove {
+            csv_column_extra_map.remove(id)?;
         }
 
         let time_series_map = self.time_series_map();
-        let iter =
-            time_series_map.prefix_iter(rocksdb::Direction::Reverse, None, &model_id.to_be_bytes());
+        let to_remove: Vec<_> = time_series_map
+            .prefix_iter(rocksdb::Direction::Forward, None, &model_id.to_be_bytes())
+            .filter_map(|e| {
+                let ts = e.ok()?;
+                Some(ts.unique_key())
+            })
+            .collect();
         let txn = time_series_map.transaction();
-        for entry in iter {
-            let ts = entry?;
-            time_series_map.delete_with_transaction(&ts.unique_key(), &txn)?;
+        for key in to_remove {
+            time_series_map.delete_with_transaction(&key, &txn)?;
         }
         txn.commit()?;
 
         let model_indicator_map = self.model_indicator_map();
-        let iter = model_indicator_map.iter(rocksdb::Direction::Reverse, None);
-        for entry in iter {
-            let indicator = entry?;
-            if indicator.model_id == model_id {
-                model_indicator_map.remove(std::iter::once(indicator.name.as_str()))?;
-            }
-        }
+        let to_remove: Vec<_> = model_indicator_map
+            .iter(rocksdb::Direction::Forward, None)
+            .filter_map(|e| {
+                let indicator = e.ok()?;
+                if indicator.model_id == model_id {
+                    Some(indicator.name)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        model_indicator_map.remove(to_remove.iter().map(String::as_str))?;
 
         let outlier_info_map = self.outlier_map();
-        let iter = outlier_info_map.prefix_iter(
-            rocksdb::Direction::Reverse,
-            None,
-            &model_id.to_be_bytes(),
-        );
+        let to_remove: Vec<_> = outlier_info_map
+            .prefix_iter(rocksdb::Direction::Forward, None, &model_id.to_be_bytes())
+            .filter_map(|e| {
+                let outlier = e.ok()?;
+                Some(outlier.unique_key())
+            })
+            .collect();
         let txn = outlier_info_map.transaction();
-        for entry in iter {
-            let outlier = entry?;
-            if outlier.model_id == model_id {
-                outlier_info_map.delete_with_transaction(&outlier.unique_key(), &txn)?;
-            }
+        for key in to_remove {
+            outlier_info_map.delete_with_transaction(&key, &txn)?;
         }
         txn.commit()?;
 
         Ok(())
+    }
+
+    /// Returns the model and classifer with the given model name.
+    /// Note:
+    ///     Model name is unique in the database.
+    ///     `batch_info` and `scores` are empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model does not exist or if a database operation fails.
+    pub async fn load_model_by_name(&self, name: &str) -> Result<crate::model::Model> {
+        let table = self.model_map();
+        let model = table.load_model_by_name(name)?;
+
+        let model_id = i32::try_from(model.id)?;
+        let classifier = self
+            .classifier_fm
+            .load_classifier(model_id, &model.name)
+            .await?;
+
+        Ok(crate::model::Model {
+            id: model_id,
+            name: model.name,
+            version: model.version,
+            kind: model.kind,
+            max_event_id_num: model.max_event_id_num,
+            data_source_id: model.data_source_id,
+            classification_id: model.classification_id.unwrap_or_default(),
+            serialized_classifier: classifier,
+            batch_info: Vec::new(),
+            scores: crate::types::ModelScores::default(),
+        })
     }
 
     /// Backup current database and keep most recent `num_backups_to_keep` backups

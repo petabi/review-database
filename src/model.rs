@@ -215,6 +215,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model already exists or if a database operation fails.
+    #[deprecated(note = "Use `Store::add_model` instead")]
     pub async fn add_model(&self, model: &Model) -> Result<i32, Error> {
         let mut conn = self.pool.get().await?;
         let n = diesel::insert_into(dsl::model)
@@ -245,6 +246,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
+    #[deprecated(note = "Use `Store::delete_model` instead")]
     pub async fn delete_model(&self, name: &str) -> Result<i32, Error> {
         let mut conn = self.pool.get().await?;
         let id = diesel::delete(dsl::model)
@@ -289,6 +291,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if a database operation fails.
+    #[deprecated(note = "Use `IndexedTable<'d, Model>::count_models` instead")]
     pub async fn count_models(&self) -> Result<i64, Error> {
         let mut conn = self.pool.get().await?;
         Ok(dsl::model.count().get_result(&mut conn).await?)
@@ -299,6 +302,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
+    #[deprecated(note = "Use `IndexedTable<'d, Model>::load_model` instead")]
     pub async fn load_model(&self, id: i32) -> Result<Digest, Error> {
         let mut conn = self.pool.get().await?;
         Ok(dsl::model
@@ -319,6 +323,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
+    #[deprecated(note = "Use `Store::load_model_by_name` instead")]
     pub async fn load_model_by_name(&self, name: &str) -> Result<Model, Error> {
         let query = dsl::model
             .select((
@@ -348,6 +353,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if a database operation fails.
+    #[deprecated(note = "Use `IndexedTable<'d, Model>::load_models` instead")]
     pub async fn load_models(
         &self,
         after: &Option<(i32, String)>,
@@ -405,6 +411,7 @@ impl Database {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
+    #[deprecated(note = "Use `Store::update_model` instead")]
     pub async fn update_model(&self, model: &Model) -> Result<i32, Error> {
         let mut conn = self.pool.get().await?;
 
