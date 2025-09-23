@@ -388,6 +388,84 @@ impl Store {
         Ok(types::PretrainedModel(buf))
     }
 
+    /// Delete statistics of `model_id`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if database operation fails or the data is invalid.
+    pub fn delete_stats(&self, model_id: i32) -> Result<()> {
+        let cluster_map = self.cluster_map();
+        let iter =
+            cluster_map.prefix_iter(rocksdb::Direction::Reverse, None, &model_id.to_be_bytes());
+        let txn = cluster_map.transaction();
+        for entry in iter {
+            let cluster = entry?;
+            cluster_map.delete_with_transaction(&cluster.unique_key(), &txn)?;
+        }
+        txn.commit()?;
+
+        let batch_info_map = self.batch_info_map();
+        batch_info_map.delete_all_for(model_id)?;
+
+        let column_stats_map = self.column_stats_map();
+        let iter = column_stats_map.iter(rocksdb::Direction::Reverse, None);
+        let txn = column_stats_map.transaction();
+        for entry in iter {
+            let col_stat = entry?;
+            if col_stat.model_id == model_id {
+                column_stats_map.delete_with_transaction(&col_stat.unique_key(), &txn)?;
+            }
+        }
+        txn.commit()?;
+
+        let csv_column_extra_map = self.csv_column_extra_map();
+        let iter = csv_column_extra_map.prefix_iter(
+            rocksdb::Direction::Reverse,
+            None,
+            &model_id.to_be_bytes(),
+        );
+        for entry in iter {
+            let col_extra = entry?;
+            csv_column_extra_map.remove(col_extra.id)?;
+        }
+
+        let time_series_map = self.time_series_map();
+        let iter =
+            time_series_map.prefix_iter(rocksdb::Direction::Reverse, None, &model_id.to_be_bytes());
+        let txn = time_series_map.transaction();
+        for entry in iter {
+            let ts = entry?;
+            time_series_map.delete_with_transaction(&ts.unique_key(), &txn)?;
+        }
+        txn.commit()?;
+
+        let model_indicator_map = self.model_indicator_map();
+        let iter = model_indicator_map.iter(rocksdb::Direction::Reverse, None);
+        for entry in iter {
+            let indicator = entry?;
+            if indicator.model_id == model_id {
+                model_indicator_map.remove(std::iter::once(indicator.name.as_str()))?;
+            }
+        }
+
+        let outlier_info_map = self.outlier_map();
+        let iter = outlier_info_map.prefix_iter(
+            rocksdb::Direction::Reverse,
+            None,
+            &model_id.to_be_bytes(),
+        );
+        let txn = outlier_info_map.transaction();
+        for entry in iter {
+            let outlier = entry?;
+            if outlier.model_id == model_id {
+                outlier_info_map.delete_with_transaction(&outlier.unique_key(), &txn)?;
+            }
+        }
+        txn.commit()?;
+
+        Ok(())
+    }
+
     /// Backup current database and keep most recent `num_backups_to_keep` backups
     ///
     /// # Errors
