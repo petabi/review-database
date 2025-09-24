@@ -78,7 +78,7 @@ impl<'d> Table<'d, Cluster> {
         }
         .to_bytes();
         let Some(value) = self.map.get(&key)? else {
-            bail!("cluster with model_id {} and id {} not found", model_id, id)
+            bail!("cluster with model_id {model_id} and id {id} not found")
         };
         let mut entry: Cluster = FromKeyValue::from_key_value(&key, value.as_ref())?;
         if let Some(category) = category {
