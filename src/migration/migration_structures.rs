@@ -1,104 +1,8 @@
-use std::{
-    net::{IpAddr, SocketAddr},
-    time::Duration,
-};
+use std::net::IpAddr;
 
 use serde::{Deserialize, Serialize};
-use strum_macros::{Display, EnumString};
 
-use crate::{ExternalServiceConfig, ExternalServiceStatus, types::EventCategory};
-
-#[derive(Deserialize, Serialize, PartialEq)]
-pub struct PigletConfig {
-    pub dpdk_args: String,
-
-    pub dpdk_input: Vec<String>,
-    pub dpdk_output: Vec<String>,
-
-    pub src_mac: String,
-    pub dst_mac: String,
-
-    pub log_dir: String,
-    pub dump_dir: String,
-
-    pub dump_items: Option<Vec<DumpItem>>,
-    pub dump_http_content_types: Option<Vec<DumpHttpContentType>>,
-
-    pub giganto_ingest_srv_addr: SocketAddr,
-    pub giganto_name: String,
-
-    pub pcap_max_size: u32,
-}
-
-#[derive(Deserialize, Serialize, PartialEq, Display, EnumString)]
-#[strum(serialize_all = "snake_case")]
-pub enum DumpItem {
-    Pcap,
-    Eml,
-    Ftp,
-    Http,
-}
-
-#[derive(Deserialize, Serialize, PartialEq, Display, EnumString)]
-#[strum(serialize_all = "snake_case")]
-pub enum DumpHttpContentType {
-    Office,
-    Exe,
-    Pdf,
-    Vbs,
-    Txt,
-}
-
-#[derive(Deserialize, Serialize, PartialEq)]
-pub struct HogConfig {
-    pub active_protocols: Option<Vec<ProtocolForHog>>,
-    pub active_sources: Option<Vec<String>>,
-
-    pub giganto_publish_srv_addr: Option<SocketAddr>,
-
-    pub cryptocurrency_mining_pool: String,
-
-    pub log_dir: String,
-    pub export_dir: String,
-
-    pub services_path: String,
-}
-
-#[derive(Deserialize, Serialize, PartialEq, Display, EnumString)]
-#[strum(serialize_all = "snake_case")]
-pub enum ProtocolForHog {
-    Conn,
-    Dns,
-    Rdp,
-    Http,
-}
-
-#[derive(Deserialize, Serialize, PartialEq)]
-pub struct GigantoConfig {
-    pub ingest_srv_addr: SocketAddr,
-    pub publish_srv_addr: SocketAddr,
-    pub graphql_srv_addr: SocketAddr,
-
-    pub data_dir: String,
-    pub log_dir: String,
-    pub export_dir: String,
-
-    #[serde(with = "humantime_serde")]
-    pub retention: Duration,
-
-    pub max_open_files: i32,
-    pub max_mb_of_level_base: u64,
-    pub num_of_thread: i32,
-    pub max_sub_compactions: u32,
-
-    pub ack_transmission: u16,
-}
-
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Giganto {
-    pub status: ExternalServiceStatus,
-    pub draft: Option<ExternalServiceConfig>,
-}
+use crate::types::EventCategory;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FtpEventFieldsV0_41 {
@@ -123,4 +27,36 @@ pub struct FtpEventFieldsV0_41 {
     pub file_id: String,
     pub confidence: f32,
     pub category: EventCategory,
+}
+
+impl From<FtpEventFieldsV0_41> for crate::event::FtpEventFields {
+    fn from(value: FtpEventFieldsV0_41) -> Self {
+        let command = crate::event::FtpCommand {
+            command: value.command,
+            reply_code: value.reply_code,
+            reply_msg: value.reply_msg,
+            data_passive: value.data_passive,
+            data_orig_addr: value.data_orig_addr,
+            data_resp_addr: value.data_resp_addr,
+            data_resp_port: value.data_resp_port,
+            file: value.file,
+            file_size: value.file_size,
+            file_id: value.file_id,
+        };
+
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            user: value.user,
+            password: value.password,
+            commands: vec![command],
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
 }

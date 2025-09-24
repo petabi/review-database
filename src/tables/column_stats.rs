@@ -697,7 +697,7 @@ fn from_timestamp(timestamp: i64) -> Result<NaiveDateTime> {
     let nanos = u32::try_from(timestamp.rem_euclid(A_BILLION))?;
     chrono::DateTime::from_timestamp(s, nanos)
         .map(|t| t.naive_utc())
-        .ok_or(anyhow::anyhow!("Invalid timestamp: {}", timestamp))
+        .ok_or(anyhow::anyhow!("Invalid timestamp: {timestamp}"))
 }
 
 fn from_naive_utc(date: NaiveDateTime) -> i64 {

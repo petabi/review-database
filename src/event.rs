@@ -5,7 +5,7 @@ mod conn;
 mod dcerpc;
 mod dhcp;
 mod dns;
-pub mod ftp;
+mod ftp;
 mod http;
 mod kerberos;
 mod ldap;
@@ -2327,6 +2327,17 @@ impl<'a> EventDb<'a> {
             }
         }
         Ok(())
+    }
+
+    /// Creates a raw iterator over key-value byte pairs for migration purposes.
+    #[must_use]
+    pub fn raw_iter_forward(
+        &self,
+    ) -> rocksdb::DBIteratorWithThreadMode<
+        '_,
+        rocksdb::OptimisticTransactionDB<rocksdb::SingleThreaded>,
+    > {
+        self.inner.iterator(IteratorMode::Start)
     }
 }
 

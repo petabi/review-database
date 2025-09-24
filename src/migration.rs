@@ -5,6 +5,7 @@ mod migrate_classifiers_to_filesystem;
 mod migrate_cluster;
 mod migrate_model;
 mod migrate_time_series;
+pub mod migration_structures;
 
 use std::{
     fs::{File, create_dir_all},
@@ -151,19 +152,55 @@ pub async fn migrate_backend<P: AsRef<Path>>(
 /// # Errors
 ///
 /// Returns an error if the migration fails.
-#[allow(clippy::unnecessary_wraps)]
 fn migrate_0_41_to_0_42(store: &super::Store) -> Result<()> {
-    migrate_0_42_ftp_events(store);
+    use num_traits::FromPrimitive;
+
+    use crate::event::{EventKind, FtpEventFields};
+    use crate::migration::migration_structures::FtpEventFieldsV0_41;
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        match event_kind {
+            EventKind::FtpPlainText | EventKind::BlocklistFtp => {
+                update_event_db_with_new_event::<FtpEventFieldsV0_41, FtpEventFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            _ => {}
+        }
+    }
     Ok(())
 }
 
-/// Migrates FTP event structures to use Vec<FtpCommand> instead of individual fields.
-fn migrate_0_42_ftp_events(_store: &super::Store) {
-    // For now, this is a no-op since we're implementing a demonstration.
-    // In a real implementation, this would need to migrate actual event data.
-    // However, since this is a structural change to how we define events going forward,
-    // and we're not migrating existing data in this case, we can skip the actual migration logic.
-    info!("FTP event structure migration completed - using new Vec<FtpCommand> format");
+fn update_event_db_with_new_event<'a, T, K>(
+    k: &[u8],
+    v: &'a [u8],
+    event_db: &crate::EventDb,
+) -> Result<()>
+where
+    T: serde::Deserialize<'a> + Into<K>,
+    K: serde::Serialize,
+{
+    let Ok(from_event) = bincode::deserialize::<T>(v) else {
+        return Err(anyhow!("Failed to migrate events: invalid event value"));
+    };
+    let to_event: K = from_event.into();
+    let new = bincode::serialize(&to_event).unwrap_or_default();
+    event_db.update((k, v), (k, &new))?;
+    Ok(())
 }
 
 /// Migrates the data directory to the up-to-date format if necessary.

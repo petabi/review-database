@@ -18,7 +18,7 @@ impl<'a> IndexedSet<'a> {
     ) -> Result<Self> {
         db.cf_handle(name)
             .map(|cf| Self { db, cf, key })
-            .ok_or_else(|| anyhow!("database error: cannot find column family \"{}\"", name))
+            .ok_or_else(|| anyhow!("database error: cannot find column family \"{name}\""))
     }
 
     /// Returns the index of the set.

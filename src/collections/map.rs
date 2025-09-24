@@ -22,7 +22,7 @@ impl<'a> Map<'a> {
     pub fn delete(&self, key: &[u8]) -> Result<(), anyhow::Error> {
         self.db
             .delete_cf(self.cf, key)
-            .map_err(|e| anyhow!("database error: {}", e))
+            .map_err(|e| anyhow!("database error: {e}"))
     }
 
     /// Deletes a key-value pair with the given key within a transaction.
@@ -36,7 +36,7 @@ impl<'a> Map<'a> {
         txn: &rocksdb::Transaction<rocksdb::OptimisticTransactionDB>,
     ) -> Result<()> {
         txn.delete_cf(self.cf, key)
-            .map_err(|e| anyhow!("database error: {}", e))
+            .map_err(|e| anyhow!("database error: {e}"))
     }
 
     /// Gets a value corresponding to the given key.
@@ -47,7 +47,7 @@ impl<'a> Map<'a> {
     pub fn get(&self, key: &[u8]) -> Result<Option<impl AsRef<[u8]>>> {
         self.db
             .get_cf(self.cf, key)
-            .map_err(|e| anyhow!("database error: {}", e))
+            .map_err(|e| anyhow!("database error: {e}"))
     }
 
     /// Puts a key-value pair, overwriting any existing value for the key.
@@ -58,7 +58,7 @@ impl<'a> Map<'a> {
     pub fn put(&self, key: &[u8], value: &[u8]) -> Result<()> {
         self.db
             .put_cf(self.cf, key, value)
-            .map_err(|e| anyhow!("database error: {}", e))
+            .map_err(|e| anyhow!("database error: {e}"))
     }
 
     /// Puts a key-value pair within a transaction, overwriting any existing value for the key.

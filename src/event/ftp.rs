@@ -33,13 +33,7 @@ macro_rules! find_ftp_attr_by_kind {
                 FtpAttr::Proto => AttrValue::UInt($event.proto.into()),
                 FtpAttr::User => AttrValue::String(&$event.user),
                 FtpAttr::Password => AttrValue::String(&$event.password),
-                FtpAttr::Command => {
-                    if let Some(first_cmd) = $event.commands.first() {
-                        AttrValue::String(&first_cmd.command)
-                    } else {
-                        return None;
-                    }
-                }
+                FtpAttr::Command => AttrValue::VecString(&$event.command_list),
                 FtpAttr::ReplyCode => {
                     if let Some(first_cmd) = $event.commands.first() {
                         AttrValue::String(&first_cmd.reply_code)
@@ -463,6 +457,7 @@ pub struct FtpPlainText {
     pub user: String,
     pub password: String,
     pub commands: Vec<FtpCommand>,
+    pub command_list: Vec<String>,
     pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -497,6 +492,11 @@ impl fmt::Display for FtpPlainText {
 
 impl FtpPlainText {
     pub(super) fn new(time: DateTime<Utc>, fields: FtpEventFields) -> Self {
+        let command_list = fields
+            .commands
+            .iter()
+            .map(|cmd| cmd.command.clone())
+            .collect();
         Self {
             time,
             sensor: fields.sensor,
@@ -509,6 +509,7 @@ impl FtpPlainText {
             user: fields.user,
             password: fields.password,
             commands: fields.commands,
+            command_list,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -579,6 +580,7 @@ pub struct BlocklistFtp {
     pub user: String,
     pub password: String,
     pub commands: Vec<FtpCommand>,
+    pub command_list: Vec<String>,
     pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -613,6 +615,11 @@ impl fmt::Display for BlocklistFtp {
 
 impl BlocklistFtp {
     pub(super) fn new(time: DateTime<Utc>, fields: FtpEventFields) -> Self {
+        let command_list = fields
+            .commands
+            .iter()
+            .map(|cmd| cmd.command.clone())
+            .collect();
         Self {
             time,
             sensor: fields.sensor,
@@ -625,6 +632,7 @@ impl BlocklistFtp {
             user: fields.user,
             password: fields.password,
             commands: fields.commands,
+            command_list,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
