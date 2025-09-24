@@ -5,6 +5,28 @@ mod migrate_classifiers_to_filesystem;
 mod migrate_cluster;
 mod migrate_model;
 mod migrate_time_series;
+pub(crate) mod migration_structures {
+    //! Data structures from previous versions used for migration.
+
+    use serde::{Deserialize, Serialize};
+
+    /// `AccountPolicy` struct from version 0.41.x
+    #[derive(Serialize, Deserialize)]
+    pub(crate) struct AccountPolicyV0_41 {
+        pub(crate) expiry_period_in_secs: u32,
+    }
+
+    impl From<AccountPolicyV0_41> for crate::AccountPolicy {
+        fn from(old: AccountPolicyV0_41) -> Self {
+            Self {
+                expiry_period_in_secs: old.expiry_period_in_secs,
+                lockout_threshold: 5,           // Default value
+                lockout_duration_in_secs: 1800, // Default value
+                suspension_threshold: 10,       // Default value
+            }
+        }
+    }
+}
 
 use std::{
     fs::{File, create_dir_all},
@@ -97,7 +119,31 @@ use tracing::info;
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.1,<0.42.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.2,<0.42.0-alpha.3";
+
+/// Migrates `AccountPolicy` from version 0.41.x to 0.42.x by adding new fields with default values.
+fn migrate_0_41_to_0_42(store: &crate::Store) -> Result<()> {
+    migrate_0_42_account_policy(store)
+}
+
+fn migrate_0_42_account_policy(store: &crate::Store) -> Result<()> {
+    use bincode::Options;
+
+    const ACCOUNT_POLICY_KEY: &[u8] = b"account policy key";
+
+    let map = store.account_policy_map();
+    let raw = map.raw();
+
+    if let Some(old_data) = raw.get(ACCOUNT_POLICY_KEY)? {
+        let old_policy: migration_structures::AccountPolicyV0_41 =
+            bincode::DefaultOptions::new().deserialize(old_data.as_ref())?;
+        let new_policy = crate::AccountPolicy::from(old_policy);
+        let new_data = bincode::DefaultOptions::new().serialize(&new_policy)?;
+        raw.put(ACCOUNT_POLICY_KEY, &new_data)?;
+    }
+
+    Ok(())
+}
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -191,7 +237,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<Migration> = vec![];
+    let migration: Vec<Migration> = vec![(
+        VersionReq::parse(">=0.41.0,<0.42.0")?,
+        Version::parse("0.42.0")?,
+        migrate_0_41_to_0_42,
+    )];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
     store.backup(false, 1)?;

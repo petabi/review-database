@@ -7,6 +7,27 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added three new security-related fields to `AccountPolicy`:
+  - `lockout_threshold`: Number of failed sign-in attempts before temporary
+    lockout
+  - `lockout_duration_in_secs`: Duration of temporary lockout in seconds
+  - `suspension_threshold`: Number of failed sign-in attempts before account
+    suspension
+- Added `current_account_policy()` method to retrieve the complete account
+  policy
+
+### Changed
+
+- **Breaking**: Replaced `init_expiry_period()` with `init_account_policy()`
+  which now requires all four policy parameters
+- **Breaking**: Replaced `update_expiry_period()` with `update_account_policy()`
+  which accepts optional parameters for all policy fields
+- Automatic migration applies default values for new fields:
+  `lockout_threshold` (5), `lockout_duration_in_secs` (1800),
+  `suspension_threshold` (10)
+
 ### Removed
 
 - Legacy PostgreSQL-based column statistics tables and APIs have been removed.
