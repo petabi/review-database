@@ -33,7 +33,13 @@ macro_rules! find_ftp_attr_by_kind {
                 FtpAttr::Proto => AttrValue::UInt($event.proto.into()),
                 FtpAttr::User => AttrValue::String(&$event.user),
                 FtpAttr::Password => AttrValue::String(&$event.password),
-                FtpAttr::Command => AttrValue::VecString(&$event.command_list),
+                FtpAttr::Command => {
+                    if let Some(first_cmd) = $event.commands.first() {
+                        AttrValue::String(&first_cmd.command)
+                    } else {
+                        return None;
+                    }
+                }
                 FtpAttr::ReplyCode => {
                     if let Some(first_cmd) = $event.commands.first() {
                         AttrValue::String(&first_cmd.reply_code)
@@ -139,37 +145,6 @@ pub struct FtpBruteForceFieldsV0_41 {
     pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub confidence: f32,
-    pub category: EventCategory,
-}
-
-impl From<FtpBruteForceFieldsV0_39> for FtpBruteForceFieldsV0_41 {
-    fn from(value: FtpBruteForceFieldsV0_39) -> Self {
-        Self {
-            sensor: String::new(),
-            src_addr: value.src_addr,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            user_list: value.user_list,
-            start_time: value.start_time,
-            end_time: value.end_time,
-            is_internal: value.is_internal,
-            confidence: 0.3, // default value for FtpBruteForce
-            category: value.category,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct FtpBruteForceFieldsV0_39 {
-    pub src_addr: IpAddr,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub user_list: Vec<String>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub is_internal: bool,
     pub category: EventCategory,
 }
 
@@ -320,59 +295,6 @@ impl FtpEventFields {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct FtpEventFieldsV0_39 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub user: String,
-    pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
-
-impl From<FtpEventFieldsV0_38> for FtpEventFieldsV0_39 {
-    fn from(value: FtpEventFieldsV0_38) -> Self {
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            end_time: value.end_time,
-            user: value.user,
-            password: value.password,
-            command: value.command,
-            reply_code: value.reply_code,
-            reply_msg: value.reply_msg,
-            data_passive: value.data_passive,
-            data_orig_addr: value.data_orig_addr,
-            data_resp_addr: value.data_resp_addr,
-            data_resp_port: value.data_resp_port,
-            file: value.file,
-            file_size: value.file_size,
-            file_id: value.file_id,
-            confidence: 1.0, // default value for FtpPlainText
-            category: value.category,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct FtpEventFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -385,62 +307,6 @@ pub struct FtpEventFieldsV0_42 {
     pub password: String,
     pub commands: Vec<FtpCommand>,
     pub confidence: f32,
-    pub category: EventCategory,
-}
-
-impl From<FtpEventFieldsV0_39> for FtpEventFieldsV0_42 {
-    fn from(value: FtpEventFieldsV0_39) -> Self {
-        let command = FtpCommand {
-            command: value.command,
-            reply_code: value.reply_code,
-            reply_msg: value.reply_msg,
-            data_passive: value.data_passive,
-            data_orig_addr: value.data_orig_addr,
-            data_resp_addr: value.data_resp_addr,
-            data_resp_port: value.data_resp_port,
-            file: value.file,
-            file_size: value.file_size,
-            file_id: value.file_id,
-        };
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            end_time: value.end_time,
-            user: value.user,
-            password: value.password,
-            commands: vec![command],
-            confidence: value.confidence,
-            category: value.category,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FtpEventFieldsV0_38 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub user: String,
-    pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
     pub category: EventCategory,
 }
 
@@ -457,7 +323,6 @@ pub struct FtpPlainText {
     pub user: String,
     pub password: String,
     pub commands: Vec<FtpCommand>,
-    pub command_list: Vec<String>,
     pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -492,11 +357,6 @@ impl fmt::Display for FtpPlainText {
 
 impl FtpPlainText {
     pub(super) fn new(time: DateTime<Utc>, fields: FtpEventFields) -> Self {
-        let command_list = fields
-            .commands
-            .iter()
-            .map(|cmd| cmd.command.clone())
-            .collect();
         Self {
             time,
             sensor: fields.sensor,
@@ -509,7 +369,6 @@ impl FtpPlainText {
             user: fields.user,
             password: fields.password,
             commands: fields.commands,
-            command_list,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -580,7 +439,6 @@ pub struct BlocklistFtp {
     pub user: String,
     pub password: String,
     pub commands: Vec<FtpCommand>,
-    pub command_list: Vec<String>,
     pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -615,11 +473,6 @@ impl fmt::Display for BlocklistFtp {
 
 impl BlocklistFtp {
     pub(super) fn new(time: DateTime<Utc>, fields: FtpEventFields) -> Self {
-        let command_list = fields
-            .commands
-            .iter()
-            .map(|cmd| cmd.command.clone())
-            .collect();
         Self {
             time,
             sensor: fields.sensor,
@@ -632,7 +485,6 @@ impl BlocklistFtp {
             user: fields.user,
             password: fields.password,
             commands: fields.commands,
-            command_list,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
