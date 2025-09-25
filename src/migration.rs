@@ -5,6 +5,7 @@ mod migrate_classifiers_to_filesystem;
 mod migrate_cluster;
 mod migrate_model;
 mod migrate_time_series;
+pub mod migration_structures;
 
 use std::{
     fs::{File, create_dir_all},
@@ -97,7 +98,7 @@ use tracing::info;
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.1,<0.42.0-alpha.2";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.2,<0.42.0-alpha.3";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -146,6 +147,62 @@ pub async fn migrate_backend<P: AsRef<Path>>(
     Ok(())
 }
 
+/// Migrates FTP event structures from 0.41 to 0.42 format.
+///
+/// # Errors
+///
+/// Returns an error if the migration fails.
+fn migrate_0_41_to_0_42(store: &super::Store) -> Result<()> {
+    use num_traits::FromPrimitive;
+
+    use crate::event::{EventKind, FtpEventFields};
+    use crate::migration::migration_structures::FtpEventFieldsV0_41;
+
+    let event_db = store.events();
+    let iter = event_db.raw_iter_forward();
+    for event in iter {
+        let (k, v) = event.map_err(|e| anyhow!("Failed to read events database: {e:?}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        match event_kind {
+            EventKind::FtpPlainText | EventKind::BlocklistFtp => {
+                update_event_db_with_new_event::<FtpEventFieldsV0_41, FtpEventFields>(
+                    &k, &v, &event_db,
+                )?;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn update_event_db_with_new_event<'a, T, K>(
+    k: &[u8],
+    v: &'a [u8],
+    event_db: &crate::EventDb,
+) -> Result<()>
+where
+    T: serde::Deserialize<'a> + Into<K>,
+    K: serde::Serialize,
+{
+    let Ok(from_event) = bincode::deserialize::<T>(v) else {
+        return Err(anyhow!("Failed to migrate events: invalid event value"));
+    };
+    let to_event: K = from_event.into();
+    let new = bincode::serialize(&to_event).unwrap_or_default();
+    event_db.update((k, v), (k, &new))?;
+    Ok(())
+}
+
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
 /// Migration is supported between released versions only. The prelease versions (alpha, beta,
@@ -191,7 +248,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<Migration> = vec![];
+    let migration: Vec<Migration> = vec![(
+        VersionReq::parse(">=0.42.0-alpha.1,<0.42.0-alpha.2")?,
+        Version::parse("0.42.0-alpha.2")?,
+        migrate_0_41_to_0_42,
+    )];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
     store.backup(false, 1)?;
