@@ -30,7 +30,7 @@ impl<'a> IndexedMap<'a> {
     pub fn new(db: &'a rocksdb::OptimisticTransactionDB, name: &str) -> Result<Self> {
         db.cf_handle(name)
             .map(|cf| Self { db, cf })
-            .ok_or_else(|| anyhow!("database error: cannot find column family \"{}\"", name))
+            .ok_or_else(|| anyhow!("database error: cannot find column family \"{name}\""))
     }
 
     /// Gets a value corresponding to the given key.
