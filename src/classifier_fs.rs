@@ -12,7 +12,7 @@ pub type Result<T> = std::result::Result<T, ClassifierFsError>;
 /// Stores classifier binary data in a hierarchical directory structure:
 /// `base_dir/classifiers/model_{id}/classifier_{name}.bin`
 #[derive(Clone, Debug)]
-pub struct ClassifierFileManager {
+pub(crate) struct ClassifierFileManager {
     base_dir: PathBuf,
 }
 
