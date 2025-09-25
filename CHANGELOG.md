@@ -42,6 +42,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   event structure for consistency with other multi-raw event-based detection
   events and to provide necessary information for packet information requests
   in the UI.
+- Implemented TI DB (Threat Intelligence Database) matching logic for triage
+  policies. Detection events now properly match against TI DB entries with
+  allowlist functionality that assigns `f64::MIN` scores to prevent
+  classification as malicious.
+- Added new triage policy structures: `TriageExclusionReason` enum for storing
+  different types of exclusion criteria (IP addresses, domains, hostnames,
+  URIs), `TriageExclusion` enum for compiled matching rules, `NetworkFilter`
+  for IP address filtering, and `TriagePolicyInput` for triage policy
+  processing.
 
 ### Changed
 
@@ -52,6 +61,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Removed re-exports of event types from the crate's top level for cleaner, more
   organized API. Event types are now accessed through the `event::` module path
   instead of directly at the crate root.
+- **BREAKING**: Refactored `Ti` struct into `TriageExclusionReason` enum in triage
+  policies. The old `Ti` struct with `ti_name`, `kind`, and `weight` fields has
+  been replaced with a more efficient enum that directly stores exclusion data
+  (IP address groups, domain lists, hostname lists, URI lists) eliminating the
+  need for the `TiCmpKind` enum.
 - Updated `Match` trait implementations for detection events to return actual
   `sensor` and `confidence` field values instead of placeholders.
 - Time series data is now stored in RocksDB instead of PostgreSQL. A built-in
