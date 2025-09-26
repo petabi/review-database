@@ -1,6 +1,44 @@
-DROP FUNCTION IF EXISTS attempt_cluster_upsert;
+CREATE TABLE IF NOT EXISTS cluster (
+  id SERIAL PRIMARY KEY,
+  category_id INTEGER NOT NULL DEFAULT 1,
+  cluster_id TEXT NOT NULL,
+  detector_id INTEGER NOT NULL,
+  event_ids BIGINT[] NOT NULL,
+  labels TEXT[],
+  last_modification_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  model_id INTEGER NOT NULL,
+  qualifier_id INTEGER NOT NULL DEFAULT 2,
+  score FLOAT8,
+  signature TEXT NOT NULL,
+  size BIGINT NOT NULL,
+  status_id INTEGER NOT NULL DEFAULT 3,
+  UNIQUE (cluster_id, model_id)
+);
+
+CREATE TABLE IF NOT EXISTS model (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  max_event_id_num INTEGER NOT NULL,
+  data_source_id INTEGER NOT NULL,
+  classifier BYTEA,
+  classification_id BIGINT,
+  version INTEGER NOT NULL,
+  UNIQUE (name)
+);
+
+CREATE TABLE IF NOT EXISTS time_series (
+    id SERIAL PRIMARY KEY,
+    cluster_id INTEGER NOT NULL,
+    time TIMESTAMP NOT NULL,
+    count_index INTEGER,
+    value TIMESTAMP NOT NULL,
+    count BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS time_series_cluster_id ON time_series (cluster_id);
+
 CREATE OR REPLACE FUNCTION attempt_cluster_upsert(
-  clusterid VARCHAR,
+  clusterid INTEGER,
   detector_id INTEGER,
   event_ids BIGINT[],
   sensors TEXT[],

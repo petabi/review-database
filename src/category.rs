@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Indexable, IndexedMapUpdate};
 
 /// A category for a cluster.
-#[derive(Debug, Deserialize, Queryable, Serialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Category {
     pub id: u32,
     pub name: String,
