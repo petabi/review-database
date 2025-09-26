@@ -1,11 +1,6 @@
 //! Routines to check the database format version and migrate it if necessary.
 #![allow(clippy::too_many_lines)]
 
-mod migrate_classifiers_to_filesystem;
-mod migrate_cluster;
-mod migrate_model;
-mod migrate_time_series;
-
 use std::{
     fs::{File, create_dir_all},
     io::{Read, Write},
@@ -99,53 +94,6 @@ use tracing::info;
 /// // all alpha changes finalized in 3.5.0.
 /// ```
 const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.1,<0.42.0-alpha.2";
-
-/// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
-///
-/// Migration is supported for current released version only. And the migrated data
-/// and related interface should be removed from `PostgresQL` database in the next released
-/// version.
-///
-/// # Errors
-///
-/// Returns an error if the data hasn't been migrated successfully to Rocksdb.
-pub async fn migrate_backend<P: AsRef<Path>>(
-    database: &super::Database,
-    store: &super::Store,
-    data_dir: P,
-) -> Result<()> {
-    // Below is an example for cases when data migration between `PostgreSQL`
-    // and RocksDB is needed.
-    // let path = data_dir.as_ref();
-    // let file = path.join("VERSION");
-
-    // let version = read_version_file(&file)?;
-
-    // let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
-    //     unreachable!("COMPATIBLE_VERSION_REQ must be valid")
-    // };
-    // if compatible.matches(&version) {
-    //     backend_0_23(db, store).await?;
-    // }
-
-    let path = data_dir.as_ref();
-    let file = path.join("VERSION");
-
-    let version = read_version_file(&file)?;
-
-    let Ok(compatible) = VersionReq::parse(COMPATIBLE_VERSION_REQ) else {
-        unreachable!("COMPATIBLE_VERSION_REQ must be valid")
-    };
-
-    migrate_classifiers_to_filesystem::run_migration(database).await?;
-    if compatible.matches(&version) {
-        migrate_time_series::run(database, store).await?;
-        migrate_cluster::run(database, store).await?;
-        migrate_model::run(database, store).await?;
-    }
-
-    Ok(())
-}
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
