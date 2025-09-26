@@ -1,8 +1,4 @@
-#[macro_use]
-extern crate diesel;
-
 mod account;
-mod backends;
 pub mod backup;
 mod batch_info;
 mod category;
@@ -13,7 +9,6 @@ mod column_statistics;
 pub mod event;
 mod migration;
 mod model;
-mod schema;
 mod scores;
 mod tables;
 mod tags;
@@ -28,14 +23,12 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
 pub use attrievent::attribute::RawEventKind;
-use bb8_postgres::{bb8, tokio_postgres};
 pub use rocksdb::backup::BackupEngineInfo;
 pub use tags::TagSet;
 use tags::{EventTagId, NetworkTagId, WorkflowTagId};
 use thiserror::Error;
 
 pub use self::account::Role;
-use self::backends::ConnectionPool;
 pub use self::batch_info::BatchInfo;
 pub use self::category::Category;
 pub use self::cluster::*;
@@ -43,7 +36,7 @@ pub use self::collections::Indexable;
 pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, Map};
 pub use self::column_statistics::*;
 pub use self::event::{Event, EventDb, EventKind, EventMessage};
-pub use self::migration::{migrate_backend, migrate_data_dir};
+pub use self::migration::migrate_data_dir;
 pub use self::model::{Digest, Model};
 pub use self::scores::Scores;
 use self::tables::StateDb;
@@ -70,32 +63,6 @@ pub use self::top_n::{
 };
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 pub use self::util::find_ip_country;
-
-#[derive(Clone)]
-pub struct Database {
-    pool: ConnectionPool,
-    classifier_fm: classifier_fs::ClassifierFileManager,
-}
-
-impl Database {
-    /// Creates a new database connection pool.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the connection pool cannot be created.
-    pub async fn new<P: AsRef<Path>>(
-        url: &str,
-        db_root_ca: &[P],
-        data_dir: P,
-    ) -> Result<Self, Error> {
-        let pool = ConnectionPool::new(url, db_root_ca).await?;
-        let classifier_fm = classifier_fs::ClassifierFileManager::new(data_dir)?;
-        Ok(Self {
-            pool,
-            classifier_fm,
-        })
-    }
-}
 
 const DEFAULT_STATES: &str = "states.db";
 const EXCLUSIVE: bool = true;
@@ -602,6 +569,13 @@ impl Store {
         let table = self.model_map();
         let model = table.load_model_by_name(name)?;
 
+        if !self.classifier_fm.classifier_exists(model.id, &model.name) {
+            return Err(anyhow!(
+                "Classifier file not found for model {}",
+                model.name
+            ));
+        }
+
         let classifier = self
             .classifier_fm
             .load_classifier(model.id, &model.name)
@@ -723,18 +697,10 @@ fn get_most_recent<P: AsRef<Path>>(name: &str, dir: P) -> Result<(i64, PathBuf)>
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("diesel connection error: {0}")]
-    Connection(#[from] diesel::ConnectionError),
     #[error("invalid input: {0}")]
     InvalidInput(String),
     #[error("migration error: {0}")]
     Migration(Box<dyn std::error::Error + Send + Sync>),
-    #[error("query error: {0}")]
-    Query(#[from] diesel::result::Error),
-    #[error("connection error: {0}")]
-    PgConnection(#[from] bb8::RunError<tokio_postgres::Error>),
-    #[error("PostgreSQL error: {0}")]
-    Postgres(#[from] tokio_postgres::Error),
     #[error("JSON deserialization error: {0}")]
     SerdeJson(#[from] serde_json::Error),
     #[error("Certificate error: {0}")]
