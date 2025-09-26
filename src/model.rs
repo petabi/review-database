@@ -1,13 +1,9 @@
 use anyhow::Result;
 use bincode::Options;
-use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl};
-use diesel_async::{RunQueryDsl, pg::AsyncPgConnection};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use super::{Database, Error, schema::model::dsl};
-
-#[derive(Deserialize, Queryable)]
+#[derive(Deserialize)]
 pub struct Digest {
     pub id: i32,
     pub name: String,
@@ -16,7 +12,7 @@ pub struct Digest {
     pub classification_id: Option<i64>,
 }
 
-#[derive(Debug, Queryable)]
+#[derive(Debug)]
 pub struct Model {
     pub id: i32,
     pub name: String,
@@ -31,21 +27,6 @@ pub struct Model {
 }
 
 impl Model {
-    fn from_storage(model: SqlModel, serialized_classifier: Vec<u8>) -> Self {
-        Self {
-            id: model.id,
-            name: model.name,
-            version: model.version,
-            kind: model.kind,
-            serialized_classifier,
-            max_event_id_num: model.max_event_id_num,
-            data_source_id: model.data_source_id,
-            classification_id: model.classification_id.unwrap_or_default(),
-            batch_info: vec![],
-            scores: crate::types::ModelScores::new(),
-        }
-    }
-
     fn header(&self) -> Result<MagicHeader> {
         use std::str::FromStr;
         Ok(MagicHeader {
@@ -195,253 +176,6 @@ struct Body {
     classification_id: i64,
     batch_info: Vec<crate::types::ModelBatchInfo>,
     scores: crate::types::ModelScores,
-}
-
-#[derive(Deserialize, Queryable)]
-#[allow(clippy::module_name_repetitions)]
-struct SqlModel {
-    id: i32,
-    name: String,
-    version: i32,
-    kind: String,
-    max_event_id_num: i32,
-    data_source_id: i32,
-    classification_id: Option<i64>,
-}
-
-impl Database {
-    /// Adds a new model to the database.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the model already exists or if a database operation fails.
-    #[deprecated(note = "Use `Store::add_model` instead")]
-    pub async fn add_model(&self, model: &Model) -> Result<i32, Error> {
-        let mut conn = self.pool.get().await?;
-        let n = diesel::insert_into(dsl::model)
-            .values((
-                dsl::name.eq(&model.name),
-                dsl::version.eq(model.version),
-                dsl::kind.eq(&model.kind),
-                dsl::max_event_id_num.eq(model.max_event_id_num),
-                dsl::data_source_id.eq(model.data_source_id),
-                dsl::classification_id.eq(model.classification_id),
-            ))
-            .returning(dsl::id)
-            .get_result(&mut conn)
-            .await
-            .map_err(|_| Error::InvalidInput(format!("model \"{}\" already exists", model.name)))?;
-        if n == 0 {
-            Err(Error::InvalidInput("failed to insert model".into()))
-        } else {
-            let n_u32 = u32::try_from(n)?;
-            self.classifier_fm
-                .store_classifier(n_u32, &model.name, &model.serialized_classifier)
-                .await?;
-            Ok(n)
-        }
-    }
-
-    /// Deletes the model with the given name.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the model does not exist or if a database operation fails.
-    #[deprecated(note = "Use `Store::delete_model` instead")]
-    pub async fn delete_model(&self, name: &str) -> Result<i32, Error> {
-        let mut conn = self.pool.get().await?;
-        let id = diesel::delete(dsl::model)
-            .filter(dsl::name.eq(name))
-            .returning(dsl::id)
-            .get_result(&mut conn)
-            .await
-            .optional()?;
-        let Some(id) = id else {
-            return Err(Error::InvalidInput(format!("The model {name} not found")));
-        };
-
-        let id_u32 = u32::try_from(id)?;
-        self.classifier_fm.delete_classifier(id_u32, name).await?;
-
-        self.delete_stats(id, &mut conn).await?;
-
-        Ok(id)
-    }
-
-    async fn delete_stats(&self, id: i32, conn: &mut AsyncPgConnection) -> Result<(), Error> {
-        use super::schema::{cluster::dsl as cluster, time_series::dsl as time_series};
-
-        let cluster_ids: Vec<i32> = diesel::delete(cluster::cluster)
-            .filter(cluster::model_id.eq(id))
-            .returning(cluster::id)
-            .get_results(conn)
-            .await?;
-        if cluster_ids.is_empty() {
-            return Ok(());
-        }
-
-        diesel::delete(time_series::time_series)
-            .filter(time_series::cluster_id.eq_any(&cluster_ids))
-            .execute(conn)
-            .await?;
-
-        Ok(())
-    }
-
-    /// Returns the number of models.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if a database operation fails.
-    #[deprecated(note = "Use `IndexedTable<'d, Model>::count_models` instead")]
-    pub async fn count_models(&self) -> Result<i64, Error> {
-        let mut conn = self.pool.get().await?;
-        Ok(dsl::model.count().get_result(&mut conn).await?)
-    }
-
-    /// Returns the model with the given ID.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the model does not exist or if a database operation fails.
-    #[deprecated(note = "Use `IndexedTable<'d, Model>::load_model` instead")]
-    pub async fn load_model(&self, id: i32) -> Result<Digest, Error> {
-        let mut conn = self.pool.get().await?;
-        Ok(dsl::model
-            .select((
-                dsl::id,
-                dsl::name,
-                dsl::version,
-                dsl::data_source_id,
-                dsl::classification_id,
-            ))
-            .filter(dsl::id.eq(id))
-            .get_result(&mut conn)
-            .await?)
-    }
-
-    /// Returns the model with the given name.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the model does not exist or if a database operation fails.
-    #[deprecated(note = "Use `Store::load_model_by_name` instead")]
-    pub async fn load_model_by_name(&self, name: &str) -> Result<Model, Error> {
-        let query = dsl::model
-            .select((
-                dsl::id,
-                dsl::name,
-                dsl::version,
-                dsl::kind,
-                dsl::max_event_id_num,
-                dsl::data_source_id,
-                dsl::classification_id,
-            ))
-            .filter(dsl::name.eq(name));
-
-        let mut conn = self.pool.get().await?;
-        let model = query.get_result::<SqlModel>(&mut conn).await?;
-        let model_id_u32 = u32::try_from(model.id)?;
-        if !self.classifier_fm.classifier_exists(model_id_u32, name) {
-            return Err(Error::Classifier(
-                super::classifier_fs::ClassifierFsError::FileNotFound(model_id_u32, name.into()),
-            ));
-        }
-        let classifier = self
-            .classifier_fm
-            .load_classifier(model_id_u32, name)
-            .await?;
-        Ok(Model::from_storage(model, classifier))
-    }
-
-    /// Returns the models between `after` and `before`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if a database operation fails.
-    #[deprecated(note = "Use `IndexedTable<'d, Model>::load_models` instead")]
-    pub async fn load_models(
-        &self,
-        after: &Option<(i32, String)>,
-        before: &Option<(i32, String)>,
-        is_first: bool,
-        limit: usize,
-    ) -> Result<Vec<Digest>, Error> {
-        let limit = i64::try_from(limit).map_err(|_| Error::InvalidInput("limit".into()))? + 1;
-        let mut query = dsl::model
-            .select((
-                dsl::id,
-                dsl::name,
-                dsl::version,
-                dsl::data_source_id,
-                dsl::classification_id,
-            ))
-            .limit(limit)
-            .into_boxed();
-
-        if let Some(after) = after {
-            query = query.filter(
-                dsl::name
-                    .eq(&after.1)
-                    .and(dsl::id.gt(after.0))
-                    .or(dsl::name.gt(&after.1)),
-            );
-        }
-        if let Some(before) = before {
-            query = query.filter(
-                dsl::name
-                    .eq(&before.1)
-                    .and(dsl::id.lt(before.0))
-                    .or(dsl::name.lt(&before.1)),
-            );
-        }
-        if is_first {
-            query = query.order_by(dsl::name.asc()).then_order_by(dsl::id.asc());
-        } else {
-            query = query
-                .order_by(dsl::name.desc())
-                .then_order_by(dsl::id.desc());
-        }
-
-        let mut conn = self.pool.get().await?;
-        let rows = query.get_results::<Digest>(&mut conn).await?;
-        if is_first {
-            Ok(rows)
-        } else {
-            Ok(rows.into_iter().rev().collect())
-        }
-    }
-
-    /// Updates the model with the given name.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the model does not exist or if a database operation fails.
-    #[deprecated(note = "Use `Store::update_model` instead")]
-    pub async fn update_model(&self, model: &Model) -> Result<i32, Error> {
-        let mut conn = self.pool.get().await?;
-
-        diesel::update(dsl::model.filter(dsl::id.eq(model.id)))
-            .set((
-                dsl::name.eq(&model.name),
-                dsl::version.eq(model.version),
-                dsl::kind.eq(&model.kind),
-                dsl::max_event_id_num.eq(model.max_event_id_num),
-                dsl::data_source_id.eq(model.data_source_id),
-                dsl::classification_id.eq(model.classification_id),
-            ))
-            .execute(&mut conn)
-            .await
-            .map_err(|e| {
-                Error::InvalidInput(format!("failed to update model \"{}\": {e}", model.name))
-            })?;
-        let model_id_u32 = u32::try_from(model.id)?;
-        self.classifier_fm
-            .store_classifier(model_id_u32, &model.name, &model.serialized_classifier)
-            .await?;
-
-        Ok(model.id)
-    }
 }
 
 #[cfg(test)]
