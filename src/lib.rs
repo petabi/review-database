@@ -587,6 +587,15 @@ impl Store {
         let model = table.load_model_by_name(name)?;
 
         let model_id = i32::try_from(model.id)?;
+        if !self.classifier_fm.classifier_exists(model_id, name) {
+            return Err(
+                crate::Error::Classifier(classifier_fs::ClassifierFsError::FileNotFound(
+                    model_id,
+                    name.into(),
+                ))
+                .into(),
+            );
+        }
         let classifier = self
             .classifier_fm
             .load_classifier(model_id, &model.name)
