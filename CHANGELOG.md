@@ -11,6 +11,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Legacy PostgreSQL-based column statistics tables and APIs have been removed.
 
+### Fixed
+
+- `BackupInfo.timestamp` now correctly interprets `BackupEngineInfo.timestamp`
+  as seconds instead of nanoseconds, fixing incorrect backup timestamps that
+  appeared as dates in 1970.
+
 ## [0.41.0] - 2025-09-17
 
 ### Added
