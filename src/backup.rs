@@ -20,7 +20,8 @@ impl From<BackupEngineInfo> for BackupInfo {
     fn from(backup: BackupEngineInfo) -> Self {
         Self {
             id: backup.backup_id,
-            timestamp: Utc.timestamp_nanos(backup.timestamp),
+            timestamp: DateTime::from_timestamp(backup.timestamp, 0)
+                .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap()),
             size: backup.size,
         }
     }
@@ -168,5 +169,33 @@ mod tests {
         assert_eq!(backup_list[0].id, 1);
         assert_eq!(backup_list[1].id, 2);
         assert_eq!(backup_list[2].id, 3);
+    }
+
+    #[test]
+    fn test_backup_info_timestamp_conversion() {
+        use chrono::{DateTime, Datelike};
+        use rocksdb::backup::BackupEngineInfo;
+
+        use super::BackupInfo;
+
+        // Test with a known timestamp in seconds (September 25, 2025, 00:42:20 UTC)
+        let timestamp_seconds: i64 = 1_758_760_940;
+        let backup_engine_info = BackupEngineInfo {
+            backup_id: 1,
+            timestamp: timestamp_seconds,
+            size: 697_860,
+            num_files: 10,
+        };
+
+        let backup_info: BackupInfo = backup_engine_info.into();
+
+        // Verify the timestamp is correctly interpreted as seconds
+        assert_eq!(backup_info.id, 1);
+        assert_eq!(backup_info.size, 697_860);
+
+        // The timestamp should be in 2025, not 1970
+        let expected_timestamp = DateTime::from_timestamp(timestamp_seconds, 0).unwrap();
+        assert_eq!(backup_info.timestamp, expected_timestamp);
+        assert!(backup_info.timestamp.year() == 2025);
     }
 }
