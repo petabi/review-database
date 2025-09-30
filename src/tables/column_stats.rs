@@ -17,7 +17,7 @@ const DEFAULT_PORTION_OF_TOP_N: f64 = 1.0;
 
 #[derive(Deserialize)]
 pub struct TopColumnsOfCluster {
-    pub cluster_id: String,
+    pub cluster_id: i32,
     pub columns: Vec<TopElementCountsByColumn>,
 }
 
@@ -184,7 +184,7 @@ impl<'d> Table<'d, ColumnStats> {
     pub fn get_top_multimaps_of_model(
         &self,
         model_id: i32,
-        cluster_ids: Vec<(u32, String)>,
+        cluster_ids: Vec<(u32, i32)>,
         (column_1, column_n): (&[bool], &[bool]),
         number_of_top_n: usize,
         min_top_n_of_1_to_n: usize,
@@ -711,7 +711,7 @@ fn from_naive_utc(date: NaiveDateTime) -> i64 {
 
 fn to_multi_maps(
     column: u32,
-    cluster_ids: &HashMap<u32, String>,
+    cluster_ids: &HashMap<u32, i32>,
     selected: HashMap<u32, HashMap<u32, Vec<&[structured::ElementCount]>>>,
 ) -> TopMultimaps {
     TopMultimaps {
@@ -719,10 +719,9 @@ fn to_multi_maps(
         selected: selected
             .into_iter()
             .map(|(cluster, v)| {
-                let cluster_id = cluster_ids
+                let cluster_id = *cluster_ids
                     .get(&cluster)
-                    .expect("Cluster ID not found in cluster_ids map")
-                    .clone();
+                    .expect("Cluster ID not found in cluster_ids map");
                 TopColumnsOfCluster {
                     cluster_id,
                     columns: v
@@ -1208,12 +1207,12 @@ mod tests {
             .insert(column_index, vec![&data]);
 
         let mut cluster_ids = HashMap::new();
-        cluster_ids.insert(1, "cluster-one".to_string());
+        cluster_ids.insert(1, 1);
 
         let result = to_multi_maps(0, &cluster_ids, selected);
         assert_eq!(result.n_index, 0);
         assert_eq!(result.selected.len(), 1);
-        assert_eq!(result.selected[0].cluster_id, "cluster-one");
+        assert_eq!(result.selected[0].cluster_id, 1);
         assert_eq!(result.selected[0].columns[0].counts[0].count, 42);
     }
     #[test]
