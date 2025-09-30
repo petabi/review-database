@@ -46,7 +46,6 @@ pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::cluster::Cluster;
 pub use self::column_stats::ColumnStats;
-pub use self::config::Config;
 pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::customer::{Customer, Network as CustomerNetwork, Update as CustomerUpdate};
 pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
@@ -391,9 +390,9 @@ impl StateDb {
     }
 
     #[must_use]
-    pub(crate) fn configs(&self) -> Table<'_, Config> {
+    pub(crate) fn configs(&self) -> Table<'_, String> {
         let inner = self.inner.as_ref().expect("database must be open");
-        Table::<Config>::open(inner).expect("{CONFIGS} table must be present")
+        Table::<String>::open(inner).expect("{CONFIGS} table must be present")
     }
 
     #[must_use]

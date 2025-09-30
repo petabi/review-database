@@ -2,24 +2,11 @@
 
 use anyhow::Result;
 use rocksdb::OptimisticTransactionDB;
-use serde::{Deserialize, Serialize};
 
 use crate::{Map, Table};
 
-#[derive(Serialize, Deserialize)]
-pub enum Config {
-    AccountPolicy(AccountPolicy),
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct AccountPolicy {
-    pub(crate) expiry_period_in_secs: u32,
-}
-
 /// Functions for the `configs` map.
-impl<'d> Table<'d, Config> {
-    const ACCOUNT_POLICY_KEY: &'d [u8] = b"account policy key";
-
+impl<'d> Table<'d, String> {
     /// Opens the  `configs` map in the database.
     ///
     /// Returns `None` if the map does not exist.
@@ -33,12 +20,8 @@ impl<'d> Table<'d, Config> {
     ///
     /// Returns an error if it has already been initialized or
     /// if database operation fails.
-    pub fn init_expiry_period(&self, secs: u32) -> Result<()> {
-        let init = Config::AccountPolicy(AccountPolicy {
-            expiry_period_in_secs: secs,
-        });
-        self.map
-            .insert(Self::ACCOUNT_POLICY_KEY, &super::serialize(&init)?)
+    pub fn init(&self, key: &str, value: &str) -> Result<()> {
+        self.map.insert(key.as_bytes(), value.as_bytes())
     }
 
     /// Updates or initializes the account policy expiry period.
@@ -46,17 +29,14 @@ impl<'d> Table<'d, Config> {
     /// # Errors
     ///
     /// Returns an error if database operation fails.
-    pub fn update_expiry_period(&self, secs: u32) -> Result<()> {
-        if let Some(old) = self.map.get(Self::ACCOUNT_POLICY_KEY)? {
-            let update = super::serialize(&Config::AccountPolicy(AccountPolicy {
-                expiry_period_in_secs: secs,
-            }))?;
+    pub fn update(&self, key: &str, value: &str) -> Result<()> {
+        if let Some(old) = self.map.get(key.as_bytes())? {
             self.map.update(
-                (Self::ACCOUNT_POLICY_KEY, old.as_ref()),
-                (Self::ACCOUNT_POLICY_KEY, &update),
+                (key.as_bytes(), old.as_ref()),
+                (key.as_bytes(), value.as_bytes()),
             )
         } else {
-            self.init_expiry_period(secs)
+            self.init(key, value)
         }
     }
 
@@ -66,16 +46,13 @@ impl<'d> Table<'d, Config> {
     /// # Errors
     ///
     /// Returns an error if database operation fails.
-    pub fn current_expiry_period(&self) -> Result<Option<u32>> {
+    pub fn current(&self, key: &str) -> Result<Option<String>> {
+        use anyhow::anyhow;
+
         self.map
-            .get(Self::ACCOUNT_POLICY_KEY)?
-            .map(|p| {
-                super::deserialize(p.as_ref()).map(|c| match c {
-                    Config::AccountPolicy(p) => Some(p.expiry_period_in_secs),
-                })
-            })
+            .get(key.as_bytes())?
+            .map(|p| String::from_utf8(p.as_ref().to_owned()).map_err(|e| anyhow!("{e}")))
             .transpose()
-            .map(Option::flatten)
     }
 }
 
@@ -92,9 +69,9 @@ mod tests {
         let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
         let table = store.config_map();
 
-        assert!(table.update_expiry_period(10).is_ok());
-        assert_eq!(table.current_expiry_period().unwrap(), Some(10));
-        assert!(table.update_expiry_period(20).is_ok());
-        assert_eq!(table.current_expiry_period().unwrap(), Some(20));
+        assert!(table.update("test", "10").is_ok());
+        assert_eq!(table.current("test").unwrap(), Some("10".to_string()));
+        assert!(table.update("test", "20").is_ok());
+        assert_eq!(table.current("test").unwrap(), Some("20".to_string()));
     }
 }
