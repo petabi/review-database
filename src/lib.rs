@@ -68,7 +68,6 @@ pub use self::top_n::{
 };
 pub use self::types::{EventCategory, HostNetworkGroup, Qualifier, Status};
 pub use self::util::find_ip_country;
-use crate::tables::Config;
 
 #[derive(Clone)]
 pub struct Database {
@@ -201,7 +200,7 @@ impl Store {
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn config_map(&self) -> Table<'_, Config> {
+    pub fn config_map(&self) -> Table<'_, String> {
         self.states.configs()
     }
 

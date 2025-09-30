@@ -228,7 +228,9 @@ fn migrate_0_41_to_0_42(store: &super::Store) -> Result<()> {
 fn migrate_account_policy(store: &super::Store) -> Result<()> {
     let current = store.account_policy_map().current_expiry_period()?;
     if let Some(init) = current {
-        store.config_map().init_expiry_period(init)?;
+        store
+            .config_map()
+            .init("account expiry period in seconds", &init.to_string())?;
     }
     Ok(())
 }
