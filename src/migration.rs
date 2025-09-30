@@ -220,6 +220,16 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
 
 fn migrate_0_41_to_0_42(store: &super::Store) -> Result<()> {
     migrate_0_41_events(store)?;
+    migrate_account_policy(store)?;
+    Ok(())
+}
+
+#[allow(deprecated)]
+fn migrate_account_policy(store: &super::Store) -> Result<()> {
+    let current = store.account_policy_map().current_expiry_period()?;
+    if let Some(init) = current {
+        store.config_map().init_expiry_period(init)?;
+    }
     Ok(())
 }
 

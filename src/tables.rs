@@ -8,6 +8,7 @@ mod block_network;
 mod category;
 mod cluster;
 mod column_stats;
+mod config;
 mod csv_column_extra;
 mod customer;
 mod data_source;
@@ -45,6 +46,7 @@ pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::cluster::Cluster;
 pub use self::column_stats::ColumnStats;
+pub use self::config::Config;
 pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::customer::{Customer, Network as CustomerNetwork, Update as CustomerUpdate};
 pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
@@ -100,6 +102,7 @@ pub(super) const BLOCK_NETWORKS: &str = "block networks";
 pub(super) const CATEGORY: &str = "category";
 pub(super) const CLUSTER: &str = "cluster";
 pub(super) const COLUMN_STATS: &str = "column stats";
+pub(super) const CONFIGS: &str = "configs";
 pub(super) const CSV_COLUMN_EXTRAS: &str = "csv column extras";
 pub(super) const CUSTOMERS: &str = "customers";
 pub(super) const DATA_SOURCES: &str = "data sources";
@@ -125,7 +128,7 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 34] = [
+const MAP_NAMES: [&str; 35] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -136,6 +139,7 @@ const MAP_NAMES: [&str; 34] = [
     CATEGORY,
     CLUSTER,
     COLUMN_STATS,
+    CONFIGS,
     CSV_COLUMN_EXTRAS,
     CUSTOMERS,
     DATA_SOURCES,
@@ -384,6 +388,12 @@ impl StateDb {
     pub(crate) fn models(&self) -> IndexedTable<'_, Model> {
         let inner = self.inner.as_ref().expect("database must be open");
         IndexedTable::<Model>::open(inner).expect("{MODELS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn configs(&self) -> Table<'_, Config> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<Config>::open(inner).expect("{CONFIGS} table must be present")
     }
 
     #[must_use]
