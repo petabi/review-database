@@ -109,18 +109,16 @@ impl ClassifierFileManager {
 
     /// Loads classifier data from the file system.
     ///
-    /// If the classifier file doesn't exist, returns an empty Vec rather than
-    /// an error. This allows graceful handling of missing classifiers.
-    ///
     /// # Errors
     ///
+    /// Returns `FileNotFound` if the classifier file does not exist.
     /// If loading fails due to permission denied, I/O errors, corrupted file, etc.
     pub(crate) async fn load_classifier(&self, model_id: i32, name: &str) -> Result<Vec<u8>> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
-        // Return empty vector if file doesn't exist
+        // Return error if file doesn't exist
         if !file_path.exists() {
-            return Ok(Vec::new());
+            return Err(ClassifierFsError::FileNotFound(model_id, name.to_string()));
         }
 
         async_fs::read(&file_path)
@@ -294,8 +292,11 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
 
-        let loaded_data = manager.load_classifier(999, "nonexistent").await.unwrap();
-        assert!(loaded_data.is_empty());
+        let result = manager.load_classifier(999, "nonexistent").await;
+        assert!(matches!(
+            result,
+            Err(ClassifierFsError::FileNotFound(999, name)) if name == "nonexistent"
+        ));
     }
 
     #[test]
