@@ -19,7 +19,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   from an FTP session instead of just the last command. The `FtpEventFields`,
   `FtpPlainText`, and `BlocklistFtp` structures now use a `commands:
   Vec<FtpCommand>` field instead of individual command-related fields.
-- Added automatic migration for existing FTP event data from v0.41 to v0.42 format.
+- Added automatic migration for existing FTP event data from v0.41 to v0.42
+  format.
+- Changed `cluster_id` type from `String` to `i32` in both RocksDB and
+  PostgreSQL databases. The `cluster_id` is now stored as a numerical ID,
+  reducing storage overhead and improving query performance. The `Cluster`
+  struct in RocksDB now uses `i32` for the `id` field, and
+  `TopColumnsOfCluster` uses `i32` for `cluster_id`. User-facing string
+  representations should be handled at the UI or service layer.
 
 ### Removed
 
