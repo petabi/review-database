@@ -46,8 +46,10 @@ pub struct LdapBruteForceFieldsV0_42 {
     pub dst_port: u16,
     pub proto: u8,
     pub user_pw_list: Vec<(String, String)>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub confidence: f32,
     pub category: Option<EventCategory>,
 }
@@ -55,6 +57,8 @@ pub struct LdapBruteForceFieldsV0_42 {
 impl LdapBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -67,8 +71,8 @@ impl LdapBruteForceFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             get_user_pw_list(&self.user_pw_list),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.confidence.to_string()
         )
     }
@@ -96,8 +100,8 @@ impl From<LdapBruteForceFieldsV0_41> for LdapBruteForceFieldsV0_42 {
             dst_port: value.dst_port,
             proto: value.proto,
             user_pw_list: value.user_pw_list,
-            start_time: value.start_time,
-            end_time: value.end_time,
+            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
             confidence: value.confidence,
             category: value.category.into(),
         }
@@ -159,8 +163,8 @@ impl LdapBruteForce {
             dst_port: fields.dst_port,
             proto: fields.proto,
             user_pw_list: fields.user_pw_list.clone(),
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -238,8 +242,13 @@ pub struct LdapEventFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
     pub start_time: i64,
-    pub end_time: i64,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub message_id: u32,
     pub version: u8,
     pub opcode: Vec<String>,
@@ -254,11 +263,9 @@ pub struct LdapEventFieldsV0_42 {
 impl LdapEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -269,8 +276,12 @@ impl LdapEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            start_time_dt.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -305,6 +316,8 @@ pub(crate) struct LdapEventFieldsV0_39 {
 
 impl MigrateFrom<LdapEventFieldsV0_39> for LdapEventFieldsV0_42 {
     fn new(value: LdapEventFieldsV0_39, start_time: i64) -> Self {
+        let duration = value.end_time.saturating_sub(start_time);
+
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -313,7 +326,11 @@ impl MigrateFrom<LdapEventFieldsV0_39> for LdapEventFieldsV0_42 {
             dst_port: value.dst_port,
             proto: value.proto,
             start_time,
-            end_time: value.end_time,
+            duration,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             message_id: value.message_id,
             version: value.version,
             opcode: value.opcode,
@@ -336,8 +353,12 @@ pub struct LdapPlainText {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub message_id: u32,
     pub version: u8,
     pub opcode: Vec<String>,
@@ -352,20 +373,21 @@ pub struct LdapPlainText {
 
 impl fmt::Display for LdapPlainText {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -383,13 +405,17 @@ impl LdapPlainText {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            end_time: fields.end_time,
+            duration: fields.duration,
+            orig_pkts: fields.orig_pkts,
+            resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             message_id: fields.message_id,
             version: fields.version,
             opcode: fields.opcode,
@@ -463,8 +489,12 @@ pub struct BlocklistLdap {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub message_id: u32,
     pub version: u8,
     pub opcode: Vec<String>,
@@ -479,20 +509,21 @@ pub struct BlocklistLdap {
 
 impl fmt::Display for BlocklistLdap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -510,13 +541,17 @@ impl BlocklistLdap {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            end_time: fields.end_time,
+            duration: fields.duration,
+            orig_pkts: fields.orig_pkts,
+            resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             message_id: fields.message_id,
             version: fields.version,
             opcode: fields.opcode,

@@ -120,6 +120,8 @@ pub type FtpBruteForceFields = FtpBruteForceFieldsV0_42;
 impl FtpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -132,8 +134,8 @@ impl FtpBruteForceFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.user_list.join(","),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.is_internal.to_string(),
             self.confidence.to_string()
         )
@@ -148,8 +150,10 @@ pub struct FtpBruteForceFieldsV0_42 {
     pub dst_port: u16,
     pub proto: u8,
     pub user_list: Vec<String>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub is_internal: bool,
     pub confidence: f32,
     pub category: Option<EventCategory>,
@@ -164,8 +168,8 @@ impl From<FtpBruteForceFieldsV0_41> for FtpBruteForceFieldsV0_42 {
             dst_port: value.dst_port,
             proto: value.proto,
             user_list: value.user_list,
-            start_time: value.start_time,
-            end_time: value.end_time,
+            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
             is_internal: value.is_internal,
             confidence: value.confidence,
             category: value.category.into(),
@@ -232,8 +236,8 @@ impl FtpBruteForce {
             dst_port: fields.dst_port,
             proto: fields.proto,
             user_list: fields.user_list.clone(),
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             is_internal: fields.is_internal,
             confidence: fields.confidence,
             category: fields.category,
@@ -308,6 +312,7 @@ pub type FtpEventFields = FtpEventFieldsV0_42;
 impl FtpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
         let commands_str = self
             .commands
             .iter()
@@ -315,11 +320,8 @@ impl FtpEventFields {
             .collect::<Vec<_>>()
             .join(";");
 
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} user={:?} password={:?} commands={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -330,8 +332,12 @@ impl FtpEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            start_time_dt.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.user,
             self.password,
             commands_str,
@@ -348,8 +354,13 @@ pub struct FtpEventFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
     pub start_time: i64,
-    pub end_time: i64,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub user: String,
     pub password: String,
     pub commands: Vec<FtpCommand>,
@@ -372,6 +383,8 @@ impl MigrateFrom<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
             file_id: value.file_id,
         };
 
+        let duration = value.end_time.saturating_sub(start_time);
+
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -380,7 +393,11 @@ impl MigrateFrom<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
             dst_port: value.dst_port,
             proto: value.proto,
             start_time,
-            end_time: value.end_time,
+            duration,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             user: value.user,
             password: value.password,
             commands: vec![command],
@@ -424,8 +441,12 @@ pub struct FtpPlainText {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub user: String,
     pub password: String,
     pub commands: Vec<FtpCommand>,
@@ -443,20 +464,21 @@ impl fmt::Display for FtpPlainText {
             .collect::<Vec<_>>()
             .join(";");
 
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} user={:?} password={:?} commands={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.user,
             self.password,
             commands_str,
@@ -470,13 +492,17 @@ impl FtpPlainText {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            end_time: fields.end_time,
+            duration: fields.duration,
+            orig_pkts: fields.orig_pkts,
+            resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             user: fields.user,
             password: fields.password,
             commands: fields.commands,
@@ -546,8 +572,12 @@ pub struct BlocklistFtp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub user: String,
     pub password: String,
     pub commands: Vec<FtpCommand>,
@@ -565,20 +595,21 @@ impl fmt::Display for BlocklistFtp {
             .collect::<Vec<_>>()
             .join(";");
 
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} user={:?} password={:?} commands={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.user,
             self.password,
             commands_str,
@@ -592,13 +623,17 @@ impl BlocklistFtp {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            end_time: fields.end_time,
+            duration: fields.duration,
+            orig_pkts: fields.orig_pkts,
+            resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             user: fields.user,
             password: fields.password,
             commands: fields.commands,
