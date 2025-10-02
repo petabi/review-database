@@ -1371,6 +1371,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
             proto: 17,
+            start_time: 0,
             end_time: 100,
             op: 1,
             htype: 2,
@@ -1397,6 +1398,7 @@ mod tests {
             dst_port: 80,
             proto: 6,
             conn_state: "SAF".to_string(),
+            start_time: 0,
             end_time: 1000,
             service: "http".to_string(),
             orig_bytes: 100,
@@ -1418,6 +1420,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 135,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             rtt: 1,
             named_pipe: "svcctl".to_string(),
@@ -1436,6 +1439,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
             proto: 17,
+            start_time: 0,
             end_time: 100,
             msg_type: 1,
             ciaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 5)),
@@ -1468,6 +1472,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
+            start_time: 0,
             end_time: 100,
             query: "foo.com".to_string(),
             answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
@@ -1494,6 +1499,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
+            start_time: 0,
             end_time: 600,
             method: "GET".to_string(),
             host: "example.com".to_string(),
@@ -1528,6 +1534,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 88,
             proto: 17,
+            start_time: 0,
             end_time: 100,
             client_time: 100,
             server_time: 101,
@@ -1551,6 +1558,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 1883,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             protocol: "mqtt".to_string(),
             version: 211,
@@ -1571,6 +1579,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 2049,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             read_files: vec!["/etc/passwd".to_string()],
             write_files: vec!["/etc/shadow".to_string()],
@@ -1587,6 +1596,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             protocol: "ntlm".to_string(),
             username: "user1".to_string(),
@@ -1606,6 +1616,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 3389,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             cookie: "cookie".to_string(),
             confidence: 1.0,
@@ -1621,6 +1632,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             command: 1,
             path: "path".to_string(),
@@ -1646,6 +1658,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 25,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             mailfrom: "mailfrom".to_string(),
             date: "date".to_string(),
@@ -1667,6 +1680,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 22,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             client: "client".to_string(),
             server: "server".to_string(),
@@ -1694,6 +1708,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
+            start_time: 0,
             end_time: 100,
             server_name: "server".to_string(),
             alpn_protocol: "alpn".to_string(),
@@ -1724,6 +1739,11 @@ mod tests {
     fn ldap_event_fields() -> LdapEventFields {
         LdapEventFields {
             sensor: "sensor".to_string(),
+            start_time: Utc
+                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
+                .unwrap()
+                .timestamp_nanos_opt()
+                .unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -1759,6 +1779,11 @@ mod tests {
         };
 
         FtpEventFields {
+            start_time: Utc
+                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
+                .unwrap()
+                .timestamp_nanos_opt()
+                .unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -1824,6 +1849,7 @@ mod tests {
     fn crypto_miining_pool_fields() -> CryptocurrencyMiningPoolFields {
         CryptocurrencyMiningPoolFields {
             sensor: "sensro".to_string(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
@@ -1888,6 +1914,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
+            start_time: 0,
             end_time: 1000,
             method: "GET".to_string(),
             host: "example.com".to_string(),
@@ -1917,6 +1944,7 @@ mod tests {
     fn http_event_fields() -> HttpEventFields {
         HttpEventFields {
             sensor: "sensor".to_string(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -1985,6 +2013,7 @@ mod tests {
     fn dns_event_fields() -> DnsEventFields {
         DnsEventFields {
             sensor: "sensor".to_string(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc::now(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
@@ -2018,6 +2047,7 @@ mod tests {
             resp_port: 80,
             proto: 6,
             service: "http".to_string(),
+            start_time: 0,
             end_time: 100,
             content: "content".to_string(),
             db_name: "db_name".to_string(),
@@ -2080,6 +2110,7 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
+            start_time: 0,
             end_time: 1000,
             method: "GET".to_string(),
             host: "example.com".to_string(),

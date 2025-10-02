@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -39,6 +40,7 @@ pub struct BlocklistNfsFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
@@ -46,8 +48,8 @@ pub struct BlocklistNfsFieldsV0_42 {
     pub category: Option<EventCategory>,
 }
 
-impl From<BlocklistNfsFieldsV0_41> for BlocklistNfsFieldsV0_42 {
-    fn from(value: BlocklistNfsFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistNfsFieldsV0_41> for BlocklistNfsFieldsV0_42 {
+    fn new(value: BlocklistNfsFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -55,6 +57,7 @@ impl From<BlocklistNfsFieldsV0_41> for BlocklistNfsFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             read_files: value.read_files,
             write_files: value.write_files,
@@ -82,8 +85,11 @@ pub(crate) struct BlocklistNfsFieldsV0_41 {
 impl BlocklistNfsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} read_files={:?} write_files={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} read_files={:?} write_files={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -94,7 +100,8 @@ impl BlocklistNfsFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.read_files.join(","),
             self.write_files.join(","),
             self.confidence.to_string()
@@ -111,6 +118,7 @@ pub struct BlocklistNfs {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
@@ -120,16 +128,20 @@ pub struct BlocklistNfs {
 }
 impl fmt::Display for BlocklistNfs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} read_files={:?} write_files={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} read_files={:?} write_files={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.read_files.join(","),
             self.write_files.join(","),
             triage_scores_to_string(self.triage_scores.as_ref())
@@ -147,6 +159,7 @@ impl BlocklistNfs {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             read_files: fields.read_files,
             write_files: fields.write_files,

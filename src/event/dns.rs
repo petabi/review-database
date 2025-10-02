@@ -9,6 +9,7 @@ use super::{EventCategory, HIGH, LearningMethod, MEDIUM, TriageScore, common::Ma
 use crate::{
     TriageExclusion,
     event::common::{AttrValue, triage_scores_to_string, vector_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -48,13 +49,15 @@ pub type DnsEventFields = DnsEventFieldsV0_42;
 #[derive(Deserialize, Serialize)]
 pub struct DnsEventFieldsV0_42 {
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -71,16 +74,17 @@ pub struct DnsEventFieldsV0_42 {
     pub category: Option<EventCategory>,
 }
 
-impl From<DnsEventFieldsV0_41> for DnsEventFieldsV0_42 {
-    fn from(value: DnsEventFieldsV0_41) -> Self {
+impl MigrateFrom<DnsEventFieldsV0_41> for DnsEventFieldsV0_42 {
+    fn new(value: DnsEventFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
-            end_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time: chrono::DateTime::from_timestamp_nanos(start_time),
+            end_time: value.end_time,
             query: value.query,
             answer: value.answer,
             trans_id: value.trans_id,
@@ -129,12 +133,13 @@ impl DnsEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
+            "category={:?} sensor={:?} start_time={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
             ),
             self.sensor,
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -162,12 +167,13 @@ impl DnsEventFields {
 pub struct DnsCovertChannel {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -189,8 +195,9 @@ impl fmt::Display for DnsCovertChannel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} start_time={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -220,6 +227,7 @@ impl DnsCovertChannel {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -319,12 +327,13 @@ impl Match for DnsCovertChannel {
 pub struct LockyRansomware {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -346,8 +355,9 @@ impl fmt::Display for LockyRansomware {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} start_time={:?} end_time={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -377,6 +387,7 @@ impl LockyRansomware {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -483,6 +494,8 @@ pub struct CryptocurrencyMiningPoolFieldsV0_42 {
     pub dst_port: u16,
     pub proto: u8,
     #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
@@ -505,7 +518,7 @@ impl CryptocurrencyMiningPoolFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -516,6 +529,7 @@ impl CryptocurrencyMiningPoolFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.query,
             self.answer.join(","),
@@ -561,8 +575,8 @@ pub(crate) struct CryptocurrencyMiningPoolFieldsV0_41 {
     pub confidence: f32,
     pub category: EventCategoryV0_41,
 }
-impl From<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolFieldsV0_42 {
-    fn from(value: CryptocurrencyMiningPoolFieldsV0_41) -> Self {
+impl MigrateFrom<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolFieldsV0_42 {
+    fn new(value: CryptocurrencyMiningPoolFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -570,6 +584,7 @@ impl From<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolField
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time: chrono::DateTime::from_timestamp_nanos(start_time),
             end_time: value.end_time,
             query: value.query,
             answer: value.answer,
@@ -594,12 +609,13 @@ impl From<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolField
 pub struct CryptocurrencyMiningPool {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -622,13 +638,14 @@ impl fmt::Display for CryptocurrencyMiningPool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} coins={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.query,
             self.answer.join(","),
@@ -653,6 +670,7 @@ impl CryptocurrencyMiningPool {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -759,6 +777,7 @@ pub struct BlocklistDnsFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub query: String,
     pub answer: Vec<String>,
@@ -779,8 +798,11 @@ pub struct BlocklistDnsFieldsV0_42 {
 impl BlocklistDnsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -791,7 +813,8 @@ impl BlocklistDnsFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
@@ -834,8 +857,8 @@ pub(crate) struct BlocklistDnsFieldsV0_41 {
     pub category: EventCategoryV0_41,
 }
 
-impl From<BlocklistDnsFieldsV0_41> for BlocklistDnsFieldsV0_42 {
-    fn from(value: BlocklistDnsFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistDnsFieldsV0_41> for BlocklistDnsFieldsV0_42 {
+    fn new(value: BlocklistDnsFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -843,6 +866,7 @@ impl From<BlocklistDnsFieldsV0_41> for BlocklistDnsFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             query: value.query,
             answer: value.answer,
@@ -870,6 +894,7 @@ pub struct BlocklistDns {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub query: String,
     pub answer: Vec<String>,
@@ -890,16 +915,20 @@ pub struct BlocklistDns {
 
 impl fmt::Display for BlocklistDns {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} query={:?} answer={:?} trans_id={:?} rtt={:?} qclass={:?} qtype={:?} rcode={:?} aa_flag={:?} tc_flag={:?} rd_flag={:?} ra_flag={:?} ttl={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.query,
             self.answer.join(","),
             self.trans_id.to_string(),
@@ -922,6 +951,7 @@ impl BlocklistDns {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
