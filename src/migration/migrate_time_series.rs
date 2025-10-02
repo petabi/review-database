@@ -63,7 +63,13 @@ async fn get_time_series(database: &Database, model_id: i32) -> Result<Vec<TimeS
     Ok(c_d::cluster
         .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
         .filter(c_d::model_id.eq(model_id))
-        .select((c_d::id, t_d::time, t_d::count_index, t_d::value, t_d::count))
+        .select((
+            c_d::cluster_id,
+            t_d::time,
+            t_d::count_index,
+            t_d::value,
+            t_d::count,
+        ))
         .load::<(i32, NaiveDateTime, Option<i32>, NaiveDateTime, i64)>(&mut conn)
         .await?
         .into_iter()
