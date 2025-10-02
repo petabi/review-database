@@ -1,7 +1,7 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{NetworkAttr, RawEventAttrKind};
+use attrievent::attribute::{ConnAttr, NetworkAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
@@ -12,18 +12,29 @@ use crate::event::common::{AttrValue, triage_scores_to_string};
 // protocols are consolidated into `NetworkThreat` events.
 macro_rules! find_network_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {
-        if let RawEventAttrKind::Network(attr) = $raw_event_attr {
-            let target_value = match attr {
-                NetworkAttr::SrcAddr => AttrValue::Addr($event.orig_addr),
-                NetworkAttr::SrcPort => AttrValue::UInt($event.orig_port.into()),
-                NetworkAttr::DstAddr => AttrValue::Addr($event.resp_addr),
-                NetworkAttr::DstPort => AttrValue::UInt($event.resp_port.into()),
-                NetworkAttr::Proto => AttrValue::UInt($event.proto.into()),
-                NetworkAttr::Content => AttrValue::String(&$event.content),
-            };
-            Some(target_value)
-        } else {
-            None
+        match $raw_event_attr {
+            RawEventAttrKind::Network(attr) => {
+                let target_value = match attr {
+                    NetworkAttr::SrcAddr => AttrValue::Addr($event.orig_addr),
+                    NetworkAttr::SrcPort => AttrValue::UInt($event.orig_port.into()),
+                    NetworkAttr::DstAddr => AttrValue::Addr($event.resp_addr),
+                    NetworkAttr::DstPort => AttrValue::UInt($event.resp_port.into()),
+                    NetworkAttr::Proto => AttrValue::UInt($event.proto.into()),
+                    NetworkAttr::Content => AttrValue::String(&$event.content),
+                };
+                Some(target_value)
+            }
+            RawEventAttrKind::Conn(attr) => match attr {
+                ConnAttr::Duration => Some(AttrValue::SInt($event.duration)),
+                ConnAttr::OrigBytes => Some(AttrValue::UInt($event.orig_bytes)),
+                ConnAttr::RespBytes => Some(AttrValue::UInt($event.resp_bytes)),
+                ConnAttr::OrigPkts => Some(AttrValue::UInt($event.orig_pkts)),
+                ConnAttr::RespPkts => Some(AttrValue::UInt($event.resp_pkts)),
+                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt($event.orig_l2_bytes)),
+                ConnAttr::RespL2Bytes => Some(AttrValue::UInt($event.resp_l2_bytes)),
+                _ => None,
+            },
+            _ => None,
         }
     };
 }
@@ -39,8 +50,15 @@ pub struct NetworkThreat {
     pub resp_port: u16,
     pub proto: u8,
     pub service: String,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub content: String,
     pub db_name: String,
     pub rule_id: u32,
@@ -55,10 +73,8 @@ pub struct NetworkThreat {
 impl NetworkThreat {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
         format!(
-            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -70,8 +86,15 @@ impl NetworkThreat {
             self.resp_port.to_string(),
             self.proto.to_string(),
             self.service,
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_bytes.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.content,
             self.db_name,
             self.rule_id.to_string(),
@@ -86,11 +109,9 @@ impl NetworkThreat {
 
 impl fmt::Display for NetworkThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
         write!(
             f,
-            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.orig_addr.to_string(),
             self.orig_port.to_string(),
@@ -98,8 +119,15 @@ impl fmt::Display for NetworkThreat {
             self.resp_port.to_string(),
             self.proto.to_string(),
             self.service,
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_bytes.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.content,
             self.db_name,
             self.rule_id.to_string(),

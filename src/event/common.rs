@@ -1374,6 +1374,8 @@ mod tests {
     }
 
     fn blocklist_bootp_fields() -> BlocklistBootpFields {
+        use chrono::DateTime;
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistBootpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1381,8 +1383,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time: end_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             op: 1,
             htype: 2,
             hops: 1,
@@ -1400,6 +1409,9 @@ mod tests {
     }
 
     fn blocklist_conn_fields() -> BlocklistConnFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(1000);
         BlocklistConnFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1408,8 +1420,9 @@ mod tests {
             dst_port: 80,
             proto: 6,
             conn_state: "SAF".to_string(),
-            start_time: 0,
-            end_time: 1000,
+            start_time,
+            end_time,
+            duration: 1000,
             service: "http".to_string(),
             orig_bytes: 100,
             orig_pkts: 1,
@@ -1423,6 +1436,8 @@ mod tests {
     }
 
     fn blocklist_dcerpc_fields() -> BlocklistDceRpcFields {
+        use chrono::DateTime;
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistDceRpcFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1430,8 +1445,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 135,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: end_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
             rtt: 1,
             named_pipe: "svcctl".to_string(),
             endpoint: "epmapper".to_string(),
@@ -1442,6 +1462,8 @@ mod tests {
     }
 
     fn blocklist_dhcp_fields() -> BlocklistDhcpFields {
+        use chrono::DateTime;
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistDhcpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1449,8 +1471,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time: end_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             msg_type: 1,
             ciaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 5)),
             yiaddr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 6)),
@@ -1475,6 +1504,9 @@ mod tests {
     }
 
     fn blocklist_dns_fields() -> BlocklistDnsFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistDnsFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1482,8 +1514,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 1,
+            resp_pkts: 1,
+            orig_l2_bytes: 122,
+            resp_l2_bytes: 122,
             query: "foo.com".to_string(),
             answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
             trans_id: 123,
@@ -1502,6 +1541,9 @@ mod tests {
     }
 
     fn blocklist_http_fields() -> BlocklistHttpFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(600);
         BlocklistHttpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1509,8 +1551,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: 0,
-            end_time: 600,
+            start_time,
+            end_time,
+            duration: 600,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 1,
+            resp_pkts: 1,
+            orig_l2_bytes: 122,
+            resp_l2_bytes: 122,
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -1537,6 +1586,9 @@ mod tests {
     }
 
     fn blocklist_kerberos_fields() -> BlocklistKerberosFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistKerberosFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1544,8 +1596,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 88,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 1,
+            resp_pkts: 1,
+            orig_l2_bytes: 122,
+            resp_l2_bytes: 122,
             client_time: 100,
             server_time: 101,
             error_code: 0,
@@ -1561,6 +1620,8 @@ mod tests {
     }
 
     fn blocklist_mqtt_fields() -> BlocklistMqttFields {
+        use chrono::DateTime;
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistMqttFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1568,8 +1629,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 1883,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: end_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             protocol: "mqtt".to_string(),
             version: 211,
             client_id: "client1".to_string(),
@@ -1582,6 +1650,9 @@ mod tests {
     }
 
     fn blocklist_nfs_fields() -> BlocklistNfsFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistNfsFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1589,8 +1660,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 2049,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_pkts: 1,
+            orig_bytes: 100,
+            resp_pkts: 1,
+            resp_bytes: 100,
             read_files: vec!["/etc/passwd".to_string()],
             write_files: vec!["/etc/shadow".to_string()],
             confidence: 1.0,
@@ -1599,6 +1675,8 @@ mod tests {
     }
 
     fn blocklist_ntlm_fields() -> BlocklistNtlmFields {
+        use chrono::DateTime;
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistNtlmFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1606,8 +1684,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: end_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             protocol: "ntlm".to_string(),
             username: "user1".to_string(),
             hostname: "host1".to_string(),
@@ -1619,6 +1704,8 @@ mod tests {
     }
 
     fn blocklist_rdp_fields() -> BlocklistRdpFields {
+        use chrono::DateTime;
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistRdpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1626,8 +1713,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 3389,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: end_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             cookie: "cookie".to_string(),
             confidence: 1.0,
             category: Some(EventCategory::InitialAccess),
@@ -1635,6 +1729,8 @@ mod tests {
     }
 
     fn blocklist_smb_fields() -> BlocklistSmbFields {
+        use chrono::DateTime;
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistSmbFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1642,8 +1738,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: end_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             command: 1,
             path: "path".to_string(),
             service: "service".to_string(),
@@ -1661,6 +1764,9 @@ mod tests {
     }
 
     fn blocklist_smtp_fields() -> BlocklistSmtpFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistSmtpFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1668,8 +1774,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 25,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_pkts: 1,
+            orig_bytes: 100,
+            resp_pkts: 1,
+            resp_bytes: 100,
             mailfrom: "mailfrom".to_string(),
             date: "date".to_string(),
             from: "from".to_string(),
@@ -1683,6 +1794,9 @@ mod tests {
     }
 
     fn blocklist_ssh_fields() -> BlocklistSshFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistSshFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1690,8 +1804,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 22,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_pkts: 1,
+            orig_bytes: 100,
+            resp_pkts: 1,
+            resp_bytes: 100,
             client: "client".to_string(),
             server: "server".to_string(),
             cipher_alg: "cipher_alg".to_string(),
@@ -1711,6 +1830,9 @@ mod tests {
     }
 
     fn blocklist_tls_fields() -> BlocklistTlsFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistTlsFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1718,8 +1840,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 1,
+            resp_pkts: 1,
+            orig_l2_bytes: 122,
+            resp_l2_bytes: 122,
             server_name: "server".to_string(),
             alpn_protocol: "alpn".to_string(),
             ja3: "ja3".to_string(),
@@ -1747,19 +1876,25 @@ mod tests {
     }
 
     fn ldap_event_fields() -> LdapEventFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         LdapEventFields {
             sensor: "sensor".to_string(),
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
             proto: 6,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             message_id: 1,
             version: 3,
             opcode: vec!["bind".to_string()],
@@ -1773,6 +1908,8 @@ mod tests {
     }
 
     fn ftp_event_fields() -> FtpEventFields {
+        use chrono::DateTime;
+
         use crate::event::ftp::FtpCommand;
 
         let command = FtpCommand {
@@ -1788,22 +1925,27 @@ mod tests {
             file_id: "123".to_string(),
         };
 
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         FtpEventFields {
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
             proto: 6,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             user: "user1".to_string(),
             password: "password".to_string(),
             commands: vec![command],
-            sensor: "collector1".to_string(),
             confidence: 1.0,
             category: Some(EventCategory::LateralMovement),
         }
@@ -1817,7 +1959,14 @@ mod tests {
             dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            duration: 100,
             proto: 6,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             confidence: 0.3,
             category: Some(EventCategory::Reconnaissance),
         }
@@ -1834,7 +1983,14 @@ mod tests {
             dst_port: 80,
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            duration: 100,
             proto: 6,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             confidence: 0.3,
             category: Some(EventCategory::Reconnaissance),
         }
@@ -1850,22 +2006,38 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            duration: 100,
             proto: 6,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             confidence: 0.3,
             category: Some(EventCategory::Impact),
         }
     }
 
     fn crypto_miining_pool_fields() -> CryptocurrencyMiningPoolFields {
+        let start_time = Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 0).unwrap();
+        let end_time = Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap();
         CryptocurrencyMiningPoolFields {
             sensor: "sensro".to_string(),
-            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
-            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             query: "foo.com".to_string(),
             answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
             trans_id: 123,
@@ -1894,6 +2066,13 @@ mod tests {
             user_list: vec!["user1".to_string(), "user_2".to_string()],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             is_internal: true,
             confidence: 0.3,
             category: Some(EventCategory::CredentialAccess),
@@ -1911,12 +2090,22 @@ mod tests {
             proto: 6,
             start_time: now,
             end_time: now,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             confidence: 0.3,
             category: Some(EventCategory::Exfiltration),
         }
     }
 
     fn dga_fields() -> DgaFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(1000);
         DgaFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1924,8 +2113,15 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: 0,
-            end_time: 1000,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -1952,15 +2148,25 @@ mod tests {
     }
 
     fn http_event_fields() -> HttpEventFields {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap();
         HttpEventFields {
             sensor: "sensor".to_string(),
-            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap(),
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
@@ -1999,6 +2205,13 @@ mod tests {
             ],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             confidence: 0.3,
             category: Some(EventCategory::CredentialAccess),
         }
@@ -2014,17 +2227,33 @@ mod tests {
             ],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
+            duration: 100,
             proto: 6,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             confidence: 0.3,
             category: Some(EventCategory::Discovery),
         }
     }
 
     fn dns_event_fields() -> DnsEventFields {
+        let start_time = Utc::now();
+        let end_time = start_time;
         DnsEventFields {
             sensor: "sensor".to_string(),
-            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
-            end_time: Utc::now(),
+            start_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 1,
+            resp_pkts: 1,
+            orig_l2_bytes: 122,
+            resp_l2_bytes: 122,
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -2048,6 +2277,9 @@ mod tests {
     }
 
     fn network_threat() -> NetworkThreat {
+        use chrono::DateTime;
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(100);
         NetworkThreat {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             sensor: "sensor".to_string(),
@@ -2057,8 +2289,15 @@ mod tests {
             resp_port: 80,
             proto: 6,
             service: "http".to_string(),
-            start_time: 0,
-            end_time: 100,
+            start_time,
+            end_time,
+            duration: 100,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 10,
+            resp_pkts: 10,
+            orig_l2_bytes: 120,
+            resp_l2_bytes: 120,
             content: "content".to_string(),
             db_name: "db_name".to_string(),
             rule_id: 1,
@@ -2112,16 +2351,27 @@ mod tests {
     }
 
     fn http_threat_fields() -> HttpThreatFields {
+        use chrono::DateTime;
+        let time = Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap();
+        let start_time = DateTime::from_timestamp_nanos(0);
+        let end_time = DateTime::from_timestamp_nanos(1000);
         HttpThreatFields {
-            time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            time,
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: 0,
-            end_time: 1000,
+            start_time,
+            end_time,
+            duration: 1000,
+            orig_bytes: 100,
+            resp_bytes: 100,
+            orig_pkts: 1,
+            resp_pkts: 1,
+            orig_l2_bytes: 122,
+            resp_l2_bytes: 122,
             method: "GET".to_string(),
             host: "example.com".to_string(),
             uri: "/uri/path".to_string(),
