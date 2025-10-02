@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -49,6 +50,7 @@ pub struct BlocklistMqttFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub protocol: String,
     pub version: u8,
@@ -60,8 +62,8 @@ pub struct BlocklistMqttFieldsV0_42 {
     pub category: Option<EventCategory>,
 }
 
-impl From<BlocklistMqttFieldsV0_41> for BlocklistMqttFieldsV0_42 {
-    fn from(value: BlocklistMqttFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistMqttFieldsV0_41> for BlocklistMqttFieldsV0_42 {
+    fn new(value: BlocklistMqttFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -69,6 +71,7 @@ impl From<BlocklistMqttFieldsV0_41> for BlocklistMqttFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             protocol: value.protocol,
             version: value.version,
@@ -104,8 +107,11 @@ pub(crate) struct BlocklistMqttFieldsV0_41 {
 impl BlocklistMqttFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -116,7 +122,8 @@ impl BlocklistMqttFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.protocol,
             self.version.to_string(),
             self.client_id,
@@ -137,6 +144,7 @@ pub struct BlocklistMqtt {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub protocol: String,
     pub version: u8,
@@ -151,16 +159,20 @@ pub struct BlocklistMqtt {
 
 impl fmt::Display for BlocklistMqtt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.protocol,
             self.version.to_string(),
             self.client_id,
@@ -182,6 +194,7 @@ impl BlocklistMqtt {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             protocol: fields.protocol,
             version: fields.version,

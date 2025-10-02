@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -237,6 +238,7 @@ pub struct LdapEventFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub message_id: u32,
     pub version: u8,
@@ -252,8 +254,11 @@ pub struct LdapEventFieldsV0_42 {
 impl LdapEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -264,7 +269,8 @@ impl LdapEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -297,8 +303,8 @@ pub(crate) struct LdapEventFieldsV0_39 {
     pub category: EventCategoryV0_41,
 }
 
-impl From<LdapEventFieldsV0_39> for LdapEventFieldsV0_42 {
-    fn from(value: LdapEventFieldsV0_39) -> Self {
+impl MigrateFrom<LdapEventFieldsV0_39> for LdapEventFieldsV0_42 {
+    fn new(value: LdapEventFieldsV0_39, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -306,6 +312,7 @@ impl From<LdapEventFieldsV0_39> for LdapEventFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             message_id: value.message_id,
             version: value.version,
@@ -329,6 +336,7 @@ pub struct LdapPlainText {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub message_id: u32,
     pub version: u8,
@@ -344,16 +352,20 @@ pub struct LdapPlainText {
 
 impl fmt::Display for LdapPlainText {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -371,6 +383,7 @@ impl LdapPlainText {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -450,6 +463,7 @@ pub struct BlocklistLdap {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub message_id: u32,
     pub version: u8,
@@ -465,16 +479,20 @@ pub struct BlocklistLdap {
 
 impl fmt::Display for BlocklistLdap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} message_id={:?} version={:?} opcode={:?} result={:?} diagnostic_message={:?} object={:?} argument={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.message_id.to_string(),
             self.version.to_string(),
             self.opcode.join(","),
@@ -492,6 +510,7 @@ impl BlocklistLdap {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,

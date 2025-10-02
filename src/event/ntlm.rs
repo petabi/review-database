@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -42,6 +43,7 @@ pub struct BlocklistNtlmFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub protocol: String,
     pub username: String,
@@ -52,8 +54,8 @@ pub struct BlocklistNtlmFieldsV0_42 {
     pub category: Option<EventCategory>,
 }
 
-impl From<BlocklistNtlmFieldsV0_41> for BlocklistNtlmFieldsV0_42 {
-    fn from(value: BlocklistNtlmFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistNtlmFieldsV0_41> for BlocklistNtlmFieldsV0_42 {
+    fn new(value: BlocklistNtlmFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -61,6 +63,7 @@ impl From<BlocklistNtlmFieldsV0_41> for BlocklistNtlmFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             protocol: value.protocol,
             username: value.username,
@@ -94,8 +97,11 @@ pub(crate) struct BlocklistNtlmFieldsV0_41 {
 impl BlocklistNtlmFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -106,7 +112,8 @@ impl BlocklistNtlmFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.protocol,
             self.username,
             self.hostname,
@@ -126,6 +133,7 @@ pub struct BlocklistNtlm {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub protocol: String,
     pub username: String,
@@ -138,16 +146,20 @@ pub struct BlocklistNtlm {
 }
 impl fmt::Display for BlocklistNtlm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} protocol={:?} username={:?} hostname={:?} domainname={:?} success={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.protocol,
             self.username,
             self.hostname,
@@ -167,6 +179,7 @@ impl BlocklistNtlm {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             protocol: fields.protocol,
             username: fields.username,

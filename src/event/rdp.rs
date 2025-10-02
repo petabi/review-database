@@ -12,6 +12,7 @@ use super::{
 };
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -209,14 +210,15 @@ pub struct BlocklistRdpFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub cookie: String,
     pub confidence: f32,
     pub category: Option<EventCategory>,
 }
 
-impl From<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
-    fn from(value: BlocklistRdpFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
+    fn new(value: BlocklistRdpFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -224,6 +226,7 @@ impl From<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             cookie: value.cookie,
             confidence: value.confidence,
@@ -249,8 +252,11 @@ pub(crate) struct BlocklistRdpFieldsV0_41 {
 impl BlocklistRdpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} cookie={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} cookie={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -261,7 +267,8 @@ impl BlocklistRdpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.cookie,
             self.confidence.to_string()
         )
@@ -276,6 +283,7 @@ pub struct BlocklistRdp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub cookie: String,
     pub confidence: f32,
@@ -284,16 +292,20 @@ pub struct BlocklistRdp {
 }
 impl fmt::Display for BlocklistRdp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} cookie={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} cookie={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.cookie,
             triage_scores_to_string(self.triage_scores.as_ref())
         )
@@ -310,6 +322,7 @@ impl BlocklistRdp {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             cookie: fields.cookie,
             confidence: fields.confidence,

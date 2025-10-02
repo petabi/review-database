@@ -10,6 +10,7 @@ use super::{
 };
 use crate::{
     event::common::{to_hardware_address, triage_scores_to_string, vector_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -64,6 +65,7 @@ pub struct BlocklistDhcpFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub msg_type: u8,
     pub ciaddr: IpAddr,
@@ -87,8 +89,8 @@ pub struct BlocklistDhcpFieldsV0_42 {
     pub category: Option<EventCategory>,
 }
 
-impl From<BlocklistDhcpFieldsV0_41> for BlocklistDhcpFieldsV0_42 {
-    fn from(value: BlocklistDhcpFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistDhcpFieldsV0_41> for BlocklistDhcpFieldsV0_42 {
+    fn new(value: BlocklistDhcpFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -96,6 +98,7 @@ impl From<BlocklistDhcpFieldsV0_41> for BlocklistDhcpFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             msg_type: value.msg_type,
             ciaddr: value.ciaddr,
@@ -160,8 +163,10 @@ pub(crate) struct BlocklistDhcpFieldsV0_41 {
 impl BlocklistDhcpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -172,7 +177,8 @@ impl BlocklistDhcpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.msg_type.to_string(),
             self.ciaddr.to_string(),
             self.yiaddr.to_string(),
@@ -207,6 +213,7 @@ pub struct BlocklistDhcp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub msg_type: u8,
     pub ciaddr: IpAddr,
@@ -232,16 +239,19 @@ pub struct BlocklistDhcp {
 }
 impl fmt::Display for BlocklistDhcp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.msg_type.to_string(),
             self.ciaddr.to_string(),
             self.yiaddr.to_string(),
@@ -277,6 +287,7 @@ impl BlocklistDhcp {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             msg_type: fields.msg_type,
             ciaddr: fields.ciaddr,

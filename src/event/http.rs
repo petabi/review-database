@@ -9,6 +9,7 @@ use super::{EventCategory, EventFilter, LOW, LearningMethod, MEDIUM, TriageScore
 use crate::{
     TriageExclusion,
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -58,13 +59,15 @@ pub type HttpEventFields = HttpEventFieldsV0_42;
 #[derive(Deserialize, Serialize)]
 pub struct HttpEventFieldsV0_42 {
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub method: String,
     pub host: String,
     pub uri: String,
@@ -93,7 +96,7 @@ impl HttpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -104,6 +107,7 @@ impl HttpEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.method,
             self.host,
@@ -164,16 +168,17 @@ pub(crate) struct HttpEventFieldsV0_41 {
     pub category: EventCategoryV0_41,
 }
 
-impl From<HttpEventFieldsV0_41> for HttpEventFieldsV0_42 {
-    fn from(value: HttpEventFieldsV0_41) -> Self {
+impl MigrateFrom<HttpEventFieldsV0_41> for HttpEventFieldsV0_42 {
+    fn new(value: HttpEventFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
-            end_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time: chrono::DateTime::from_timestamp_nanos(start_time),
+            end_time: value.end_time,
             method: value.method,
             host: value.host,
             uri: value.uri,
@@ -289,13 +294,15 @@ impl fmt::Display for RepeatedHttpSessions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
     }
@@ -394,6 +401,7 @@ pub struct HttpThreatFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub method: String,
     pub host: String,
@@ -427,8 +435,11 @@ pub struct HttpThreatFieldsV0_42 {
 impl HttpThreatFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -439,7 +450,8 @@ impl HttpThreatFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            chrono::DateTime::from_timestamp_nanos(self.end_time).to_rfc3339(),
+            start_time_str,
+            end_time_str,
             self.method,
             self.host,
             self.uri,
@@ -511,8 +523,8 @@ pub(crate) struct HttpThreatFieldsV0_41 {
     pub category: EventCategoryV0_41,
 }
 
-impl From<HttpThreatFieldsV0_41> for HttpThreatFieldsV0_42 {
-    fn from(value: HttpThreatFieldsV0_41) -> Self {
+impl MigrateFrom<HttpThreatFieldsV0_41> for HttpThreatFieldsV0_42 {
+    fn new(value: HttpThreatFieldsV0_41, start_time: i64) -> Self {
         Self {
             time: value.time,
             sensor: value.sensor,
@@ -521,6 +533,7 @@ impl From<HttpThreatFieldsV0_41> for HttpThreatFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             method: value.method,
             host: value.host,
@@ -579,6 +592,7 @@ pub struct HttpThreat {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub method: String,
     pub host: String,
@@ -612,16 +626,20 @@ pub struct HttpThreat {
 
 impl fmt::Display for HttpThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.method,
             self.host,
             self.uri,
@@ -658,6 +676,7 @@ impl HttpThreat {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -796,6 +815,7 @@ pub struct DgaFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub method: String,
     pub host: String,
@@ -824,8 +844,11 @@ pub struct DgaFieldsV0_42 {
 impl DgaFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -836,7 +859,8 @@ impl DgaFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.method,
             self.host,
             self.uri,
@@ -895,8 +919,8 @@ pub(crate) struct DgaFieldsV0_41 {
     pub category: EventCategoryV0_41,
 }
 
-impl From<DgaFieldsV0_41> for DgaFieldsV0_42 {
-    fn from(value: DgaFieldsV0_41) -> Self {
+impl MigrateFrom<DgaFieldsV0_41> for DgaFieldsV0_42 {
+    fn new(value: DgaFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -904,6 +928,7 @@ impl From<DgaFieldsV0_41> for DgaFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             method: value.method,
             host: value.host,
@@ -941,6 +966,7 @@ pub struct DomainGenerationAlgorithm {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub method: String,
     pub host: String,
@@ -969,16 +995,20 @@ pub struct DomainGenerationAlgorithm {
 
 impl fmt::Display for DomainGenerationAlgorithm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.method,
             self.host,
             self.uri,
@@ -1010,6 +1040,7 @@ impl DomainGenerationAlgorithm {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -1112,12 +1143,13 @@ impl Match for DomainGenerationAlgorithm {
 pub struct NonBrowser {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub method: String,
     pub host: String,
     pub uri: String,
@@ -1147,13 +1179,14 @@ impl fmt::Display for NonBrowser {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.method,
             self.host,
@@ -1185,6 +1218,7 @@ impl NonBrowser {
         NonBrowser {
             time,
             sensor: fields.sensor.clone(),
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -1292,6 +1326,7 @@ pub struct BlocklistHttpFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub method: String,
     pub host: String,
@@ -1320,8 +1355,11 @@ pub struct BlocklistHttpFieldsV0_42 {
 impl BlocklistHttpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -1332,7 +1370,8 @@ impl BlocklistHttpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.method,
             self.host,
             self.uri,
@@ -1391,8 +1430,8 @@ pub(crate) struct BlocklistHttpFieldsV0_41 {
     pub category: EventCategoryV0_41,
 }
 
-impl From<BlocklistHttpFieldsV0_41> for BlocklistHttpFieldsV0_42 {
-    fn from(value: BlocklistHttpFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistHttpFieldsV0_41> for BlocklistHttpFieldsV0_42 {
+    fn new(value: BlocklistHttpFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -1400,6 +1439,7 @@ impl From<BlocklistHttpFieldsV0_41> for BlocklistHttpFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
+            start_time,
             end_time: value.end_time,
             method: value.method,
             host: value.host,
@@ -1437,6 +1477,7 @@ pub struct BlocklistHttp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: i64,
     pub end_time: i64,
     pub method: String,
     pub host: String,
@@ -1465,16 +1506,20 @@ pub struct BlocklistHttp {
 
 impl fmt::Display for BlocklistHttp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.method,
             self.host,
             self.uri,
@@ -1505,6 +1550,7 @@ impl BlocklistHttp {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -1646,7 +1692,8 @@ mod tests {
             category: EventCategoryV0_41::InitialAccess,
         };
 
-        let new_fields_case1: HttpEventFieldsV0_42 = old_fields_case1.into();
+        let new_fields_case1: HttpEventFieldsV0_42 =
+            crate::migration::MigrateFrom::new(old_fields_case1, 0);
 
         // Verify that fields were merged correctly (orig + resp)
         assert_eq!(new_fields_case1.filenames.len(), 2);
@@ -1694,7 +1741,8 @@ mod tests {
             category: EventCategoryV0_41::Collection,
         };
 
-        let new_fields_case2: HttpEventFieldsV0_42 = old_fields_case2.into();
+        let new_fields_case2: HttpEventFieldsV0_42 =
+            crate::migration::MigrateFrom::new(old_fields_case2, 0);
 
         // Verify migration worked correctly (orig + resp)
         assert_eq!(new_fields_case2.filenames.len(), 1);
@@ -1742,7 +1790,7 @@ mod tests {
             category: EventCategoryV0_41::Discovery,
         };
 
-        let new_fields: HttpEventFieldsV0_42 = old_fields.into();
+        let new_fields: HttpEventFieldsV0_42 = crate::migration::MigrateFrom::new(old_fields, 0);
 
         // Verify empty collections remain empty after merge
         assert!(new_fields.filenames.is_empty());

@@ -45,12 +45,13 @@ macro_rules! find_conn_attr_by_kind {
 pub struct TorConnection {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub method: String,
     pub host: String,
     pub uri: String,
@@ -80,13 +81,14 @@ impl fmt::Display for TorConnection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.method,
             self.host,
@@ -118,6 +120,7 @@ impl TorConnection {
         TorConnection {
             time,
             sensor: fields.sensor.clone(),
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -224,8 +227,9 @@ pub struct TorConnectionConn {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub conn_state: String,
+    pub start_time: i64,
     pub end_time: i64,
+    pub conn_state: String,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -240,9 +244,12 @@ pub struct TorConnectionConn {
 
 impl fmt::Display for TorConnectionConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -250,7 +257,8 @@ impl fmt::Display for TorConnectionConn {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -268,6 +276,7 @@ impl TorConnectionConn {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -361,6 +370,7 @@ mod tests {
             dst_port: 443,
             proto: 6,
             conn_state: "SF".to_string(),
+            start_time: 0,
             end_time: end_time.timestamp_nanos_opt().expect("valid time"),
             service: "https".to_string(),
             orig_bytes: 1024,

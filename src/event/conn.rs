@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string, vector_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -565,6 +566,7 @@ pub struct BlocklistConnFieldsV0_42 {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
+    pub start_time: i64,
     pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
@@ -601,8 +603,11 @@ pub(crate) struct BlocklistConnFieldsV0_41 {
 impl BlocklistConnFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -614,7 +619,8 @@ impl BlocklistConnFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -627,8 +633,8 @@ impl BlocklistConnFields {
     }
 }
 
-impl From<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
-    fn from(value: BlocklistConnFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
+    fn new(value: BlocklistConnFieldsV0_41, start_time: i64) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -637,6 +643,7 @@ impl From<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
             dst_port: value.dst_port,
             proto: value.proto,
             conn_state: value.conn_state,
+            start_time,
             end_time: value.end_time,
             service: value.service,
             orig_bytes: value.orig_bytes,
@@ -661,6 +668,7 @@ pub struct BlocklistConn {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
+    pub start_time: i64,
     pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
@@ -676,9 +684,12 @@ pub struct BlocklistConn {
 
 impl fmt::Display for BlocklistConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -686,7 +697,8 @@ impl fmt::Display for BlocklistConn {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.end_time.to_string(),
+            start_time_str,
+            end_time_str,
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -710,6 +722,7 @@ impl BlocklistConn {
             dst_port: fields.dst_port,
             proto: fields.proto,
             conn_state: fields.conn_state,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             service: fields.service,
             orig_bytes: fields.orig_bytes,
