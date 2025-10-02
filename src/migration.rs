@@ -98,7 +98,7 @@ use tracing::info;
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.2,<0.42.0-alpha.3";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.3,<0.42.0-alpha.4";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -193,8 +193,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
     let migration: Vec<Migration> = vec![(
-        VersionReq::parse(">=0.41.0,<0.42.0-alpha.2")?,
-        Version::parse("0.42.0-alpha.2")?,
+        VersionReq::parse(">=0.41.0,<0.42.0-alpha.3")?,
+        Version::parse("0.42.0-alpha.3")?,
         migrate_0_41_to_0_42,
     )];
 
@@ -321,25 +321,34 @@ fn migrate_event_category(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Resu
     use num_traits::FromPrimitive;
 
     use crate::event::{
-        BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42, BlocklistConnFieldsV0_41,
-        BlocklistConnFieldsV0_42, BlocklistDceRpcFieldsV0_41, BlocklistDceRpcFieldsV0_42,
-        BlocklistDhcpFieldsV0_41, BlocklistDhcpFieldsV0_42, BlocklistDnsFieldsV0_41,
-        BlocklistDnsFieldsV0_42, BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42,
-        BlocklistKerberosFieldsV0_41, BlocklistKerberosFieldsV0_42, BlocklistMqttFieldsV0_41,
-        BlocklistMqttFieldsV0_42, BlocklistNfsFieldsV0_41, BlocklistNfsFieldsV0_42,
-        BlocklistNtlmFieldsV0_41, BlocklistNtlmFieldsV0_42, BlocklistRdpFieldsV0_41,
-        BlocklistRdpFieldsV0_42, BlocklistSmbFieldsV0_41, BlocklistSmbFieldsV0_42,
-        BlocklistSmtpFieldsV0_41, BlocklistSmtpFieldsV0_42, BlocklistSshFieldsV0_41,
-        BlocklistSshFieldsV0_42, BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42,
-        CryptocurrencyMiningPoolFieldsV0_41, CryptocurrencyMiningPoolFieldsV0_42, DgaFieldsV0_41,
-        DgaFieldsV0_42, DnsEventFieldsV0_41, DnsEventFieldsV0_42, EventKind,
-        ExternalDdosFieldsV0_41, ExternalDdosFieldsV0_42, FtpBruteForceFieldsV0_41,
-        FtpBruteForceFieldsV0_42, FtpEventFieldsV0_41, FtpEventFieldsV0_42, HttpEventFieldsV0_41,
-        HttpEventFieldsV0_42, HttpThreatFieldsV0_41, HttpThreatFieldsV0_42,
-        LdapBruteForceFieldsV0_41, LdapBruteForceFieldsV0_42, LdapEventFieldsV0_39,
-        LdapEventFieldsV0_42, MultiHostPortScanFieldsV0_41, MultiHostPortScanFieldsV0_42,
-        PortScanFieldsV0_41, PortScanFieldsV0_42, RdpBruteForceFieldsV0_41,
-        RdpBruteForceFieldsV0_42, RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42,
+        BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42, BlocklistBootpFieldsV0_43,
+        BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42, BlocklistConnFieldsV0_43,
+        BlocklistDceRpcFieldsV0_41, BlocklistDceRpcFieldsV0_42, BlocklistDceRpcFieldsV0_43,
+        BlocklistDhcpFieldsV0_41, BlocklistDhcpFieldsV0_42, BlocklistDhcpFieldsV0_43,
+        BlocklistDnsFieldsV0_41, BlocklistDnsFieldsV0_42, BlocklistDnsFieldsV0_43,
+        BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42, BlocklistHttpFieldsV0_43,
+        BlocklistKerberosFieldsV0_41, BlocklistKerberosFieldsV0_42, BlocklistKerberosFieldsV0_43,
+        BlocklistMqttFieldsV0_41, BlocklistMqttFieldsV0_42, BlocklistMqttFieldsV0_43,
+        BlocklistNfsFieldsV0_41, BlocklistNfsFieldsV0_42, BlocklistNfsFieldsV0_43,
+        BlocklistNtlmFieldsV0_41, BlocklistNtlmFieldsV0_42, BlocklistNtlmFieldsV0_43,
+        BlocklistRdpFieldsV0_41, BlocklistRdpFieldsV0_42, BlocklistRdpFieldsV0_43,
+        BlocklistSmbFieldsV0_41, BlocklistSmbFieldsV0_42, BlocklistSmbFieldsV0_43,
+        BlocklistSmtpFieldsV0_41, BlocklistSmtpFieldsV0_42, BlocklistSmtpFieldsV0_43,
+        BlocklistSshFieldsV0_41, BlocklistSshFieldsV0_42, BlocklistSshFieldsV0_43,
+        BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42, BlocklistTlsFieldsV0_43,
+        CryptocurrencyMiningPoolFieldsV0_41, CryptocurrencyMiningPoolFieldsV0_42,
+        CryptocurrencyMiningPoolFieldsV0_43, DgaFieldsV0_41, DgaFieldsV0_42, DgaFieldsV0_43,
+        DnsEventFieldsV0_41, DnsEventFieldsV0_42, DnsEventFieldsV0_43, EventKind,
+        ExternalDdosFieldsV0_41, ExternalDdosFieldsV0_42, ExternalDdosFieldsV0_43,
+        FtpBruteForceFieldsV0_42, FtpBruteForceFieldsV0_43, FtpEventFieldsV0_41,
+        FtpEventFieldsV0_42, FtpEventFieldsV0_43, HttpEventFieldsV0_41, HttpEventFieldsV0_42,
+        HttpEventFieldsV0_43, HttpThreatFieldsV0_41, HttpThreatFieldsV0_42, HttpThreatFieldsV0_43,
+        LdapBruteForceFieldsV0_42, LdapBruteForceFieldsV0_43, LdapEventFieldsV0_39,
+        LdapEventFieldsV0_42, LdapEventFieldsV0_43, MultiHostPortScanFieldsV0_41,
+        MultiHostPortScanFieldsV0_42, MultiHostPortScanFieldsV0_43, PortScanFieldsV0_41,
+        PortScanFieldsV0_42, PortScanFieldsV0_43, RdpBruteForceFieldsV0_42,
+        RdpBruteForceFieldsV0_43, RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42,
+        RepeatedHttpSessionsFieldsV0_43,
     };
 
     // For bincode serialization, handle each event type
@@ -354,120 +363,225 @@ fn migrate_event_category(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Resu
     #[allow(clippy::match_same_arms)]
     match EventKind::from_i128(kind_num) {
         Some(EventKind::BlocklistBootp) => {
-            migrate_event::<BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistBootpFieldsV0_41,
+                BlocklistBootpFieldsV0_42,
+                BlocklistBootpFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistConn) => {
-            migrate_event::<BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistConnFieldsV0_41,
+                BlocklistConnFieldsV0_42,
+                BlocklistConnFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistDceRpc) => {
-            migrate_event::<BlocklistDceRpcFieldsV0_41, BlocklistDceRpcFieldsV0_42>(
-                k, v, event_db,
-            )?;
+            migrate_event_two_step::<
+                BlocklistDceRpcFieldsV0_41,
+                BlocklistDceRpcFieldsV0_42,
+                BlocklistDceRpcFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistDhcp) => {
-            migrate_event::<BlocklistDhcpFieldsV0_41, BlocklistDhcpFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistDhcpFieldsV0_41,
+                BlocklistDhcpFieldsV0_42,
+                BlocklistDhcpFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistDns) => {
-            migrate_event::<BlocklistDnsFieldsV0_41, BlocklistDnsFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistDnsFieldsV0_41,
+                BlocklistDnsFieldsV0_42,
+                BlocklistDnsFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistFtp) => {
-            migrate_event::<FtpEventFieldsV0_41, FtpEventFieldsV0_42>(k, v, event_db)?;
-        }
-        Some(EventKind::BlocklistHttp) => {
-            migrate_event::<BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42>(k, v, event_db)?;
-        }
-        Some(EventKind::BlocklistKerberos) => {
-            migrate_event::<BlocklistKerberosFieldsV0_41, BlocklistKerberosFieldsV0_42>(
+            migrate_event_two_step::<FtpEventFieldsV0_41, FtpEventFieldsV0_42, FtpEventFieldsV0_43>(
                 k, v, event_db,
             )?;
         }
+        Some(EventKind::BlocklistHttp) => {
+            migrate_event_two_step::<
+                BlocklistHttpFieldsV0_41,
+                BlocklistHttpFieldsV0_42,
+                BlocklistHttpFieldsV0_43,
+            >(k, v, event_db)?;
+        }
+        Some(EventKind::BlocklistKerberos) => {
+            migrate_event_two_step::<
+                BlocklistKerberosFieldsV0_41,
+                BlocklistKerberosFieldsV0_42,
+                BlocklistKerberosFieldsV0_43,
+            >(k, v, event_db)?;
+        }
         Some(EventKind::BlocklistLdap) => {
-            migrate_event::<LdapEventFieldsV0_39, LdapEventFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                LdapEventFieldsV0_39,
+                LdapEventFieldsV0_42,
+                LdapEventFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistMqtt) => {
-            migrate_event::<BlocklistMqttFieldsV0_41, BlocklistMqttFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistMqttFieldsV0_41,
+                BlocklistMqttFieldsV0_42,
+                BlocklistMqttFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistNfs) => {
-            migrate_event::<BlocklistNfsFieldsV0_41, BlocklistNfsFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistNfsFieldsV0_41,
+                BlocklistNfsFieldsV0_42,
+                BlocklistNfsFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistNtlm) => {
-            migrate_event::<BlocklistNtlmFieldsV0_41, BlocklistNtlmFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistNtlmFieldsV0_41,
+                BlocklistNtlmFieldsV0_42,
+                BlocklistNtlmFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistRdp) => {
-            migrate_event::<BlocklistRdpFieldsV0_41, BlocklistRdpFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistRdpFieldsV0_41,
+                BlocklistRdpFieldsV0_42,
+                BlocklistRdpFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistSmb) => {
-            migrate_event::<BlocklistSmbFieldsV0_41, BlocklistSmbFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistSmbFieldsV0_41,
+                BlocklistSmbFieldsV0_42,
+                BlocklistSmbFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistSmtp) => {
-            migrate_event::<BlocklistSmtpFieldsV0_41, BlocklistSmtpFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistSmtpFieldsV0_41,
+                BlocklistSmtpFieldsV0_42,
+                BlocklistSmtpFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistSsh) => {
-            migrate_event::<BlocklistSshFieldsV0_41, BlocklistSshFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistSshFieldsV0_41,
+                BlocklistSshFieldsV0_42,
+                BlocklistSshFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::BlocklistTls) => {
-            migrate_event::<BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistTlsFieldsV0_41,
+                BlocklistTlsFieldsV0_42,
+                BlocklistTlsFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::CryptocurrencyMiningPool) => {
-            migrate_event::<
+            migrate_event_two_step::<
                 CryptocurrencyMiningPoolFieldsV0_41,
                 CryptocurrencyMiningPoolFieldsV0_42,
+                CryptocurrencyMiningPoolFieldsV0_43,
             >(k, v, event_db)?;
         }
         Some(EventKind::DnsCovertChannel) => {
-            migrate_event::<DnsEventFieldsV0_41, DnsEventFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<DnsEventFieldsV0_41, DnsEventFieldsV0_42, DnsEventFieldsV0_43>(
+                k, v, event_db,
+            )?;
         }
         Some(EventKind::DomainGenerationAlgorithm) => {
-            migrate_event::<DgaFieldsV0_41, DgaFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<DgaFieldsV0_41, DgaFieldsV0_42, DgaFieldsV0_43>(
+                k, v, event_db,
+            )?;
         }
         Some(EventKind::ExternalDdos) => {
-            migrate_event::<ExternalDdosFieldsV0_41, ExternalDdosFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                ExternalDdosFieldsV0_41,
+                ExternalDdosFieldsV0_42,
+                ExternalDdosFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::FtpBruteForce) => {
-            migrate_event::<FtpBruteForceFieldsV0_41, FtpBruteForceFieldsV0_42>(k, v, event_db)?;
+            migrate_event::<FtpBruteForceFieldsV0_42, FtpBruteForceFieldsV0_43>(k, v, event_db)?;
         }
         Some(EventKind::FtpPlainText) => {
-            migrate_event::<FtpEventFieldsV0_41, FtpEventFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<FtpEventFieldsV0_41, FtpEventFieldsV0_42, FtpEventFieldsV0_43>(
+                k, v, event_db,
+            )?;
         }
         Some(EventKind::HttpThreat) => {
-            migrate_event::<HttpThreatFieldsV0_41, HttpThreatFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                HttpThreatFieldsV0_41,
+                HttpThreatFieldsV0_42,
+                HttpThreatFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::LdapBruteForce) => {
-            migrate_event::<LdapBruteForceFieldsV0_41, LdapBruteForceFieldsV0_42>(k, v, event_db)?;
+            migrate_event::<LdapBruteForceFieldsV0_42, LdapBruteForceFieldsV0_43>(k, v, event_db)?;
         }
         Some(EventKind::LdapPlainText) => {
-            migrate_event::<LdapEventFieldsV0_39, LdapEventFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                LdapEventFieldsV0_39,
+                LdapEventFieldsV0_42,
+                LdapEventFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::LockyRansomware) => {
-            migrate_event::<DnsEventFieldsV0_41, DnsEventFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<DnsEventFieldsV0_41, DnsEventFieldsV0_42, DnsEventFieldsV0_43>(
+                k, v, event_db,
+            )?;
         }
         Some(EventKind::MultiHostPortScan) => {
-            migrate_event::<MultiHostPortScanFieldsV0_41, MultiHostPortScanFieldsV0_42>(
-                k, v, event_db,
-            )?;
+            migrate_event_two_step::<
+                MultiHostPortScanFieldsV0_41,
+                MultiHostPortScanFieldsV0_42,
+                MultiHostPortScanFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::NonBrowser) => {
-            migrate_event::<HttpEventFieldsV0_41, HttpEventFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                HttpEventFieldsV0_41,
+                HttpEventFieldsV0_42,
+                HttpEventFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::PortScan) => {
-            migrate_event::<PortScanFieldsV0_41, PortScanFieldsV0_42>(k, v, event_db)?;
-        }
-        Some(EventKind::RdpBruteForce) => {
-            migrate_event::<RdpBruteForceFieldsV0_41, RdpBruteForceFieldsV0_42>(k, v, event_db)?;
-        }
-        Some(EventKind::RepeatedHttpSessions) => {
-            migrate_event::<RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42>(
+            migrate_event_two_step::<PortScanFieldsV0_41, PortScanFieldsV0_42, PortScanFieldsV0_43>(
                 k, v, event_db,
             )?;
         }
+        Some(EventKind::RdpBruteForce) => {
+            migrate_event::<RdpBruteForceFieldsV0_42, RdpBruteForceFieldsV0_43>(k, v, event_db)?;
+        }
+        Some(EventKind::RepeatedHttpSessions) => {
+            migrate_event_two_step::<
+                RepeatedHttpSessionsFieldsV0_41,
+                RepeatedHttpSessionsFieldsV0_42,
+                RepeatedHttpSessionsFieldsV0_43,
+            >(k, v, event_db)?;
+        }
         Some(EventKind::SuspiciousTlsTraffic) => {
-            migrate_event::<BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistTlsFieldsV0_41,
+                BlocklistTlsFieldsV0_42,
+                BlocklistTlsFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::TorConnectionConn) => {
-            migrate_event::<BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                BlocklistConnFieldsV0_41,
+                BlocklistConnFieldsV0_42,
+                BlocklistConnFieldsV0_43,
+            >(k, v, event_db)?;
         }
         Some(EventKind::TorConnection) => {
-            migrate_event::<HttpEventFieldsV0_41, HttpEventFieldsV0_42>(k, v, event_db)?;
+            migrate_event_two_step::<
+                HttpEventFieldsV0_41,
+                HttpEventFieldsV0_42,
+                HttpEventFieldsV0_43,
+            >(k, v, event_db)?;
         }
         // Event types that don't have category fields or no detected events, no migration needed
         Some(EventKind::WindowsThreat | EventKind::NetworkThreat | EventKind::ExtraThreat) => {}
@@ -488,6 +602,32 @@ where
     let new =
         bincode::serialize(&to_event).map_err(|e| anyhow!("Failed to serialize event: {e}"))?;
     event_db.update((k, v), (k, &new))?;
+    Ok(())
+}
+
+fn migrate_event_two_step<'a, T, K, L>(
+    k: &[u8],
+    v: &'a [u8],
+    event_db: &crate::EventDb,
+) -> Result<()>
+where
+    T: Deserialize<'a> + Into<K>,
+    K: Serialize + for<'de> Deserialize<'de> + Into<L>,
+    L: Serialize,
+{
+    // First migration: V0_41 -> V0_42
+    let from_event =
+        bincode::deserialize::<T>(v).map_err(|e| anyhow!("Failed to deserialize event: {e}"))?;
+    let to_event_v42: K = from_event.into();
+
+    // Second migration: V0_42 -> V0_43 (in memory)
+    let to_event_v43: L = to_event_v42.into();
+
+    // Serialize and write the final V0_43 version
+    let new =
+        bincode::serialize(&to_event_v43).map_err(|e| anyhow!("Failed to serialize event: {e}"))?;
+    event_db.update((k, v), (k, &new))?;
+
     Ok(())
 }
 
