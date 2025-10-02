@@ -14,8 +14,7 @@ pub struct BlocklistMalformedDnsFields {
     pub resp_addr: IpAddr,
     pub resp_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -40,11 +39,9 @@ pub struct BlocklistMalformedDnsFields {
 impl BlocklistMalformedDnsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_str = self.start_time.to_rfc3339();
-        let end_time_str = self.end_time.to_rfc3339();
-
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
         format!(
-            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} trans_id={:?} flags={:?} question_count={:?} answer_count={:?} authority_count={:?} additional_count={:?} query_count={:?} resp_count={:?} query_bytes={:?} resp_bytes={:?} query_body={:?} resp_body={:?} confidence={:?}",
+            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} trans_id={:?} flags={:?} question_count={:?} answer_count={:?} authority_count={:?} additional_count={:?} query_count={:?} resp_count={:?} query_bytes={:?} resp_bytes={:?} query_body={:?} resp_body={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -55,8 +52,7 @@ impl BlocklistMalformedDnsFields {
             self.resp_addr.to_string(),
             self.resp_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            start_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -96,7 +92,6 @@ pub struct BlocklistMalformedDns {
     pub resp_port: u16,
     pub proto: u8,
     pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -122,11 +117,10 @@ pub struct BlocklistMalformedDns {
 impl fmt::Display for BlocklistMalformedDns {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let start_time_str = self.start_time.to_rfc3339();
-        let end_time_str = self.end_time.to_rfc3339();
 
         write!(
             f,
-            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} trans_id={:?} flags={:?} question_count={:?} answer_count={:?} authority_count={:?} additional_count={:?} query_count={:?} resp_count={:?} query_bytes={:?} resp_bytes={:?} query_body={:?} resp_body={:?} triage_scores={:?}",
+            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} trans_id={:?} flags={:?} question_count={:?} answer_count={:?} authority_count={:?} additional_count={:?} query_count={:?} resp_count={:?} query_bytes={:?} resp_bytes={:?} query_body={:?} resp_body={:?} triage_scores={:?}",
             self.sensor,
             self.orig_addr.to_string(),
             self.orig_port.to_string(),
@@ -134,7 +128,6 @@ impl fmt::Display for BlocklistMalformedDns {
             self.resp_port.to_string(),
             self.proto.to_string(),
             start_time_str,
-            end_time_str,
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -167,8 +160,7 @@ impl BlocklistMalformedDns {
             resp_addr: fields.resp_addr,
             resp_port: fields.resp_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,

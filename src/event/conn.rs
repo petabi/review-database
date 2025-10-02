@@ -11,6 +11,7 @@ use crate::{
     types::EventCategoryV0_41,
 };
 
+#[macro_export]
 macro_rules! find_conn_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
         if let RawEventAttrKind::Conn(attr) = $raw_event_attr {
@@ -21,9 +22,7 @@ macro_rules! find_conn_attr_by_kind {
                 ConnAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
                 ConnAttr::Proto => AttrValue::UInt($event.proto.into()),
                 ConnAttr::ConnState => AttrValue::String(&$event.conn_state),
-                ConnAttr::Duration => AttrValue::SInt(
-                    $event.end_time - $event.time.timestamp_nanos_opt().unwrap_or_default(),
-                ),
+                ConnAttr::Duration => AttrValue::SInt($event.duration),
                 ConnAttr::Service => AttrValue::String(&$event.service),
                 ConnAttr::OrigBytes => AttrValue::UInt($event.orig_bytes),
                 ConnAttr::RespBytes => AttrValue::UInt($event.resp_bytes),
@@ -38,6 +37,7 @@ macro_rules! find_conn_attr_by_kind {
         }
     }};
 }
+pub(crate) use find_conn_attr_by_kind;
 
 pub type PortScanFields = PortScanFieldsV0_42;
 
@@ -47,8 +47,10 @@ pub struct PortScanFieldsV0_42 {
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_ports: Vec<u16>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub proto: u8,
     pub confidence: f32,
     pub category: Option<EventCategory>,
@@ -57,6 +59,8 @@ pub struct PortScanFieldsV0_42 {
 impl PortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -67,8 +71,8 @@ impl PortScanFields {
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             vector_to_string(&self.dst_ports),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.proto.to_string(),
             self.confidence.to_string()
         )
@@ -94,8 +98,8 @@ impl From<PortScanFieldsV0_41> for PortScanFieldsV0_42 {
             src_addr: value.src_addr,
             dst_addr: value.dst_addr,
             dst_ports: value.dst_ports,
-            start_time: value.start_time,
-            end_time: value.end_time,
+            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
             proto: value.proto,
             confidence: value.confidence,
             category: value.category.into(),
@@ -144,8 +148,8 @@ impl PortScan {
             dst_addr: fields.dst_addr,
             dst_ports: fields.dst_ports.clone(),
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -223,8 +227,10 @@ pub struct MultiHostPortScanFieldsV0_42 {
     pub dst_port: u16,
     pub dst_addrs: Vec<IpAddr>,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub confidence: f32,
     pub category: Option<EventCategory>,
 }
@@ -232,6 +238,8 @@ pub struct MultiHostPortScanFieldsV0_42 {
 impl MultiHostPortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -243,8 +251,8 @@ impl MultiHostPortScanFields {
             vector_to_string(&self.dst_addrs),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.confidence.to_string()
         )
     }
@@ -271,8 +279,8 @@ impl From<MultiHostPortScanFieldsV0_41> for MultiHostPortScanFieldsV0_42 {
             dst_port: value.dst_port,
             dst_addrs: value.dst_addrs,
             proto: value.proto,
-            start_time: value.start_time,
-            end_time: value.end_time,
+            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
             confidence: value.confidence,
             category: value.category.into(),
         }
@@ -320,8 +328,8 @@ impl MultiHostPortScan {
             dst_port: fields.dst_port,
             dst_addrs: fields.dst_addrs.clone(),
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -397,8 +405,10 @@ pub struct ExternalDdosFieldsV0_42 {
     pub src_addrs: Vec<IpAddr>,
     pub dst_addr: IpAddr,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub confidence: f32,
     pub category: Option<EventCategory>,
 }
@@ -406,6 +416,8 @@ pub struct ExternalDdosFieldsV0_42 {
 impl ExternalDdosFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -416,8 +428,8 @@ impl ExternalDdosFields {
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.confidence.to_string()
         )
     }
@@ -441,8 +453,8 @@ impl From<ExternalDdosFieldsV0_41> for ExternalDdosFieldsV0_42 {
             src_addrs: value.src_addrs,
             dst_addr: value.dst_addr,
             proto: value.proto,
-            start_time: value.start_time,
-            end_time: value.end_time,
+            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
             confidence: value.confidence,
             category: value.category.into(),
         }
@@ -487,8 +499,8 @@ impl ExternalDdos {
             src_addrs: fields.src_addrs.clone(),
             dst_addr: fields.dst_addr,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -566,8 +578,9 @@ pub struct BlocklistConnFieldsV0_42 {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
     pub start_time: i64,
-    pub end_time: i64,
+    pub duration: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -603,11 +616,10 @@ pub(crate) struct BlocklistConnFieldsV0_41 {
 impl BlocklistConnFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
 
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -619,8 +631,8 @@ impl BlocklistConnFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            start_time_str,
-            end_time_str,
+            start_time_dt.to_rfc3339(),
+            self.duration.to_string(),
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -635,6 +647,8 @@ impl BlocklistConnFields {
 
 impl MigrateFrom<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
     fn new(value: BlocklistConnFieldsV0_41, start_time: i64) -> Self {
+        let duration = value.end_time.saturating_sub(start_time);
+
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -644,7 +658,7 @@ impl MigrateFrom<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
             proto: value.proto,
             conn_state: value.conn_state,
             start_time,
-            end_time: value.end_time,
+            duration,
             service: value.service,
             orig_bytes: value.orig_bytes,
             resp_bytes: value.resp_bytes,
@@ -668,8 +682,8 @@ pub struct BlocklistConn {
     pub dst_port: u16,
     pub proto: u8,
     pub conn_state: String,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub duration: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -684,12 +698,9 @@ pub struct BlocklistConn {
 
 impl fmt::Display for BlocklistConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} end_time={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -697,8 +708,8 @@ impl fmt::Display for BlocklistConn {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.duration.to_string(),
             self.service,
             self.orig_bytes.to_string(),
             self.resp_bytes.to_string(),
@@ -722,8 +733,8 @@ impl BlocklistConn {
             dst_port: fields.dst_port,
             proto: fields.proto,
             conn_state: fields.conn_state,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            duration: fields.duration,
             service: fields.service,
             orig_bytes: fields.orig_bytes,
             resp_bytes: fields.resp_bytes,
