@@ -77,7 +77,7 @@ mod tests {
     };
 
     use bincode::Options;
-    use chrono::Utc;
+    use chrono::{TimeZone, Utc};
 
     use crate::{
         Store,
@@ -88,6 +88,7 @@ mod tests {
         let codec = bincode::DefaultOptions::new();
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc::now(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,

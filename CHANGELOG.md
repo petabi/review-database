@@ -12,6 +12,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - New `FtpCommand` struct containing individual FTP command details (`command`,
   `reply_code`, `reply_msg`, `data_passive`, `data_orig_addr`, `data_resp_addr`,
   `data_resp_port`, `file`, `file_size`, `file_id`).
+- Added `start_time` field to all detection event structures to track when an
+  event began. This includes both Fields structs (e.g., `DnsEventFields`,
+  `BlocklistConnFields`) and main event structs (e.g., `DnsCovertChannel`,
+  `HttpThreat`). Event types that already had `start_time` (`RdpBruteForce`,
+  `LdapBruteForce`, `FtpBruteForce`, `RepeatedHttpSessions`, `PortScan`,
+  `MultiHostPortScan`, `ExternalDdos`) are unchanged.
 
 ### Changed
 

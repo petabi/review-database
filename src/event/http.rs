@@ -59,6 +59,8 @@ pub type HttpEventFields = HttpEventFieldsV0_42;
 pub struct HttpEventFieldsV0_42 {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -168,6 +170,7 @@ impl From<HttpEventFieldsV0_41> for HttpEventFieldsV0_42 {
     fn from(value: HttpEventFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
+            start_time: value.end_time,
             end_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
@@ -389,6 +392,7 @@ pub struct HttpThreatFieldsV0_42 {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -516,6 +520,7 @@ impl From<HttpThreatFieldsV0_41> for HttpThreatFieldsV0_42 {
         Self {
             time: value.time,
             sensor: value.sensor,
+            start_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
@@ -574,6 +579,7 @@ pub struct HttpThreat {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -658,6 +664,7 @@ impl HttpThreat {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -791,6 +798,7 @@ pub type DgaFields = DgaFieldsV0_42;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DgaFieldsV0_42 {
     pub sensor: String,
+    pub start_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -899,6 +907,7 @@ impl From<DgaFieldsV0_41> for DgaFieldsV0_42 {
     fn from(value: DgaFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
+            start_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
@@ -936,6 +945,7 @@ pub struct DomainGenerationAlgorithm {
     #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -1010,6 +1020,7 @@ impl DomainGenerationAlgorithm {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -1112,6 +1123,7 @@ impl Match for DomainGenerationAlgorithm {
 pub struct NonBrowser {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1185,6 +1197,7 @@ impl NonBrowser {
         NonBrowser {
             time,
             sensor: fields.sensor.clone(),
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -1287,6 +1300,7 @@ pub type BlocklistHttpFields = BlocklistHttpFieldsV0_42;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BlocklistHttpFieldsV0_42 {
     pub sensor: String,
+    pub start_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -1395,6 +1409,7 @@ impl From<BlocklistHttpFieldsV0_41> for BlocklistHttpFieldsV0_42 {
     fn from(value: BlocklistHttpFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
+            start_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
@@ -1432,6 +1447,7 @@ impl From<BlocklistHttpFieldsV0_41> for BlocklistHttpFieldsV0_42 {
 pub struct BlocklistHttp {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -1505,6 +1521,7 @@ impl BlocklistHttp {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
