@@ -1,27 +1,74 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::RawEventAttrKind;
+use attrievent::attribute::{ConnAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
-pub type BlocklistDceRpcFields = BlocklistDceRpcFieldsV0_42;
+pub type BlocklistDceRpcFields = BlocklistDceRpcFieldsV0_43;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistDceRpcFieldsV0_42 {
+pub struct BlocklistDceRpcFieldsV0_43 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub orig_bytes: u64,
+    pub resp_pkts: u64,
+    pub resp_bytes: u64,
+    pub rtt: i64,
+    pub named_pipe: String,
+    pub endpoint: String,
+    pub operation: String,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+impl From<BlocklistDceRpcFieldsV0_42> for BlocklistDceRpcFieldsV0_43 {
+    fn from(value: BlocklistDceRpcFieldsV0_42) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            start_time: DateTime::from_timestamp_nanos(value.end_time),
+            end_time: DateTime::from_timestamp_nanos(value.end_time),
+            duration: 0,
+            orig_pkts: 0,
+            orig_bytes: 0,
+            resp_pkts: 0,
+            resp_bytes: 0,
+            rtt: value.rtt,
+            named_pipe: value.named_pipe,
+            endpoint: value.endpoint,
+            operation: value.operation,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistDceRpcFieldsV0_42 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
     pub end_time: i64,
     pub rtt: i64,
     pub named_pipe: String,
@@ -31,8 +78,8 @@ pub struct BlocklistDceRpcFieldsV0_42 {
     pub category: Option<EventCategory>,
 }
 
-impl MigrateFrom<BlocklistDceRpcFieldsV0_41> for BlocklistDceRpcFieldsV0_42 {
-    fn new(value: BlocklistDceRpcFieldsV0_41, start_time: i64) -> Self {
+impl From<BlocklistDceRpcFieldsV0_41> for BlocklistDceRpcFieldsV0_42 {
+    fn from(value: BlocklistDceRpcFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -40,7 +87,6 @@ impl MigrateFrom<BlocklistDceRpcFieldsV0_41> for BlocklistDceRpcFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time,
             end_time: value.end_time,
             rtt: value.rtt,
             named_pipe: value.named_pipe,
@@ -72,10 +118,8 @@ pub(crate) struct BlocklistDceRpcFieldsV0_41 {
 impl BlocklistDceRpcFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} rtt={:?} named_pipe={:?} endpoint={:?} operation={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} orig_bytes={:?} resp_pkts={:?} resp_bytes={:?} rtt={:?} named_pipe={:?} endpoint={:?} operation={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -86,8 +130,13 @@ impl BlocklistDceRpcFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_pkts.to_string(),
+            self.resp_bytes.to_string(),
             self.rtt.to_string(),
             self.named_pipe,
             self.endpoint,
@@ -105,8 +154,13 @@ pub struct BlocklistDceRpc {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub orig_bytes: u64,
+    pub resp_pkts: u64,
+    pub resp_bytes: u64,
     pub rtt: i64,
     pub named_pipe: String,
     pub endpoint: String,
@@ -118,19 +172,22 @@ pub struct BlocklistDceRpc {
 
 impl fmt::Display for BlocklistDceRpc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} rtt={:?} named_pipe={:?} endpoint={:?} operation={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} orig_bytes={:?} resp_pkts={:?} resp_bytes={:?} rtt={:?} named_pipe={:?} endpoint={:?} operation={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_pkts.to_string(),
+            self.resp_bytes.to_string(),
             self.rtt.to_string(),
             self.named_pipe,
             self.endpoint,
@@ -152,6 +209,11 @@ impl BlocklistDceRpc {
             proto: fields.proto,
             start_time: fields.start_time,
             end_time: fields.end_time,
+            duration: fields.duration,
+            orig_pkts: fields.orig_pkts,
+            orig_bytes: fields.orig_bytes,
+            resp_pkts: fields.resp_pkts,
+            resp_bytes: fields.resp_bytes,
             rtt: fields.rtt,
             named_pipe: fields.named_pipe,
             endpoint: fields.endpoint,
@@ -211,7 +273,23 @@ impl Match for BlocklistDceRpc {
     // Since `dcerpc` is not currently an event type collected by Feature Sensor, and as a result,
     // the notation for each attribute of `dcerpc` has not been finalized. Therefore, we will
     // proceed with this part after the collection and notation of dcerpc events is finalized.
-    fn find_attr_by_kind(&self, _raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        None
+    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
+        if let RawEventAttrKind::Conn(attr) = raw_event_attr {
+            match attr {
+                ConnAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                ConnAttr::SrcPort => Some(AttrValue::UInt(self.src_port.into())),
+                ConnAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                ConnAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+                ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
+                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
+                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
+                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
+                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 }

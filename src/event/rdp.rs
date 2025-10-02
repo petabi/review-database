@@ -2,7 +2,7 @@
 
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{RawEventAttrKind, RdpAttr};
+use attrievent::attribute::{ConnAttr, RawEventAttrKind, RdpAttr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -12,32 +12,32 @@ use super::{
 };
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
-macro_rules! find_rdp_attr_by_kind {
-    ($event: expr, $raw_event_attr: expr) => {{
-        if let RawEventAttrKind::Rdp(attr) = $raw_event_attr {
-            let target_value = match attr {
-                RdpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
-                RdpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
-                RdpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
-                RdpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
-                RdpAttr::Proto => AttrValue::UInt($event.proto.into()),
-                RdpAttr::Cookie => AttrValue::String(&$event.cookie),
-            };
-            Some(target_value)
-        } else {
-            None
-        }
-    }};
-}
-
-pub type RdpBruteForceFields = RdpBruteForceFieldsV0_42;
+pub type RdpBruteForceFields = RdpBruteForceFieldsV0_43;
 
 #[derive(Serialize, Deserialize)]
-pub struct RdpBruteForceFieldsV0_42 {
+pub struct RdpBruteForceFieldsV0_43 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub dst_addrs: Vec<IpAddr>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub proto: u8,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct RdpBruteForceFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addrs: Vec<IpAddr>,
@@ -52,7 +52,7 @@ impl RdpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} duration={:?} proto={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -62,7 +62,14 @@ impl RdpBruteForceFields {
             vector_to_string(&self.dst_addrs),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
+            self.duration.to_string(),
             self.proto.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_bytes.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.confidence.to_string()
         )
     }
@@ -95,6 +102,30 @@ impl From<RdpBruteForceFieldsV0_41> for RdpBruteForceFieldsV0_42 {
     }
 }
 
+impl From<RdpBruteForceFieldsV0_42> for RdpBruteForceFieldsV0_43 {
+    fn from(value: RdpBruteForceFieldsV0_42) -> Self {
+        let duration = value.end_time.timestamp_nanos_opt().unwrap_or_default()
+            - value.start_time.timestamp_nanos_opt().unwrap_or_default();
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            dst_addrs: value.dst_addrs,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            duration,
+            proto: value.proto,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct RdpBruteForce {
     pub sensor: String,
@@ -103,7 +134,14 @@ pub struct RdpBruteForce {
     pub dst_addrs: Vec<IpAddr>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub duration: i64,
     pub proto: u8,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub confidence: f32,
     pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -133,7 +171,14 @@ impl RdpBruteForce {
             dst_addrs: fields.dst_addrs.clone(),
             start_time: fields.start_time,
             end_time: fields.end_time,
+            duration: fields.duration,
             proto: fields.proto,
+            orig_bytes: fields.orig_bytes,
+            resp_bytes: fields.resp_bytes,
+            orig_pkts: fields.orig_pkts,
+            resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -187,38 +232,68 @@ impl Match for RdpBruteForce {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        if let RawEventAttrKind::Rdp(attr) = raw_event_attr {
-            match attr {
+        match raw_event_attr {
+            RawEventAttrKind::Rdp(attr) => match attr {
                 RdpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
                 RdpAttr::DstAddr => Some(AttrValue::VecAddr(&self.dst_addrs)),
                 RdpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
                 _ => None,
-            }
-        } else {
-            None
+            },
+            RawEventAttrKind::Conn(attr) => match attr {
+                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
+                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
+                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
+                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
+                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
+                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
+                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
+                _ => None,
+            },
+            _ => None,
         }
     }
 }
 
-pub type BlocklistRdpFields = BlocklistRdpFieldsV0_42;
+pub type BlocklistRdpFields = BlocklistRdpFieldsV0_43;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistRdpFieldsV0_42 {
+pub struct BlocklistRdpFieldsV0_43 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub cookie: String,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistRdpFieldsV0_42 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
     pub end_time: i64,
     pub cookie: String,
     pub confidence: f32,
     pub category: Option<EventCategory>,
 }
 
-impl MigrateFrom<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
-    fn new(value: BlocklistRdpFieldsV0_41, start_time: i64) -> Self {
+impl From<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
+    fn from(value: BlocklistRdpFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -226,11 +301,36 @@ impl MigrateFrom<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time,
             end_time: value.end_time,
             cookie: value.cookie,
             confidence: value.confidence,
             category: value.category.into(),
+        }
+    }
+}
+
+impl From<BlocklistRdpFieldsV0_42> for BlocklistRdpFieldsV0_43 {
+    fn from(value: BlocklistRdpFieldsV0_42) -> Self {
+        let end_time = DateTime::from_timestamp_nanos(value.end_time);
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            start_time: end_time,
+            end_time,
+            duration: 0,
+            orig_bytes: 0,
+            resp_bytes: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
+            cookie: value.cookie,
+            confidence: value.confidence,
+            category: value.category,
         }
     }
 }
@@ -252,11 +352,8 @@ pub(crate) struct BlocklistRdpFieldsV0_41 {
 impl BlocklistRdpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} cookie={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} cookie={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -267,8 +364,15 @@ impl BlocklistRdpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_bytes.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.cookie,
             self.confidence.to_string()
         )
@@ -283,8 +387,15 @@ pub struct BlocklistRdp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub cookie: String,
     pub confidence: f32,
     pub category: Option<EventCategory>,
@@ -292,20 +403,24 @@ pub struct BlocklistRdp {
 }
 impl fmt::Display for BlocklistRdp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} cookie={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} cookie={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_bytes.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.cookie,
             triage_scores_to_string(self.triage_scores.as_ref())
         )
@@ -324,6 +439,13 @@ impl BlocklistRdp {
             proto: fields.proto,
             start_time: fields.start_time,
             end_time: fields.end_time,
+            duration: fields.duration,
+            orig_bytes: fields.orig_bytes,
+            resp_bytes: fields.resp_bytes,
+            orig_pkts: fields.orig_pkts,
+            resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             cookie: fields.cookie,
             confidence: fields.confidence,
             category: fields.category,
@@ -378,6 +500,26 @@ impl Match for BlocklistRdp {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        find_rdp_attr_by_kind!(self, raw_event_attr)
+        match raw_event_attr {
+            RawEventAttrKind::Rdp(attr) => match attr {
+                RdpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
+                RdpAttr::SrcPort => Some(AttrValue::UInt(self.src_port.into())),
+                RdpAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
+                RdpAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
+                RdpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
+                RdpAttr::Cookie => Some(AttrValue::String(&self.cookie)),
+            },
+            RawEventAttrKind::Conn(attr) => match attr {
+                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
+                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
+                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
+                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
+                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
+                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
+                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
+                _ => None,
+            },
+            _ => None,
+        }
     }
 }
