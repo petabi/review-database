@@ -45,6 +45,7 @@ macro_rules! find_conn_attr_by_kind {
 pub struct TorConnection {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -118,6 +119,7 @@ impl TorConnection {
         TorConnection {
             time,
             sensor: fields.sensor.clone(),
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -219,6 +221,7 @@ impl Match for TorConnection {
 pub struct TorConnectionConn {
     pub sensor: String,
     pub time: DateTime<Utc>,
+    pub start_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -268,6 +271,7 @@ impl TorConnectionConn {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -361,6 +365,7 @@ mod tests {
             dst_port: 443,
             proto: 6,
             conn_state: "SF".to_string(),
+            start_time: 0,
             end_time: end_time.timestamp_nanos_opt().expect("valid time"),
             service: "https".to_string(),
             orig_bytes: 1024,

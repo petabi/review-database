@@ -2,7 +2,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{FtpAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -338,6 +338,8 @@ impl FtpEventFields {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FtpEventFieldsV0_42 {
     pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -368,6 +370,7 @@ impl From<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
 
         Self {
             sensor: value.sensor,
+            start_time: Utc::now(),
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
@@ -412,6 +415,7 @@ pub(crate) struct FtpEventFieldsV0_41 {
 pub struct FtpPlainText {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -458,6 +462,7 @@ impl FtpPlainText {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -528,6 +533,7 @@ impl Match for FtpPlainText {
 pub struct BlocklistFtp {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -574,6 +580,7 @@ impl BlocklistFtp {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,

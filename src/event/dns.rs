@@ -49,6 +49,8 @@ pub type DnsEventFields = DnsEventFieldsV0_42;
 pub struct DnsEventFieldsV0_42 {
     pub sensor: String,
     #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -75,6 +77,7 @@ impl From<DnsEventFieldsV0_41> for DnsEventFieldsV0_42 {
     fn from(value: DnsEventFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
+            start_time: value.end_time,
             end_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
@@ -162,6 +165,7 @@ impl DnsEventFields {
 pub struct DnsCovertChannel {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -220,6 +224,7 @@ impl DnsCovertChannel {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -319,6 +324,7 @@ impl Match for DnsCovertChannel {
 pub struct LockyRansomware {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -377,6 +383,7 @@ impl LockyRansomware {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -477,6 +484,8 @@ pub type CryptocurrencyMiningPoolFields = CryptocurrencyMiningPoolFieldsV0_42;
 #[derive(Deserialize, Serialize)]
 pub struct CryptocurrencyMiningPoolFieldsV0_42 {
     pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -565,6 +574,7 @@ impl From<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolField
     fn from(value: CryptocurrencyMiningPoolFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
+            start_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
@@ -594,6 +604,7 @@ impl From<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolField
 pub struct CryptocurrencyMiningPool {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -653,6 +664,7 @@ impl CryptocurrencyMiningPool {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             end_time: fields.end_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
@@ -754,6 +766,7 @@ pub type BlocklistDnsFields = BlocklistDnsFieldsV0_42;
 #[derive(Deserialize, Serialize)]
 pub struct BlocklistDnsFieldsV0_42 {
     pub sensor: String,
+    pub start_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -838,6 +851,7 @@ impl From<BlocklistDnsFieldsV0_41> for BlocklistDnsFieldsV0_42 {
     fn from(value: BlocklistDnsFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
+            start_time: value.end_time,
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
@@ -865,6 +879,7 @@ impl From<BlocklistDnsFieldsV0_41> for BlocklistDnsFieldsV0_42 {
 pub struct BlocklistDns {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -922,6 +937,7 @@ impl BlocklistDns {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,

@@ -2,7 +2,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{LdapAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -232,6 +232,8 @@ pub type LdapEventFields = LdapEventFieldsV0_42;
 #[derive(Serialize, Deserialize)]
 pub struct LdapEventFieldsV0_42 {
     pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -301,6 +303,7 @@ impl From<LdapEventFieldsV0_39> for LdapEventFieldsV0_42 {
     fn from(value: LdapEventFieldsV0_39) -> Self {
         Self {
             sensor: value.sensor,
+            start_time: Utc::now(),
             src_addr: value.src_addr,
             src_port: value.src_port,
             dst_addr: value.dst_addr,
@@ -324,6 +327,7 @@ impl From<LdapEventFieldsV0_39> for LdapEventFieldsV0_42 {
 pub struct LdapPlainText {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -371,6 +375,7 @@ impl LdapPlainText {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
@@ -445,6 +450,7 @@ impl Match for LdapPlainText {
 pub struct BlocklistLdap {
     pub time: DateTime<Utc>,
     pub sensor: String,
+    pub start_time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -492,6 +498,7 @@ impl BlocklistLdap {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
