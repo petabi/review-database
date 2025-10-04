@@ -1,6 +1,6 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{RawEventAttrKind, SmtpAttr};
+use attrievent::attribute::{ConnAttr, RawEventAttrKind, SmtpAttr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -12,32 +12,101 @@ use crate::{
 
 macro_rules! find_smtp_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
-        if let RawEventAttrKind::Smtp(attr) = $raw_event_attr {
-            let target_value = match attr {
-                SmtpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
-                SmtpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
-                SmtpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
-                SmtpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
-                SmtpAttr::Proto => AttrValue::UInt($event.proto.into()),
-                SmtpAttr::MailFrom => AttrValue::String(&$event.mailfrom),
-                SmtpAttr::Date => AttrValue::String(&$event.date),
-                SmtpAttr::From => AttrValue::String(&$event.from),
-                SmtpAttr::To => AttrValue::String(&$event.to),
-                SmtpAttr::Subject => AttrValue::String(&$event.subject),
-                SmtpAttr::Agent => AttrValue::String(&$event.agent),
-                SmtpAttr::State => AttrValue::String(&$event.state),
-            };
-            Some(target_value)
-        } else {
-            None
+        match $raw_event_attr {
+            RawEventAttrKind::Smtp(attr) => {
+                let target_value = match attr {
+                    SmtpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                    SmtpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                    SmtpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                    SmtpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                    SmtpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                    SmtpAttr::MailFrom => AttrValue::String(&$event.mailfrom),
+                    SmtpAttr::Date => AttrValue::String(&$event.date),
+                    SmtpAttr::From => AttrValue::String(&$event.from),
+                    SmtpAttr::To => AttrValue::String(&$event.to),
+                    SmtpAttr::Subject => AttrValue::String(&$event.subject),
+                    SmtpAttr::Agent => AttrValue::String(&$event.agent),
+                    SmtpAttr::State => AttrValue::String(&$event.state),
+                };
+                Some(target_value)
+            }
+            RawEventAttrKind::Conn(attr) => match attr {
+                ConnAttr::SrcAddr => Some(AttrValue::Addr($event.src_addr)),
+                ConnAttr::SrcPort => Some(AttrValue::UInt($event.src_port.into())),
+                ConnAttr::DstAddr => Some(AttrValue::Addr($event.dst_addr)),
+                ConnAttr::DstPort => Some(AttrValue::UInt($event.dst_port.into())),
+                ConnAttr::Proto => Some(AttrValue::UInt($event.proto.into())),
+                ConnAttr::Duration => Some(AttrValue::SInt($event.duration)),
+                ConnAttr::OrigBytes => Some(AttrValue::UInt($event.orig_bytes)),
+                ConnAttr::RespBytes => Some(AttrValue::UInt($event.resp_bytes)),
+                ConnAttr::OrigPkts => Some(AttrValue::UInt($event.orig_pkts)),
+                ConnAttr::RespPkts => Some(AttrValue::UInt($event.resp_pkts)),
+                _ => None,
+            },
+            _ => None,
         }
     }};
 }
 
-pub type BlocklistSmtpFields = BlocklistSmtpFieldsV0_42;
+pub type BlocklistSmtpFields = BlocklistSmtpFieldsV0_43;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistSmtpFieldsV0_42 {
+pub struct BlocklistSmtpFieldsV0_43 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub orig_bytes: u64,
+    pub resp_pkts: u64,
+    pub resp_bytes: u64,
+    pub mailfrom: String,
+    pub date: String,
+    pub from: String,
+    pub to: String,
+    pub subject: String,
+    pub agent: String,
+    pub state: String,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+impl From<BlocklistSmtpFieldsV0_42> for BlocklistSmtpFieldsV0_43 {
+    fn from(value: BlocklistSmtpFieldsV0_42) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            start_time: DateTime::from_timestamp_nanos(value.end_time),
+            end_time: DateTime::from_timestamp_nanos(value.end_time),
+            duration: 0,
+            orig_pkts: 0,
+            orig_bytes: 0,
+            resp_pkts: 0,
+            resp_bytes: 0,
+            mailfrom: value.mailfrom,
+            date: value.date,
+            from: value.from,
+            to: value.to,
+            subject: value.subject,
+            agent: value.agent,
+            state: value.state,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct BlocklistSmtpFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -103,7 +172,7 @@ impl BlocklistSmtpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} orig_bytes={:?} resp_pkts={:?} resp_bytes={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -114,7 +183,13 @@ impl BlocklistSmtpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_pkts.to_string(),
+            self.resp_bytes.to_string(),
             self.mailfrom,
             self.date,
             self.from,
@@ -136,7 +211,13 @@ pub struct BlocklistSmtp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub orig_bytes: u64,
+    pub resp_pkts: u64,
+    pub resp_bytes: u64,
     pub mailfrom: String,
     pub date: String,
     pub from: String,
@@ -152,14 +233,20 @@ impl fmt::Display for BlocklistSmtp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} orig_bytes={:?} resp_pkts={:?} resp_bytes={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.end_time.to_string(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.orig_bytes.to_string(),
+            self.resp_pkts.to_string(),
+            self.resp_bytes.to_string(),
             self.mailfrom,
             self.date,
             self.from,
@@ -182,7 +269,13 @@ impl BlocklistSmtp {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
             end_time: fields.end_time,
+            duration: fields.duration,
+            orig_pkts: fields.orig_pkts,
+            orig_bytes: fields.orig_bytes,
+            resp_pkts: fields.resp_pkts,
+            resp_bytes: fields.resp_bytes,
             mailfrom: fields.mailfrom,
             date: fields.date,
             from: fields.from,
