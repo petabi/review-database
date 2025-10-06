@@ -94,8 +94,9 @@ async fn migrate_single_classifier(
     id: i32,
     name: &str,
 ) -> Result<MigrationResult, Error> {
+    let id_u32 = u32::try_from(id)?;
     // Skip if classifier already exists in file system
-    if database.classifier_fm.classifier_exists(id, name) {
+    if database.classifier_fm.classifier_exists(id_u32, name) {
         tracing::info!("model {name} (id={id}) already exists in the file system");
         return Ok(MigrationResult::Skipped);
     }
@@ -118,13 +119,13 @@ async fn migrate_single_classifier(
     // Store classifier data to file system
     database
         .classifier_fm
-        .store_classifier(id, name, &classifier)
+        .store_classifier(id_u32, name, &classifier)
         .await?;
 
     // Verify file system storage was successful
-    if !database.classifier_fm.classifier_exists(id, name) {
+    if !database.classifier_fm.classifier_exists(id_u32, name) {
         return Err(Error::Classifier(ClassifierFsError::FileNotFound(
-            id,
+            id_u32,
             name.to_string(),
         )));
     }

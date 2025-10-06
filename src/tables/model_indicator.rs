@@ -18,7 +18,7 @@ use crate::{Map, Table, types::FromKeyValue};
 pub struct ModelIndicator {
     pub name: String,
     pub description: String,
-    pub model_id: i32,
+    pub model_id: u32,
     pub tokens: HashSet<Vec<String>>,
     pub last_modification_time: DateTime<Utc>,
 }
@@ -43,7 +43,7 @@ impl ModelIndicator {
         let key = self.name.into_bytes();
         let value = Value {
             description: self.description,
-            model_id: self.model_id,
+            model_id: i32::try_from(self.model_id)?,
             tokens: self.tokens,
             last_modification_time: self.last_modification_time,
         };
@@ -67,7 +67,7 @@ impl FromKeyValue for ModelIndicator {
         Ok(Self {
             name,
             description: value.description,
-            model_id: value.model_id,
+            model_id: u32::try_from(value.model_id)?,
             tokens: value.tokens,
             last_modification_time: value.last_modification_time,
         })
