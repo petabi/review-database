@@ -9,9 +9,9 @@ use crate::{Iterable, Map, Table, UniqueKey, batch_info::BatchInfo, types::FromK
 
 impl FromKeyValue for BatchInfo {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
-        let mut model = [0; size_of::<i32>()];
-        model.copy_from_slice(&key[..size_of::<i32>()]);
-        let model = i32::from_be_bytes(model);
+        let mut model = [0; size_of::<u32>()];
+        model.copy_from_slice(&key[..size_of::<u32>()]);
+        let model = u32::from_be_bytes(model);
 
         let inner = super::deserialize(value)?;
 
@@ -33,7 +33,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     ///
     /// Returns an error if the record with given model id does not exist
     /// or the database operation fails.
-    pub fn get_all_for(&self, model: i32) -> Result<Vec<BatchInfo>> {
+    pub fn get_all_for(&self, model: u32) -> Result<Vec<BatchInfo>> {
         let prefix = model.to_be_bytes();
         self.prefix_iter(rocksdb::Direction::Forward, None, &prefix)
             .collect()
@@ -45,7 +45,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     ///
     /// Returns an error if the record with given model id does not exist
     /// or the database operation fails.
-    pub fn count(&self, model: i32) -> Result<usize> {
+    pub fn count(&self, model: u32) -> Result<usize> {
         let prefix = model.to_be_bytes();
         Ok(self
             .prefix_iter(rocksdb::Direction::Forward, None, &prefix)
@@ -58,7 +58,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     ///
     /// Returns an error if the record with given `model_id` and `batch_ts` does not exist
     /// or the database operation fails.
-    pub fn get(&self, model_id: i32, batch_ts: i64) -> Result<Option<BatchInfo>> {
+    pub fn get(&self, model_id: u32, batch_ts: i64) -> Result<Option<BatchInfo>> {
         let mut key = model_id.to_be_bytes().to_vec();
         key.extend(batch_ts.to_be_bytes());
         let Some(value) = self.map.get(&key)? else {
@@ -73,7 +73,7 @@ impl<'d> Table<'d, crate::batch_info::BatchInfo> {
     /// # Errors
     ///
     /// Returns an error if any of deletion operation fails.
-    pub fn delete_all_for(&self, model: i32) -> Result<usize> {
+    pub fn delete_all_for(&self, model: u32) -> Result<usize> {
         let mut deleted = 0;
         let prefix = model.to_be_bytes();
         for res in self.prefix_iter(rocksdb::Direction::Reverse, None, &prefix) {

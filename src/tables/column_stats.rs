@@ -41,7 +41,7 @@ impl<'d> Table<'d, ColumnStats> {
 
     /// Retrieves a `TableIter` for the `ColumnStats` entries matching the given parameters.
     #[must_use]
-    pub fn get(&self, batch_ts: i64, model_id: i32, cluster_id: u32) -> TableIter<'_, ColumnStats> {
+    pub fn get(&self, batch_ts: i64, model_id: u32, cluster_id: u32) -> TableIter<'_, ColumnStats> {
         let key = Key {
             model_id,
             cluster_id,
@@ -66,7 +66,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn remove_by_model(&self, model_id: i32) -> Result<()> {
+    pub fn remove_by_model(&self, model_id: u32) -> Result<()> {
         let iter = self.prefix_iter(Direction::Forward, None, &model_id.to_be_bytes());
         let to_deletes: Vec<_> = iter
             .filter_map(|result| {
@@ -88,7 +88,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn get_column_statistics(
         &self,
-        model: i32,
+        model: u32,
         cluster: u32,
         time: Vec<NaiveDateTime>,
     ) -> Result<Vec<Statistics>> {
@@ -139,7 +139,7 @@ impl<'d> Table<'d, ColumnStats> {
     pub fn insert_column_statistics(
         &self,
         stats: Vec<(u32, Vec<structured::ColumnStatistics>)>,
-        model_id: i32,
+        model_id: u32,
         batch_ts: NaiveDateTime,
     ) -> Result<()> {
         let batch_ts = from_naive_utc(batch_ts);
@@ -186,7 +186,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn get_top_multimaps_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_ids: Vec<u32>,
         (column_1, column_n): (&[bool], &[bool]),
         number_of_top_n: usize,
@@ -293,7 +293,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if an underlying database error occurs.
     pub fn get_top_columns_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_ids: Vec<u32>,
         top_n: &[bool],
         number_of_top_n: usize,
@@ -362,7 +362,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if an underlying database operation fails.
     pub fn get_top_ip_addresses_of_cluster(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_ids: &[i32],
         size: usize,
     ) -> Result<Vec<TopElementCountsByColumn>> {
@@ -432,7 +432,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if an underlying database operation fails.
     pub fn get_top_ip_addresses_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_ids: &[u32],
         size: usize, // number of top N IP addresses to return
         time: Option<NaiveDateTime>,
@@ -520,7 +520,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn load_rounds_by_cluster(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_id: u32,
         after: &Option<NaiveDateTime>,
         before: &Option<NaiveDateTime>,
@@ -567,7 +567,7 @@ impl<'d> Table<'d, ColumnStats> {
             }
         }
         let model_id = model_id.ok_or_else(|| anyhow::anyhow!("No model ID found"))?;
-        Ok((model_id, rounds.into_iter().collect()))
+        Ok((i32::try_from(model_id)?, rounds.into_iter().collect()))
     }
 
     /// # Errors
@@ -575,7 +575,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn get_column_types_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
     ) -> Result<Vec<crate::StructuredColumnType>> {
         let prefix = model_id.to_be_bytes();
 
@@ -770,11 +770,10 @@ fn to_multi_maps(
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ColumnStats {
-    pub model_id: i32,
+    pub model_id: u32,
     pub cluster_id: u32,
     pub batch_ts: i64,
     pub column_index: u32,
-
     pub description: Description,
     pub n_largest_count: NLargestCount,
 }
@@ -823,7 +822,7 @@ impl ValueTrait for ColumnStats {
 }
 
 struct Key {
-    pub model_id: i32,
+    pub model_id: u32,
     pub cluster_id: u32,
     pub batch_ts: i64,
     pub column_index: u32,
@@ -845,9 +844,9 @@ impl Key {
     pub fn from_be_bytes(buf: &[u8]) -> Self {
         let (val, rest) = buf.split_at(size_of::<i32>());
 
-        let mut buf = [0; size_of::<i32>()];
+        let mut buf = [0; size_of::<u32>()];
         buf.copy_from_slice(val);
-        let model_id = i32::from_be_bytes(buf);
+        let model_id = u32::from_be_bytes(buf);
 
         let (val, rest) = rest.split_at(size_of::<u32>());
         let mut buf = [0; size_of::<u32>()];
@@ -1025,7 +1024,7 @@ mod tests {
         let table = store.column_stats_map();
 
         let cluster_id = 123;
-        let model_id = 42;
+        let model_id = 42_u32;
 
         let batch1 = NaiveDate::from_ymd_opt(2024, 1, 10)
             .unwrap()
@@ -1058,7 +1057,7 @@ mod tests {
             .load_rounds_by_cluster(model_id, cluster_id, &None, &None, true, 10)
             .unwrap();
 
-        assert_eq!(retrieved_model_id, model_id);
+        assert_eq!(u32::try_from(retrieved_model_id).unwrap(), model_id);
         assert_eq!(rounds.len(), 2);
         assert!(rounds.contains(&batch1));
         assert!(rounds.contains(&batch2));

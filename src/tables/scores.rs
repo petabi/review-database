@@ -18,7 +18,7 @@ impl<'d> Table<'d, Scores> {
     /// # Errors
     ///
     /// Returns an error if the account does not exist or the database operation fails.
-    pub fn delete(&self, model: i32) -> Result<()> {
+    pub fn delete(&self, model: u32) -> Result<()> {
         let key = super::serialize(&model)?;
         self.map.delete(&key)
     }
@@ -28,7 +28,7 @@ impl<'d> Table<'d, Scores> {
     /// # Errors
     ///
     /// Returns an error if the scores does not exist or the database operation fails.
-    pub fn get(&self, model: i32) -> Result<Option<Scores>> {
+    pub fn get(&self, model: u32) -> Result<Option<Scores>> {
         let key = super::serialize(&model)?;
         let Some(value) = self.map.get(&key)? else {
             return Ok(None);

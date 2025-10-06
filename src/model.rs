@@ -234,8 +234,9 @@ impl Database {
         if n == 0 {
             Err(Error::InvalidInput("failed to insert model".into()))
         } else {
+            let n_u32 = u32::try_from(n)?;
             self.classifier_fm
-                .store_classifier(n, &model.name, &model.serialized_classifier)
+                .store_classifier(n_u32, &model.name, &model.serialized_classifier)
                 .await?;
             Ok(n)
         }
@@ -259,7 +260,8 @@ impl Database {
             return Err(Error::InvalidInput(format!("The model {name} not found")));
         };
 
-        self.classifier_fm.delete_classifier(id, name).await?;
+        let id_u32 = u32::try_from(id)?;
+        self.classifier_fm.delete_classifier(id_u32, name).await?;
 
         self.delete_stats(id, &mut conn).await?;
 
@@ -339,12 +341,16 @@ impl Database {
 
         let mut conn = self.pool.get().await?;
         let model = query.get_result::<SqlModel>(&mut conn).await?;
-        if !self.classifier_fm.classifier_exists(model.id, name) {
+        let model_id_u32 = u32::try_from(model.id)?;
+        if !self.classifier_fm.classifier_exists(model_id_u32, name) {
             return Err(Error::Classifier(
-                super::classifier_fs::ClassifierFsError::FileNotFound(model.id, name.into()),
+                super::classifier_fs::ClassifierFsError::FileNotFound(model_id_u32, name.into()),
             ));
         }
-        let classifier = self.classifier_fm.load_classifier(model.id, name).await?;
+        let classifier = self
+            .classifier_fm
+            .load_classifier(model_id_u32, name)
+            .await?;
         Ok(Model::from_storage(model, classifier))
     }
 
@@ -429,8 +435,9 @@ impl Database {
             .map_err(|e| {
                 Error::InvalidInput(format!("failed to update model \"{}\": {e}", model.name))
             })?;
+        let model_id_u32 = u32::try_from(model.id)?;
         self.classifier_fm
-            .store_classifier(model.id, &model.name, &model.serialized_classifier)
+            .store_classifier(model_id_u32, &model.name, &model.serialized_classifier)
             .await?;
 
         Ok(model.id)

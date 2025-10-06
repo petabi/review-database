@@ -46,7 +46,7 @@ impl ClassifierFileManager {
     /// # Errors
     ///
     /// If the name contains invalid characters.
-    pub(crate) fn create_classifier_path(&self, model_id: i32, name: &str) -> Result<PathBuf> {
+    pub(crate) fn create_classifier_path(&self, model_id: u32, name: &str) -> Result<PathBuf> {
         validate_name(name)?;
 
         Ok(self
@@ -72,7 +72,7 @@ impl ClassifierFileManager {
     /// access conflicts (rare with timestamp-based temp files), etc.
     pub(crate) async fn store_classifier(
         &self,
-        model_id: i32,
+        model_id: u32,
         name: &str,
         data: &[u8],
     ) -> Result<()> {
@@ -113,7 +113,7 @@ impl ClassifierFileManager {
     ///
     /// Returns `FileNotFound` if the classifier file does not exist.
     /// If loading fails due to permission denied, I/O errors, corrupted file, etc.
-    pub(crate) async fn load_classifier(&self, model_id: i32, name: &str) -> Result<Vec<u8>> {
+    pub(crate) async fn load_classifier(&self, model_id: u32, name: &str) -> Result<Vec<u8>> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
         // Return error if file doesn't exist
@@ -132,7 +132,7 @@ impl ClassifierFileManager {
     /// not readability or integrity. The file might exist but be unreadable
     /// due to permission issues.
     #[must_use]
-    pub(crate) fn classifier_exists(&self, model_id: i32, name: &str) -> bool {
+    pub(crate) fn classifier_exists(&self, model_id: u32, name: &str) -> bool {
         let Ok(file_path) = self.create_classifier_path(model_id, name) else {
             return false;
         };
@@ -146,7 +146,7 @@ impl ClassifierFileManager {
     /// # Errors
     ///
     /// If deletion fails due to permission denied, I/O errors, etc.
-    pub(crate) async fn delete_classifier(&self, model_id: i32, name: &str) -> Result<()> {
+    pub(crate) async fn delete_classifier(&self, model_id: u32, name: &str) -> Result<()> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
         // Only attempt deletion if file exists
@@ -213,7 +213,7 @@ pub enum ClassifierFsError {
     FileRename(std::io::Error, PathBuf, PathBuf),
 
     #[error("classifier file does not exist for model_id: {0}, name = '{1}'")]
-    FileNotFound(i32, String),
+    FileNotFound(u32, String),
 
     #[error("Failed to remove temp classifier file: {1}: {0}")]
     TempFileCleanup(std::io::Error, PathBuf),

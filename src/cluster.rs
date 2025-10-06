@@ -45,7 +45,7 @@ impl From<ClusterDbSchema> for Cluster {
             .map(|labels| labels.into_iter().flatten().collect());
         Cluster {
             id: c.id,
-            cluster_id: c.cluster_id,
+            cluster_id: c.cluster_id.try_into().unwrap_or(0),
             category_id: c.category_id,
             detector_id: c.detector_id,
             event_ids,
@@ -57,7 +57,7 @@ impl From<ClusterDbSchema> for Cluster {
             size: c.size,
             score: c.score,
             last_modification_time: c.last_modification_time,
-            model_id: c.model_id,
+            model_id: c.model_id.try_into().unwrap_or(0),
         }
     }
 }
@@ -198,12 +198,13 @@ impl Database {
     )]
     pub async fn cluster_name_to_ids(
         &self,
-        model_id: i32,
+        model_id: u32,
         names: &[i32],
     ) -> Result<Vec<(i32, i32)>, Error> {
+        let model_id_i32 = i32::try_from(model_id)?;
         let query = dsl::cluster
             .select((dsl::id, dsl::cluster_id))
-            .filter(dsl::model_id.eq(&model_id))
+            .filter(dsl::model_id.eq(&model_id_i32))
             .filter(dsl::cluster_id.eq_any(names));
         let mut conn = self.pool.get().await?;
         Ok(query.get_results(&mut conn).await?)

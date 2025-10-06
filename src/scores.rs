@@ -4,13 +4,13 @@ use crate::{UniqueKey, tables::Value};
 
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct Scores {
-    pub model: i32,
+    pub model: u32,
     inner: crate::types::ModelScores,
 }
 
 impl Scores {
     #[must_use]
-    pub fn new(model: i32, inner: crate::types::ModelScores) -> Self {
+    pub fn new(model: u32, inner: crate::types::ModelScores) -> Self {
         Self { model, inner }
     }
 

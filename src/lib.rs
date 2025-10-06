@@ -442,14 +442,15 @@ impl Store {
             table.add_model(model)?
         })?;
 
+        let model_id_u32 = u32::try_from(model_id)?;
         self.classifier_fm
-            .store_classifier(model_id, &name, &classifier)
+            .store_classifier(model_id_u32, &name, &classifier)
             .await?;
 
         let table = self.batch_info_map();
         for batch in batch_info {
             let record = BatchInfo {
-                model: model_id,
+                model: model_id_u32,
                 inner: batch.clone(),
             };
             if is_update {
@@ -459,7 +460,7 @@ impl Store {
             }
         }
 
-        let record = Scores::new(model_id, scores);
+        let record = Scores::new(model_id_u32, scores);
         if is_update {
             self.scores_map().put(&record)?;
         } else {
@@ -476,7 +477,7 @@ impl Store {
     /// Returns an error if database operation fails or the data is invalid.
     pub async fn delete_model(&self, name: &str) -> Result<()> {
         let table = self.model_map();
-        let model_id = i32::try_from(table.delete_model(name)?)?;
+        let model_id = table.delete_model(name)?;
         self.delete_stats(model_id)?;
         self.classifier_fm.delete_classifier(model_id, name).await?;
         Ok(())
@@ -487,7 +488,7 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error if database operation fails or the data is invalid.
-    fn delete_stats(&self, model_id: i32) -> Result<()> {
+    fn delete_stats(&self, model_id: u32) -> Result<()> {
         let cluster_map = self.cluster_map();
         let to_remove = cluster_map
             .prefix_iter(rocksdb::Direction::Forward, None, &model_id.to_be_bytes())
@@ -594,14 +595,13 @@ impl Store {
         let table = self.model_map();
         let model = table.load_model_by_name(name)?;
 
-        let model_id = i32::try_from(model.id)?;
         let classifier = self
             .classifier_fm
-            .load_classifier(model_id, &model.name)
+            .load_classifier(model.id, &model.name)
             .await?;
 
         Ok(crate::model::Model {
-            id: model_id,
+            id: i32::try_from(model.id)?,
             name: model.name,
             version: model.version,
             kind: model.kind,
@@ -734,6 +734,8 @@ pub enum Error {
     Tls(String),
     #[error("ClassifierFileManager error: {0}")]
     Classifier(#[from] classifier_fs::ClassifierFsError),
+    #[error("Integer conversion error: {0}")]
+    IntConversion(#[from] std::num::TryFromIntError),
 }
 
 #[cfg(test)]
