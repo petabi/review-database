@@ -13,7 +13,7 @@ use crate::{
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Cluster {
-    pub model_id: i32,
+    pub model_id: u32,
     pub id: i32,
     pub category_id: i32,
     pub detector_id: i32,
@@ -43,7 +43,7 @@ impl<'d> Table<'d, Cluster> {
     /// Returns an error if a database operation fails.
     pub fn count_clusters(
         &self,
-        model: i32,
+        model: u32,
         categories: Option<&[i32]>,
         detectors: Option<&[i32]>,
         qualifiers: Option<&[i32]>,
@@ -62,7 +62,7 @@ impl<'d> Table<'d, Cluster> {
     /// Returns an error if a database operation fails.
     pub fn update_cluster(
         &self,
-        model_id: i32,
+        model_id: u32,
         id: i32,
         category: Option<i32>,
         qualifier: Option<i32>,
@@ -103,7 +103,7 @@ impl<'d> Table<'d, Cluster> {
     pub fn update_clusters(
         &self,
         updates: Vec<crate::UpdateClusterRequest>,
-        model_id: i32,
+        model_id: u32,
         max_event_id_num: usize,
     ) -> Result<()> {
         let txn = self.map.db.transaction();
@@ -186,7 +186,7 @@ impl<'d> Table<'d, Cluster> {
     #[allow(clippy::too_many_arguments)]
     pub fn load_clusters(
         &self,
-        model: i32,
+        model: u32,
         categories: Option<&[i32]>,
         detectors: Option<&[i32]>,
         qualifiers: Option<&[i32]>,
@@ -293,7 +293,7 @@ impl ValueTrait for Cluster {
     }
 }
 struct Key {
-    model_id: i32,
+    model_id: u32,
     cluster_id: i32,
 }
 
@@ -336,7 +336,7 @@ impl UniqueKey for Cluster {
 impl Key {
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
-        let capacity = size_of::<i32>() * 2;
+        let capacity = size_of::<u32>() + size_of::<i32>();
 
         let mut buf = Vec::with_capacity(capacity);
         buf.extend(self.model_id.to_be_bytes());
@@ -346,10 +346,10 @@ impl Key {
     }
 
     pub fn from_be_bytes(buf: &[u8]) -> Self {
-        let (val, rest) = buf.split_at(size_of::<i32>());
-        let mut buf = [0; size_of::<i32>()];
+        let (val, rest) = buf.split_at(size_of::<u32>());
+        let mut buf = [0; size_of::<u32>()];
         buf.copy_from_slice(val);
-        let model_id = i32::from_be_bytes(buf);
+        let model_id = u32::from_be_bytes(buf);
 
         let mut buf = [0; size_of::<i32>()];
         buf.copy_from_slice(rest);
@@ -622,7 +622,7 @@ mod tests {
         }
     }
 
-    fn make_cluster(model_id: i32, cluster_id: i32) -> Cluster {
+    fn make_cluster(model_id: u32, cluster_id: i32) -> Cluster {
         Cluster {
             model_id,
             id: cluster_id,

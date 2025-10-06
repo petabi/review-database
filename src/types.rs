@@ -146,7 +146,7 @@ pub(crate) enum EventCategoryV0_41 {
 #[derive(Deserialize)]
 pub struct Cluster {
     pub id: i32,
-    pub cluster_id: i32,
+    pub cluster_id: u32,
     pub category_id: i32,
     pub detector_id: i32,
     pub event_ids: Vec<Timestamp>,
@@ -159,7 +159,7 @@ pub struct Cluster {
     pub score: Option<f64>,
     #[serde(with = "ts_nanoseconds_option")]
     pub last_modification_time: Option<NaiveDateTime>,
-    pub model_id: i32,
+    pub model_id: u32,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -291,7 +291,7 @@ pub struct Outlier {
     pub event_ids: Vec<Timestamp>,
     pub sensors: Vec<Sensor>,
     pub size: i64,
-    pub model_id: i32,
+    pub model_id: u32,
 }
 
 pub type SeqNo = usize;

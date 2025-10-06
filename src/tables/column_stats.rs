@@ -62,7 +62,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn remove_by_model(&self, model_id: i32) -> Result<()> {
+    pub fn remove_by_model(&self, model_id: u32) -> Result<()> {
         let iter = self.iter(Direction::Forward, None);
         let to_deletes: Vec<_> = iter
             .filter_map(|result| {
@@ -136,7 +136,7 @@ impl<'d> Table<'d, ColumnStats> {
     pub fn insert_column_statistics(
         &self,
         stats: Vec<(u32, Vec<structured::ColumnStatistics>)>,
-        model_id: i32,
+        model_id: u32,
         batch_ts: NaiveDateTime,
     ) -> Result<()> {
         let batch_ts = from_naive_utc(batch_ts);
@@ -183,7 +183,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn get_top_multimaps_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_ids: Vec<(u32, i32)>,
         (column_1, column_n): (&[bool], &[bool]),
         number_of_top_n: usize,
@@ -289,7 +289,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if an underlying database error occurs.
     pub fn get_top_columns_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_ids: Vec<u32>,
         top_n: &[bool],
         number_of_top_n: usize,
@@ -349,7 +349,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if an underlying database operation fails.
     pub fn get_top_ip_addresses_of_cluster(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_ids: &[i32],
         size: usize,
     ) -> Result<Vec<TopElementCountsByColumn>> {
@@ -415,7 +415,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if an underlying database operation fails.
     pub fn get_top_ip_addresses_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_ids: &[u32],
         size: usize, // number of top N IP addresses to return
         time: Option<NaiveDateTime>,
@@ -537,7 +537,7 @@ impl<'d> Table<'d, ColumnStats> {
             }
         }
         let model_id = model_id.ok_or_else(|| anyhow::anyhow!("No model ID found"))?;
-        Ok((model_id, rounds.into_iter().collect()))
+        Ok((i32::try_from(model_id)?, rounds.into_iter().collect()))
     }
 
     /// # Errors
@@ -545,7 +545,7 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn get_column_types_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
     ) -> Result<Vec<crate::StructuredColumnType>> {
         let md_id = model_id.to_be_bytes();
         let mut prefix = None;
@@ -750,7 +750,7 @@ pub struct ColumnStats {
     pub cluster_id: u32,
     pub batch_ts: i64,
     pub column_index: u32,
-    pub model_id: i32,
+    pub model_id: u32,
     pub description: Description,
     pub n_largest_count: NLargestCount,
 }
@@ -802,7 +802,7 @@ struct Key {
     pub cluster_id: u32,
     pub batch_ts: i64,
     pub column_index: u32,
-    pub model_id: i32,
+    pub model_id: u32,
 }
 impl Key {
     #[must_use]
@@ -833,9 +833,9 @@ impl Key {
         buf.copy_from_slice(val);
         let column_index = u32::from_be_bytes(buf);
 
-        let mut buf = [0; size_of::<i32>()];
+        let mut buf = [0; size_of::<u32>()];
         buf.copy_from_slice(rest);
-        let model_id = i32::from_be_bytes(buf);
+        let model_id = u32::from_be_bytes(buf);
 
         Self {
             cluster_id,
@@ -999,7 +999,7 @@ mod tests {
         let table = store.column_stats_map();
 
         let cluster_id = 123;
-        let model_id = 42;
+        let model_id = 42_u32;
 
         let batch1 = NaiveDate::from_ymd_opt(2024, 1, 10)
             .unwrap()
@@ -1032,7 +1032,7 @@ mod tests {
             .load_rounds_by_cluster(cluster_id, &None, &None, true, 10)
             .unwrap();
 
-        assert_eq!(retrieved_model_id, model_id);
+        assert_eq!(u32::try_from(retrieved_model_id).unwrap(), model_id);
         assert_eq!(rounds.len(), 2);
         assert!(rounds.contains(&batch1));
         assert!(rounds.contains(&batch2));

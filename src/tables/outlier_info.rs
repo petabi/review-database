@@ -11,7 +11,7 @@ use crate::{Iterable, Map, Table, UniqueKey, tables::Value as ValueTrait, types:
 
 #[derive(Debug, PartialEq)]
 pub struct OutlierInfo {
-    pub model_id: i32,
+    pub model_id: u32,
     pub timestamp: i64,
     pub rank: i64,
     pub id: i64,
@@ -66,7 +66,7 @@ impl ValueTrait for OutlierInfo {
 
 #[derive(Debug, PartialEq)]
 pub struct Key {
-    pub model_id: i32,
+    pub model_id: u32,
     pub timestamp: i64,
     pub rank: i64,
     pub id: i64,
@@ -76,7 +76,7 @@ pub struct Key {
 impl Key {
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
-        let capacity = size_of::<i32>() + size_of::<i64>() * 3 + self.sensor.len();
+        let capacity = size_of::<u32>() + size_of::<i64>() * 3 + self.sensor.len();
 
         let mut buf = Vec::with_capacity(capacity);
         buf.extend(self.model_id.to_be_bytes());
@@ -91,11 +91,11 @@ impl Key {
     ///
     /// Returns an error if deserialization from bytes fails.
     pub fn from_be_bytes(buf: &[u8]) -> Result<Self> {
-        let (val, rest) = buf.split_at(size_of::<i32>());
+        let (val, rest) = buf.split_at(size_of::<u32>());
 
         let mut buf = [0; size_of::<u32>()];
         buf.copy_from_slice(val);
-        let model_id = i32::from_be_bytes(buf);
+        let model_id = u32::from_be_bytes(buf);
 
         let (val, rest) = rest.split_at(size_of::<i64>());
         let mut buf = [0; size_of::<i64>()];
@@ -142,7 +142,7 @@ impl<'d> Table<'d, OutlierInfo> {
     #[must_use]
     pub fn get(
         &self,
-        model: i32,
+        model: u32,
         timestamp: Option<i64>,
         direction: Direction,
         from: Option<&[u8]>,
@@ -302,7 +302,7 @@ mod tests {
         is_saved: bool,
     ) -> OutlierInfo {
         OutlierInfo {
-            model_id,
+            model_id: model_id.try_into().unwrap(),
             timestamp,
             rank,
             id,

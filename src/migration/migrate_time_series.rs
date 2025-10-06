@@ -4,17 +4,21 @@ use chrono::NaiveDateTime;
 use crate::Database;
 use crate::tables::TimeSeries;
 
-pub(crate) async fn retrieve_model_to_migrate(database: &Database) -> Result<Vec<i32>> {
+pub(crate) async fn retrieve_model_to_migrate(database: &Database) -> Result<Vec<u32>> {
     use diesel_async::RunQueryDsl;
 
     use crate::diesel::QueryDsl;
     use crate::schema::model::dsl;
     let mut conn = database.pool.get().await?;
-    Ok(dsl::model
+    let ids: Vec<i32> = dsl::model
         .select(dsl::id)
         .order_by(dsl::id)
         .load(&mut conn)
-        .await?)
+        .await?;
+    Ok(ids
+        .into_iter()
+        .filter_map(|id| u32::try_from(id).ok())
+        .collect())
 }
 
 pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()> {
@@ -41,7 +45,7 @@ pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()>
 async fn migrate_time_series_for_model(
     database: &Database,
     store: &crate::Store,
-    model: i32,
+    model: u32,
 ) -> Result<()> {
     let time_series = get_time_series(database, model).await?;
     let map = store.time_series_map();
@@ -53,16 +57,17 @@ async fn migrate_time_series_for_model(
     Ok(())
 }
 
-async fn get_time_series(database: &Database, model_id: i32) -> Result<Vec<TimeSeries>> {
+async fn get_time_series(database: &Database, model_id: u32) -> Result<Vec<TimeSeries>> {
     use diesel_async::RunQueryDsl;
 
     use crate::diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
     use crate::schema::{cluster::dsl as c_d, time_series::dsl as t_d};
 
     let mut conn = database.pool.get().await?;
+    let model_id_i32 = i32::try_from(model_id)?;
     Ok(c_d::cluster
         .inner_join(t_d::time_series.on(t_d::cluster_id.eq(c_d::id)))
-        .filter(c_d::model_id.eq(model_id))
+        .filter(c_d::model_id.eq(model_id_i32))
         .select((
             c_d::cluster_id,
             t_d::time,
@@ -89,19 +94,20 @@ async fn get_time_series(database: &Database, model_id: i32) -> Result<Vec<TimeS
         .collect())
 }
 
-async fn remove_time_series(database: &Database, model_id: i32) -> Result<()> {
+async fn remove_time_series(database: &Database, model_id: u32) -> Result<()> {
     use diesel_async::RunQueryDsl;
 
     use crate::diesel::{ExpressionMethods, QueryDsl};
     use crate::schema::{cluster::dsl as c_d, time_series::dsl as t_d};
 
     let mut conn = database.pool.get().await?;
+    let model_id_i32 = i32::try_from(model_id)?;
     diesel::delete(t_d::time_series)
         .filter(
             t_d::cluster_id.eq_any(
                 c_d::cluster
                     .select(c_d::id)
-                    .filter(c_d::model_id.eq(model_id)),
+                    .filter(c_d::model_id.eq(model_id_i32)),
             ),
         )
         .execute(&mut conn)
