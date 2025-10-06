@@ -30,14 +30,15 @@ pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()>
     Ok(())
 }
 
-async fn remove_clusters(database: &Database, model: i32) -> Result<()> {
+async fn remove_clusters(database: &Database, model: u32) -> Result<()> {
     use diesel::ExpressionMethods;
     use diesel_async::RunQueryDsl;
 
     use crate::diesel::QueryDsl;
     use crate::schema::cluster::dsl;
     let mut conn = database.pool.get().await?;
-    diesel::delete(dsl::cluster.filter(dsl::model_id.eq(model)))
+    let model_i32 = i32::try_from(model)?;
+    diesel::delete(dsl::cluster.filter(dsl::model_id.eq(model_i32)))
         .execute(&mut conn)
         .await?;
     Ok(())
@@ -167,7 +168,7 @@ impl TryFrom<(ColumnStatsKeyV41, ColumnStatsValueV41)> for crate::ColumnStats {
         (key, value): (ColumnStatsKeyV41, ColumnStatsValueV41),
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            model_id: key.model_id,
+            model_id: u32::try_from(key.model_id)?,
             cluster_id: key.cluster_id,
             batch_ts: key.batch_ts,
             column_index: key.column_index,
@@ -225,7 +226,7 @@ async fn update_cluster_id_in_column_stats(
 async fn migrate_clusters_for_model(
     database: &Database,
     store: &crate::Store,
-    model: i32,
+    model: u32,
 ) -> Result<()> {
     let clusters = retrieve_cluster_to_migrate(database, model).await?;
     let map = store.cluster_map();
@@ -240,11 +241,12 @@ async fn migrate_clusters_for_model(
 #[allow(deprecated)]
 async fn retrieve_cluster_to_migrate(
     database: &Database,
-    model: i32,
+    model: u32,
 ) -> Result<Vec<crate::Cluster>> {
+    let model_i32 = i32::try_from(model)?;
     Ok(database
         .load_clusters(
-            model,
+            model_i32,
             None,
             None,
             None,
@@ -258,7 +260,7 @@ async fn retrieve_cluster_to_migrate(
         .into_iter()
         .map(|c| Cluster {
             model_id: model,
-            id: c.cluster_id,
+            id: c.id,
             category_id: c.category_id,
             detector_id: c.detector_id,
             event_ids: c.event_ids,

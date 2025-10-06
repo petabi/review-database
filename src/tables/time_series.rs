@@ -20,7 +20,7 @@ impl<'d> Table<'d, TimeSeries> {
     /// Returns an error if the database operation fails.
     pub fn add_time_series(
         &self,
-        model_id: i32,
+        model_id: u32,
         batch_ts: i64,
         series: Vec<(i32, Vec<Column>)>,
     ) -> Result<()> {
@@ -48,7 +48,7 @@ impl<'d> Table<'d, TimeSeries> {
     /// # Errors
     ///
     /// Returns an error if an underlying database error occurs.
-    pub fn get_time_range_of_model(&self, model_id: i32) -> Result<Option<(i64, i64)>> {
+    pub fn get_time_range_of_model(&self, model_id: u32) -> Result<Option<(i64, i64)>> {
         use rocksdb::Direction;
 
         let prefix = model_id.to_be_bytes();
@@ -115,7 +115,7 @@ impl<'d> Table<'d, TimeSeries> {
     /// Returns an error if an underlying database error occurs.
     pub fn get_top_time_series_of_cluster(
         &self,
-        model_id: i32,
+        model_id: u32,
         cluster_id: i32,
         start: Option<i64>,
         end: Option<i64>,
@@ -167,7 +167,7 @@ impl<'d> Table<'d, TimeSeries> {
     /// Returns an error if an underlying database operation fails.
     pub fn get_top_time_series_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
         time: Option<i64>,
         start: Option<i64>,
         end: Option<i64>,
@@ -213,7 +213,7 @@ impl<'d> Table<'d, TimeSeries> {
 
     fn time_series_of_model(
         &self,
-        model_id: i32,
+        model_id: u32,
         time: Option<i64>,
         start: Option<i64>,
         end: Option<i64>,
@@ -287,7 +287,7 @@ pub struct Cluster {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TimeSeries {
-    pub model_id: i32,
+    pub model_id: u32,
     pub cluster_id: i32,
     pub time: i64, // batch_ts
     pub value: i64,
@@ -336,7 +336,7 @@ impl FromKeyValue for TimeSeries {
 }
 
 struct Key {
-    model_id: i32,
+    model_id: u32,
     cluster_id: i32,
     time: i64,
     value: i64,
@@ -357,12 +357,13 @@ impl Key {
     }
 
     pub fn from_bytes(buf: &[u8]) -> Self {
-        let (val, rest) = buf.split_at(size_of::<i32>());
-        let mut buf = [0; size_of::<i32>()];
+        let (val, rest) = buf.split_at(size_of::<u32>());
+        let mut buf = [0; size_of::<u32>()];
         buf.copy_from_slice(val);
-        let model_id = i32::from_be_bytes(buf);
+        let model_id = u32::from_be_bytes(buf);
 
         let (val, rest) = rest.split_at(size_of::<i32>());
+        let mut buf = [0; size_of::<i32>()];
         buf.copy_from_slice(val);
         let cluster_id = i32::from_be_bytes(buf);
 

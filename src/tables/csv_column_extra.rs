@@ -14,7 +14,7 @@ use crate::{
 #[derive(Deserialize, Serialize, Default)]
 pub struct CsvColumnExtra {
     pub id: u32,
-    pub model_id: i32,
+    pub model_id: u32,
     pub column_alias: Option<Vec<String>>,
     pub column_display: Option<Vec<bool>>,
     pub column_top_n: Option<Vec<bool>>,
@@ -114,7 +114,7 @@ impl<'d> IndexedTable<'d, CsvColumnExtra> {
     ) -> Result<u32> {
         let entry = CsvColumnExtra {
             id: u32::MAX,
-            model_id,
+            model_id: u32::try_from(model_id)?,
             column_alias: column_alias.map(ToOwned::to_owned),
             column_display: column_display.map(ToOwned::to_owned),
             column_top_n: column_top_n.map(ToOwned::to_owned),

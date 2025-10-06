@@ -4,13 +4,13 @@ use crate::{UniqueKey, tables::Value};
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct BatchInfo {
-    pub model: i32,
+    pub model: u32,
     pub inner: crate::types::ModelBatchInfo,
 }
 
 impl BatchInfo {
     #[must_use]
-    pub fn new(model: i32, inner: crate::types::ModelBatchInfo) -> Self {
+    pub fn new(model: u32, inner: crate::types::ModelBatchInfo) -> Self {
         Self { model, inner }
     }
 
@@ -23,7 +23,7 @@ impl BatchInfo {
 impl From<crate::types::ModelBatchInfo> for BatchInfo {
     fn from(inner: crate::types::ModelBatchInfo) -> Self {
         Self {
-            model: i32::default(),
+            model: u32::default(),
             inner,
         }
     }

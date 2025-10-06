@@ -98,7 +98,7 @@ impl Database {
     /// Returns an error if an underlying database operation fails.
     pub async fn load_cluster_ids_with_size_limit(
         &self,
-        model: i32,
+        model: u32,
         portion_of_clusters: Option<f64>,
     ) -> Result<Vec<i32>, Error> {
         let mut conn = self.pool.get().await?;
@@ -118,15 +118,21 @@ impl Database {
 
 async fn get_cluster_sizes(
     conn: &mut AsyncPgConnection,
-    model_id: i32,
+    model_id: u32,
 ) -> Result<Vec<ClusterSize>, diesel::result::Error> {
     use diesel_async::RunQueryDsl;
 
     use super::schema::cluster::dsl;
 
+    let model_id_i32 = i32::try_from(model_id).map_err(|e| {
+        diesel::result::Error::DatabaseError(
+            diesel::result::DatabaseErrorKind::Unknown,
+            Box::new(format!("model_id out of range: {e}")),
+        )
+    })?;
     dsl::cluster
         .select((dsl::id, dsl::size))
-        .filter(dsl::model_id.eq(model_id).and(dsl::category_id.ne(2)))
+        .filter(dsl::model_id.eq(model_id_i32).and(dsl::category_id.ne(2)))
         .order_by(dsl::size.desc())
         .then_order_by(dsl::id.asc())
         .load::<ClusterSize>(conn)
