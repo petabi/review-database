@@ -1113,12 +1113,7 @@ mod tests {
             (Element::Text("text".into()), 4),
             (Element::IpAddr("127.0.0.1".parse().unwrap()), 5),
             (
-                Element::DateTime(
-                    NaiveDate::from_ymd_opt(2024, 1, 1)
-                        .unwrap()
-                        .and_hms_opt(0, 0, 0)
-                        .unwrap(),
-                ),
+                Element::DateTime(jiff::civil::DateTime::new(2024, 1, 1, 0, 0, 0, 0).unwrap()),
                 6,
             ),
             (Element::Binary(vec![1, 2, 3]), 7),
