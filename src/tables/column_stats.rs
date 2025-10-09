@@ -37,18 +37,18 @@ impl<'d> Table<'d, ColumnStats> {
 
     /// Retrieves a `TableIter` for the `ColumnStats` entries matching the given parameters.
     #[must_use]
-    pub fn get(&self, batch_ts: i64, cluster_id: u32) -> TableIter<'_, ColumnStats> {
+    pub fn get(&self, batch_ts: i64, model_id: i32, cluster_id: u32) -> TableIter<'_, ColumnStats> {
         let key = Key {
+            model_id,
             cluster_id,
             batch_ts,
             column_index: 0,
-            model_id: 0,
         };
         let prefix = key.to_bytes();
         self.prefix_iter(
             Direction::Forward,
             None,
-            &prefix[..prefix.len() - size_of::<u32>() - size_of::<i32>()],
+            &prefix[..prefix.len() - size_of::<u32>()],
         )
     }
 
@@ -63,15 +63,11 @@ impl<'d> Table<'d, ColumnStats> {
     ///
     /// Returns an error if the database operation fails.
     pub fn remove_by_model(&self, model_id: i32) -> Result<()> {
-        let iter = self.iter(Direction::Forward, None);
+        let iter = self.prefix_iter(Direction::Forward, None, &model_id.to_be_bytes());
         let to_deletes: Vec<_> = iter
             .filter_map(|result| {
                 let stats = result.ok()?;
-                if stats.model_id == model_id {
-                    Some(stats.unique_key())
-                } else {
-                    None
-                }
+                Some(stats.unique_key())
             })
             .collect();
         for to_delete in to_deletes {
@@ -88,11 +84,14 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn get_column_statistics(
         &self,
+        model: i32,
         cluster: u32,
         time: Vec<NaiveDateTime>,
     ) -> Result<Vec<Statistics>> {
         if time.is_empty() {
-            let prefix = cluster.to_be_bytes();
+            let mut prefix = model.to_be_bytes().to_vec();
+            prefix.extend(cluster.to_be_bytes());
+
             return self
                 .prefix_iter(Direction::Forward, None, &prefix)
                 .map(|result| {
@@ -110,7 +109,7 @@ impl<'d> Table<'d, ColumnStats> {
         }
         time.into_iter()
             .map(from_naive_utc)
-            .flat_map(|t| self.get(t, cluster))
+            .flat_map(|t| self.get(t, model, cluster))
             .map(|result: std::result::Result<ColumnStats, anyhow::Error>| {
                 let column_stats = result?;
                 Ok(Statistics {
@@ -184,7 +183,7 @@ impl<'d> Table<'d, ColumnStats> {
     pub fn get_top_multimaps_of_model(
         &self,
         model_id: i32,
-        cluster_ids: Vec<(u32, i32)>,
+        cluster_ids: Vec<u32>,
         (column_1, column_n): (&[bool], &[bool]),
         number_of_top_n: usize,
         min_top_n_of_1_to_n: usize,
@@ -193,13 +192,22 @@ impl<'d> Table<'d, ColumnStats> {
         let time = time.map(from_naive_utc);
         let column_1: HashSet<_> = get_selected_column_index(column_1).into_iter().collect();
         let column_n: HashSet<_> = get_selected_column_index(column_n).into_iter().collect();
-        let cluster_ids: HashMap<_, _> = cluster_ids.into_iter().collect();
+        let prefix_size = if time.is_some() {
+            size_of::<i32>() + size_of::<u32>() + size_of::<i64>()
+        } else {
+            size_of::<i32>() + size_of::<u32>()
+        };
+        let mut prefix = Vec::with_capacity(prefix_size);
+        prefix.extend(model_id.to_be_bytes());
+        prefix.extend(u32::to_be_bytes(0)); // placeholder for cluster_id
+        if let Some(ts) = time {
+            prefix.extend(ts.to_be_bytes());
+        }
         let mut top_n_stats = vec![];
-        for id in cluster_ids.keys() {
-            let mut prefix = id.to_be_bytes().to_vec();
-            if let Some(ts) = time {
-                prefix.extend(ts.to_be_bytes());
-            }
+        for cluster_id in cluster_ids {
+            prefix[size_of::<i32>()..size_of::<i32>() + size_of::<u32>()]
+                .copy_from_slice(&cluster_id.to_be_bytes());
+
             let iter = self.prefix_iter(Direction::Forward, None, &prefix);
             for result in iter {
                 let column_stats = result?;
@@ -239,15 +247,7 @@ impl<'d> Table<'d, ColumnStats> {
             }
 
             let mut clusters: Vec<_> = clusters.into_iter().map(|(k, val)| (k, val[0])).collect();
-            clusters.sort_unstable_by(|a, b| {
-                let a = cluster_ids
-                    .get(&a.0)
-                    .expect("Cluster ID not found in cluster_ids map");
-                let b = cluster_ids
-                    .get(&b.0)
-                    .expect("Cluster ID not found in cluster_ids map");
-                a.cmp(b)
-            });
+            clusters.sort_unstable_by_key(|(cluster_id, _)| *cluster_id);
             clusters.sort_unstable_by_key(|(_, (batch_ts, _))| *batch_ts);
             clusters.truncate(number_of_top_n);
 
@@ -269,7 +269,7 @@ impl<'d> Table<'d, ColumnStats> {
                     },
                 );
 
-            result.push(to_multi_maps(col_n, &cluster_ids, selected));
+            result.push(to_multi_maps(col_n, selected));
         }
 
         Ok(result)
@@ -298,18 +298,27 @@ impl<'d> Table<'d, ColumnStats> {
     ) -> Result<Vec<TopElementCountsByColumn>> {
         let columns = get_columns_for_top_n(top_n);
         let time = time.map(from_naive_utc);
+        let prefix_size = if time.is_some() {
+            size_of::<i32>() + size_of::<u32>() + size_of::<i64>()
+        } else {
+            size_of::<i32>() + size_of::<u32>()
+        };
+        let mut prefix = Vec::with_capacity(prefix_size);
+        prefix.extend(model_id.to_be_bytes());
+        prefix.extend(u32::to_be_bytes(0)); // placeholder for cluster_id
+        if let Some(ts) = time {
+            prefix.extend(ts.to_be_bytes());
+        }
+
         let mut total_of_top_n: HashMap<_, HashMap<_, HashMap<String, i64>>> = HashMap::new();
         for cluster_id in cluster_ids {
-            let mut prefix = cluster_id.to_be_bytes().to_vec();
-            if let Some(ts) = time {
-                prefix.extend(ts.to_be_bytes());
-            }
+            prefix[size_of::<i32>()..size_of::<i32>() + size_of::<u32>()]
+                .copy_from_slice(&cluster_id.to_be_bytes());
+
             let iter = self.prefix_iter(Direction::Forward, None, &prefix);
             for result in iter {
                 let column_stats = result?;
-                if column_stats.model_id != model_id {
-                    continue;
-                }
+
                 if !columns.contains(&i32::try_from(column_stats.column_index)?) {
                     continue;
                 }
@@ -358,9 +367,13 @@ impl<'d> Table<'d, ColumnStats> {
         if cluster_ids.is_empty() {
             return Ok(Vec::new());
         }
+        let mut prefix = Vec::with_capacity(size_of::<i32>() + size_of::<u32>());
+        prefix.extend(model_id.to_be_bytes());
+        prefix.extend(u32::to_be_bytes(0)); // placeholder for cluster_id
+
         let mut top_n: HashMap<u32, HashMap<String, i64>> = HashMap::new();
         for cluster_id in cluster_ids {
-            let prefix = cluster_id.to_be_bytes();
+            prefix[size_of::<i32>()..].copy_from_slice(&cluster_id.to_be_bytes());
             let iter = self.prefix_iter(Direction::Forward, None, &prefix);
             for result in iter {
                 let column_stats = result?;
@@ -423,12 +436,22 @@ impl<'d> Table<'d, ColumnStats> {
     ) -> Result<Vec<TopElementCountsByColumn>> {
         let time = time.map(from_naive_utc).map(i64::to_be_bytes);
         let mut total_of_top_n: HashMap<_, HashMap<_, HashMap<String, i64>>> = HashMap::new();
+        let prefix_size = if time.is_some() {
+            size_of::<i32>() + size_of::<u32>() + size_of::<i64>()
+        } else {
+            size_of::<i32>() + size_of::<u32>()
+        };
+        let mut prefix = Vec::with_capacity(prefix_size);
+        prefix.extend(model_id.to_be_bytes());
+        prefix.extend(u32::to_be_bytes(0)); // placeholder for cluster_id
+        if let Some(ts) = time {
+            prefix.extend(ts);
+        }
 
         for &cluster_id in cluster_ids {
-            let mut prefix = cluster_id.to_be_bytes().to_vec();
-            if let Some(ts) = time {
-                prefix.extend(ts);
-            }
+            prefix[size_of::<i32>()..size_of::<i32>() + size_of::<u32>()]
+                .copy_from_slice(&cluster_id.to_be_bytes());
+
             let iter = self.prefix_iter(Direction::Forward, None, &prefix);
             for result in iter {
                 let column_stats = result?;
@@ -471,8 +494,9 @@ impl<'d> Table<'d, ColumnStats> {
     /// # Errors
     ///
     /// Returns an error if the database operation fails.
-    pub fn count_rounds_by_cluster(&self, cluster_id: u32) -> Result<i64> {
-        let prefix = cluster_id.to_be_bytes();
+    pub fn count_rounds_by_cluster(&self, model_id: i32, cluster_id: u32) -> Result<i64> {
+        let mut prefix = model_id.to_be_bytes().to_vec();
+        prefix.extend(cluster_id.to_be_bytes());
         let iter = self.prefix_iter(Direction::Forward, None, &prefix);
         i64::try_from(
             iter.filter_map(|result| {
@@ -492,13 +516,15 @@ impl<'d> Table<'d, ColumnStats> {
     /// Returns an error if the database operation fails.
     pub fn load_rounds_by_cluster(
         &self,
+        model_id: i32,
         cluster_id: u32,
         after: &Option<NaiveDateTime>,
         before: &Option<NaiveDateTime>,
         is_first: bool,
         limit: usize,
     ) -> Result<(i32, Vec<NaiveDateTime>)> {
-        let prefix = cluster_id.to_be_bytes();
+        let mut prefix = model_id.to_be_bytes().to_vec();
+        prefix.extend(cluster_id.to_be_bytes());
         let mut buf = Vec::with_capacity(size_of::<u32>() + size_of::<i64>());
         buf.extend(cluster_id.to_be_bytes());
         let (direction, from) = if is_first {
@@ -547,21 +573,16 @@ impl<'d> Table<'d, ColumnStats> {
         &self,
         model_id: i32,
     ) -> Result<Vec<crate::StructuredColumnType>> {
-        let md_id = model_id.to_be_bytes();
-        let mut prefix = None;
-        for result in self
-            .map
-            .db
-            .iterator_cf(self.map.cf, rocksdb::IteratorMode::Start)
-        {
-            let (key, _value) = result?;
-            if key.ends_with(&md_id) {
-                prefix = Some(key[..key.len() - size_of::<i32>() - size_of::<u32>()].to_vec());
-                break;
-            }
-        }
-        if let Some(prefix) = prefix {
-            let iter = self.prefix_iter(Direction::Forward, None, &prefix);
+        let prefix = model_id.to_be_bytes();
+
+        if let Some(first) = self.prefix_iter(Direction::Forward, None, &prefix).next() {
+            let column_stats = first?;
+            let key = column_stats.unique_key();
+            let iter = self.prefix_iter(
+                Direction::Forward,
+                None,
+                &key[..key.len() - size_of::<u32>()],
+            );
             let mut column_types = Vec::new();
             for result in iter {
                 let column_stats = result?;
@@ -575,6 +596,7 @@ impl<'d> Table<'d, ColumnStats> {
             }
             return Ok(column_types);
         }
+
         Ok(Vec::new())
     }
 }
@@ -711,17 +733,14 @@ fn from_naive_utc(date: NaiveDateTime) -> i64 {
 
 fn to_multi_maps(
     column: u32,
-    cluster_ids: &HashMap<u32, i32>,
     selected: HashMap<u32, HashMap<u32, Vec<&[structured::ElementCount]>>>,
 ) -> TopMultimaps {
     TopMultimaps {
         n_index: column.to_usize().expect("column index < usize::max"),
         selected: selected
             .into_iter()
-            .map(|(cluster, v)| {
-                let cluster_id = *cluster_ids
-                    .get(&cluster)
-                    .expect("Cluster ID not found in cluster_ids map");
+            .map(|(cluster_id, v)| {
+                let cluster_id = cluster_id.to_i32().expect("cluster_id is a valid i32");
                 TopColumnsOfCluster {
                     cluster_id,
                     columns: v
@@ -747,10 +766,11 @@ fn to_multi_maps(
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ColumnStats {
+    pub model_id: i32,
     pub cluster_id: u32,
     pub batch_ts: i64,
     pub column_index: u32,
-    pub model_id: i32,
+
     pub description: Description,
     pub n_largest_count: NLargestCount,
 }
@@ -763,8 +783,8 @@ impl FromKeyValue for ColumnStats {
 
         Ok(Self {
             model_id: key.model_id,
-            batch_ts: key.batch_ts,
             cluster_id: key.cluster_id,
+            batch_ts: key.batch_ts,
             column_index: key.column_index,
             description: value.description,
             n_largest_count: value.n_largest_count,
@@ -799,10 +819,10 @@ impl ValueTrait for ColumnStats {
 }
 
 struct Key {
+    pub model_id: i32,
     pub cluster_id: u32,
     pub batch_ts: i64,
     pub column_index: u32,
-    pub model_id: i32,
 }
 impl Key {
     #[must_use]
@@ -810,15 +830,22 @@ impl Key {
         let capacity = size_of::<i32>() + size_of::<i64>() + size_of::<u32>() * 2;
 
         let mut buf = Vec::with_capacity(capacity);
+        buf.extend(self.model_id.to_be_bytes());
         buf.extend(self.cluster_id.to_be_bytes());
         buf.extend(self.batch_ts.to_be_bytes());
         buf.extend(self.column_index.to_be_bytes());
-        buf.extend(self.model_id.to_be_bytes());
+
         buf
     }
 
     pub fn from_be_bytes(buf: &[u8]) -> Self {
-        let (val, rest) = buf.split_at(size_of::<u32>());
+        let (val, rest) = buf.split_at(size_of::<i32>());
+
+        let mut buf = [0; size_of::<i32>()];
+        buf.copy_from_slice(val);
+        let model_id = i32::from_be_bytes(buf);
+
+        let (val, rest) = rest.split_at(size_of::<u32>());
         let mut buf = [0; size_of::<u32>()];
         buf.copy_from_slice(val);
         let cluster_id = u32::from_be_bytes(buf);
@@ -828,20 +855,15 @@ impl Key {
         buf.copy_from_slice(val);
         let batch_ts = i64::from_be_bytes(buf);
 
-        let (val, rest) = rest.split_at(size_of::<u32>());
         let mut buf = [0; size_of::<u32>()];
-        buf.copy_from_slice(val);
+        buf.copy_from_slice(rest);
         let column_index = u32::from_be_bytes(buf);
 
-        let mut buf = [0; size_of::<i32>()];
-        buf.copy_from_slice(rest);
-        let model_id = i32::from_be_bytes(buf);
-
         Self {
+            model_id,
             cluster_id,
             batch_ts,
             column_index,
-            model_id,
         }
     }
 }
@@ -879,7 +901,7 @@ mod tests {
             n_largest_count: NLargestCount::default(),
         };
         table.insert(&stats).unwrap();
-        let retrieved = table.get(1_622_547_800, 42).next().unwrap().unwrap();
+        let retrieved = table.get(1_622_547_800, 1, 42).next().unwrap().unwrap();
         assert_eq!(retrieved, stats);
     }
 
@@ -924,7 +946,7 @@ mod tests {
             .unwrap();
 
         let stats = table
-            .get_column_statistics(cluster_id, vec![batch_ts])
+            .get_column_statistics(model_id, cluster_id, vec![batch_ts])
             .unwrap();
         assert_eq!(stats.len(), 1);
         assert_eq!(stats[0].column_index, 0);
@@ -986,7 +1008,7 @@ mod tests {
             .insert_column_statistics(vec![(cluster_id, vec![stats2])], model_id, batch2)
             .unwrap();
 
-        let count = table.count_rounds_by_cluster(cluster_id).unwrap();
+        let count = table.count_rounds_by_cluster(2, cluster_id).unwrap();
         assert_eq!(count, 2);
     }
 
@@ -1029,7 +1051,7 @@ mod tests {
         }
 
         let (retrieved_model_id, rounds) = table
-            .load_rounds_by_cluster(cluster_id, &None, &None, true, 10)
+            .load_rounds_by_cluster(model_id, cluster_id, &None, &None, true, 10)
             .unwrap();
 
         assert_eq!(retrieved_model_id, model_id);
@@ -1201,10 +1223,7 @@ mod tests {
             .or_default()
             .insert(column_index, vec![&data]);
 
-        let mut cluster_ids = HashMap::new();
-        cluster_ids.insert(1, 1);
-
-        let result = to_multi_maps(0, &cluster_ids, selected);
+        let result = to_multi_maps(0, selected);
         assert_eq!(result.n_index, 0);
         assert_eq!(result.selected.len(), 1);
         assert_eq!(result.selected[0].cluster_id, 1);
