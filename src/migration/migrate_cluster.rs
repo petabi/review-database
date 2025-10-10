@@ -48,7 +48,7 @@ async fn update_cluster_id_in_column_stats(
 
     use crate::diesel::QueryDsl;
     use crate::schema::cluster::dsl as c_d;
-    use crate::tables::Iterable;
+
     let mut conn = database.pool.get().await?;
 
     let cluster_ids: HashMap<u32, u32> = c_d::cluster
@@ -59,16 +59,19 @@ async fn update_cluster_id_in_column_stats(
         .map(|(id, cid)| Ok((u32::try_from(id)?, u32::try_from(cid)?)))
         .collect::<Result<_, anyhow::Error>>()?;
     let map = store.column_stats_map();
-    let txn = map.transaction();
-    let iter = map.iter(rocksdb::Direction::Forward, None);
+
+    let iter = map.raw().db.iterator(rocksdb::IteratorMode::Start);
+    let txn = map.raw().db.transaction();
     for item in iter {
-        let old = item?;
-        let mut new = old.clone();
-        new.cluster_id = cluster_ids
-            .get(&old.cluster_id)
-            .copied()
-            .unwrap_or(old.cluster_id);
-        map.update_with_transaction(&old, &new, &txn)?;
+        let (old_key, old_value) = item?;
+
+        // let mut new = old.clone();
+        // new.cluster_id = cluster_ids
+        //     .get(&old.cluster_id)
+        //     .copied()
+        //     .unwrap_or(old.cluster_id);
+        map.raw()
+            .update_with_transaction((&old_key, &old_value), (&old_key, &old_value), &txn)?;
     }
     txn.commit()?;
 
