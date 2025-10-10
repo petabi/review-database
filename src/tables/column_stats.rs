@@ -35,6 +35,10 @@ impl<'d> Table<'d, ColumnStats> {
         Map::open(db, super::COLUMN_STATS).map(Table::new)
     }
 
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
+    }
+
     /// Retrieves a `TableIter` for the `ColumnStats` entries matching the given parameters.
     #[must_use]
     pub fn get(&self, batch_ts: i64, model_id: i32, cluster_id: u32) -> TableIter<'_, ColumnStats> {

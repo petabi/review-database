@@ -67,11 +67,6 @@ impl<'d> Table<'d, AccountPolicy> {
             .map(|p| super::deserialize(p.as_ref()).map(|p: AccountPolicy| p.expiry_period_in_secs))
             .transpose()
     }
-
-    #[allow(unused)]
-    pub(crate) fn raw(&self) -> &Map<'_> {
-        &self.map
-    }
 }
 
 #[cfg(test)]
