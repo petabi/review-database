@@ -100,9 +100,11 @@ pub(crate) use self::{
         BlocklistDhcpFieldsV0_42,
     },
     dns::{
-        BlocklistDnsFieldsV0_41, BlocklistDnsFieldsV0_42, BlocklistDnsFieldsV0_43,
-        CryptocurrencyMiningPoolFields as CryptocurrencyMiningPoolFieldsV0_43,
+        BlocklistDnsFields as BlocklistDnsFieldsV0_44, BlocklistDnsFieldsV0_41,
+        BlocklistDnsFieldsV0_42, BlocklistDnsFieldsV0_43,
+        CryptocurrencyMiningPoolFields as CryptocurrencyMiningPoolFieldsV0_44,
         CryptocurrencyMiningPoolFieldsV0_41, CryptocurrencyMiningPoolFieldsV0_42,
+        CryptocurrencyMiningPoolFieldsV0_43, DnsEventFields as DnsEventFieldsV0_44,
         DnsEventFieldsV0_41, DnsEventFieldsV0_42, DnsEventFieldsV0_43,
     },
     ftp::{

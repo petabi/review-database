@@ -43,10 +43,44 @@ macro_rules! find_dns_attr_by_kind {
     }};
 }
 
-pub type DnsEventFields = DnsEventFieldsV0_43;
+pub type DnsEventFields = DnsEventFieldsV0_44;
 
 #[derive(Deserialize, Serialize)]
-pub struct DnsEventFieldsV0_43 {
+pub struct DnsEventFieldsV0_44 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct DnsEventFieldsV0_43 {
     pub sensor: String,
     pub start_time: DateTime<Utc>,
     #[serde(with = "ts_nanoseconds")]
@@ -103,6 +137,42 @@ pub(crate) struct DnsEventFieldsV0_42 {
     pub ttl: Vec<i32>,
     pub confidence: f32,
     pub category: Option<EventCategory>,
+}
+
+impl From<DnsEventFieldsV0_43> for DnsEventFieldsV0_44 {
+    fn from(value: DnsEventFieldsV0_43) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            duration: value.duration,
+            orig_bytes: value.orig_bytes,
+            resp_bytes: value.resp_bytes,
+            orig_pkts: value.orig_pkts,
+            resp_pkts: value.resp_pkts,
+            orig_l2_bytes: value.orig_l2_bytes,
+            resp_l2_bytes: value.resp_l2_bytes,
+            query: value.query,
+            answer: value.answer,
+            trans_id: value.trans_id,
+            rtt: value.rtt,
+            qclass: value.qclass,
+            qtype: value.qtype,
+            rcode: value.rcode,
+            aa_flag: value.aa_flag,
+            tc_flag: value.tc_flag,
+            rd_flag: value.rd_flag,
+            ra_flag: value.ra_flag,
+            ttl: value.ttl,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
 }
 
 impl From<DnsEventFieldsV0_42> for DnsEventFieldsV0_43 {
@@ -241,14 +311,14 @@ impl DnsEventFields {
 pub struct DnsCovertChannel {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub duration: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
     pub orig_pkts: u64,
@@ -307,14 +377,14 @@ impl DnsCovertChannel {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
-            duration: fields.duration,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
+            end_time: fields.end_time,
+            duration: fields.duration,
             orig_bytes: fields.orig_bytes,
             resp_bytes: fields.resp_bytes,
             orig_pkts: fields.orig_pkts,
@@ -435,14 +505,14 @@ impl Match for DnsCovertChannel {
 pub struct LockyRansomware {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub duration: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
     pub orig_pkts: u64,
@@ -501,14 +571,14 @@ impl LockyRansomware {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
-            duration: fields.duration,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
+            end_time: fields.end_time,
+            duration: fields.duration,
             orig_bytes: fields.orig_bytes,
             resp_bytes: fields.resp_bytes,
             orig_pkts: fields.orig_pkts,
@@ -625,10 +695,45 @@ impl Match for LockyRansomware {
     }
 }
 
-pub type CryptocurrencyMiningPoolFields = CryptocurrencyMiningPoolFieldsV0_43;
+pub type CryptocurrencyMiningPoolFields = CryptocurrencyMiningPoolFieldsV0_44;
 
 #[derive(Deserialize, Serialize)]
-pub struct CryptocurrencyMiningPoolFieldsV0_43 {
+pub struct CryptocurrencyMiningPoolFieldsV0_44 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub coins: Vec<String>,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct CryptocurrencyMiningPoolFieldsV0_43 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -687,6 +792,43 @@ pub(crate) struct CryptocurrencyMiningPoolFieldsV0_42 {
     pub coins: Vec<String>,
     pub confidence: f32,
     pub category: Option<EventCategory>,
+}
+
+impl From<CryptocurrencyMiningPoolFieldsV0_43> for CryptocurrencyMiningPoolFieldsV0_44 {
+    fn from(value: CryptocurrencyMiningPoolFieldsV0_43) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            duration: value.duration,
+            orig_bytes: value.orig_bytes,
+            resp_bytes: value.resp_bytes,
+            orig_pkts: value.orig_pkts,
+            resp_pkts: value.resp_pkts,
+            orig_l2_bytes: value.orig_l2_bytes,
+            resp_l2_bytes: value.resp_l2_bytes,
+            query: value.query,
+            answer: value.answer,
+            trans_id: value.trans_id,
+            rtt: value.rtt,
+            qclass: value.qclass,
+            qtype: value.qtype,
+            rcode: value.rcode,
+            aa_flag: value.aa_flag,
+            tc_flag: value.tc_flag,
+            rd_flag: value.rd_flag,
+            ra_flag: value.ra_flag,
+            ttl: value.ttl,
+            coins: value.coins,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
 }
 
 impl From<CryptocurrencyMiningPoolFieldsV0_42> for CryptocurrencyMiningPoolFieldsV0_43 {
@@ -828,14 +970,14 @@ impl From<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolField
 pub struct CryptocurrencyMiningPool {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub duration: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
     pub orig_pkts: u64,
@@ -895,14 +1037,14 @@ impl CryptocurrencyMiningPool {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
-            duration: fields.duration,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
+            end_time: fields.end_time,
+            duration: fields.duration,
             orig_bytes: fields.orig_bytes,
             resp_bytes: fields.resp_bytes,
             orig_pkts: fields.orig_pkts,
@@ -1020,10 +1162,44 @@ impl Match for CryptocurrencyMiningPool {
     }
 }
 
-pub type BlocklistDnsFields = BlocklistDnsFieldsV0_43;
+pub type BlocklistDnsFields = BlocklistDnsFieldsV0_44;
 
 #[derive(Deserialize, Serialize)]
-pub struct BlocklistDnsFieldsV0_43 {
+pub struct BlocklistDnsFieldsV0_44 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_bytes: u64,
+    pub resp_bytes: u64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub query: String,
+    pub answer: Vec<String>,
+    pub trans_id: u16,
+    pub rtt: i64,
+    pub qclass: u16,
+    pub qtype: u16,
+    pub rcode: u16,
+    pub aa_flag: bool,
+    pub tc_flag: bool,
+    pub rd_flag: bool,
+    pub ra_flag: bool,
+    pub ttl: Vec<i32>,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct BlocklistDnsFieldsV0_43 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -1079,6 +1255,42 @@ pub(crate) struct BlocklistDnsFieldsV0_42 {
     pub ttl: Vec<i32>,
     pub confidence: f32,
     pub category: Option<EventCategory>,
+}
+
+impl From<BlocklistDnsFieldsV0_43> for BlocklistDnsFieldsV0_44 {
+    fn from(value: BlocklistDnsFieldsV0_43) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            duration: value.duration,
+            orig_bytes: value.orig_bytes,
+            resp_bytes: value.resp_bytes,
+            orig_pkts: value.orig_pkts,
+            resp_pkts: value.resp_pkts,
+            orig_l2_bytes: value.orig_l2_bytes,
+            resp_l2_bytes: value.resp_l2_bytes,
+            query: value.query,
+            answer: value.answer,
+            trans_id: value.trans_id,
+            rtt: value.rtt,
+            qclass: value.qclass,
+            qtype: value.qtype,
+            rcode: value.rcode,
+            aa_flag: value.aa_flag,
+            tc_flag: value.tc_flag,
+            rd_flag: value.rd_flag,
+            ra_flag: value.ra_flag,
+            ttl: value.ttl,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
 }
 
 impl From<BlocklistDnsFieldsV0_42> for BlocklistDnsFieldsV0_43 {
