@@ -223,6 +223,7 @@ fn migrate_0_41_to_0_42(store: &super::Store) -> Result<()> {
     migrate_0_41_events(store)?;
     migrate_account_policy(store)?;
     migrate_0_42_filter(store)?;
+    migrate_0_42_3_events(store)?;
     Ok(())
 }
 
@@ -340,6 +341,78 @@ fn needs_category_migration(event_kind: crate::event::EventKind) -> bool {
             | TorConnectionConn
             | WindowsThreat
     )
+}
+
+fn migrate_0_42_3_events(store: &super::Store) -> Result<()> {
+    use num_traits::FromPrimitive;
+
+    use crate::event::EventKind;
+
+    let event_db = store.events();
+    for row in event_db.raw_iter_forward() {
+        let (k, v) = row.map_err(|e| anyhow!("Failed to read event: {e}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        // Migrate events with field reordering from V0_43 to V0_44
+        if needs_field_reordering_migration(event_kind) {
+            migrate_event_field_reordering(&k, &v, &event_db)?;
+        }
+    }
+    Ok(())
+}
+
+fn needs_field_reordering_migration(event_kind: crate::event::EventKind) -> bool {
+    use crate::event::EventKind::{
+        BlocklistDns, CryptocurrencyMiningPool, DnsCovertChannel, LockyRansomware,
+    };
+    matches!(
+        event_kind,
+        BlocklistDns | CryptocurrencyMiningPool | DnsCovertChannel | LockyRansomware
+    )
+}
+
+fn migrate_event_field_reordering(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Result<()> {
+    use num_traits::FromPrimitive;
+
+    use crate::event::{
+        BlocklistDnsFieldsV0_43, BlocklistDnsFieldsV0_44, CryptocurrencyMiningPoolFieldsV0_43,
+        CryptocurrencyMiningPoolFieldsV0_44, DnsEventFieldsV0_43, DnsEventFieldsV0_44, EventKind,
+    };
+
+    let key: [u8; 16] = if let Ok(key) = k.try_into() {
+        key
+    } else {
+        return Ok(());
+    };
+    let key = i128::from_be_bytes(key);
+    let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+
+    match EventKind::from_i128(kind_num) {
+        Some(EventKind::BlocklistDns) => {
+            migrate_event::<BlocklistDnsFieldsV0_43, BlocklistDnsFieldsV0_44>(k, v, event_db)?;
+        }
+        Some(EventKind::CryptocurrencyMiningPool) => {
+            migrate_event::<
+                CryptocurrencyMiningPoolFieldsV0_43,
+                CryptocurrencyMiningPoolFieldsV0_44,
+            >(k, v, event_db)?;
+        }
+        Some(EventKind::DnsCovertChannel | EventKind::LockyRansomware) => {
+            migrate_event::<DnsEventFieldsV0_43, DnsEventFieldsV0_44>(k, v, event_db)?;
+        }
+        _ => {}
+    }
+
+    Ok(())
 }
 
 fn migrate_event_category(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Result<()> {
@@ -1068,6 +1141,7 @@ mod tests {
 
         // Run migration
         super::migrate_0_41_events(&schema.store).unwrap();
+        super::migrate_0_42_3_events(&schema.store).unwrap();
 
         // Verify migrations
         let mut iter = event_db.iter_forward();
