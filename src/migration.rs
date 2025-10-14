@@ -98,7 +98,7 @@ use tracing::info;
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.3,<0.42.0-alpha.4";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.4,<0.42.0-alpha.5";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -192,11 +192,18 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<Migration> = vec![(
-        VersionReq::parse(">=0.41.0,<0.42.0-alpha.3")?,
-        Version::parse("0.42.0-alpha.3")?,
-        migrate_0_41_to_0_42,
-    )];
+    let migration: Vec<Migration> = vec![
+        (
+            VersionReq::parse(">=0.41.0,<0.42.0-alpha.3")?,
+            Version::parse("0.42.0-alpha.3")?,
+            migrate_0_41_to_0_42,
+        ),
+        (
+            VersionReq::parse(">=0.42.0-alpha.3,<0.42.0-alpha.4")?,
+            Version::parse("0.42.0-alpha.4")?,
+            migrate_0_42_3_to_0_42_4,
+        ),
+    ];
 
     let mut store = super::Store::new(data_dir, backup_dir)?;
     store.backup(false, 1)?;
@@ -221,6 +228,11 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
 fn migrate_0_41_to_0_42(store: &super::Store) -> Result<()> {
     migrate_0_41_events(store)?;
     migrate_account_policy(store)?;
+    Ok(())
+}
+
+fn migrate_0_42_3_to_0_42_4(store: &super::Store) -> Result<()> {
+    migrate_0_42_3_events(store)?;
     Ok(())
 }
 
@@ -315,6 +327,78 @@ fn needs_category_migration(event_kind: crate::event::EventKind) -> bool {
             | TorConnectionConn
             | WindowsThreat
     )
+}
+
+fn migrate_0_42_3_events(store: &super::Store) -> Result<()> {
+    use num_traits::FromPrimitive;
+
+    use crate::event::EventKind;
+
+    let event_db = store.events();
+    for row in event_db.raw_iter_forward() {
+        let (k, v) = row.map_err(|e| anyhow!("Failed to read event: {e}"))?;
+        let key: [u8; 16] = if let Ok(key) = k.as_ref().try_into() {
+            key
+        } else {
+            return Err(anyhow!("Failed to migrate events: invalid event key"));
+        };
+        let key = i128::from_be_bytes(key);
+        let kind = (key & 0xffff_ffff_0000_0000) >> 32;
+        let Some(event_kind) = EventKind::from_i128(kind) else {
+            return Err(anyhow!("Failed to migrate events: invalid event kind"));
+        };
+
+        // Migrate events with field reordering from V0_43 to V0_44
+        if needs_field_reordering_migration(event_kind) {
+            migrate_event_field_reordering(&k, &v, &event_db)?;
+        }
+    }
+    Ok(())
+}
+
+fn needs_field_reordering_migration(event_kind: crate::event::EventKind) -> bool {
+    use crate::event::EventKind::{
+        BlocklistDns, CryptocurrencyMiningPool, DnsCovertChannel, LockyRansomware,
+    };
+    matches!(
+        event_kind,
+        BlocklistDns | CryptocurrencyMiningPool | DnsCovertChannel | LockyRansomware
+    )
+}
+
+fn migrate_event_field_reordering(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Result<()> {
+    use num_traits::FromPrimitive;
+
+    use crate::event::{
+        BlocklistDnsFieldsV0_43, BlocklistDnsFieldsV0_44, CryptocurrencyMiningPoolFieldsV0_43,
+        CryptocurrencyMiningPoolFieldsV0_44, DnsEventFieldsV0_43, DnsEventFieldsV0_44, EventKind,
+    };
+
+    let key: [u8; 16] = if let Ok(key) = k.try_into() {
+        key
+    } else {
+        return Ok(());
+    };
+    let key = i128::from_be_bytes(key);
+    let kind_num = (key & 0xffff_ffff_0000_0000) >> 32;
+
+    match EventKind::from_i128(kind_num) {
+        Some(EventKind::BlocklistDns) => {
+            migrate_event::<BlocklistDnsFieldsV0_43, BlocklistDnsFieldsV0_44>(k, v, event_db)?;
+        }
+        Some(EventKind::CryptocurrencyMiningPool) => {
+            migrate_event::<
+                CryptocurrencyMiningPoolFieldsV0_43,
+                CryptocurrencyMiningPoolFieldsV0_44,
+            >(k, v, event_db)?;
+        }
+        Some(EventKind::DnsCovertChannel | EventKind::LockyRansomware) => {
+            migrate_event::<DnsEventFieldsV0_43, DnsEventFieldsV0_44>(k, v, event_db)?;
+        }
+        _ => {}
+    }
+
+    Ok(())
 }
 
 fn migrate_event_category(k: &[u8], v: &[u8], event_db: &crate::EventDb) -> Result<()> {
@@ -1043,6 +1127,7 @@ mod tests {
 
         // Run migration
         super::migrate_0_41_events(&schema.store).unwrap();
+        super::migrate_0_42_3_events(&schema.store).unwrap();
 
         // Verify migrations
         let mut iter = event_db.iter_forward();
