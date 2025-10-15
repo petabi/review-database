@@ -15,6 +15,18 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Added session information fields to all detection event structures for both
+  Semi-supervised and Unsupervised engines. All detection events now include:
+  `start_time`, `end_time`, `duration`, `orig_pkts`, `resp_pkts`, `orig_bytes`,
+  `resp_bytes`, `orig_l2_bytes`, and `resp_l2_bytes`. This provides consistent
+  session context across all event types, enabling better analysis and
+  correlation.
+- Reordered timing fields (`start_time`, `end_time`, `duration`) in
+  `DnsEventFields`, `DnsCovertChannel`, `LockyRansomware`, and `TorConnection`
+  structures to be positioned after the `proto` field, matching the standard
+  field ordering used across all other event structures. This is a
+  serialization-breaking change with automatic migration from v0.43 to v0.44
+  format.
 - Modified FTP detection event structures to store all commands and responses
   from an FTP session instead of just the last command. The `FtpEventFields`,
   `FtpPlainText`, and `BlocklistFtp` structures now use a `commands:
