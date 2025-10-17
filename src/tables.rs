@@ -45,7 +45,7 @@ pub use self::agent::{Agent, AgentKind};
 pub use self::allow_network::{AllowNetwork, Update as AllowNetworkUpdate};
 pub use self::block_network::{BlockNetwork, Update as BlockNetworkUpdate};
 pub use self::cluster::Cluster;
-pub use self::column_stats::ColumnStats;
+pub use self::column_stats::{ColumnStats, TopColumnsOfCluster, TopMultimaps};
 pub use self::csv_column_extra::CsvColumnExtra;
 pub use self::customer::{Customer, Network as CustomerNetwork, Update as CustomerUpdate};
 pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
