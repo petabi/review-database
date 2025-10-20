@@ -14,6 +14,7 @@ mod mqtt;
 mod network;
 mod nfs;
 mod ntlm;
+mod radius;
 mod rdp;
 mod smb;
 mod smtp;
@@ -68,6 +69,7 @@ pub use self::{
     network::NetworkThreat,
     nfs::{BlocklistNfs, BlocklistNfsFields},
     ntlm::{BlocklistNtlm, BlocklistNtlmFields},
+    radius::{BlocklistRadius, BlocklistRadiusFields},
     rdp::{BlocklistRdp, BlocklistRdpFields, RdpBruteForce, RdpBruteForceFields},
     smb::{BlocklistSmb, BlocklistSmbFields},
     smtp::{BlocklistSmtp, BlocklistSmtpFields},
@@ -425,6 +427,13 @@ impl fmt::Display for Event {
                         event.time.to_rfc3339(),
                     )
                 }
+                RecordType::Radius(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
                 RecordType::Rdp(event) => {
                     write!(
                         f,
@@ -511,6 +520,7 @@ pub enum RecordType {
     Mqtt(BlocklistMqtt),
     Nfs(BlocklistNfs),
     Ntlm(BlocklistNtlm),
+    Radius(BlocklistRadius),
     Rdp(BlocklistRdp),
     Smb(BlocklistSmb),
     Smtp(BlocklistSmtp),
@@ -563,6 +573,7 @@ impl Event {
                 RecordType::Mqtt(mqtt_event) => mqtt_event.matches(locator, filter),
                 RecordType::Nfs(nfs_event) => nfs_event.matches(locator, filter),
                 RecordType::Ntlm(ntlm_event) => ntlm_event.matches(locator, filter),
+                RecordType::Radius(radius_event) => radius_event.matches(locator, filter),
                 RecordType::Rdp(rdp_event) => rdp_event.matches(locator, filter),
                 RecordType::Smb(smb_event) => smb_event.matches(locator, filter),
                 RecordType::Smtp(smtp_event) => smtp_event.matches(locator, filter),
@@ -723,6 +734,11 @@ impl Event {
                 RecordType::Ntlm(ntlm_event) => {
                     if ntlm_event.matches(locator, filter)?.0 {
                         addr_pair = (Some(ntlm_event.src_addr), Some(ntlm_event.dst_addr));
+                    }
+                }
+                RecordType::Radius(radius_event) => {
+                    if radius_event.matches(locator, filter)?.0 {
+                        addr_pair = (Some(radius_event.src_addr), Some(radius_event.dst_addr));
                     }
                 }
                 RecordType::Rdp(rdp_event) => {
@@ -920,6 +936,11 @@ impl Event {
                         kind = Some(BLOCKLIST);
                     }
                 }
+                RecordType::Radius(radius_event) => {
+                    if radius_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCKLIST);
+                    }
+                }
                 RecordType::Rdp(rdp_event) => {
                     if rdp_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCKLIST);
@@ -1010,6 +1031,7 @@ impl Event {
                 RecordType::Mqtt(e) => (EventKind::BlocklistMqtt, e.category()),
                 RecordType::Nfs(e) => (EventKind::BlocklistNfs, e.category()),
                 RecordType::Ntlm(e) => (EventKind::BlocklistNtlm, e.category()),
+                RecordType::Radius(e) => (EventKind::BlocklistRadius, e.category()),
                 RecordType::Rdp(e) => (EventKind::BlocklistRdp, e.category()),
                 RecordType::Smb(e) => (EventKind::BlocklistSmb, e.category()),
                 RecordType::Smtp(e) => (EventKind::BlocklistSmtp, e.category()),
@@ -1235,6 +1257,11 @@ impl Event {
                 RecordType::Ntlm(ntlm_event) => {
                     if ntlm_event.matches(locator, filter)?.0 {
                         category = ntlm_event.category();
+                    }
+                }
+                RecordType::Radius(radius_event) => {
+                    if radius_event.matches(locator, filter)?.0 {
+                        category = radius_event.category();
                     }
                 }
                 RecordType::Rdp(rdp_event) => {
@@ -1594,6 +1621,11 @@ impl Event {
                         level = Some(ntlm_event.level());
                     }
                 }
+                RecordType::Radius(radius_event) => {
+                    if radius_event.matches(locator, filter)?.0 {
+                        level = Some(radius_event.level());
+                    }
+                }
                 RecordType::Rdp(rdp_event) => {
                     if rdp_event.matches(locator, filter)?.0 {
                         level = Some(rdp_event.level());
@@ -1770,6 +1802,9 @@ impl Event {
                 RecordType::Ntlm(ntlm_event) => {
                     ntlm_event.triage_scores = Some(triage_scores);
                 }
+                RecordType::Radius(radius_event) => {
+                    radius_event.triage_scores = Some(triage_scores);
+                }
                 RecordType::Rdp(rdp_event) => {
                     rdp_event.triage_scores = Some(triage_scores);
                 }
@@ -1850,6 +1885,7 @@ pub enum EventKind {
     BlocklistMqtt,
     BlocklistNfs,
     BlocklistNtlm,
+    BlocklistRadius,
     BlocklistRdp,
     BlocklistSmb,
     BlocklistSmtp,
@@ -1903,6 +1939,7 @@ impl EventKind {
             Self::BlocklistMqtt => &[EventCategory::InitialAccess],
             Self::BlocklistNfs => &[EventCategory::InitialAccess],
             Self::BlocklistNtlm => &[EventCategory::InitialAccess],
+            Self::BlocklistRadius => &[EventCategory::InitialAccess],
             Self::BlocklistRdp => &[EventCategory::InitialAccess],
             Self::BlocklistSmb => &[EventCategory::InitialAccess],
             Self::BlocklistSmtp => &[EventCategory::InitialAccess],
@@ -2237,6 +2274,10 @@ impl EventMessage {
                 .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistNtlm => bincode::deserialize::<BlocklistNtlmFields>(&self.fields)
                 .map(|fields| fields.syslog_rfc5424()),
+            EventKind::BlocklistRadius => {
+                bincode::deserialize::<BlocklistRadiusFields>(&self.fields)
+                    .map(|fields| fields.syslog_rfc5424())
+            }
             EventKind::BlocklistRdp => bincode::deserialize::<BlocklistRdpFields>(&self.fields)
                 .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistSmb => bincode::deserialize::<BlocklistSmbFields>(&self.fields)
@@ -2536,6 +2577,15 @@ impl Iterator for EventIterator<'_> {
                 Some(Ok((
                     key,
                     Event::Blocklist(RecordType::Ntlm(BlocklistNtlm::new(time, fields))),
+                )))
+            }
+            EventKind::BlocklistRadius => {
+                let Ok(fields) = bincode::deserialize::<BlocklistRadiusFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::Blocklist(RecordType::Radius(BlocklistRadius::new(time, fields))),
                 )))
             }
             EventKind::BlocklistRdp => {
