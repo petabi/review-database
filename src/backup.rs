@@ -77,7 +77,7 @@ mod tests {
     };
 
     use bincode::Options;
-    use chrono::{TimeZone, Utc};
+    use chrono::Utc;
 
     use crate::{
         Store,
