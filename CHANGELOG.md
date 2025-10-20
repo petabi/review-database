@@ -9,6 +9,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- New `reset_last_signin_time` method in `Account` struct to reset the last
+  signin time to `None`, typically used when an administrator resets a user's
+  password to force a password change upon next sign-in.
 - New `FtpCommand` struct containing individual FTP command details (`command`,
   `reply_code`, `reply_msg`, `data_passive`, `data_orig_addr`, `data_resp_addr`,
   `data_resp_port`, `file`, `file_size`, `file_id`).
