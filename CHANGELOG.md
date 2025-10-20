@@ -20,23 +20,6 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - New `FtpCommand` struct containing individual FTP command details (`command`,
   `reply_code`, `reply_msg`, `data_passive`, `data_orig_addr`, `data_resp_addr`,
   `data_resp_port`, `file`, `file_size`, `file_id`).
-- Added `start_time` field to all detection event structures to track when an
-  event began. The field is stored as an `i64` timestamp (nanoseconds since
-  Unix epoch) internally. This includes both Fields structs (e.g.,
-  `DnsEventFields`, `BlocklistConnFields`) and main event structs (e.g.,
-  `DnsCovertChannel`, `HttpThreat`). Event types that already had `start_time`
-  (`RdpBruteForce`, `LdapBruteForce`, `FtpBruteForce`, `RepeatedHttpSessions`,
-  `PortScan`, `MultiHostPortScan`, `ExternalDdos`) are unchanged.
-- Timestamp fields (`start_time` and `end_time`) in event outputs are now
-  formatted using RFC3339 format (e.g., "1970-01-01T00:00:00+00:00") instead of
-  raw nanosecond integers or string representations. This affects both
-  `syslog_rfc5424()` method output and `Display` trait implementations for all
-  detection events. For `DateTime<Utc>` fields, the formatting uses
-  `.to_rfc3339()` directly. For `i64` timestamp fields, the formatting uses
-  `DateTime::from_timestamp_nanos(value).to_rfc3339()`.
-- New `MigrateFrom<OldT>` trait for migrations that require additional context
-  like `start_time`. Events with newly added `start_time` fields use this trait
-  instead of the `From` trait for migration from v0.41 to v0.42.
 
 ### Changed
 
@@ -57,15 +40,17 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Added session information fields to all detection event structures for both
   Semi-supervised and Unsupervised engines. All detection events now include:
   `start_time`, `end_time`, `duration`, `orig_pkts`, `resp_pkts`, `orig_bytes`,
-  `resp_bytes`, `orig_l2_bytes`, and `resp_l2_bytes`. This provides consistent
-  session context across all event types, enabling better analysis and
-  correlation.
+  `resp_bytes`, `orig_l2_bytes`, and `resp_l2_bytes`. The `start_time` and
+  `end_time` fields are stored as `DateTime<Utc>` and formatted using RFC3339
+  format in event outputs. This provides consistent session context across all
+  event types, enabling better analysis and correlation. Automatic migration
+  handles existing event data from v0.41 to the current format.
 - Reordered timing fields (`start_time`, `end_time`, `duration`) in
   `DnsEventFields`, `DnsCovertChannel`, `LockyRansomware`, and `TorConnection`
   structures to be positioned after the `proto` field, matching the standard
   field ordering used across all other event structures. This is a
-  serialization-breaking change with automatic migration from v0.43 to v0.44
-  format.
+  serialization-breaking change with automatic migration for existing event
+  data.
 - Modified FTP detection event structures to store all commands and responses
   from an FTP session instead of just the last command. The `FtpEventFields`,
   `FtpPlainText`, and `BlocklistFtp` structures now use a `commands:
