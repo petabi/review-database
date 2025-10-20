@@ -9,6 +9,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added `BlocklistRadius` event type for detecting blocklist-matched RADIUS
+  traffic. This includes the `BlocklistRadiusFields` struct with fields for
+  RADIUS-specific attributes such as `id`, `code`, `resp_code`, `auth`,
+  `resp_auth`, `user_name`, `user_passwd`, `chap_passwd`, `nas_ip`, `nas_port`,
+  `state`, `nas_id`, `nas_port_type`, and `message`.
 - New `reset_last_signin_time` method in `Account` struct to reset the last
   signin time to `None`, typically used when an administrator resets a user's
   password to force a password change upon next sign-in.
