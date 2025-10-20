@@ -122,6 +122,15 @@ impl Account {
         self.last_signin_time = Some(Utc::now());
     }
 
+    /// Resets the last signin time to `None`.
+    ///
+    /// This is typically used when an administrator resets a user's
+    /// password, forcing the user to change their password upon next
+    /// sign-in.
+    pub fn reset_last_signin_time(&mut self) {
+        self.last_signin_time = None;
+    }
+
     #[must_use]
     pub fn last_signin_time(&self) -> Option<DateTime<Utc>> {
         self.last_signin_time
@@ -356,5 +365,33 @@ mod tests {
             account.password_hash_algorithm,
             Account::DEFAULT_HASH_ALGORITHM
         );
+    }
+
+    #[test]
+    fn reset_last_signin_time() {
+        let mut account = Account::new(
+            "test",
+            "password",
+            Role::SecurityAdministrator,
+            String::new(),
+            String::new(),
+            None,
+            None,
+            None,
+            None,
+            Some(Vec::new()),
+        )
+        .unwrap();
+
+        // Initially, last_signin_time should be None
+        assert_eq!(account.last_signin_time(), None);
+
+        // Update last signin time
+        account.update_last_signin_time();
+        assert!(account.last_signin_time().is_some());
+
+        // Reset last signin time
+        account.reset_last_signin_time();
+        assert_eq!(account.last_signin_time(), None);
     }
 }
