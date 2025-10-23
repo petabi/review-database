@@ -9,6 +9,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added `BlocklistRadius` event type for detecting blocklist-matched RADIUS
+  traffic. This includes the `BlocklistRadiusFields` struct with fields for
+  RADIUS-specific attributes such as `id`, `code`, `resp_code`, `auth`,
+  `resp_auth`, `user_name`, `user_passwd`, `chap_passwd`, `nas_ip`, `nas_port`,
+  `state`, `nas_id`, `nas_port_type`, and `message`.
 - New `FtpCommand` struct containing individual FTP command details (`command`,
   `reply_code`, `reply_msg`, `data_passive`, `data_orig_addr`, `data_resp_addr`,
   `data_resp_port`, `file`, `file_size`, `file_id`).
