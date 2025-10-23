@@ -6,10 +6,8 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::event::common::{AttrValue, triage_scores_to_string};
 
-pub type BlocklistRadiusFields = BlocklistRadiusFieldsV0_42;
-
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistRadiusFieldsV0_42 {
+pub struct BlocklistRadiusFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -75,7 +73,6 @@ impl BlocklistRadiusFields {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
 pub struct BlocklistRadius {
     pub time: DateTime<Utc>,
     pub sensor: String,

@@ -1885,7 +1885,6 @@ pub enum EventKind {
     BlocklistMqtt,
     BlocklistNfs,
     BlocklistNtlm,
-    BlocklistRadius,
     BlocklistRdp,
     BlocklistSmb,
     BlocklistSmtp,
@@ -1898,6 +1897,7 @@ pub enum EventKind {
     BlocklistBootp,
     BlocklistDhcp,
     TorConnectionConn,
+    BlocklistRadius,
 }
 
 impl EventKind {
@@ -1939,7 +1939,6 @@ impl EventKind {
             Self::BlocklistMqtt => &[EventCategory::InitialAccess],
             Self::BlocklistNfs => &[EventCategory::InitialAccess],
             Self::BlocklistNtlm => &[EventCategory::InitialAccess],
-            Self::BlocklistRadius => &[EventCategory::InitialAccess],
             Self::BlocklistRdp => &[EventCategory::InitialAccess],
             Self::BlocklistSmb => &[EventCategory::InitialAccess],
             Self::BlocklistSmtp => &[EventCategory::InitialAccess],
@@ -1951,6 +1950,7 @@ impl EventKind {
             Self::SuspiciousTlsTraffic => &[EventCategory::CommandAndControl],
             Self::BlocklistBootp => &[EventCategory::InitialAccess],
             Self::BlocklistDhcp => &[EventCategory::InitialAccess],
+            Self::BlocklistRadius => &[EventCategory::InitialAccess],
         }
     }
 }
@@ -2135,6 +2135,11 @@ impl EventFilter {
                 kinds,
                 &["block", "list", "blocklist", "ntlm"],
                 "blocklist ntlm",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "radius"],
+                "blocklist radius",
             );
             moderate_kinds_by(
                 kinds,
