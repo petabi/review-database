@@ -41,46 +41,8 @@ use rocksdb::IteratorMode;
 use serde::{Deserialize, Serialize};
 
 use self::common::Match;
-pub use self::{
-    bootp::{BlocklistBootp, BlocklistBootpFields},
-    common::TriageScore,
-    conn::{
-        BlocklistConn, BlocklistConnFields, ExternalDdos, ExternalDdosFields, MultiHostPortScan,
-        MultiHostPortScanFields, PortScan, PortScanFields,
-    },
-    dcerpc::{BlocklistDceRpc, BlocklistDceRpcFields},
-    dhcp::{BlocklistDhcp, BlocklistDhcpFields},
-    dns::{
-        BlocklistDns, BlocklistDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
-        DnsCovertChannel, DnsEventFields, LockyRansomware,
-    },
-    ftp::{
-        BlocklistFtp, FtpBruteForce, FtpBruteForceFields, FtpCommand, FtpEventFields, FtpPlainText,
-    },
-    http::{
-        BlocklistHttp, BlocklistHttpFields, DgaFields, DomainGenerationAlgorithm, HttpEventFields,
-        HttpThreat, HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
-    },
-    kerberos::{BlocklistKerberos, BlocklistKerberosFields},
-    ldap::{BlocklistLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
-    log::ExtraThreat,
-    mqtt::{BlocklistMqtt, BlocklistMqttFields},
-    network::NetworkThreat,
-    nfs::{BlocklistNfs, BlocklistNfsFields},
-    ntlm::{BlocklistNtlm, BlocklistNtlmFields},
-    rdp::{BlocklistRdp, BlocklistRdpFields, RdpBruteForce, RdpBruteForceFields},
-    smb::{BlocklistSmb, BlocklistSmbFields},
-    smtp::{BlocklistSmtp, BlocklistSmtpFields},
-    ssh::{BlocklistSsh, BlocklistSshFields},
-    sysmon::WindowsThreat,
-    tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
-    tor::{TorConnection, TorConnectionConn},
-};
 pub(crate) use self::{
-    bootp::{
-        BlocklistBootpFields as BlocklistBootpFieldsV0_43, BlocklistBootpFieldsV0_41,
-        BlocklistBootpFieldsV0_42,
-    },
+    bootp::BlocklistBootpFieldsV0_41,
     conn::{
         BlocklistConnFields as BlocklistConnFieldsV0_43, BlocklistConnFieldsV0_41,
         BlocklistConnFieldsV0_42, ExternalDdosFields as ExternalDdosFieldsV0_43,
@@ -89,14 +51,8 @@ pub(crate) use self::{
         MultiHostPortScanFieldsV0_42, PortScanFields as PortScanFieldsV0_43, PortScanFieldsV0_41,
         PortScanFieldsV0_42,
     },
-    dcerpc::{
-        BlocklistDceRpcFields as BlocklistDceRpcFieldsV0_43, BlocklistDceRpcFieldsV0_41,
-        BlocklistDceRpcFieldsV0_42,
-    },
-    dhcp::{
-        BlocklistDhcpFields as BlocklistDhcpFieldsV0_43, BlocklistDhcpFieldsV0_41,
-        BlocklistDhcpFieldsV0_42,
-    },
+    dcerpc::BlocklistDceRpcFieldsV0_41,
+    dhcp::BlocklistDhcpFieldsV0_41,
     dns::{
         BlocklistDnsFields as BlocklistDnsFieldsV0_44, BlocklistDnsFieldsV0_41,
         BlocklistDnsFieldsV0_42, BlocklistDnsFieldsV0_43,
@@ -117,10 +73,7 @@ pub(crate) use self::{
         RepeatedHttpSessionsFields as RepeatedHttpSessionsFieldsV0_43,
         RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42,
     },
-    kerberos::{
-        BlocklistKerberosFields as BlocklistKerberosFieldsV0_43, BlocklistKerberosFieldsV0_41,
-        BlocklistKerberosFieldsV0_42,
-    },
+    kerberos::BlocklistKerberosFieldsV0_41,
     ldap::{
         LdapBruteForceFields as LdapBruteForceFieldsV0_43, LdapBruteForceFieldsV0_42,
         LdapEventFields as LdapEventFieldsV0_43, LdapEventFieldsV0_39, LdapEventFieldsV0_42,
@@ -158,6 +111,41 @@ pub(crate) use self::{
         BlocklistTlsFields as BlocklistTlsFieldsV0_43, BlocklistTlsFieldsV0_41,
         BlocklistTlsFieldsV0_42,
     },
+};
+pub use self::{
+    bootp::{BlocklistBootp, BlocklistBootpFields},
+    common::TriageScore,
+    conn::{
+        BlocklistConn, BlocklistConnFields, ExternalDdos, ExternalDdosFields, MultiHostPortScan,
+        MultiHostPortScanFields, PortScan, PortScanFields,
+    },
+    dcerpc::{BlocklistDceRpc, BlocklistDceRpcFields},
+    dhcp::{BlocklistDhcp, BlocklistDhcpFields},
+    dns::{
+        BlocklistDns, BlocklistDnsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
+        DnsCovertChannel, DnsEventFields, LockyRansomware,
+    },
+    ftp::{
+        BlocklistFtp, FtpBruteForce, FtpBruteForceFields, FtpCommand, FtpEventFields, FtpPlainText,
+    },
+    http::{
+        BlocklistHttp, BlocklistHttpFields, DgaFields, DomainGenerationAlgorithm, HttpEventFields,
+        HttpThreat, HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
+    },
+    kerberos::{BlocklistKerberos, BlocklistKerberosFields},
+    ldap::{BlocklistLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
+    log::ExtraThreat,
+    mqtt::{BlocklistMqtt, BlocklistMqttFields},
+    network::NetworkThreat,
+    nfs::{BlocklistNfs, BlocklistNfsFields},
+    ntlm::{BlocklistNtlm, BlocklistNtlmFields},
+    rdp::{BlocklistRdp, BlocklistRdpFields, RdpBruteForce, RdpBruteForceFields},
+    smb::{BlocklistSmb, BlocklistSmbFields},
+    smtp::{BlocklistSmtp, BlocklistSmtpFields},
+    ssh::{BlocklistSsh, BlocklistSshFields},
+    sysmon::WindowsThreat,
+    tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
+    tor::{TorConnection, TorConnectionConn},
 };
 use super::{
     Customer, EventCategory, Network, TriagePolicy, TriagePolicyInput,
@@ -3575,8 +3563,6 @@ mod tests {
             start_time,
             end_time,
             duration: 100,
-            orig_bytes: 100,
-            resp_bytes: 100,
             orig_pkts: 1,
             resp_pkts: 1,
             orig_l2_bytes: 122,
@@ -3612,7 +3598,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" confidence="1""#,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" confidence="1""#,
         );
         let blocklist_bootp = Event::Blocklist(RecordType::Bootp(BlocklistBootp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -3622,7 +3608,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_bootp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" triage_scores="""#
         );
     }
 
@@ -3757,10 +3743,10 @@ mod tests {
             start_time: end_time,
             end_time,
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             rtt: 1,
             named_pipe: "svcctl".to_string(),
             endpoint: "epmapper".to_string(),
@@ -3780,7 +3766,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" orig_bytes="0" resp_pkts="0" resp_bytes="0" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" confidence="1""#
         );
 
         let blocklist_dce_rpc = Event::Blocklist(RecordType::DceRpc(BlocklistDceRpc::new(
@@ -3790,7 +3776,7 @@ mod tests {
         .to_string();
         assert_eq!(
             &blocklist_dce_rpc,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" orig_bytes="0" resp_pkts="0" resp_bytes="0" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" triage_scores="""#
         );
     }
 
@@ -3808,8 +3794,6 @@ mod tests {
             start_time,
             end_time,
             duration: 100,
-            orig_bytes: 100,
-            resp_bytes: 100,
             orig_pkts: 1,
             resp_pkts: 1,
             orig_l2_bytes: 122,
@@ -3851,7 +3835,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" confidence="1""#,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" confidence="1""#,
         );
 
         let blocklist_dhcp = Event::Blocklist(RecordType::Dhcp(BlocklistDhcp::new(
@@ -3862,7 +3846,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_dhcp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" triage_scores="""#
         );
     }
 
@@ -4442,8 +4426,6 @@ mod tests {
             start_time: end_time,
             end_time,
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -4472,7 +4454,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="[\"user1\"]" realm="EXAMPLE.COM" sname_type="1" service_name="[\"krbtgt/EXAMPLE.COM\"]" confidence="1""#
         );
 
         let blocklist_kerberos = Event::Blocklist(RecordType::Kerberos(BlocklistKerberos::new(
@@ -4483,7 +4465,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_kerberos,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" triage_scores="""#
         );
     }
 

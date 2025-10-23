@@ -10,13 +10,55 @@ use super::{
 };
 use crate::{
     event::common::{to_hardware_address, triage_scores_to_string, vector_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
-pub type BlocklistDhcpFields = BlocklistDhcpFieldsV0_43;
+macro_rules! find_dhcp_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Dhcp(attr) = $raw_event_attr {
+            let target_value = match attr {
+                DhcpAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                DhcpAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                DhcpAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                DhcpAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                DhcpAttr::Proto => AttrValue::UInt($event.proto.into()),
+                DhcpAttr::MgsType => AttrValue::UInt($event.msg_type.into()),
+                DhcpAttr::CiAddr => AttrValue::Addr($event.ciaddr),
+                DhcpAttr::YiAddr => AttrValue::Addr($event.yiaddr),
+                DhcpAttr::SiAddr => AttrValue::Addr($event.siaddr),
+                DhcpAttr::GiAddr => AttrValue::Addr($event.giaddr),
+                DhcpAttr::SubNetMask => AttrValue::Addr($event.subnet_mask),
+                DhcpAttr::Router => AttrValue::VecAddr(&$event.router),
+                DhcpAttr::DomainNameServer => AttrValue::VecAddr(&$event.domain_name_server),
+                DhcpAttr::ReqIpAddr => AttrValue::Addr($event.req_ip_addr),
+                DhcpAttr::LeaseTime => AttrValue::UInt($event.lease_time.into()),
+                DhcpAttr::ServerId => AttrValue::Addr($event.server_id),
+                DhcpAttr::ParamReqList => AttrValue::VecUInt(
+                    $event
+                        .param_req_list
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+                DhcpAttr::Message => AttrValue::String(&$event.message),
+                DhcpAttr::RenewalTime => AttrValue::UInt($event.renewal_time.into()),
+                DhcpAttr::RebindingTime => AttrValue::UInt($event.rebinding_time.into()),
+                DhcpAttr::ClassId => AttrValue::VecRaw(&$event.class_id),
+                DhcpAttr::ClientIdType => AttrValue::UInt($event.client_id_type.into()),
+                DhcpAttr::ClientId => AttrValue::VecRaw(&$event.client_id),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
+
+pub type BlocklistDhcpFields = BlocklistDhcpFieldsV0_42;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistDhcpFieldsV0_43 {
+pub struct BlocklistDhcpFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -26,8 +68,6 @@ pub struct BlocklistDhcpFieldsV0_43 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -54,73 +94,10 @@ pub struct BlocklistDhcpFieldsV0_43 {
     pub category: Option<EventCategory>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistDhcpFieldsV0_42 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub msg_type: u8,
-    pub ciaddr: IpAddr,
-    pub yiaddr: IpAddr,
-    pub siaddr: IpAddr,
-    pub giaddr: IpAddr,
-    pub subnet_mask: IpAddr,
-    pub router: Vec<IpAddr>,
-    pub domain_name_server: Vec<IpAddr>,
-    pub req_ip_addr: IpAddr,
-    pub lease_time: u32,
-    pub server_id: IpAddr,
-    pub param_req_list: Vec<u8>,
-    pub message: String,
-    pub renewal_time: u32,
-    pub rebinding_time: u32,
-    pub class_id: Vec<u8>,
-    pub client_id_type: u8,
-    pub client_id: Vec<u8>,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
-
-impl From<BlocklistDhcpFieldsV0_41> for BlocklistDhcpFieldsV0_42 {
-    fn from(value: BlocklistDhcpFieldsV0_41) -> Self {
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            end_time: value.end_time,
-            msg_type: value.msg_type,
-            ciaddr: value.ciaddr,
-            yiaddr: value.yiaddr,
-            siaddr: value.siaddr,
-            giaddr: value.giaddr,
-            subnet_mask: value.subnet_mask,
-            router: value.router,
-            domain_name_server: value.domain_name_server,
-            req_ip_addr: value.req_ip_addr,
-            lease_time: value.lease_time,
-            server_id: value.server_id,
-            param_req_list: value.param_req_list,
-            message: value.message,
-            renewal_time: value.renewal_time,
-            rebinding_time: value.rebinding_time,
-            class_id: value.class_id,
-            client_id_type: value.client_id_type,
-            client_id: value.client_id,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-impl From<BlocklistDhcpFieldsV0_42> for BlocklistDhcpFieldsV0_43 {
-    fn from(value: BlocklistDhcpFieldsV0_42) -> Self {
+impl MigrateFrom<BlocklistDhcpFieldsV0_41> for BlocklistDhcpFields {
+    fn new(value: BlocklistDhcpFieldsV0_41, start_time: i64) -> Self {
+        let duration = start_time.saturating_sub(value.end_time);
+        let start_time = DateTime::from_timestamp_nanos(start_time);
         let end_time = DateTime::from_timestamp_nanos(value.end_time);
         Self {
             sensor: value.sensor,
@@ -129,11 +106,9 @@ impl From<BlocklistDhcpFieldsV0_42> for BlocklistDhcpFieldsV0_43 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: end_time,
+            start_time,
             end_time,
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
+            duration,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -157,7 +132,7 @@ impl From<BlocklistDhcpFieldsV0_42> for BlocklistDhcpFieldsV0_43 {
             client_id_type: value.client_id_type,
             client_id: value.client_id,
             confidence: value.confidence,
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
@@ -202,7 +177,7 @@ impl BlocklistDhcpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -216,8 +191,6 @@ impl BlocklistDhcpFields {
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
@@ -259,8 +232,6 @@ pub struct BlocklistDhcp {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -291,7 +262,7 @@ impl fmt::Display for BlocklistDhcp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} msg_type={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} subnet_mask={:?} router={:?} domain_name_server={:?} req_ip_addr={:?} lease_time={:?} server_id={:?} param_req_list={:?} message={:?} renewal_time={:?} rebinding_time={:?} class_id={:?} client_id_type={:?} client_id={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -301,8 +272,6 @@ impl fmt::Display for BlocklistDhcp {
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
@@ -345,8 +314,6 @@ impl BlocklistDhcp {
             start_time: fields.start_time,
             end_time: fields.end_time,
             duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
             orig_l2_bytes: fields.orig_l2_bytes,
@@ -423,40 +390,9 @@ impl Match for BlocklistDhcp {
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
         match raw_event_attr {
-            RawEventAttrKind::Dhcp(attr) => match attr {
-                DhcpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
-                DhcpAttr::SrcPort => Some(AttrValue::UInt(self.src_port.into())),
-                DhcpAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
-                DhcpAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
-                DhcpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
-                DhcpAttr::MgsType => todo!(),
-                DhcpAttr::CiAddr => Some(AttrValue::Addr(self.ciaddr)),
-                DhcpAttr::YiAddr => Some(AttrValue::Addr(self.yiaddr)),
-                DhcpAttr::SiAddr => Some(AttrValue::Addr(self.siaddr)),
-                DhcpAttr::GiAddr => Some(AttrValue::Addr(self.giaddr)),
-                DhcpAttr::SubNetMask => Some(AttrValue::Addr(self.subnet_mask)),
-                DhcpAttr::Router => Some(AttrValue::VecAddr(&self.router)),
-                DhcpAttr::DomainNameServer => Some(AttrValue::VecAddr(&self.domain_name_server)),
-                DhcpAttr::ReqIpAddr => Some(AttrValue::Addr(self.req_ip_addr)),
-                DhcpAttr::LeaseTime => Some(AttrValue::UInt(self.lease_time.into())),
-                DhcpAttr::ServerId => Some(AttrValue::Addr(self.server_id)),
-                DhcpAttr::ParamReqList => Some(AttrValue::VecUInt(
-                    self.param_req_list
-                        .iter()
-                        .map(|val| u64::from(*val))
-                        .collect(),
-                )),
-                DhcpAttr::Message => Some(AttrValue::String(&self.message)),
-                DhcpAttr::RenewalTime => Some(AttrValue::UInt(self.renewal_time.into())),
-                DhcpAttr::RebindingTime => Some(AttrValue::UInt(self.rebinding_time.into())),
-                DhcpAttr::ClassId => Some(AttrValue::VecRaw(&self.class_id)),
-                DhcpAttr::ClientIdType => Some(AttrValue::UInt(self.client_id_type.into())),
-                DhcpAttr::ClientId => Some(AttrValue::VecRaw(&self.client_id)),
-            },
+            RawEventAttrKind::Dhcp(_) => find_dhcp_attr_by_kind!(self, raw_event_attr),
             RawEventAttrKind::Conn(attr) => match attr {
                 ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
                 ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
                 ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
                 ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
