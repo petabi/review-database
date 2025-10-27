@@ -614,6 +614,44 @@ impl Store {
         })
     }
 
+    /// Returns the models between `after` and `before`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a database operation fails.
+    pub async fn load_models(
+        &self,
+        after: &Option<(u32, String)>,
+        before: &Option<(u32, String)>,
+        is_first: bool,
+        limit: usize,
+    ) -> Result<Vec<crate::model::Model>> {
+        let table = self.model_map();
+        let models = table.load_models(after, before, is_first, limit)?;
+
+        let mut result = Vec::with_capacity(models.len());
+        for model in models {
+            let classifier = self
+                .classifier_fm
+                .load_classifier(model.id, &model.name)
+                .await?;
+
+            result.push(crate::model::Model {
+                id: i32::try_from(model.id)?,
+                name: model.name,
+                version: model.version,
+                kind: model.kind,
+                max_event_id_num: model.max_event_id_num,
+                data_source_id: model.data_source_id,
+                classification_id: model.classification_id.unwrap_or_default(),
+                serialized_classifier: classifier,
+                batch_info: Vec::new(),
+                scores: crate::types::ModelScores::default(),
+            });
+        }
+        Ok(result)
+    }
+
     /// Backup current database and keep most recent `num_backups_to_keep` backups
     ///
     /// # Errors
