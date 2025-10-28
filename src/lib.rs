@@ -44,7 +44,7 @@ pub(crate) use self::collections::{IndexedMap, IndexedMapUpdate, Map};
 pub use self::column_statistics::*;
 pub use self::event::{Event, EventDb, EventKind, EventMessage};
 pub use self::migration::{migrate_backend, migrate_data_dir};
-pub use self::model::{Digest as ModelDigest, Model};
+pub use self::model::{Digest, Model};
 pub use self::scores::Scores;
 use self::tables::StateDb;
 pub use self::tables::{
@@ -53,14 +53,15 @@ pub use self::tables::{
     ColumnStats, ColumnTimeSeries, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
     CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, ExternalService,
     ExternalServiceConfig, ExternalServiceKind, ExternalServiceStatus, Filter, IndexedTable,
-    Iterable, ModelIndicator, Network, NetworkFilter, NetworkUpdate, Node, NodeProfile, NodeTable,
-    NodeUpdate, OutlierInfo, OutlierInfoKey, OutlierInfoValue, PacketAttr, PeriodForSearch,
-    ProtocolPorts, Response, ResponseKind, SamplingInterval, SamplingKind, SamplingPeriod,
-    SamplingPolicy, SamplingPolicyUpdate, Structured, StructuredClusteringAlgorithm, Table,
-    Template, Tidb, TidbKind, TidbRule, TidbRuleKind, TimeSeries, TopColumnsOfCluster,
-    TopMultimaps, TorExitNode, TrafficFilter, TriageExclusion, TriageExclusionReason, TriagePolicy,
-    TriagePolicyInput, TriagePolicyUpdate, TriageResponse, TriageResponseUpdate, TrustedDomain,
-    TrustedUserAgent, UniqueKey, Unstructured, UnstructuredClusteringAlgorithm, ValueKind,
+    Iterable, Model as ModelDigest, ModelIndicator, Network, NetworkFilter, NetworkUpdate, Node,
+    NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey, OutlierInfoValue, PacketAttr,
+    PeriodForSearch, ProtocolPorts, Response, ResponseKind, SamplingInterval, SamplingKind,
+    SamplingPeriod, SamplingPolicy, SamplingPolicyUpdate, Structured,
+    StructuredClusteringAlgorithm, Table, Template, Tidb, TidbKind, TidbRule, TidbRuleKind,
+    TimeSeries, TopColumnsOfCluster, TopMultimaps, TorExitNode, TrafficFilter, TriageExclusion,
+    TriageExclusionReason, TriagePolicy, TriagePolicyInput, TriagePolicyUpdate, TriageResponse,
+    TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
+    UnstructuredClusteringAlgorithm, ValueKind,
 };
 pub use self::top_n::*;
 #[allow(deprecated)]
