@@ -37,6 +37,12 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - New `MigrateFrom<OldT>` trait for migrations that require additional context
   like `start_time`. Events with newly added `start_time` fields use this trait
   instead of the `From` trait for migration from v0.41 to v0.42.
+- Added `Hosts` database. `Hosts` database will handle the information of hosts
+  detected in the customer's internal network.
+  The information to manage in this `Hosts` database.
+  - The opened ports of hosts.
+  - Ths OS and agent software names extracted from the HTTP user-agent header
+    message.
 
 ### Changed
 
