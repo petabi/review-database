@@ -1779,55 +1779,8 @@ impl Match for NonBrowser {
 // Note: BlocklistHttpFields has been merged with DgaFields as they have identical structure.
 // Use DgaFields for both BlocklistHttp and DomainGenerationAlgorithm events.
 pub type BlocklistHttpFields = DgaFields;
-pub type BlocklistHttpFieldsV0_43 = DgaFieldsV0_43;
 pub type BlocklistHttpFieldsV0_42 = DgaFieldsV0_42;
 pub(crate) type BlocklistHttpFieldsV0_41 = DgaFieldsV0_41;
-
-impl From<BlocklistHttpFieldsV0_42> for BlocklistHttpFieldsV0_43 {
-    fn from(value: BlocklistHttpFieldsV0_42) -> Self {
-        let end_time = DateTime::from_timestamp_nanos(value.end_time);
-        let duration = 0;
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time: end_time,
-            end_time,
-            duration,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            method: value.method,
-            host: value.host,
-            uri: value.uri,
-            referer: value.referer,
-            version: value.version,
-            user_agent: value.user_agent,
-            request_len: value.request_len,
-            response_len: value.response_len,
-            status_code: value.status_code,
-            status_msg: value.status_msg,
-            username: value.username,
-            password: value.password,
-            cookie: value.cookie,
-            content_encoding: value.content_encoding,
-            content_type: value.content_type,
-            cache_control: value.cache_control,
-            filenames: value.filenames,
-            mime_types: value.mime_types,
-            body: value.body,
-            state: value.state,
-            confidence: value.confidence,
-            category: value.category,
-        }
-    }
-}
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize, Serialize)]
