@@ -200,7 +200,7 @@ pub(super) trait Match {
         if let Some(categories) = &filter.categories
             && categories
                 .iter()
-                .all(|category| Some(*category) != self.category())
+                .all(|category| *category != self.category())
         {
             return Ok((false, None));
         }
