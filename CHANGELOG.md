@@ -32,6 +32,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **BREAKING**: Replaced `EventFilter::confidence` with
+  `confidence_min`/`confidence_max` for range-based filtering. The single
+  minimum threshold (`confidence`) is now split into two optional bounds:
+  `confidence_min` (≥) and `confidence_max` (≤). Inclusive comparisons use a
+  small epsilon (1e-6). Existing stored filters are automatically migrated
+  during upgrade (`confidence = x` becomes `confidence_min = x`,
+  `confidence_max = None`).
 - Modified FTP detection event structures to store all commands and responses
   from an FTP session instead of just the last command. The `FtpEventFields`,
   `FtpPlainText`, and `BlocklistFtp` structures now use a `commands:

@@ -1938,7 +1938,8 @@ pub struct EventFilter {
     kinds: Option<Vec<String>>,
     learning_methods: Option<Vec<LearningMethod>>,
     sensors: Option<Vec<String>>,
-    confidence: Option<f32>,
+    confidence_min: Option<f32>,
+    confidence_max: Option<f32>,
     triage_policies: Option<Vec<TriagePolicyInput>>,
 }
 
@@ -1962,7 +1963,8 @@ impl EventFilter {
         kinds: Option<Vec<String>>,
         learning_methods: Option<Vec<LearningMethod>>,
         sensors: Option<Vec<String>>,
-        confidence: Option<f32>,
+        confidence_min: Option<f32>,
+        confidence_max: Option<f32>,
         triage_policies: Option<Vec<TriagePolicy>>,
     ) -> Self {
         // Convert TriagePolicy to TriagePolicyInput
@@ -1993,7 +1995,8 @@ impl EventFilter {
             kinds,
             learning_methods,
             sensors,
-            confidence,
+            confidence_min,
+            confidence_max,
             triage_policies,
         }
     }
@@ -2920,7 +2923,8 @@ mod tests {
             kinds: Some(vec!["locky ransomware".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
-            confidence: Some(0.5),
+            confidence_min: Some(0.5),
+            confidence_max: None,
             triage_policies: None,
         };
         assert_eq!(event.kind(None, &filter).unwrap(), Some(LOCKY_RANSOMWARE));
@@ -3533,7 +3537,8 @@ mod tests {
             kinds: Some(vec!["blocklist bootp".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
-            confidence: None,
+            confidence_min: None,
+            confidence_max: None,
             triage_policies: None,
         };
         assert_eq!(
@@ -3755,7 +3760,8 @@ mod tests {
             kinds: Some(vec!["blocklist dhcp".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
-            confidence: None,
+            confidence_min: None,
+            confidence_max: None,
             triage_policies: None,
         };
         assert_eq!(
@@ -4157,7 +4163,8 @@ mod tests {
             kinds: Some(vec!["blocklist ftp".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
-            confidence: Some(0.5),
+            confidence_min: Some(0.5),
+            confidence_max: None,
             triage_policies: None,
         };
         assert_eq!(
@@ -4467,7 +4474,8 @@ mod tests {
             kinds: Some(vec!["blocklist ldap".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
-            confidence: Some(0.5),
+            confidence_min: Some(0.5),
+            confidence_max: None,
             triage_policies: None,
         };
         assert_eq!(
@@ -5161,7 +5169,8 @@ mod tests {
             kinds: Some(vec!["tor exit nodes".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
-            confidence: Some(0.5),
+            confidence_min: Some(0.5),
+            confidence_max: None,
             triage_policies: None,
         };
         assert_eq!(
@@ -5311,7 +5320,8 @@ mod tests {
             kinds: Some(vec!["suspicious tls traffic".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
-            confidence: Some(0.5),
+            confidence_min: Some(0.5),
+            confidence_max: None,
             triage_policies: None,
         };
         assert_eq!(

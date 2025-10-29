@@ -37,7 +37,8 @@ pub struct Filter {
     pub levels: Option<Vec<u8>>,
     pub kinds: Option<Vec<String>>,
     pub learning_methods: Option<Vec<LearningMethod>>,
-    pub confidence: Option<f32>,
+    pub confidence_min: Option<f32>,
+    pub confidence_max: Option<f32>,
     pub period: PeriodForSearch,
 }
 
@@ -63,7 +64,8 @@ impl Default for Filter {
             levels: None,
             kinds: None,
             learning_methods: None,
-            confidence: None,
+            confidence_min: None,
+            confidence_max: None,
             period: PeriodForSearch::Recent("1 hour".to_string()),
         }
     }
@@ -97,7 +99,8 @@ impl Filter {
             levels: self.levels,
             kinds: self.kinds,
             learning_methods: self.learning_methods,
-            confidence: self.confidence,
+            confidence_min: self.confidence_min,
+            confidence_max: self.confidence_max,
             period: self.period,
         };
         let value = super::serialize(&value)?;
@@ -106,26 +109,27 @@ impl Filter {
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct Value {
-    directions: Option<Vec<FlowKind>>,
-    keywords: Option<Vec<String>>,
-    network_tags: Option<Vec<String>>,
-    customers: Option<Vec<String>>,
-    endpoints: Option<Vec<FilterEndpoint>>,
-    sensors: Option<Vec<String>>,
-    os: Option<Vec<String>>,
-    devices: Option<Vec<String>>,
-    hostnames: Option<Vec<String>>,
-    user_ids: Option<Vec<String>>,
-    user_names: Option<Vec<String>>,
-    user_departments: Option<Vec<String>>,
-    countries: Option<Vec<String>>,
-    categories: Option<Vec<u8>>,
-    levels: Option<Vec<u8>>,
-    kinds: Option<Vec<String>>,
-    learning_methods: Option<Vec<LearningMethod>>,
-    confidence: Option<f32>,
-    period: PeriodForSearch,
+pub struct Value {
+    pub(crate) directions: Option<Vec<FlowKind>>,
+    pub(crate) keywords: Option<Vec<String>>,
+    pub(crate) network_tags: Option<Vec<String>>,
+    pub(crate) customers: Option<Vec<String>>,
+    pub(crate) endpoints: Option<Vec<FilterEndpoint>>,
+    pub(crate) sensors: Option<Vec<String>>,
+    pub(crate) os: Option<Vec<String>>,
+    pub(crate) devices: Option<Vec<String>>,
+    pub(crate) hostnames: Option<Vec<String>>,
+    pub(crate) user_ids: Option<Vec<String>>,
+    pub(crate) user_names: Option<Vec<String>>,
+    pub(crate) user_departments: Option<Vec<String>>,
+    pub(crate) countries: Option<Vec<String>>,
+    pub(crate) categories: Option<Vec<u8>>,
+    pub(crate) levels: Option<Vec<u8>>,
+    pub(crate) kinds: Option<Vec<String>>,
+    pub(crate) learning_methods: Option<Vec<LearningMethod>>,
+    pub(crate) confidence_min: Option<f32>,
+    pub(crate) confidence_max: Option<f32>,
+    pub(crate) period: PeriodForSearch,
 }
 
 impl FromKeyValue for Filter {
@@ -159,7 +163,8 @@ impl FromKeyValue for Filter {
             levels: value.levels,
             kinds: value.kinds,
             learning_methods: value.learning_methods,
-            confidence: value.confidence,
+            confidence_min: value.confidence_min,
+            confidence_max: value.confidence_max,
             period: value.period,
         })
     }
@@ -232,6 +237,10 @@ impl<'d> Table<'d, Filter> {
                 .transpose()
         })
         .collect()
+    }
+
+    pub(crate) fn raw(&self) -> &Map<'_> {
+        &self.map
     }
 }
 
