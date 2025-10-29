@@ -106,7 +106,7 @@ pub struct BlocklistKerberosFieldsV0_42 {
 
 impl MigrateFrom<BlocklistKerberosFieldsV0_41> for BlocklistKerberosFields {
     fn new(value: BlocklistKerberosFieldsV0_41, start_time: i64) -> Self {
-        let duration = start_time.saturating_sub(value.end_time);
+        let duration = value.end_time.saturating_sub(start_time);
         let start_time = DateTime::from_timestamp_nanos(start_time);
         let end_time = DateTime::from_timestamp_nanos(value.end_time);
         Self {
