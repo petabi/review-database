@@ -50,6 +50,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   positive ID range. This affects RocksDB-stored structures including
   `Cluster`, `TimeSeries`, `OutlierInfo`, `ColumnStats`, `BatchInfo`,
   `Scores`, `ModelIndicator`, and `CsvColumnExtra`.
+- Changed `EventFilter.categories` type from `Option<Vec<EventCategory>>` to
+  `Option<Vec<Option<EventCategory>>>` to support filtering for detection
+  events with unspecified categories (where `category` is `None`).
 
 ### Removed
 
