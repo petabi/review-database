@@ -15,6 +15,9 @@ use super::{
 };
 use crate::{AttrCmpKind, Confidence, PacketAttr, TriageExclusion, ValueKind};
 
+/// Epsilon value for inclusive confidence comparisons
+const CONFIDENCE_EPSILON: f32 = 1e-6;
+
 // TODO: Make new Match trait to support Windows Events
 
 pub(super) trait Match {
@@ -222,11 +225,17 @@ pub(super) trait Match {
             return Ok((false, None));
         }
 
-        if let Some(confidence) = &filter.confidence
-            && let Some(event_confidence) = self.confidence()
-            && event_confidence < *confidence
-        {
-            return Ok((false, None));
+        if let Some(event_confidence) = self.confidence() {
+            if let Some(confidence_min) = filter.confidence_min
+                && event_confidence < confidence_min - CONFIDENCE_EPSILON
+            {
+                return Ok((false, None));
+            }
+            if let Some(confidence_max) = filter.confidence_max
+                && event_confidence > confidence_max + CONFIDENCE_EPSILON
+            {
+                return Ok((false, None));
+            }
         }
 
         if let Some(triage_policies) = &filter.triage_policies
@@ -1358,7 +1367,8 @@ mod tests {
             kinds: None,
             learning_methods: None,
             sensors: None,
-            confidence: None,
+            confidence_min: None,
+            confidence_max: None,
             triage_policies: None,
         }
     }

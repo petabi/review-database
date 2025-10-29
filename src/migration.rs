@@ -5,6 +5,7 @@ mod migrate_classifiers_to_filesystem;
 mod migrate_cluster;
 mod migrate_model;
 mod migrate_time_series;
+mod migration_structures;
 
 use std::{
     fs::{File, create_dir_all},
@@ -103,7 +104,7 @@ pub trait MigrateFrom<OldT> {
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.3,<0.42.0-alpha.4";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.4,<0.42.0-alpha.5";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -198,8 +199,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
     let migration: Vec<Migration> = vec![(
-        VersionReq::parse(">=0.41.0,<0.42.0-alpha.3")?,
-        Version::parse("0.42.0-alpha.3")?,
+        VersionReq::parse(">=0.41.0,<0.42.0-alpha.4")?,
+        Version::parse("0.42.0-alpha.4")?,
         migrate_0_41_to_0_42,
     )];
 
@@ -226,6 +227,7 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
 fn migrate_0_41_to_0_42(store: &super::Store) -> Result<()> {
     migrate_0_41_events(store)?;
     migrate_account_policy(store)?;
+    migrate_0_42_filter(store)?;
     Ok(())
 }
 
@@ -236,6 +238,29 @@ fn migrate_account_policy(store: &super::Store) -> Result<()> {
         store
             .config_map()
             .init("account expiry period in seconds", &init.to_string())?;
+    }
+    Ok(())
+}
+
+fn migrate_0_42_filter(store: &super::Store) -> Result<()> {
+    use bincode::Options;
+
+    use self::migration_structures::FilterValueV0_41;
+    use crate::FilterValue;
+
+    let map = store.filter_map();
+    let raw = map.raw();
+    let iter = raw.db.iterator(rocksdb::IteratorMode::Start);
+    for item in iter {
+        let (key, value) = item.context("Failed to read filter from database")?;
+        let old_filter: FilterValueV0_41 = bincode::DefaultOptions::new()
+            .deserialize(value.as_ref())
+            .context("Failed to deserialize old filter value")?;
+        let new_filter = FilterValue::from(old_filter);
+        let new_value = bincode::DefaultOptions::new()
+            .serialize(&new_filter)
+            .context("Failed to serialize new filter value")?;
+        raw.put(&key, &new_value)?;
     }
     Ok(())
 }
