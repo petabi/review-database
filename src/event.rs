@@ -4628,7 +4628,8 @@ mod tests {
             kinds: Some(vec!["blocklist radius".to_string()]),
             learning_methods: None,
             sensors: Some(vec!["collector1".to_string()]),
-            confidence: Some(0.5),
+            confidence_min: Some(0.5),
+            confidence_max: None,
             triage_policies: None,
         };
         assert_eq!(
