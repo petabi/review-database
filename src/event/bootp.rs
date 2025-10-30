@@ -72,8 +72,8 @@ impl BlocklistBootpFields {
             self.siaddr.to_string(),
             self.giaddr.to_string(),
             to_hardware_address(&self.chaddr),
-            self.sname.to_string(),
-            self.file.to_string(),
+            self.sname.clone(),
+            self.file.clone(),
             self.confidence.to_string(),
         )
     }
