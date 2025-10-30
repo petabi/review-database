@@ -264,7 +264,7 @@ impl fmt::Display for BlocklistDhcp {
             self.lease_time.to_string(),
             self.server_id.to_string(),
             vector_to_string(&self.param_req_list),
-            self.message.to_string(),
+            self.message.clone(),
             self.renewal_time.to_string(),
             self.rebinding_time.to_string(),
             std::str::from_utf8(&self.class_id)

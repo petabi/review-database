@@ -1425,7 +1425,7 @@ impl Event {
     ) -> Result<()> {
         let kind = if let Event::HttpThreat(event) = self {
             if event.matches(locator, filter)?.0 {
-                Some(event.attack_kind.to_string())
+                Some(event.attack_kind.clone())
             } else {
                 None
             }

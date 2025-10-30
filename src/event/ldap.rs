@@ -263,7 +263,7 @@ impl LdapEventFields {
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
             ),
-            self.sensor.to_string(),
+            self.sensor.clone(),
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),

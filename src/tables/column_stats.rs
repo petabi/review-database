@@ -1288,7 +1288,7 @@ mod tests {
         let values: Vec<_> = column_result
             .counts
             .iter()
-            .map(|e| e.value.to_string())
+            .map(|e| e.value.clone())
             .collect();
 
         assert_eq!(values.len(), 2);
