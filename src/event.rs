@@ -4567,6 +4567,103 @@ mod tests {
         );
     }
 
+    fn blocklist_radius_fields() -> BlocklistRadiusFields {
+        BlocklistRadiusFields {
+            sensor: "collector1".to_string(),
+            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            src_port: 10000,
+            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            dst_port: 1812,
+            proto: 17,
+            start_time: 0,
+            end_time: 100,
+            id: 1,
+            code: 1,
+            resp_code: 2,
+            auth: "auth_string".to_string(),
+            resp_auth: "resp_auth_string".to_string(),
+            user_name: b"user1".to_vec(),
+            user_passwd: b"password".to_vec(),
+            chap_passwd: b"chap_pass".to_vec(),
+            nas_ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
+            nas_port: 5060,
+            state: b"state".to_vec(),
+            nas_id: b"nas_identifier".to_vec(),
+            nas_port_type: 15,
+            message: "RADIUS message".to_string(),
+            confidence: 1.0,
+            category: Some(EventCategory::InitialAccess),
+        }
+    }
+
+    #[tokio::test]
+    async fn event_blocklist_radius() {
+        use super::{BLOCKLIST, MEDIUM};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let fields = blocklist_radius_fields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlocklistRadius,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: Some(vec![MEDIUM]),
+            kinds: Some(vec!["blocklist radius".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence: Some(0.5),
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.address_pair(None, &filter).unwrap(),
+            (
+                Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
+            )
+        );
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCKLIST));
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(BLOCKLIST), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::InitialAccess), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
+        );
+    }
+
     #[tokio::test]
     async fn syslog_for_extrathreat() {
         let fields = ExtraThreat {
@@ -4776,32 +4873,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_radius() {
-        let fields = BlocklistRadiusFields {
-            sensor: "collector1".to_string(),
-            src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
-            src_port: 10000,
-            dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
-            dst_port: 1812,
-            proto: 17,
-            start_time: 0,
-            end_time: 100,
-            id: 1,
-            code: 1,
-            resp_code: 2,
-            auth: "auth_string".to_string(),
-            resp_auth: "resp_auth_string".to_string(),
-            user_name: b"user1".to_vec(),
-            user_passwd: b"password".to_vec(),
-            chap_passwd: b"chap_pass".to_vec(),
-            nas_ip: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
-            nas_port: 5060,
-            state: b"state".to_vec(),
-            nas_id: b"nas_identifier".to_vec(),
-            nas_port_type: 15,
-            message: "RADIUS message".to_string(),
-            confidence: 1.0,
-            category: Some(EventCategory::InitialAccess),
-        };
+        let fields = blocklist_radius_fields();
 
         let message = EventMessage {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
