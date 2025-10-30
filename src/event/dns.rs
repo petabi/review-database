@@ -314,7 +314,7 @@ impl Match for DnsCovertChannel {
                 let hostname = self
                     .query
                     .split_once('.')
-                    .map_or(self.query.to_string(), |(label, _)| label.to_string());
+                    .map_or(self.query.clone(), |(label, _)| label.to_string());
                 hostnames.contains(&hostname)
             }
             TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
@@ -474,7 +474,7 @@ impl Match for LockyRansomware {
                 let hostname = self
                     .query
                     .split_once('.')
-                    .map_or(self.query.to_string(), |(label, _)| label.to_string());
+                    .map_or(self.query.clone(), |(label, _)| label.to_string());
                 hostnames.contains(&hostname)
             }
             TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
@@ -758,7 +758,7 @@ impl Match for CryptocurrencyMiningPool {
                 let hostname = self
                     .query
                     .split_once('.')
-                    .map_or(self.query.to_string(), |(label, _)| label.to_string());
+                    .map_or(self.query.clone(), |(label, _)| label.to_string());
                 hostnames.contains(&hostname)
             }
             TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
@@ -1038,7 +1038,7 @@ impl Match for BlocklistDns {
                 let hostname = self
                     .query
                     .split_once('.')
-                    .map_or(self.query.to_string(), |(label, _)| label.to_string());
+                    .map_or(self.query.clone(), |(label, _)| label.to_string());
                 hostnames.contains(&hostname)
             }
             TriageExclusion::Uri(_) => false, // DNS queries don't match URIs
