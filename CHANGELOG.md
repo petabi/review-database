@@ -37,20 +37,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   small epsilon (1e-6). Existing stored filters are automatically migrated
   during upgrade (`confidence = x` becomes `confidence_min = x`,
   `confidence_max = None`).
-- Added session information fields to all detection event structures for both
-  Semi-supervised and Unsupervised engines. All detection events now include:
-  `start_time`, `end_time`, `duration`, `orig_pkts`, `resp_pkts`, `orig_bytes`,
-  `resp_bytes`, `orig_l2_bytes`, and `resp_l2_bytes`. The `start_time` and
-  `end_time` fields are stored as `DateTime<Utc>` and formatted using RFC3339
-  format in event outputs. This provides consistent session context across all
-  event types, enabling better analysis and correlation. Automatic migration
-  handles existing event data from v0.41 to the current format.
-- Reordered timing fields (`start_time`, `end_time`, `duration`) in
-  `DnsEventFields`, `DnsCovertChannel`, `LockyRansomware`, and `TorConnection`
-  structures to be positioned after the `proto` field, matching the standard
-  field ordering used across all other event structures. This is a
-  serialization-breaking change with automatic migration for existing event
-  data.
+- **BREAKING**: Enhanced all detection event field structures with session
+  information and unified time handling. All detection event field structures
+  (e.g., `DnsEventFields`, `HttpThreatFields`, `BlocklistDnsFields`, etc.) now
+  include additional session tracking fields: `duration` (i64), `orig_pkts`
+  (u64), `resp_pkts` (u64), `orig_l2_bytes` (u64), and `resp_l2_bytes` (u64).
+  The `start_time` and `end_time` fields have been changed from `i64` to
+  `DateTime<Utc>` for consistent time handling across all event types. These
+  changes affect the serialization format. Automatic migration from v0.41 to
+  v0.42 format is provided.
 - Modified FTP detection event structures to store all commands and responses
   from an FTP session instead of just the last command. The `FtpEventFields`,
   `FtpPlainText`, and `BlocklistFtp` structures now use a `commands:

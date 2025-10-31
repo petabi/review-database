@@ -42,77 +42,6 @@ use rocksdb::IteratorMode;
 use serde::{Deserialize, Serialize};
 
 use self::common::Match;
-pub(crate) use self::{
-    bootp::BlocklistBootpFieldsV0_41,
-    conn::{
-        BlocklistConnFields as BlocklistConnFieldsV0_43, BlocklistConnFieldsV0_41,
-        BlocklistConnFieldsV0_42, ExternalDdosFields as ExternalDdosFieldsV0_43,
-        ExternalDdosFieldsV0_41, ExternalDdosFieldsV0_42,
-        MultiHostPortScanFields as MultiHostPortScanFieldsV0_43, MultiHostPortScanFieldsV0_41,
-        MultiHostPortScanFieldsV0_42, PortScanFields as PortScanFieldsV0_43, PortScanFieldsV0_41,
-        PortScanFieldsV0_42,
-    },
-    dcerpc::BlocklistDceRpcFieldsV0_41,
-    dhcp::BlocklistDhcpFieldsV0_41,
-    dns::{
-        BlocklistDnsFields as BlocklistDnsFieldsV0_44, BlocklistDnsFieldsV0_41,
-        BlocklistDnsFieldsV0_42, BlocklistDnsFieldsV0_43,
-        CryptocurrencyMiningPoolFields as CryptocurrencyMiningPoolFieldsV0_44,
-        CryptocurrencyMiningPoolFieldsV0_41, CryptocurrencyMiningPoolFieldsV0_42,
-        CryptocurrencyMiningPoolFieldsV0_43, DnsEventFields as DnsEventFieldsV0_44,
-        DnsEventFieldsV0_41, DnsEventFieldsV0_42, DnsEventFieldsV0_43,
-    },
-    ftp::{
-        FtpBruteForceFields as FtpBruteForceFieldsV0_43, FtpBruteForceFieldsV0_42,
-        FtpEventFields as FtpEventFieldsV0_43, FtpEventFieldsV0_41, FtpEventFieldsV0_42,
-    },
-    http::{
-        BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42, DgaFields as DgaFieldsV0_43,
-        DgaFieldsV0_41, DgaFieldsV0_42, HttpEventFields as HttpEventFieldsV0_43,
-        HttpEventFieldsV0_41, HttpEventFieldsV0_42, HttpThreatFields as HttpThreatFieldsV0_43,
-        HttpThreatFieldsV0_41, HttpThreatFieldsV0_42,
-        RepeatedHttpSessionsFields as RepeatedHttpSessionsFieldsV0_43,
-        RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42,
-    },
-    kerberos::BlocklistKerberosFieldsV0_41,
-    ldap::{
-        LdapBruteForceFields as LdapBruteForceFieldsV0_43, LdapBruteForceFieldsV0_42,
-        LdapEventFields as LdapEventFieldsV0_43, LdapEventFieldsV0_39, LdapEventFieldsV0_42,
-    },
-    mqtt::{
-        BlocklistMqttFields as BlocklistMqttFieldsV0_43, BlocklistMqttFieldsV0_41,
-        BlocklistMqttFieldsV0_42,
-    },
-    nfs::{
-        BlocklistNfsFields as BlocklistNfsFieldsV0_43, BlocklistNfsFieldsV0_41,
-        BlocklistNfsFieldsV0_42,
-    },
-    ntlm::{
-        BlocklistNtlmFields as BlocklistNtlmFieldsV0_43, BlocklistNtlmFieldsV0_41,
-        BlocklistNtlmFieldsV0_42,
-    },
-    rdp::{
-        BlocklistRdpFields as BlocklistRdpFieldsV0_43, BlocklistRdpFieldsV0_41,
-        BlocklistRdpFieldsV0_42, RdpBruteForceFields as RdpBruteForceFieldsV0_43,
-        RdpBruteForceFieldsV0_42,
-    },
-    smb::{
-        BlocklistSmbFields as BlocklistSmbFieldsV0_43, BlocklistSmbFieldsV0_41,
-        BlocklistSmbFieldsV0_42,
-    },
-    smtp::{
-        BlocklistSmtpFields as BlocklistSmtpFieldsV0_43, BlocklistSmtpFieldsV0_41,
-        BlocklistSmtpFieldsV0_42,
-    },
-    ssh::{
-        BlocklistSshFields as BlocklistSshFieldsV0_43, BlocklistSshFieldsV0_41,
-        BlocklistSshFieldsV0_42,
-    },
-    tls::{
-        BlocklistTlsFields as BlocklistTlsFieldsV0_43, BlocklistTlsFieldsV0_41,
-        BlocklistTlsFieldsV0_42,
-    },
-};
 pub use self::{
     bootp::{BlocklistBootp, BlocklistBootpFields},
     common::TriageScore,
@@ -137,7 +66,7 @@ pub use self::{
     ldap::{BlocklistLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
     log::ExtraThreat,
     mqtt::{BlocklistMqtt, BlocklistMqttFields},
-    network::NetworkThreat,
+    network::{NetworkThreat, NetworkThreatFields},
     nfs::{BlocklistNfs, BlocklistNfsFields},
     ntlm::{BlocklistNtlm, BlocklistNtlmFields},
     radius::{BlocklistRadius, BlocklistRadiusFields},
@@ -148,6 +77,46 @@ pub use self::{
     sysmon::WindowsThreat,
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
     tor::{TorConnection, TorConnectionConn},
+};
+pub(crate) use self::{
+    bootp::{BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42},
+    conn::{
+        BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42, ExternalDdosFieldsV0_41,
+        ExternalDdosFieldsV0_42, MultiHostPortScanFieldsV0_41, MultiHostPortScanFieldsV0_42,
+        PortScanFieldsV0_41, PortScanFieldsV0_42,
+    },
+    dcerpc::{BlocklistDceRpcFieldsV0_41, BlocklistDceRpcFieldsV0_42},
+    dhcp::{BlocklistDhcpFieldsV0_41, BlocklistDhcpFieldsV0_42},
+    dns::{
+        BlocklistDnsFieldsV0_41, BlocklistDnsFieldsV0_42,
+        CryptocurrencyMiningPoolFields as CryptocurrencyMiningPoolFieldsV0_42,
+        CryptocurrencyMiningPoolFieldsV0_41, DnsEventFieldsV0_41, DnsEventFieldsV0_42,
+    },
+    ftp::{
+        FtpBruteForceFields as FtpBruteForceFieldsV0_42, FtpBruteForceFieldsV0_41,
+        FtpEventFieldsV0_41, FtpEventFieldsV0_42,
+    },
+    http::{
+        BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42, DgaFieldsV0_41, DgaFieldsV0_42,
+        HttpEventFieldsV0_41, HttpEventFieldsV0_42, HttpThreatFieldsV0_41, HttpThreatFieldsV0_42,
+        RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42,
+    },
+    kerberos::{BlocklistKerberosFieldsV0_41, BlocklistKerberosFieldsV0_42},
+    ldap::{
+        LdapBruteForceFieldsV0_41, LdapBruteForceFieldsV0_42, LdapEventFieldsV0_39,
+        LdapEventFieldsV0_42,
+    },
+    mqtt::{BlocklistMqttFieldsV0_41, BlocklistMqttFieldsV0_42},
+    nfs::{BlocklistNfsFieldsV0_41, BlocklistNfsFieldsV0_42},
+    ntlm::{BlocklistNtlmFieldsV0_41, BlocklistNtlmFieldsV0_42},
+    rdp::{
+        BlocklistRdpFieldsV0_41, BlocklistRdpFieldsV0_42, RdpBruteForceFieldsV0_41,
+        RdpBruteForceFieldsV0_42,
+    },
+    smb::{BlocklistSmbFieldsV0_41, BlocklistSmbFieldsV0_42},
+    smtp::{BlocklistSmtpFieldsV0_41, BlocklistSmtpFieldsV0_42},
+    ssh::{BlocklistSshFieldsV0_41, BlocklistSshFieldsV0_42},
+    tls::{BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42},
 };
 use super::{
     Customer, EventCategory, Network, TriagePolicy, TriagePolicyInput,
@@ -2929,23 +2898,20 @@ mod tests {
     };
 
     fn example_message(kind: EventKind, category: EventCategory) -> EventMessage {
-        let end_time = Utc::now();
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
-            start_time: end_time,
-            end_time,
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc::now(),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             query: "foo.com".to_string(),
             answer: vec!["1.1.1.1".to_string()],
             trans_id: 1,
@@ -3050,7 +3016,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_dga() {
-        let end_time = DateTime::from_timestamp_nanos(1000);
         let fields = DgaFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3058,11 +3023,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(1000),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -3100,7 +3063,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" start_time="1970-01-01T00:00:00.000001+00:00" end_time="1970-01-01T00:00:00.000001+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="0.8""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000001+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="0.8""#
         );
 
         let dga = DomainGenerationAlgorithm::new(
@@ -3111,7 +3074,7 @@ mod tests {
         let dga_display = format!("{event}");
         assert_eq!(
             &dga_display,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" end_time="1970-01-01 00:00:00.000001 UTC" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="0.8" triage_scores="""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="DomainGenerationAlgorithm" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000001+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="0.8" triage_scores="""#
         );
     }
 
@@ -3199,7 +3162,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_httpthreat() {
-        let end_time = DateTime::from_timestamp_nanos(1000);
         let fields = HttpThreatFields {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             sensor: "collector1".to_string(),
@@ -3208,11 +3170,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(1000),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -3253,11 +3213,12 @@ mod tests {
         let message = message.syslog_rfc5424();
         assert!(message.is_ok());
         let (_, _, syslog_message) = message.unwrap();
+        let start_time = chrono::DateTime::<Utc>::from_timestamp_nanos(0).to_rfc3339();
         let end_time = chrono::DateTime::<Utc>::from_timestamp_nanos(1000).to_rfc3339();
         assert_eq!(
             syslog_message,
             format!(
-                "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"HttpThreat\" category=\"Reconnaissance\" sensor=\"collector1\" src_addr=\"127.0.0.1\" src_port=\"10000\" dst_addr=\"127.0.0.2\" dst_port=\"80\" proto=\"6\" start_time=\"{end_time}\" end_time=\"{end_time}\" duration=\"0\" orig_bytes=\"0\" resp_bytes=\"0\" orig_pkts=\"0\" resp_pkts=\"0\" orig_l2_bytes=\"0\" resp_l2_bytes=\"0\" method=\"GET\" host=\"example.com\" uri=\"/uri/path\" referer=\"-\" version=\"1.1\" user_agent=\"browser\" request_len=\"100\" response_len=\"100\" status_code=\"200\" status_msg=\"-\" username=\"-\" password=\"-\" cookie=\"cookie\" content_encoding=\"encoding type\" content_type=\"content type\" cache_control=\"no cache\" filenames=\"a1,a2\" mime_types=\"b1,b2\" body=\"1234567890...\" state=\"\" db_name=\"db\" rule_id=\"12000\" matched_to=\"match\" cluster_id=\"1111\" attack_kind=\"attack\" confidence=\"0.8\""
+                "time=\"1970-01-01T00:01:01+00:00\" event_kind=\"HttpThreat\" category=\"Reconnaissance\" sensor=\"collector1\" src_addr=\"127.0.0.1\" src_port=\"10000\" dst_addr=\"127.0.0.2\" dst_port=\"80\" proto=\"6\" start_time=\"{start_time}\" end_time=\"{end_time}\" duration=\"0\" orig_pkts=\"0\" resp_pkts=\"0\" orig_l2_bytes=\"0\" resp_l2_bytes=\"0\" method=\"GET\" host=\"example.com\" uri=\"/uri/path\" referer=\"-\" version=\"1.1\" user_agent=\"browser\" request_len=\"100\" response_len=\"100\" status_code=\"200\" status_msg=\"-\" username=\"-\" password=\"-\" cookie=\"cookie\" content_encoding=\"encoding type\" content_type=\"content type\" cache_control=\"no cache\" filenames=\"a1,a2\" mime_types=\"b1,b2\" body=\"1234567890...\" state=\"\" db_name=\"db\" rule_id=\"12000\" matched_to=\"match\" cluster_id=\"1111\" attack_kind=\"attack\" confidence=\"0.8\""
             )
         );
 
@@ -3271,7 +3232,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_nonbrowser() {
-        let end_time = Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap();
         let fields = HttpEventFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3279,11 +3239,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap(),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -3323,7 +3281,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" start_time="1970-01-01T00:10:10+00:00" end_time="1970-01-01T00:10:10+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="1""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="NonBrowser" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:10+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="1""#
         );
 
         let non_browser = Event::NonBrowser(NonBrowser::new(
@@ -3337,7 +3295,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_http() {
-        let end_time = DateTime::from_timestamp_nanos(600);
         let fields = BlocklistHttpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3345,11 +3302,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(600),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -3389,7 +3344,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlocklistHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" start_time="1970-01-01T00:00:00.000000600+00:00" end_time="1970-01-01T00:00:00.000000600+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="1""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="BlocklistHttp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000600+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="example.com" uri="/uri/path" referer="-" version="1.1" user_agent="browser" request_len="100" response_len="100" status_code="200" status_msg="-" username="-" password="-" cookie="cookie" content_encoding="encoding type" content_type="content type" cache_control="no cache" filenames="a1,a2" mime_types="b1,b2" body="1234567890..." state="" confidence="1""#
         );
 
         let blocklist_http = Event::Blocklist(RecordType::Http(BlocklistHttp::new(
@@ -3404,23 +3359,20 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_lockyransomware() {
-        let end_time = Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap();
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
-            start_time: end_time,
-            end_time,
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 4)),
             dst_port: 53,
             proto: 17,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             query: "locky.com".to_string(),
             answer: vec!["1.1.1.100".to_string()],
             trans_id: 1100,
@@ -3448,7 +3400,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="LockyRansomware" category="Impact" sensor="collector1" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" src_addr="127.0.0.3" src_port="10000" dst_addr="127.0.0.4" dst_port="53" proto="17" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="locky.com" answer="1.1.1.100" trans_id="1100" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="true" rd_flag="false" ra_flag="false" ttl="120,120,120,120,120" confidence="0.8""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="LockyRansomware" category="Impact" sensor="collector1" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" src_addr="127.0.0.3" src_port="10000" dst_addr="127.0.0.4" dst_port="53" proto="17" query="locky.com" answer="1.1.1.100" trans_id="1100" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="true" rd_flag="false" ra_flag="false" ttl="120,120,120,120,120" confidence="0.8""#
         );
 
         let locky_ransomware = Event::LockyRansomware(LockyRansomware::new(
@@ -3472,13 +3424,6 @@ mod tests {
             dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             proto: 6,
             confidence: 0.3,
             category: Some(EventCategory::Reconnaissance),
@@ -3495,7 +3440,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" duration="0" proto="6" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" proto="6" confidence="0.3""#
         );
 
         let port_scan = Event::PortScan(PortScan::new(
@@ -3521,13 +3466,6 @@ mod tests {
             dst_port: 80,
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             proto: 6,
             confidence: 0.3,
             category: Some(EventCategory::Reconnaissance),
@@ -3544,7 +3482,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" sensor="" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" sensor="" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let multi_host_port_scan = Event::MultiHostPortScan(MultiHostPortScan::new(
@@ -3569,13 +3507,6 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             proto: 6,
             confidence: 0.3,
             category: Some(EventCategory::Impact),
@@ -3591,7 +3522,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" sensor="" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" confidence="0.3""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" sensor="" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let external_ddos = Event::ExternalDdos(ExternalDdos::new(
@@ -3606,9 +3537,6 @@ mod tests {
     }
 
     fn blocklist_bootp_fields() -> BlocklistBootpFields {
-        use chrono::DateTime;
-        let start_time = DateTime::from_timestamp_nanos(0);
-        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistBootpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3616,13 +3544,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
             proto: 17,
-            start_time,
-            end_time,
-            duration: 100,
-            orig_pkts: 1,
-            resp_pkts: 1,
-            orig_l2_bytes: 122,
-            resp_l2_bytes: 122,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             op: 1,
             htype: 2,
             hops: 1,
@@ -3654,7 +3582,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" confidence="1""#,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" confidence="1""#,
         );
         let blocklist_bootp = Event::Blocklist(RecordType::Bootp(BlocklistBootp::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -3664,7 +3592,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_bootp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistBootp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" op="1" htype="2" hops="1" xid="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" chaddr="01:02:03:04:05:06" sname="server_name" file="boot_file_name" triage_scores="""#
         );
     }
 
@@ -3747,9 +3675,9 @@ mod tests {
             dst_port: 80,
             proto: 6,
             conn_state: "SAF".to_string(),
-            start_time: chrono::DateTime::from_timestamp_nanos(0),
-            end_time: chrono::DateTime::from_timestamp_nanos(1000),
-            duration: 1000,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(1000),
+            duration: 0,
             service: "http".to_string(),
             orig_bytes: 100,
             orig_pkts: 1,
@@ -3772,7 +3700,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000001+00:00" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000001+00:00" duration="0" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" confidence="1""#
         );
 
         let blocklist_conn = Event::Blocklist(RecordType::Conn(BlocklistConn::new(
@@ -3782,13 +3710,12 @@ mod tests {
         .to_string();
         assert_eq!(
             &blocklist_conn,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000001+00:00" duration="1000" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistConn" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="80" proto="6" conn_state="SAF" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000001+00:00" duration="0" service="http" orig_bytes="100" resp_bytes="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_dcerpc() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistDceRpcFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3796,8 +3723,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 135,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -3822,7 +3749,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" confidence="1""#
         );
 
         let blocklist_dce_rpc = Event::Blocklist(RecordType::DceRpc(BlocklistDceRpc::new(
@@ -3832,14 +3759,11 @@ mod tests {
         .to_string();
         assert_eq!(
             &blocklist_dce_rpc,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDceRpc" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="135" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" rtt="1" named_pipe="svcctl" endpoint="epmapper" operation="bind" triage_scores="""#
         );
     }
 
     fn blocklist_dhcp_fields() -> BlocklistDhcpFields {
-        use chrono::DateTime;
-        let start_time = DateTime::from_timestamp_nanos(0);
-        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistDhcpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::from_str("127.0.0.1").unwrap(),
@@ -3847,13 +3771,13 @@ mod tests {
             dst_addr: IpAddr::from_str("127.0.0.2").unwrap(),
             dst_port: 67,
             proto: 17,
-            start_time,
-            end_time,
-            duration: 100,
-            orig_pkts: 1,
-            resp_pkts: 1,
-            orig_l2_bytes: 122,
-            resp_l2_bytes: 122,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             msg_type: 1,
             ciaddr: IpAddr::from_str("127.0.0.5").unwrap(),
             yiaddr: IpAddr::from_str("127.0.0.6").unwrap(),
@@ -3891,7 +3815,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" confidence="1""#,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" confidence="1""#,
         );
 
         let blocklist_dhcp = Event::Blocklist(RecordType::Dhcp(BlocklistDhcp::new(
@@ -3902,7 +3826,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_dhcp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_pkts="1" resp_pkts="1" orig_l2_bytes="122" resp_l2_bytes="122" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDhcp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="68" dst_addr="127.0.0.2" dst_port="67" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" msg_type="1" ciaddr="127.0.0.5" yiaddr="127.0.0.6" siaddr="127.0.0.7" giaddr="127.0.0.8" subnet_mask="255.255.255.0" router="127.0.0.1" domain_name_server="127.0.0.1" req_ip_addr="127.0.0.100" lease_time="100" server_id="127.0.0.1" param_req_list="1,2,3" message="message" renewal_time="100" rebinding_time="200" class_id="MSFT 5.0" client_id_type="1" client_id="07:08:09" triage_scores="""#
         );
     }
 
@@ -3977,23 +3901,20 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_dnscovertchannel() {
-        let end_time = Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap();
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
-            start_time: end_time,
-            end_time,
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             query: "foo.com".to_string(),
             answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
             trans_id: 123,
@@ -4021,7 +3942,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="DnsCovertChannel" category="CommandAndControl" sensor="collector1" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="0.9""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="DnsCovertChannel" category="CommandAndControl" sensor="collector1" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="0.9""#
         );
 
         let triage_scores = vec![TriageScore {
@@ -4037,29 +3958,26 @@ mod tests {
 
         assert_eq!(
             &dns_covert_channel,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="DnsCovertChannel" category="CommandAndControl" sensor="collector1" end_time="1970-01-01T01:01:01+00:00" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="0.9" triage_scores="109:0.90""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="DnsCovertChannel" category="CommandAndControl" sensor="collector1" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="0.9" triage_scores="109:0.90""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_cryptocurrencyminingpool() {
-        let end_time = Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap();
         let fields = CryptocurrencyMiningPoolFields {
             sensor: "collector1".to_string(),
-            start_time: end_time,
-            end_time,
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             query: "foo.com".to_string(),
             answer: vec!["10.10.10.10".to_string(), "20.20.20.20".to_string()],
             trans_id: 123,
@@ -4088,7 +4006,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero" confidence="1""#
         );
 
         let cryptocurrency_mining_pool =
@@ -4099,13 +4017,12 @@ mod tests {
             .to_string();
         assert_eq!(
             &cryptocurrency_mining_pool,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" end_time="1970-01-01T01:01:01+00:00" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="CryptocurrencyMiningPool" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" coins="bitcoin,monero" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_dns() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistDnsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4113,11 +4030,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -4149,7 +4064,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" confidence="1""#
         );
         let blocklist_dns = Event::Blocklist(RecordType::Dns(BlocklistDns::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -4158,7 +4073,7 @@ mod tests {
         .to_string();
         assert_eq!(
             &blocklist_dns,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistDns" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="53" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" query="foo.com" answer="10.10.10.10,20.20.20.20" trans_id="123" rtt="1" qclass="0" qtype="0" rcode="0" aa_flag="false" tc_flag="false" rd_flag="false" ra_flag="true" ttl="120,120,120,120,120" triage_scores="""#
         );
     }
 
@@ -4173,13 +4088,6 @@ mod tests {
             user_list: vec!["user1".to_string(), "user_2".to_string()],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             is_internal: true,
             confidence: 0.3,
             category: Some(EventCategory::CredentialAccess),
@@ -4196,7 +4104,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" is_internal="true" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" is_internal="true" confidence="0.3""#
         );
 
         let ftp_brute_force = Event::FtpBruteForce(FtpBruteForce::new(
@@ -4213,8 +4121,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_ftpplaintext() {
-        use chrono::DateTime;
-
         use crate::event::ftp::FtpCommand;
 
         let command = FtpCommand {
@@ -4229,8 +4135,7 @@ mod tests {
             file_size: 5000,
             file_id: "123".to_string(),
         };
-        let start_time = DateTime::from_timestamp_nanos(0);
-        let end_time = DateTime::from_timestamp_nanos(100);
+
         let fields = FtpEventFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4238,15 +4143,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
             proto: 6,
-            start_time,
-            end_time,
-            duration: 100,
-            orig_bytes: 100,
-            resp_bytes: 100,
-            orig_pkts: 10,
-            resp_pkts: 10,
-            orig_l2_bytes: 120,
-            resp_l2_bytes: 120,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             user: "user1".to_string(),
             password: "password".to_string(),
             commands: vec![command],
@@ -4265,7 +4168,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" user="user1" password="password" commands="ls:200:OK" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" user="user1" password="password" commands="ls:200:OK" confidence="1""#
         );
 
         let ftp_plain_text = Event::FtpPlainText(FtpPlainText::new(
@@ -4275,13 +4178,11 @@ mod tests {
         .to_string();
         assert_eq!(
             &ftp_plain_text,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" user="user1" password="password" commands="ls:200:OK" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="FtpPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" user="user1" password="password" commands="ls:200:OK" triage_scores="""#
         );
     }
 
     fn ftpeventfields() -> FtpEventFields {
-        use chrono::DateTime;
-
         use crate::event::ftp::FtpCommand;
 
         let command = FtpCommand {
@@ -4297,27 +4198,28 @@ mod tests {
             file_id: "123".to_string(),
         };
 
-        let start_time = DateTime::from_timestamp_nanos(0);
-        let end_time = DateTime::from_timestamp_nanos(100);
         FtpEventFields {
-            sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
             proto: 6,
-            start_time,
-            end_time,
-            duration: 100,
-            orig_bytes: 100,
-            resp_bytes: 100,
-            orig_pkts: 10,
-            resp_pkts: 10,
-            orig_l2_bytes: 120,
-            resp_l2_bytes: 120,
+            start_time: DateTime::from_timestamp_nanos(
+                Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
+                    .unwrap()
+                    .timestamp_nanos_opt()
+                    .unwrap(),
+            ),
+            end_time: DateTime::from_timestamp_nanos(100),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             user: "user1".to_string(),
             password: "password".to_string(),
             commands: vec![command],
+            sensor: "collector1".to_string(),
             confidence: 1.0,
             category: Some(EventCategory::InitialAccess),
         }
@@ -4338,7 +4240,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" user="user1" password="password" commands="ls:200:OK" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" user="user1" password="password" commands="ls:200:OK" confidence="1""#
         );
 
         let blocklist_ftp = Event::Blocklist(RecordType::Ftp(BlocklistFtp::new(
@@ -4349,7 +4251,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_ftp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" user="user1" password="password" commands="ls:200:OK" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistFtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="21" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" user="user1" password="password" commands="ls:200:OK" triage_scores="""#
         );
     }
 
@@ -4434,13 +4336,6 @@ mod tests {
             proto: 6,
             start_time: now,
             end_time: now,
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             confidence: 0.3,
             category: Some(EventCategory::Exfiltration),
         };
@@ -4456,7 +4351,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" confidence="0.3""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" confidence="0.3""#
         );
         let repeated_http_sessions = Event::RepeatedHttpSessions(RepeatedHttpSessions::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -4465,13 +4360,12 @@ mod tests {
         .to_string();
         assert_eq!(
             &repeated_http_sessions,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_kerberos() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistKerberosFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4479,8 +4373,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 88,
             proto: 17,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -4510,7 +4404,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="[\"user1\"]" realm="EXAMPLE.COM" sname_type="1" service_name="[\"krbtgt/EXAMPLE.COM\"]" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" confidence="1""#
         );
 
         let blocklist_kerberos = Event::Blocklist(RecordType::Kerberos(BlocklistKerberos::new(
@@ -4521,7 +4415,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_kerberos,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistKerberos" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="88" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client_time="100" server_time="101" error_code="0" client_realm="EXAMPLE.COM" cname_type="1" client_name="user1" realm="EXAMPLE.COM" sname_type="1" service_name="krbtgt/EXAMPLE.COM" triage_scores="""#
         );
     }
 
@@ -4539,13 +4433,6 @@ mod tests {
             ],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             confidence: 0.3,
             category: Some(EventCategory::CredentialAccess),
         };
@@ -4561,7 +4448,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let ldap_brute_force = Event::LdapBruteForce(LdapBruteForce::new(
@@ -4578,9 +4465,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_ldapplaintext() {
-        use chrono::DateTime;
-        let start_time = DateTime::from_timestamp_nanos(0);
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = LdapEventFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4588,15 +4472,18 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
             proto: 6,
-            start_time,
-            end_time,
-            duration: 100,
-            orig_bytes: 100,
-            resp_bytes: 100,
-            orig_pkts: 10,
-            resp_pkts: 10,
-            orig_l2_bytes: 120,
-            resp_l2_bytes: 120,
+            start_time: DateTime::from_timestamp_nanos(
+                Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
+                    .unwrap()
+                    .timestamp_nanos_opt()
+                    .unwrap(),
+            ),
+            end_time: DateTime::from_timestamp_nanos(100),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             message_id: 1,
             version: 3,
             opcode: vec!["bind".to_string()],
@@ -4619,7 +4506,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" confidence="1""#
         );
 
         let ldap_plain_text = Event::LdapPlainText(LdapPlainText::new(
@@ -4630,14 +4517,11 @@ mod tests {
 
         assert_eq!(
             &ldap_plain_text,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="LdapPlainText" category="LateralMovement" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
         );
     }
 
     fn ldapeventfields() -> LdapEventFields {
-        use chrono::DateTime;
-        let start_time = DateTime::from_timestamp_nanos(0);
-        let end_time = DateTime::from_timestamp_nanos(100);
         LdapEventFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4645,15 +4529,18 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
             proto: 6,
-            start_time,
-            end_time,
-            duration: 100,
-            orig_bytes: 100,
-            resp_bytes: 100,
-            orig_pkts: 10,
-            resp_pkts: 10,
-            orig_l2_bytes: 120,
-            resp_l2_bytes: 120,
+            start_time: DateTime::from_timestamp_nanos(
+                Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
+                    .unwrap()
+                    .timestamp_nanos_opt()
+                    .unwrap(),
+            ),
+            end_time: DateTime::from_timestamp_nanos(100),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             message_id: 1,
             version: 3,
             opcode: vec!["bind".to_string()],
@@ -4681,7 +4568,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" confidence="1""#
         );
 
         let blocklist_ldap = Event::Blocklist(RecordType::Ldap(BlocklistLdap::new(
@@ -4692,7 +4579,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_ldap,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistLdap" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="389" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" message_id="1" version="3" opcode="bind" result="success" diagnostic_message="msg" object="object" argument="argument" triage_scores="""#
         );
     }
 
@@ -4773,8 +4660,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 1812,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             id: 1,
             code: 1,
             resp_code: 2,
@@ -4897,7 +4789,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_mqtt() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistMqttFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4905,11 +4796,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 1883,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -4935,7 +4824,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" confidence="1""#
         );
 
         let blocklist_mqtt = Event::Blocklist(RecordType::Mqtt(BlocklistMqtt::new(
@@ -4946,15 +4835,12 @@ mod tests {
 
         assert_eq!(
             &blocklist_mqtt,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMqtt" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1883" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" protocol="mqtt" version="211" client_id="client1" connack_reason="0" subscribe="topic" suback_reason="error" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_networkthreat() {
-        use chrono::DateTime;
-        let start_time = DateTime::from_timestamp_nanos(0);
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = NetworkThreat {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             sensor: "collector1".to_string(),
@@ -4964,15 +4850,13 @@ mod tests {
             resp_port: 80,
             proto: 6,
             service: "http".to_string(),
-            start_time,
-            end_time,
-            duration: 100,
-            orig_bytes: 100,
-            resp_bytes: 100,
-            orig_pkts: 10,
-            resp_pkts: 10,
-            orig_l2_bytes: 120,
-            resp_l2_bytes: 120,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             content: "content".to_string(),
             db_name: "db_name".to_string(),
             rule_id: 1,
@@ -4995,13 +4879,12 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="NetworkThreat" category="Reconnaissance" sensor="collector1" orig_addr="127.0.0.1" orig_port="10000" resp_addr="127.0.0.2" resp_port="80" proto="6" service="http" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="100" orig_bytes="100" resp_bytes="100" orig_pkts="10" resp_pkts="10" orig_l2_bytes="120" resp_l2_bytes="120" content="content" db_name="db_name" rule_id="1" matched_to="matched_to" cluster_id="1" attack_kind="attack_kind" confidence="0.9" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="NetworkThreat" category="Reconnaissance" sensor="collector1" orig_addr="127.0.0.1" orig_port="10000" resp_addr="127.0.0.2" resp_port="80" proto="6" service="http" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" content="content" db_name="db_name" rule_id="1" matched_to="matched_to" cluster_id="1" attack_kind="attack_kind" confidence="0.9" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_nfs() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistNfsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5009,13 +4892,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 2049,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             read_files: vec!["/etc/passwd".to_string()],
             write_files: vec!["/etc/shadow".to_string()],
             confidence: 1.0,
@@ -5033,7 +4916,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" orig_bytes="0" resp_pkts="0" resp_bytes="0" read_files="/etc/passwd" write_files="/etc/shadow" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" read_files="/etc/passwd" write_files="/etc/shadow" confidence="1""#
         );
 
         let blocklist_nfs = Event::Blocklist(RecordType::Nfs(BlocklistNfs::new(
@@ -5044,13 +4927,12 @@ mod tests {
 
         assert_eq!(
             &blocklist_nfs,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" orig_bytes="0" resp_pkts="0" resp_bytes="0" read_files="/etc/passwd" write_files="/etc/shadow" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNfs" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="2049" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" read_files="/etc/passwd" write_files="/etc/shadow" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_ntlm() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistNtlmFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5058,11 +4940,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -5087,7 +4967,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" confidence="1""#
         );
 
         let blocklist_ntlm = Event::Blocklist(RecordType::Ntlm(BlocklistNtlm::new(
@@ -5098,7 +4978,37 @@ mod tests {
 
         assert_eq!(
             &blocklist_ntlm,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistNtlm" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" protocol="ntlm" username="user1" hostname="host1" domainname="domain1" success="true" triage_scores="""#
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_radius() {
+        let fields = blocklist_radius_fields();
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlocklistRadius,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRadius" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1812" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" id="1" code="1" resp_code="2" auth="auth_string" resp_auth="resp_auth_string" user_name="user1" user_passwd="password" chap_passwd="chap_pass" nas_ip="127.0.0.3" nas_port="5060" state="state" nas_id="nas_identifier" nas_port_type="15" message="RADIUS message" confidence="1""#
+        );
+
+        let blocklist_radius = Event::Blocklist(RecordType::Radius(BlocklistRadius::new(
+            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            fields,
+        )))
+        .to_string();
+
+        assert_eq!(
+            &blocklist_radius,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRadius" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1812" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" id="1" code="1" resp_code="2" auth="auth_string" resp_auth="resp_auth_string" user_name="user1" user_passwd="password" chap_passwd="chap_pass" nas_ip="127.0.0.3" nas_port="5060" state="state" nas_id="nas_identifier" nas_port_type="15" message="RADIUS message" triage_scores="""#
         );
     }
 
@@ -5143,13 +5053,6 @@ mod tests {
             ],
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             proto: 6,
             confidence: 0.3,
             category: Some(EventCategory::Discovery),
@@ -5166,7 +5069,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" sensor="" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" duration="0" proto="6" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" sensor="" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" proto="6" confidence="0.3""#
         );
 
         let rdp_brute_force = Event::RdpBruteForce(RdpBruteForce::new(
@@ -5183,7 +5086,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_rdp() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistRdpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5191,11 +5093,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 3389,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -5216,7 +5116,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" cookie="cookie" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" cookie="cookie" confidence="1""#
         );
 
         let blocklist_rdp = Event::Blocklist(RecordType::Rdp(BlocklistRdp::new(
@@ -5227,13 +5127,12 @@ mod tests {
 
         assert_eq!(
             &blocklist_rdp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" cookie="cookie" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRdp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="3389" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" cookie="cookie" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_smb() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistSmbFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5241,11 +5140,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -5276,7 +5173,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" confidence="1""#
         );
 
         let blocklist_smb = Event::Blocklist(RecordType::Smb(BlocklistSmb::new(
@@ -5287,13 +5184,12 @@ mod tests {
 
         assert_eq!(
             &blocklist_smb,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmb" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="445" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" command="1" path="path" service="service" file_name="file_name" file_size="100" resource_type="1" fid="1" create_time="100" access_time="200" write_time="300" change_time="400" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_smtp() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistSmtpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5301,13 +5197,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 25,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             mailfrom: "mailfrom".to_string(),
             date: "date".to_string(),
             from: "from".to_string(),
@@ -5330,7 +5226,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" orig_bytes="0" resp_pkts="0" resp_bytes="0" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" confidence="1""#
         );
 
         let blocklist_smtp = Event::Blocklist(RecordType::Smtp(BlocklistSmtp::new(
@@ -5341,13 +5237,12 @@ mod tests {
 
         assert_eq!(
             &blocklist_smtp,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" orig_bytes="0" resp_pkts="0" resp_bytes="0" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSmtp" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="25" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" mailfrom="mailfrom" date="date" from="from" to="to" subject="subject" agent="agent" state="state" triage_scores="""#
         );
     }
 
     #[tokio::test]
     async fn syslog_for_blocklist_ssh() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistSshFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5355,13 +5250,13 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 22,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             client: "client".to_string(),
             server: "server".to_string(),
             cipher_alg: "cipher_alg".to_string(),
@@ -5390,7 +5285,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" orig_bytes="0" resp_pkts="0" resp_bytes="0" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" confidence="1""#
         );
 
         let blocklist_ssh = Event::Blocklist(RecordType::Ssh(BlocklistSsh::new(
@@ -5401,7 +5296,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_ssh,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" orig_bytes="0" resp_pkts="0" resp_bytes="0" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistSsh" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="22" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" client="client" server="server" cipher_alg="cipher_alg" mac_alg="mac_alg" compression_alg="compression_alg" kex_alg="kex_alg" host_key_alg="host_key_alg" hassh_algorithms="hassh_algorithms" hassh="hassh" hassh_server_algorithms="hassh_server_algorithms" hassh_server="hassh_server" client_shka="client_shka" server_shka="server_shka" triage_scores="""#
         );
     }
 
@@ -5461,7 +5356,6 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_blocklist_tls() {
-        let end_time = DateTime::from_timestamp_nanos(100);
         let fields = BlocklistTlsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5469,11 +5363,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -5514,7 +5406,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
         );
 
         let blocklist_tls = Event::Blocklist(RecordType::Tls(BlocklistTls::new(
@@ -5525,19 +5417,26 @@ mod tests {
 
         assert_eq!(
             &blocklist_tls,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistTls" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
         );
     }
 
     fn httpeventfields() -> HttpEventFields {
-        let end_time = Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap();
         HttpEventFields {
             sensor: "collector1".to_string(),
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(
+                Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
+                    .unwrap()
+                    .timestamp_nanos_opt()
+                    .unwrap(),
+            ),
+            end_time: DateTime::from_timestamp_nanos(
+                Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1)
+                    .unwrap()
+                    .timestamp_nanos_opt()
+                    .unwrap(),
+            ),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -5587,7 +5486,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" filenames="filename" mime_types="mime_type" body="post_body" state="state" confidence="1""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" filenames="filename" mime_types="mime_type" body="post_body" state="state" confidence="1""#
         );
 
         let tor_connection = Event::TorConnection(TorConnection::new(
@@ -5598,7 +5497,7 @@ mod tests {
 
         assert_eq!(
             &tor_connection,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" end_time="1970-01-01T01:01:01+00:00" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" filenames="filename" mime_types="mime_type" body="post_body" state="state" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="TorConnection" category="CommandAndControl" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" method="GET" host="host" uri="uri" referer="referer" version="version" user_agent="user_agent" request_len="100" response_len="200" status_code="200" status_msg="OK" username="user" password="password" cookie="cookie" content_encoding="content_encoding" content_type="content_type" cache_control="cache_control" filenames="filename" mime_types="mime_type" body="post_body" state="state" triage_scores="""#
         );
     }
 
@@ -5672,8 +5571,6 @@ mod tests {
     }
 
     fn blocklist_tls_fields() -> BlocklistTlsFields {
-        use chrono::DateTime;
-        let end_time = DateTime::from_timestamp_nanos(100);
         BlocklistTlsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5681,11 +5578,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
-            start_time: end_time,
-            end_time,
+            start_time: DateTime::from_timestamp_nanos(0),
+            end_time: DateTime::from_timestamp_nanos(100),
             duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -5732,7 +5627,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9""#
         );
 
         let suspicious_tls_traffic =
@@ -5757,7 +5652,7 @@ mod tests {
 
         assert_eq!(
             &blocklist_tls,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:00:00.000000100+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_bytes="0" resp_bytes="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="SuspiciousTlsTraffic" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" server_name="server" alpn_protocol="alpn" ja3="ja3" version="version" client_cipher_suites="1,2,3" client_extensions="4,5,6" cipher="1" extensions="7,8,9" ja3s="ja3s" serial="serial" subject_country="country" subject_org_name="org" subject_common_name="common" validity_not_before="100" validity_not_after="200" subject_alt_name="alt" issuer_country="country" issuer_org_name="org" issuer_org_unit_name="unit" issuer_common_name="common" last_alert="1" confidence="0.9" triage_scores="""#
         );
     }
 

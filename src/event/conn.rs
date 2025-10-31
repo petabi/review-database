@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string, vector_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -36,30 +37,10 @@ macro_rules! find_conn_attr_by_kind {
     }};
 }
 
-pub type PortScanFields = PortScanFieldsV0_43;
+pub type PortScanFields = PortScanFieldsV0_42;
 
 #[derive(Serialize, Deserialize)]
-pub struct PortScanFieldsV0_43 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub dst_addr: IpAddr,
-    pub dst_ports: Vec<u16>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub duration: i64,
-    pub proto: u8,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct PortScanFieldsV0_42 {
+pub struct PortScanFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
@@ -75,7 +56,7 @@ impl PortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} duration={:?} proto={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -86,14 +67,7 @@ impl PortScanFields {
             vector_to_string(&self.dst_ports),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
-            self.duration.to_string(),
             self.proto.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
-            self.orig_pkts.to_string(),
-            self.resp_pkts.to_string(),
-            self.orig_l2_bytes.to_string(),
-            self.resp_l2_bytes.to_string(),
             self.confidence.to_string()
         )
     }
@@ -127,31 +101,6 @@ impl From<PortScanFieldsV0_41> for PortScanFieldsV0_42 {
     }
 }
 
-impl From<PortScanFieldsV0_42> for PortScanFieldsV0_43 {
-    fn from(value: PortScanFieldsV0_42) -> Self {
-        let duration = value.end_time.timestamp_nanos_opt().unwrap_or_default()
-            - value.start_time.timestamp_nanos_opt().unwrap_or_default();
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            dst_addr: value.dst_addr,
-            dst_ports: value.dst_ports,
-            start_time: value.start_time,
-            end_time: value.end_time,
-            duration,
-            proto: value.proto,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            confidence: value.confidence,
-            category: value.category,
-        }
-    }
-}
-
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
 pub struct PortScan {
@@ -162,14 +111,7 @@ pub struct PortScan {
     pub dst_ports: Vec<u16>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub duration: i64,
     pub proto: u8,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
     pub confidence: f32,
     pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -202,13 +144,6 @@ impl PortScan {
             proto: fields.proto,
             start_time: fields.start_time,
             end_time: fields.end_time,
-            duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
-            orig_pkts: fields.orig_pkts,
-            resp_pkts: fields.resp_pkts,
-            orig_l2_bytes: fields.orig_l2_bytes,
-            resp_l2_bytes: fields.resp_l2_bytes,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -269,13 +204,6 @@ impl Match for PortScan {
                     self.dst_ports.iter().map(|val| u64::from(*val)).collect(),
                 )),
                 ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
                 _ => None,
             }
         } else {
@@ -284,30 +212,10 @@ impl Match for PortScan {
     }
 }
 
-pub type MultiHostPortScanFields = MultiHostPortScanFieldsV0_43;
+pub type MultiHostPortScanFields = MultiHostPortScanFieldsV0_42;
 
 #[derive(Serialize, Deserialize)]
-pub struct MultiHostPortScanFieldsV0_43 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub dst_port: u16,
-    pub dst_addrs: Vec<IpAddr>,
-    pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct MultiHostPortScanFieldsV0_42 {
+pub struct MultiHostPortScanFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_port: u16,
@@ -323,7 +231,7 @@ impl MultiHostPortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -335,13 +243,6 @@ impl MultiHostPortScanFields {
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
-            self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
-            self.orig_pkts.to_string(),
-            self.resp_pkts.to_string(),
-            self.orig_l2_bytes.to_string(),
-            self.resp_l2_bytes.to_string(),
             self.confidence.to_string()
         )
     }
@@ -376,31 +277,6 @@ impl From<MultiHostPortScanFieldsV0_41> for MultiHostPortScanFieldsV0_42 {
     }
 }
 
-impl From<MultiHostPortScanFieldsV0_42> for MultiHostPortScanFieldsV0_43 {
-    fn from(value: MultiHostPortScanFieldsV0_42) -> Self {
-        let duration = value.end_time.timestamp_nanos_opt().unwrap_or_default()
-            - value.start_time.timestamp_nanos_opt().unwrap_or_default();
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            dst_port: value.dst_port,
-            dst_addrs: value.dst_addrs,
-            proto: value.proto,
-            start_time: value.start_time,
-            end_time: value.end_time,
-            duration,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            confidence: value.confidence,
-            category: value.category,
-        }
-    }
-}
-
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
 pub struct MultiHostPortScan {
@@ -412,13 +288,6 @@ pub struct MultiHostPortScan {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
     pub confidence: f32,
     pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -451,13 +320,6 @@ impl MultiHostPortScan {
             proto: fields.proto,
             start_time: fields.start_time,
             end_time: fields.end_time,
-            duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
-            orig_pkts: fields.orig_pkts,
-            resp_pkts: fields.resp_pkts,
-            orig_l2_bytes: fields.orig_l2_bytes,
-            resp_l2_bytes: fields.resp_l2_bytes,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -517,13 +379,6 @@ impl Match for MultiHostPortScan {
                 ConnAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
                 ConnAttr::DstAddr => Some(AttrValue::VecAddr(&self.dst_addrs)),
                 ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
                 _ => None,
             }
         } else {
@@ -532,29 +387,10 @@ impl Match for MultiHostPortScan {
     }
 }
 
-pub type ExternalDdosFields = ExternalDdosFieldsV0_43;
+pub type ExternalDdosFields = ExternalDdosFieldsV0_42;
 
 #[derive(Serialize, Deserialize)]
-pub struct ExternalDdosFieldsV0_43 {
-    pub sensor: String,
-    pub src_addrs: Vec<IpAddr>,
-    pub dst_addr: IpAddr,
-    pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct ExternalDdosFieldsV0_42 {
+pub struct ExternalDdosFieldsV0_42 {
     pub sensor: String,
     pub src_addrs: Vec<IpAddr>,
     pub dst_addr: IpAddr,
@@ -569,7 +405,7 @@ impl ExternalDdosFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -580,13 +416,6 @@ impl ExternalDdosFields {
             self.proto.to_string(),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
-            self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
-            self.orig_pkts.to_string(),
-            self.resp_pkts.to_string(),
-            self.orig_l2_bytes.to_string(),
-            self.resp_l2_bytes.to_string(),
             self.confidence.to_string()
         )
     }
@@ -618,30 +447,6 @@ impl From<ExternalDdosFieldsV0_41> for ExternalDdosFieldsV0_42 {
     }
 }
 
-impl From<ExternalDdosFieldsV0_42> for ExternalDdosFieldsV0_43 {
-    fn from(value: ExternalDdosFieldsV0_42) -> Self {
-        let duration = value.end_time.timestamp_nanos_opt().unwrap_or_default()
-            - value.start_time.timestamp_nanos_opt().unwrap_or_default();
-        Self {
-            sensor: value.sensor,
-            src_addrs: value.src_addrs,
-            dst_addr: value.dst_addr,
-            proto: value.proto,
-            start_time: value.start_time,
-            end_time: value.end_time,
-            duration,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            confidence: value.confidence,
-            category: value.category,
-        }
-    }
-}
-
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
 pub struct ExternalDdos {
@@ -652,13 +457,6 @@ pub struct ExternalDdos {
     pub proto: u8,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
     pub confidence: f32,
     pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -689,13 +487,6 @@ impl ExternalDdos {
             proto: fields.proto,
             start_time: fields.start_time,
             end_time: fields.end_time,
-            duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
-            orig_pkts: fields.orig_pkts,
-            resp_pkts: fields.resp_pkts,
-            orig_l2_bytes: fields.orig_l2_bytes,
-            resp_l2_bytes: fields.resp_l2_bytes,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -754,13 +545,6 @@ impl Match for ExternalDdos {
                 ConnAttr::SrcAddr => Some(AttrValue::VecAddr(&self.src_addrs)),
                 ConnAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
                 ConnAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
                 _ => None,
             }
         } else {
@@ -769,10 +553,10 @@ impl Match for ExternalDdos {
     }
 }
 
-pub type BlocklistConnFields = BlocklistConnFieldsV0_43;
+pub type BlocklistConnFields = BlocklistConnFieldsV0_42;
 
 #[derive(Deserialize, Serialize)]
-pub struct BlocklistConnFieldsV0_43 {
+pub struct BlocklistConnFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -783,28 +567,6 @@ pub struct BlocklistConnFieldsV0_43 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub service: String,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistConnFieldsV0_42 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub conn_state: String,
-    pub start_time: i64,
-    pub end_time: i64,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -868,8 +630,12 @@ impl BlocklistConnFields {
     }
 }
 
-impl From<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
-    fn from(value: BlocklistConnFieldsV0_41) -> Self {
+impl MigrateFrom<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
+    fn new(value: BlocklistConnFieldsV0_41, start_time: i64) -> Self {
+        let duration = value.end_time.saturating_sub(start_time);
+        let start_time_dt = DateTime::from_timestamp_nanos(start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(value.end_time);
+
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -878,8 +644,9 @@ impl From<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
             dst_port: value.dst_port,
             proto: value.proto,
             conn_state: value.conn_state,
-            start_time: value.end_time,
-            end_time: value.end_time,
+            start_time: start_time_dt,
+            end_time: end_time_dt,
+            duration,
             service: value.service,
             orig_bytes: value.orig_bytes,
             resp_bytes: value.resp_bytes,
@@ -889,33 +656,6 @@ impl From<BlocklistConnFieldsV0_41> for BlocklistConnFieldsV0_42 {
             resp_l2_bytes: value.resp_l2_bytes,
             confidence: value.confidence,
             category: value.category.into(),
-        }
-    }
-}
-
-impl From<BlocklistConnFieldsV0_42> for BlocklistConnFieldsV0_43 {
-    fn from(value: BlocklistConnFieldsV0_42) -> Self {
-        let end_time_dt = DateTime::from_timestamp_nanos(value.end_time);
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            conn_state: value.conn_state,
-            start_time: end_time_dt,
-            end_time: end_time_dt,
-            duration: 0,
-            service: value.service,
-            orig_bytes: value.orig_bytes,
-            resp_bytes: value.resp_bytes,
-            orig_pkts: value.orig_pkts,
-            resp_pkts: value.resp_pkts,
-            orig_l2_bytes: value.orig_l2_bytes,
-            resp_l2_bytes: value.resp_l2_bytes,
-            confidence: value.confidence,
-            category: value.category,
         }
     }
 }

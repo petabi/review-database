@@ -1,73 +1,67 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{ConnAttr, NfsAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc};
+use attrievent::attribute::{NfsAttr, RawEventAttrKind};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
 macro_rules! find_nfs_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
-        match $raw_event_attr {
-            RawEventAttrKind::Nfs(attr) => {
-                let target_value = match attr {
-                    NfsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
-                    NfsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
-                    NfsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
-                    NfsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
-                    NfsAttr::Proto => AttrValue::UInt($event.proto.into()),
-                    NfsAttr::ReadFiles => AttrValue::VecString(&$event.read_files),
-                    NfsAttr::WriteFiles => AttrValue::VecString(&$event.write_files),
-                };
-                Some(target_value)
-            }
-            RawEventAttrKind::Conn(attr) => match attr {
-                ConnAttr::SrcAddr => Some(AttrValue::Addr($event.src_addr)),
-                ConnAttr::SrcPort => Some(AttrValue::UInt($event.src_port.into())),
-                ConnAttr::DstAddr => Some(AttrValue::Addr($event.dst_addr)),
-                ConnAttr::DstPort => Some(AttrValue::UInt($event.dst_port.into())),
-                ConnAttr::Proto => Some(AttrValue::UInt($event.proto.into())),
-                ConnAttr::Duration => Some(AttrValue::SInt($event.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt($event.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt($event.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt($event.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt($event.resp_pkts)),
-                _ => None,
-            },
-            _ => None,
+        if let RawEventAttrKind::Nfs(attr) = $raw_event_attr {
+            let target_value = match attr {
+                NfsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                NfsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                NfsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                NfsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                NfsAttr::Proto => AttrValue::UInt($event.proto.into()),
+                NfsAttr::ReadFiles => AttrValue::VecString(&$event.read_files),
+                NfsAttr::WriteFiles => AttrValue::VecString(&$event.write_files),
+            };
+            Some(target_value)
+        } else {
+            None
         }
     }};
 }
 
-pub type BlocklistNfsFields = BlocklistNfsFieldsV0_43;
+pub type BlocklistNfsFields = BlocklistNfsFieldsV0_42;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistNfsFieldsV0_43 {
+pub struct BlocklistNfsFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
-    pub orig_bytes: u64,
     pub resp_pkts: u64,
-    pub resp_bytes: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
     pub confidence: f32,
     pub category: Option<EventCategory>,
 }
 
-impl From<BlocklistNfsFieldsV0_42> for BlocklistNfsFieldsV0_43 {
-    fn from(value: BlocklistNfsFieldsV0_42) -> Self {
+impl MigrateFrom<BlocklistNfsFieldsV0_41> for BlocklistNfsFieldsV0_42 {
+    fn new(value: BlocklistNfsFieldsV0_41, start_time: i64) -> Self {
+        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
+        let end_time_nanos = value.end_time;
+        let end_time_dt = chrono::DateTime::from_timestamp_nanos(end_time_nanos);
+        let duration = end_time_nanos.saturating_sub(start_time);
+
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -75,46 +69,13 @@ impl From<BlocklistNfsFieldsV0_42> for BlocklistNfsFieldsV0_43 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: DateTime::from_timestamp_nanos(value.end_time),
-            end_time: DateTime::from_timestamp_nanos(value.end_time),
-            duration: 0,
+            start_time: start_time_dt,
+            end_time: end_time_dt,
+            duration,
             orig_pkts: 0,
-            orig_bytes: 0,
             resp_pkts: 0,
-            resp_bytes: 0,
-            read_files: value.read_files,
-            write_files: value.write_files,
-            confidence: value.confidence,
-            category: value.category,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistNfsFieldsV0_42 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub read_files: Vec<String>,
-    pub write_files: Vec<String>,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
-
-impl From<BlocklistNfsFieldsV0_41> for BlocklistNfsFieldsV0_42 {
-    fn from(value: BlocklistNfsFieldsV0_41) -> Self {
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            end_time: value.end_time,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             read_files: value.read_files,
             write_files: value.write_files,
             confidence: value.confidence,
@@ -142,7 +103,7 @@ impl BlocklistNfsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} orig_bytes={:?} resp_pkts={:?} resp_bytes={:?} read_files={:?} write_files={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} read_files={:?} write_files={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -157,9 +118,9 @@ impl BlocklistNfsFields {
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
-            self.orig_bytes.to_string(),
             self.resp_pkts.to_string(),
-            self.resp_bytes.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.read_files.join(","),
             self.write_files.join(","),
             self.confidence.to_string()
@@ -176,13 +137,13 @@ pub struct BlocklistNfs {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start_time: i64,
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
-    pub orig_bytes: u64,
     pub resp_pkts: u64,
-    pub resp_bytes: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub read_files: Vec<String>,
     pub write_files: Vec<String>,
     pub confidence: f32,
@@ -191,22 +152,25 @@ pub struct BlocklistNfs {
 }
 impl fmt::Display for BlocklistNfs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} orig_bytes={:?} resp_pkts={:?} resp_bytes={:?} read_files={:?} write_files={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} read_files={:?} write_files={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_str,
+            end_time_str,
             self.duration.to_string(),
             self.orig_pkts.to_string(),
-            self.orig_bytes.to_string(),
             self.resp_pkts.to_string(),
-            self.resp_bytes.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.read_files.join(","),
             self.write_files.join(","),
             triage_scores_to_string(self.triage_scores.as_ref())
@@ -224,13 +188,13 @@ impl BlocklistNfs {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: fields.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: fields.end_time.timestamp_nanos_opt().unwrap_or_default(),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
-            orig_bytes: fields.orig_bytes,
             resp_pkts: fields.resp_pkts,
-            resp_bytes: fields.resp_bytes,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             read_files: fields.read_files,
             write_files: fields.write_files,
             confidence: fields.confidence,

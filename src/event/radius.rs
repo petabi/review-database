@@ -1,6 +1,6 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -14,8 +14,15 @@ pub struct BlocklistRadiusFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
-    pub end_time: i64,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub id: u8,
     pub code: u8,
     pub resp_code: u8,
@@ -37,11 +44,8 @@ pub struct BlocklistRadiusFields {
 impl BlocklistRadiusFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
-
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -52,8 +56,13 @@ impl BlocklistRadiusFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.id.to_string(),
             self.code.to_string(),
             self.resp_code.to_string(),
@@ -83,6 +92,11 @@ pub struct BlocklistRadius {
     pub proto: u8,
     pub start_time: i64,
     pub end_time: i64,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
     pub id: u8,
     pub code: u8,
     pub resp_code: u8,
@@ -109,7 +123,7 @@ impl fmt::Display for BlocklistRadius {
 
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -118,6 +132,11 @@ impl fmt::Display for BlocklistRadius {
             self.proto.to_string(),
             start_time_str,
             end_time_str,
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.id.to_string(),
             self.code.to_string(),
             self.resp_code.to_string(),
@@ -147,8 +166,13 @@ impl BlocklistRadius {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: fields.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: fields.end_time.timestamp_nanos_opt().unwrap_or_default(),
+            duration: fields.duration,
+            orig_pkts: fields.orig_pkts,
+            resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             id: fields.id,
             code: fields.code,
             resp_code: fields.resp_code,

@@ -51,8 +51,6 @@ pub struct TorConnection {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -86,14 +84,20 @@ impl fmt::Display for TorConnection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
             self.method,
             self.host,
             self.uri,
@@ -124,20 +128,18 @@ impl TorConnection {
         TorConnection {
             time,
             sensor: fields.sensor.clone(),
+            start_time: fields.start_time,
+            end_time: fields.end_time,
+            duration: fields.duration,
+            orig_pkts: fields.orig_pkts,
+            resp_pkts: fields.resp_pkts,
+            orig_l2_bytes: fields.orig_l2_bytes,
+            resp_l2_bytes: fields.resp_l2_bytes,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
-            duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
-            orig_pkts: fields.orig_pkts,
-            resp_pkts: fields.resp_pkts,
-            orig_l2_bytes: fields.orig_l2_bytes,
-            resp_l2_bytes: fields.resp_l2_bytes,
             method: fields.method.clone(),
             host: fields.host.clone(),
             uri: fields.uri.clone(),
@@ -211,20 +213,7 @@ impl Match for TorConnection {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        match raw_event_attr {
-            RawEventAttrKind::Http(_) => find_http_attr_by_kind!(self, raw_event_attr),
-            RawEventAttrKind::Conn(attr) => match attr {
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
-                _ => None,
-            },
-            _ => None,
-        }
+        find_http_attr_by_kind!(self, raw_event_attr)
     }
 
     fn score_by_ti_db(&self, ti_db: &[TriageExclusion]) -> f64 {
@@ -251,10 +240,10 @@ pub struct TorConnectionConn {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub conn_state: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub duration: i64,
+    pub conn_state: String,
     pub service: String,
     pub orig_bytes: u64,
     pub resp_bytes: u64,
@@ -299,13 +288,13 @@ impl TorConnectionConn {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
             conn_state: fields.conn_state,
-            start_time: fields.start_time,
             end_time: fields.end_time,
             duration: fields.duration,
             service: fields.service,
@@ -387,8 +376,6 @@ mod tests {
     fn tor_connection_conn_fields() -> BlocklistConnFields {
         let start_time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
         let end_time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 1).unwrap();
-        let duration = end_time.timestamp_nanos_opt().unwrap_or_default()
-            - start_time.timestamp_nanos_opt().unwrap_or_default();
         BlocklistConnFields {
             sensor: "test-sensor".to_string(),
             src_addr: "192.168.1.100".parse().unwrap(),
@@ -399,7 +386,7 @@ mod tests {
             conn_state: "SF".to_string(),
             start_time,
             end_time,
-            duration,
+            duration: 0,
             service: "https".to_string(),
             orig_bytes: 1024,
             resp_bytes: 2048,
@@ -415,7 +402,6 @@ mod tests {
     #[test]
     fn tor_connection_conn_new() {
         let time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
-        let start_time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
         let end_time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 1).unwrap();
         let fields = tor_connection_conn_fields();
 
@@ -429,9 +415,7 @@ mod tests {
         assert_eq!(event.dst_port, 443);
         assert_eq!(event.proto, 6);
         assert_eq!(event.conn_state, "SF");
-        assert_eq!(event.start_time, start_time);
         assert_eq!(event.end_time, end_time);
-        assert_eq!(event.duration, 1_000_000_000);
         assert_eq!(event.service, "https");
         assert_eq!(event.orig_bytes, 1024);
         assert_eq!(event.resp_bytes, 2048);
@@ -524,7 +508,7 @@ mod tests {
         // Test finding duration attribute
         let duration_attr = RawEventAttrKind::Conn(ConnAttr::Duration);
         if let Some(AttrValue::SInt(duration)) = event.find_attr_by_kind(duration_attr) {
-            assert_eq!(duration, 1_000_000_000);
+            assert_eq!(duration, 0);
         } else {
             panic!("Expected Duration attribute");
         }
