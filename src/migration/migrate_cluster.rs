@@ -10,23 +10,11 @@ use crate::tables::Cluster;
 
 pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()> {
     let models = super::migrate_time_series::retrieve_model_to_migrate(database).await?;
-    tracing::info!(
-        "Migrating Clusters for a total of {} models from PostgreSQL to RocksDb",
-        models.len()
-    );
     update_cluster_id_in_column_stats(database, store).await?;
     for &model in &models {
-        tracing::info!("Migrating Clusters for model {model}");
-        if let Err(e) = migrate_clusters_for_model(database, store, model).await {
-            tracing::error!("Migration for model {model} failed");
-            return Err(e);
-        }
-        if let Err(e) = remove_clusters(database, model).await {
-            tracing::error!("Removing clusters for {model} in PostgresQL failed");
-            return Err(e);
-        }
+        migrate_clusters_for_model(database, store, model).await?;
+        remove_clusters(database, model).await?;
     }
-    tracing::info!("Clusters data migration done.");
     Ok(())
 }
 
