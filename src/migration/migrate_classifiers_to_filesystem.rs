@@ -16,18 +16,13 @@ enum MigrationResult {
 /// 2. Migrates each classifier individually to the file system
 /// 3. Removes successfully migrated classifiers from PostgreSQL
 ///
-/// The migration is designed to be resilient - individual failures don't stop
-/// the entire process, and only successfully migrated classifiers are removed
-/// from PostgreSQL to ensure data integrity.
-///
 /// # Errors
 ///
-/// Returns `crate::Error` if critical operations fail, such as:
+/// Returns `crate::Error` if any operation fails, including:
 /// - Database connection failures
 /// - Metadata retrieval failures
+/// - Individual classifier migration failures
 /// - Batch removal operations from PostgreSQL
-///
-/// Individual model migration failures are logged but don't stop the process.
 pub(crate) async fn run_migration(database: &Database) -> Result<(), Error> {
     let model_metadata = get_model_metadata(database).await?;
     let model_len = model_metadata.len();
@@ -35,8 +30,6 @@ pub(crate) async fn run_migration(database: &Database) -> Result<(), Error> {
     if model_len == 0 {
         return Ok(());
     }
-
-    tracing::info!("Migrating {model_len} model classifier(s) from PostgreSQL to file system");
 
     // Migrate each classifier individually to file system
     let mut successful_ids = Vec::new();
@@ -48,31 +41,18 @@ pub(crate) async fn run_migration(database: &Database) -> Result<(), Error> {
                 }
             }
             Err(e) => {
-                tracing::error!("Failed to migrate model {name} (id={id}): {e}");
+                return Err(e);
             }
         }
     }
 
     // Remove successfully migrated classifiers from PostgreSQL
     if !successful_ids.is_empty() {
-        let mut total = 0;
         // Process in chunks of 1000
         for chunk in successful_ids.chunks(1000) {
-            match remove_classifier_in_postgres(database, chunk).await {
-                Ok(counts) => total += counts,
-                Err(e) => {
-                    tracing::error!("Failed to remove classifier data from PostgreSQL: {e}");
-                }
-            }
+            remove_classifier_in_postgres(database, chunk).await?;
         }
-        tracing::info!("{total} classifier data removed from PostgreSQL");
     }
-
-    tracing::info!(
-        "Migration summary: {} successful, {} skipped/failed out of {model_len} total models",
-        successful_ids.len(),
-        model_len - successful_ids.len(),
-    );
 
     Ok(())
 }
@@ -97,7 +77,6 @@ async fn migrate_single_classifier(
     let id_u32 = u32::try_from(id)?;
     // Skip if classifier already exists in file system
     if database.classifier_fm.classifier_exists(id_u32, name) {
-        tracing::info!("model {name} (id={id}) already exists in the file system");
         return Ok(MigrationResult::Skipped);
     }
 
@@ -106,15 +85,11 @@ async fn migrate_single_classifier(
 
     // Skip if classifier is None or empty
     let Some(classifier) = classifier else {
-        tracing::info!("model {name} (id={id}) is empty");
         return Ok(MigrationResult::Skipped);
     };
     if classifier.is_empty() {
-        tracing::info!("model {name} (id:{id}) is empty");
         return Ok(MigrationResult::Skipped);
     }
-
-    tracing::info!("Migrating model {name} (id={id}) to the file system...");
 
     // Store classifier data to file system
     database
@@ -129,8 +104,6 @@ async fn migrate_single_classifier(
             name.to_string(),
         )));
     }
-
-    tracing::info!("Successfully migrated model {name} (id={id}) to the file system");
 
     Ok(MigrationResult::Success)
 }
