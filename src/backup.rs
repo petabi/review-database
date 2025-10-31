@@ -77,7 +77,7 @@ mod tests {
     };
 
     use bincode::Options;
-    use chrono::Utc;
+    use chrono::{TimeZone, Utc};
 
     use crate::{
         Store,
@@ -86,23 +86,20 @@ mod tests {
 
     fn example_message() -> EventMessage {
         let codec = bincode::DefaultOptions::new();
-        let end_time = Utc::now();
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
-            start_time: end_time,
-            end_time,
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             src_port: 10000,
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc::now(),
+            duration: 0,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             query: "foo.com".to_string(),
             answer: vec!["1.1.1.1".to_string()],
             trans_id: 1,

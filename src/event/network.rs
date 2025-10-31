@@ -1,42 +1,125 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{ConnAttr, NetworkAttr, RawEventAttrKind};
+use attrievent::attribute::{NetworkAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::event::common::{AttrValue, triage_scores_to_string};
+use crate::migration::MigrateFrom;
 
 // TODO: We plan to implement the triage feature after detection events from other network
 // protocols are consolidated into `NetworkThreat` events.
 macro_rules! find_network_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {
-        match $raw_event_attr {
-            RawEventAttrKind::Network(attr) => {
-                let target_value = match attr {
-                    NetworkAttr::SrcAddr => AttrValue::Addr($event.orig_addr),
-                    NetworkAttr::SrcPort => AttrValue::UInt($event.orig_port.into()),
-                    NetworkAttr::DstAddr => AttrValue::Addr($event.resp_addr),
-                    NetworkAttr::DstPort => AttrValue::UInt($event.resp_port.into()),
-                    NetworkAttr::Proto => AttrValue::UInt($event.proto.into()),
-                    NetworkAttr::Content => AttrValue::String(&$event.content),
-                };
-                Some(target_value)
-            }
-            RawEventAttrKind::Conn(attr) => match attr {
-                ConnAttr::Duration => Some(AttrValue::SInt($event.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt($event.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt($event.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt($event.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt($event.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt($event.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt($event.resp_l2_bytes)),
-                _ => None,
-            },
-            _ => None,
+        if let RawEventAttrKind::Network(attr) = $raw_event_attr {
+            let target_value = match attr {
+                NetworkAttr::SrcAddr => AttrValue::Addr($event.orig_addr),
+                NetworkAttr::SrcPort => AttrValue::UInt($event.orig_port.into()),
+                NetworkAttr::DstAddr => AttrValue::Addr($event.resp_addr),
+                NetworkAttr::DstPort => AttrValue::UInt($event.resp_port.into()),
+                NetworkAttr::Proto => AttrValue::UInt($event.proto.into()),
+                NetworkAttr::Content => AttrValue::String(&$event.content),
+            };
+            Some(target_value)
+        } else {
+            None
         }
     };
+}
+
+pub type NetworkThreatFields = NetworkThreatFieldsV0_42;
+
+/// Old `NetworkThreat` structure from version 0.41.x without session information fields
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub(crate) struct NetworkThreatFieldsV0_41 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub orig_addr: IpAddr,
+    pub orig_port: u16,
+    pub resp_addr: IpAddr,
+    pub resp_port: u16,
+    pub proto: u8,
+    pub service: String,
+    pub start_time: i64,
+    pub end_time: i64,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: Option<usize>,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+/// `NetworkThreat` structure with session information fields (version 0.42+)
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub struct NetworkThreatFieldsV0_42 {
+    #[serde(with = "ts_nanoseconds")]
+    pub time: DateTime<Utc>,
+    pub sensor: String,
+    pub orig_addr: IpAddr,
+    pub orig_port: u16,
+    pub resp_addr: IpAddr,
+    pub resp_port: u16,
+    pub proto: u8,
+    pub service: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub duration: i64,
+    pub orig_pkts: u64,
+    pub resp_pkts: u64,
+    pub orig_l2_bytes: u64,
+    pub resp_l2_bytes: u64,
+    pub content: String,
+    pub db_name: String,
+    pub rule_id: u32,
+    pub matched_to: String,
+    pub cluster_id: Option<usize>,
+    pub attack_kind: String,
+    pub confidence: f32,
+    pub category: Option<EventCategory>,
+}
+
+impl MigrateFrom<NetworkThreatFieldsV0_41> for NetworkThreatFieldsV0_42 {
+    fn new(value: NetworkThreatFieldsV0_41, start_time: i64) -> Self {
+        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
+        let end_time_dt = chrono::DateTime::from_timestamp_nanos(value.end_time);
+        let duration = value.end_time - start_time;
+
+        Self {
+            time: value.time,
+            sensor: value.sensor,
+            orig_addr: value.orig_addr,
+            orig_port: value.orig_port,
+            resp_addr: value.resp_addr,
+            resp_port: value.resp_port,
+            proto: value.proto,
+            service: value.service,
+            start_time: start_time_dt,
+            end_time: end_time_dt,
+            duration,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
+            content: value.content,
+            db_name: value.db_name,
+            rule_id: value.rule_id,
+            matched_to: value.matched_to,
+            cluster_id: value.cluster_id,
+            attack_kind: value.attack_kind,
+            confidence: value.confidence,
+            category: value.category,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -50,11 +133,11 @@ pub struct NetworkThreat {
     pub resp_port: u16,
     pub proto: u8,
     pub service: String,
+    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -74,7 +157,7 @@ impl NetworkThreat {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -89,8 +172,6 @@ impl NetworkThreat {
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
@@ -111,7 +192,7 @@ impl fmt::Display for NetworkThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.orig_addr.to_string(),
             self.orig_port.to_string(),
@@ -122,8 +203,6 @@ impl fmt::Display for NetworkThreat {
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),

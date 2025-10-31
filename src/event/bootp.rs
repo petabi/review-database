@@ -1,7 +1,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{BootpAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -87,7 +87,9 @@ pub struct BlocklistBootpFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
@@ -111,9 +113,11 @@ pub struct BlocklistBootpFieldsV0_42 {
 
 impl MigrateFrom<BlocklistBootpFieldsV0_41> for BlocklistBootpFields {
     fn new(value: BlocklistBootpFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-        let start_time = DateTime::from_timestamp_nanos(start_time);
-        let end_time = DateTime::from_timestamp_nanos(value.end_time);
+        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
+        let end_time_nanos = value.end_time;
+        let end_time_dt = chrono::DateTime::from_timestamp_nanos(end_time_nanos);
+        let duration = end_time_nanos.saturating_sub(start_time);
+
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -121,8 +125,8 @@ impl MigrateFrom<BlocklistBootpFieldsV0_41> for BlocklistBootpFields {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time,
-            end_time,
+            start_time: start_time_dt,
+            end_time: end_time_dt,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -178,8 +182,8 @@ pub struct BlocklistBootp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start_time: i64,
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -202,6 +206,8 @@ pub struct BlocklistBootp {
 }
 impl fmt::Display for BlocklistBootp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
         write!(
             f,
             "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} op={:?} htype={:?} hops={:?} xid={:?} ciaddr={:?} yiaddr={:?} siaddr={:?} giaddr={:?} chaddr={:?} sname={:?} file={:?} triage_scores={:?}",
@@ -211,8 +217,8 @@ impl fmt::Display for BlocklistBootp {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_str,
+            end_time_str,
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -244,8 +250,8 @@ impl BlocklistBootp {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: fields.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: fields.end_time.timestamp_nanos_opt().unwrap_or_default(),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,

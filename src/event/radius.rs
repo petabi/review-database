@@ -1,39 +1,13 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{NfsAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::{
-    event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
-    types::EventCategoryV0_41,
-};
-
-macro_rules! find_nfs_attr_by_kind {
-    ($event: expr, $raw_event_attr: expr) => {{
-        if let RawEventAttrKind::Nfs(attr) = $raw_event_attr {
-            let target_value = match attr {
-                NfsAttr::SrcAddr => AttrValue::Addr($event.src_addr),
-                NfsAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
-                NfsAttr::DstAddr => AttrValue::Addr($event.dst_addr),
-                NfsAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
-                NfsAttr::Proto => AttrValue::UInt($event.proto.into()),
-                NfsAttr::ReadFiles => AttrValue::VecString(&$event.read_files),
-                NfsAttr::WriteFiles => AttrValue::VecString(&$event.write_files),
-            };
-            Some(target_value)
-        } else {
-            None
-        }
-    }};
-}
-
-pub type BlocklistNfsFields = BlocklistNfsFieldsV0_42;
+use crate::event::common::{AttrValue, triage_scores_to_string};
 
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistNfsFieldsV0_42 {
+pub struct BlocklistRadiusFields {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -49,61 +23,29 @@ pub struct BlocklistNfsFieldsV0_42 {
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
-    pub read_files: Vec<String>,
-    pub write_files: Vec<String>,
+    pub id: u8,
+    pub code: u8,
+    pub resp_code: u8,
+    pub auth: String,
+    pub resp_auth: String,
+    pub user_name: Vec<u8>,
+    pub user_passwd: Vec<u8>,
+    pub chap_passwd: Vec<u8>,
+    pub nas_ip: IpAddr,
+    pub nas_port: u32,
+    pub state: Vec<u8>,
+    pub nas_id: Vec<u8>,
+    pub nas_port_type: u32,
+    pub message: String,
     pub confidence: f32,
     pub category: Option<EventCategory>,
 }
 
-impl MigrateFrom<BlocklistNfsFieldsV0_41> for BlocklistNfsFieldsV0_42 {
-    fn new(value: BlocklistNfsFieldsV0_41, start_time: i64) -> Self {
-        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
-        let end_time_nanos = value.end_time;
-        let end_time_dt = chrono::DateTime::from_timestamp_nanos(end_time_nanos);
-        let duration = end_time_nanos.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time: start_time_dt,
-            end_time: end_time_dt,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            read_files: value.read_files,
-            write_files: value.write_files,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistNfsFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub read_files: Vec<String>,
-    pub write_files: Vec<String>,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-
-impl BlocklistNfsFields {
+impl BlocklistRadiusFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} read_files={:?} write_files={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -121,15 +63,26 @@ impl BlocklistNfsFields {
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
             self.resp_l2_bytes.to_string(),
-            self.read_files.join(","),
-            self.write_files.join(","),
-            self.confidence.to_string()
+            self.id.to_string(),
+            self.code.to_string(),
+            self.resp_code.to_string(),
+            self.auth,
+            self.resp_auth,
+            String::from_utf8_lossy(&self.user_name),
+            String::from_utf8_lossy(&self.user_passwd),
+            String::from_utf8_lossy(&self.chap_passwd),
+            self.nas_ip.to_string(),
+            self.nas_port.to_string(),
+            String::from_utf8_lossy(&self.state),
+            String::from_utf8_lossy(&self.nas_id),
+            self.nas_port_type.to_string(),
+            self.message,
+            self.confidence.to_string(),
         )
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
-pub struct BlocklistNfs {
+pub struct BlocklistRadius {
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub src_addr: IpAddr,
@@ -144,20 +97,33 @@ pub struct BlocklistNfs {
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
     pub resp_l2_bytes: u64,
-    pub read_files: Vec<String>,
-    pub write_files: Vec<String>,
+    pub id: u8,
+    pub code: u8,
+    pub resp_code: u8,
+    pub auth: String,
+    pub resp_auth: String,
+    pub user_name: Vec<u8>,
+    pub user_passwd: Vec<u8>,
+    pub chap_passwd: Vec<u8>,
+    pub nas_ip: IpAddr,
+    pub nas_port: u32,
+    pub state: Vec<u8>,
+    pub nas_id: Vec<u8>,
+    pub nas_port_type: u32,
+    pub message: String,
     pub confidence: f32,
     pub category: Option<EventCategory>,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
-impl fmt::Display for BlocklistNfs {
+
+impl fmt::Display for BlocklistRadius {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
         let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
 
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} read_files={:?} write_files={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -171,15 +137,27 @@ impl fmt::Display for BlocklistNfs {
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
             self.resp_l2_bytes.to_string(),
-            self.read_files.join(","),
-            self.write_files.join(","),
-            triage_scores_to_string(self.triage_scores.as_ref())
+            self.id.to_string(),
+            self.code.to_string(),
+            self.resp_code.to_string(),
+            self.auth,
+            self.resp_auth,
+            String::from_utf8_lossy(&self.user_name),
+            String::from_utf8_lossy(&self.user_passwd),
+            String::from_utf8_lossy(&self.chap_passwd),
+            self.nas_ip.to_string(),
+            self.nas_port.to_string(),
+            String::from_utf8_lossy(&self.state),
+            String::from_utf8_lossy(&self.nas_id),
+            self.nas_port_type.to_string(),
+            self.message,
+            triage_scores_to_string(self.triage_scores.as_ref()),
         )
     }
 }
 
-impl BlocklistNfs {
-    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistNfsFields) -> Self {
+impl BlocklistRadius {
+    pub(super) fn new(time: DateTime<Utc>, fields: BlocklistRadiusFields) -> Self {
         Self {
             time,
             sensor: fields.sensor,
@@ -195,8 +173,20 @@ impl BlocklistNfs {
             resp_pkts: fields.resp_pkts,
             orig_l2_bytes: fields.orig_l2_bytes,
             resp_l2_bytes: fields.resp_l2_bytes,
-            read_files: fields.read_files,
-            write_files: fields.write_files,
+            id: fields.id,
+            code: fields.code,
+            resp_code: fields.resp_code,
+            auth: fields.auth,
+            resp_auth: fields.resp_auth,
+            user_name: fields.user_name,
+            user_passwd: fields.user_passwd,
+            chap_passwd: fields.chap_passwd,
+            nas_ip: fields.nas_ip,
+            nas_port: fields.nas_port,
+            state: fields.state,
+            nas_id: fields.nas_id,
+            nas_port_type: fields.nas_port_type,
+            message: fields.message,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -204,7 +194,7 @@ impl BlocklistNfs {
     }
 }
 
-impl Match for BlocklistNfs {
+impl Match for BlocklistRadius {
     fn src_addrs(&self) -> &[IpAddr] {
         std::slice::from_ref(&self.src_addr)
     }
@@ -234,7 +224,7 @@ impl Match for BlocklistNfs {
     }
 
     fn kind(&self) -> &'static str {
-        "blocklist nfs"
+        "blocklist radius"
     }
 
     fn sensor(&self) -> &str {
@@ -249,7 +239,11 @@ impl Match for BlocklistNfs {
         LearningMethod::SemiSupervised
     }
 
-    fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        find_nfs_attr_by_kind!(self, raw_event_attr)
+    fn find_attr_by_kind(
+        &self,
+        _raw_event_attr: attrievent::attribute::RawEventAttrKind,
+    ) -> Option<AttrValue<'_>> {
+        // TODO: Implement when RawEventAttrKind::Radius is available
+        None
     }
 }

@@ -1,6 +1,6 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{ConnAttr, KerberosAttr, RawEventAttrKind};
+use attrievent::attribute::{KerberosAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
@@ -39,42 +39,6 @@ macro_rules! find_kerberos_attr_by_kind {
 
 pub type BlocklistKerberosFields = BlocklistKerberosFieldsV0_42;
 
-impl BlocklistKerberosFields {
-    #[must_use]
-    pub fn syslog_rfc5424(&self) -> String {
-        format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} client_time={:?} server_time={:?} error_code={:?} client_realm={:?} cname_type={:?} client_name={:?} realm={:?} sname_type={:?} service_name={:?} confidence={:?}",
-            self.category.as_ref().map_or_else(
-                || "Unspecified".to_string(),
-                std::string::ToString::to_string
-            ),
-            self.sensor,
-            self.src_addr.to_string(),
-            self.src_port.to_string(),
-            self.dst_addr.to_string(),
-            self.dst_port.to_string(),
-            self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
-            self.duration.to_string(),
-            self.orig_pkts.to_string(),
-            self.resp_pkts.to_string(),
-            self.orig_l2_bytes.to_string(),
-            self.resp_l2_bytes.to_string(),
-            self.client_time.to_string(),
-            self.server_time.to_string(),
-            self.error_code.to_string(),
-            self.client_realm.clone(),
-            self.cname_type.to_string(),
-            format!("{:?}", self.client_name),
-            self.realm.clone(),
-            self.sname_type.to_string(),
-            format!("{:?}", self.service_name),
-            self.confidence.to_string(),
-        )
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct BlocklistKerberosFieldsV0_42 {
     pub sensor: String,
@@ -83,6 +47,7 @@ pub struct BlocklistKerberosFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
     #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
@@ -104,11 +69,13 @@ pub struct BlocklistKerberosFieldsV0_42 {
     pub category: Option<EventCategory>,
 }
 
-impl MigrateFrom<BlocklistKerberosFieldsV0_41> for BlocklistKerberosFields {
+impl MigrateFrom<BlocklistKerberosFieldsV0_41> for BlocklistKerberosFieldsV0_42 {
     fn new(value: BlocklistKerberosFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-        let start_time = DateTime::from_timestamp_nanos(start_time);
-        let end_time = DateTime::from_timestamp_nanos(value.end_time);
+        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
+        let end_time_nanos = value.end_time;
+        let end_time_dt = chrono::DateTime::from_timestamp_nanos(end_time_nanos);
+        let duration = end_time_nanos.saturating_sub(start_time);
+
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -116,8 +83,8 @@ impl MigrateFrom<BlocklistKerberosFieldsV0_41> for BlocklistKerberosFields {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time,
-            end_time,
+            start_time: start_time_dt,
+            end_time: end_time_dt,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -160,6 +127,42 @@ pub(crate) struct BlocklistKerberosFieldsV0_41 {
     pub category: EventCategoryV0_41,
 }
 
+impl BlocklistKerberosFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} client_time={:?} server_time={:?} error_code={:?} client_realm={:?} cname_type={:?} client_name={:?} realm={:?} sname_type={:?} service_name={:?} confidence={:?}",
+            self.category.as_ref().map_or_else(
+                || "Unspecified".to_string(),
+                std::string::ToString::to_string
+            ),
+            self.sensor,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.duration.to_string(),
+            self.orig_pkts.to_string(),
+            self.resp_pkts.to_string(),
+            self.orig_l2_bytes.to_string(),
+            self.resp_l2_bytes.to_string(),
+            self.client_time.to_string(),
+            self.server_time.to_string(),
+            self.error_code.to_string(),
+            self.client_realm,
+            self.cname_type.to_string(),
+            self.client_name.join(","),
+            self.realm,
+            self.sname_type.to_string(),
+            self.service_name.join(","),
+            self.confidence.to_string()
+        )
+    }
+}
+
 #[allow(clippy::module_name_repetitions)]
 pub struct BlocklistKerberos {
     pub time: DateTime<Utc>,
@@ -169,8 +172,8 @@ pub struct BlocklistKerberos {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start_time: i64,
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -192,6 +195,9 @@ pub struct BlocklistKerberos {
 
 impl fmt::Display for BlocklistKerberos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
             "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} client_time={:?} server_time={:?} error_code={:?} client_realm={:?} cname_type={:?} client_name={:?} realm={:?} sname_type={:?} service_name={:?} triage_scores={:?}",
@@ -201,8 +207,8 @@ impl fmt::Display for BlocklistKerberos {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_str,
+            end_time_str,
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -232,8 +238,8 @@ impl BlocklistKerberos {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: fields.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: fields.end_time.timestamp_nanos_opt().unwrap_or_default(),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
@@ -301,17 +307,6 @@ impl Match for BlocklistKerberos {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        match raw_event_attr {
-            RawEventAttrKind::Kerberos(_) => find_kerberos_attr_by_kind!(self, raw_event_attr),
-            RawEventAttrKind::Conn(attr) => match attr {
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
-                _ => None,
-            },
-            _ => None,
-        }
+        find_kerberos_attr_by_kind!(self, raw_event_attr)
     }
 }

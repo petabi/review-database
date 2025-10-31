@@ -1,30 +1,60 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{ConnAttr, MqttAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc};
+use attrievent::attribute::{MqttAttr, RawEventAttrKind};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
-pub type BlocklistMqttFields = BlocklistMqttFieldsV0_43;
+macro_rules! find_mqtt_attr_by_kind {
+    ($event: expr, $raw_event_attr: expr) => {{
+        if let RawEventAttrKind::Mqtt(attr) = $raw_event_attr {
+            let target_value = match attr {
+                MqttAttr::SrcAddr => AttrValue::Addr($event.src_addr),
+                MqttAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
+                MqttAttr::DstAddr => AttrValue::Addr($event.dst_addr),
+                MqttAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
+                MqttAttr::Proto => AttrValue::UInt($event.proto.into()),
+                MqttAttr::Protocol => AttrValue::String(&$event.protocol),
+                MqttAttr::Version => AttrValue::UInt($event.version.into()),
+                MqttAttr::ClientId => AttrValue::String(&$event.client_id),
+                MqttAttr::ConnackReason => AttrValue::UInt($event.connack_reason.into()),
+                MqttAttr::Subscribe => AttrValue::VecString(&$event.subscribe),
+                MqttAttr::SubackReason => AttrValue::VecUInt(
+                    $event
+                        .suback_reason
+                        .iter()
+                        .map(|val| u64::from(*val))
+                        .collect(),
+                ),
+            };
+            Some(target_value)
+        } else {
+            None
+        }
+    }};
+}
+
+pub type BlocklistMqttFields = BlocklistMqttFieldsV0_42;
 
 #[derive(Serialize, Deserialize)]
-pub struct BlocklistMqttFieldsV0_43 {
+pub struct BlocklistMqttFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -39,27 +69,13 @@ pub struct BlocklistMqttFieldsV0_43 {
     pub category: Option<EventCategory>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistMqttFieldsV0_42 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub protocol: String,
-    pub version: u8,
-    pub client_id: String,
-    pub connack_reason: u8,
-    pub subscribe: Vec<String>,
-    pub suback_reason: Vec<u8>,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
+impl MigrateFrom<BlocklistMqttFieldsV0_41> for BlocklistMqttFieldsV0_42 {
+    fn new(value: BlocklistMqttFieldsV0_41, start_time: i64) -> Self {
+        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
+        let end_time_nanos = value.end_time;
+        let end_time_dt = chrono::DateTime::from_timestamp_nanos(end_time_nanos);
+        let duration = end_time_nanos.saturating_sub(start_time);
 
-impl From<BlocklistMqttFieldsV0_41> for BlocklistMqttFieldsV0_42 {
-    fn from(value: BlocklistMqttFieldsV0_41) -> Self {
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -67,34 +83,9 @@ impl From<BlocklistMqttFieldsV0_41> for BlocklistMqttFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            end_time: value.end_time,
-            protocol: value.protocol,
-            version: value.version,
-            client_id: value.client_id,
-            connack_reason: value.connack_reason,
-            subscribe: value.subscribe,
-            suback_reason: value.suback_reason,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-impl From<BlocklistMqttFieldsV0_42> for BlocklistMqttFieldsV0_43 {
-    fn from(value: BlocklistMqttFieldsV0_42) -> Self {
-        let end_time = DateTime::from_timestamp_nanos(value.end_time);
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time: end_time,
-            end_time,
-            duration: 0,
-            orig_bytes: 0,
-            resp_bytes: 0,
+            start_time: start_time_dt,
+            end_time: end_time_dt,
+            duration,
             orig_pkts: 0,
             resp_pkts: 0,
             orig_l2_bytes: 0,
@@ -106,7 +97,7 @@ impl From<BlocklistMqttFieldsV0_42> for BlocklistMqttFieldsV0_43 {
             subscribe: value.subscribe,
             suback_reason: value.suback_reason,
             confidence: value.confidence,
-            category: value.category,
+            category: value.category.into(),
         }
     }
 }
@@ -134,7 +125,7 @@ impl BlocklistMqttFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -148,8 +139,6 @@ impl BlocklistMqttFields {
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
@@ -174,11 +163,9 @@ pub struct BlocklistMqtt {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    pub start_time: i64,
+    pub end_time: i64,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -196,20 +183,21 @@ pub struct BlocklistMqtt {
 
 impl fmt::Display for BlocklistMqtt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
+        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} protocol={:?} version={:?} client_id={:?} connack_reason={:?} subscribe={:?} suback_reason={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_str,
+            end_time_str,
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
@@ -235,11 +223,9 @@ impl BlocklistMqtt {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: fields.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: fields.end_time.timestamp_nanos_opt().unwrap_or_default(),
             duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
             orig_l2_bytes: fields.orig_l2_bytes,
@@ -303,36 +289,6 @@ impl Match for BlocklistMqtt {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        match raw_event_attr {
-            RawEventAttrKind::Mqtt(attr) => match attr {
-                MqttAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
-                MqttAttr::SrcPort => Some(AttrValue::UInt(self.src_port.into())),
-                MqttAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
-                MqttAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
-                MqttAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
-                MqttAttr::Protocol => Some(AttrValue::String(&self.protocol)),
-                MqttAttr::Version => Some(AttrValue::UInt(self.version.into())),
-                MqttAttr::ClientId => Some(AttrValue::String(&self.client_id)),
-                MqttAttr::ConnackReason => Some(AttrValue::UInt(self.connack_reason.into())),
-                MqttAttr::Subscribe => Some(AttrValue::VecString(&self.subscribe)),
-                MqttAttr::SubackReason => Some(AttrValue::VecUInt(
-                    self.suback_reason
-                        .iter()
-                        .map(|val| u64::from(*val))
-                        .collect(),
-                )),
-            },
-            RawEventAttrKind::Conn(attr) => match attr {
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
-                _ => None,
-            },
-            _ => None,
-        }
+        find_mqtt_attr_by_kind!(self, raw_event_attr)
     }
 }

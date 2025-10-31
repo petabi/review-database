@@ -1,13 +1,14 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use attrievent::attribute::{ConnAttr, FtpAttr, RawEventAttrKind};
+use attrievent::attribute::{FtpAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
+    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -114,13 +115,13 @@ macro_rules! find_ftp_attr_by_kind {
     }};
 }
 
-pub type FtpBruteForceFields = FtpBruteForceFieldsV0_43;
+pub type FtpBruteForceFields = FtpBruteForceFieldsV0_42;
 
 impl FtpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} is_internal={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -133,13 +134,6 @@ impl FtpBruteForceFields {
             self.user_list.join(","),
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
-            self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
-            self.orig_pkts.to_string(),
-            self.resp_pkts.to_string(),
-            self.orig_l2_bytes.to_string(),
-            self.resp_l2_bytes.to_string(),
             self.is_internal.to_string(),
             self.confidence.to_string()
         )
@@ -147,29 +141,7 @@ impl FtpBruteForceFields {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct FtpBruteForceFieldsV0_43 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub user_list: Vec<String>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
-    pub is_internal: bool,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct FtpBruteForceFieldsV0_42 {
+pub struct FtpBruteForceFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
@@ -201,33 +173,6 @@ impl From<FtpBruteForceFieldsV0_41> for FtpBruteForceFieldsV0_42 {
     }
 }
 
-impl From<FtpBruteForceFieldsV0_42> for FtpBruteForceFieldsV0_43 {
-    fn from(value: FtpBruteForceFieldsV0_42) -> Self {
-        let duration = value.end_time.timestamp_nanos_opt().unwrap_or_default()
-            - value.start_time.timestamp_nanos_opt().unwrap_or_default();
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            user_list: value.user_list,
-            start_time: value.start_time,
-            end_time: value.end_time,
-            duration,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            is_internal: value.is_internal,
-            confidence: value.confidence,
-            category: value.category,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 pub(crate) struct FtpBruteForceFieldsV0_41 {
     pub sensor: String,
@@ -253,13 +198,6 @@ pub struct FtpBruteForce {
     pub user_list: Vec<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
-    pub orig_pkts: u64,
-    pub resp_pkts: u64,
-    pub orig_l2_bytes: u64,
-    pub resp_l2_bytes: u64,
     pub is_internal: bool,
     pub confidence: f32,
     pub category: Option<EventCategory>,
@@ -296,13 +234,6 @@ impl FtpBruteForce {
             user_list: fields.user_list.clone(),
             start_time: fields.start_time,
             end_time: fields.end_time,
-            duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
-            orig_pkts: fields.orig_pkts,
-            resp_pkts: fields.resp_pkts,
-            orig_l2_bytes: fields.orig_l2_bytes,
-            resp_l2_bytes: fields.resp_l2_bytes,
             is_internal: fields.is_internal,
             confidence: fields.confidence,
             category: fields.category,
@@ -357,31 +288,22 @@ impl Match for FtpBruteForce {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        match raw_event_attr {
-            RawEventAttrKind::Ftp(attr) => match attr {
+        if let RawEventAttrKind::Ftp(attr) = raw_event_attr {
+            match attr {
                 FtpAttr::SrcAddr => Some(AttrValue::Addr(self.src_addr)),
                 FtpAttr::DstAddr => Some(AttrValue::Addr(self.dst_addr)),
                 FtpAttr::DstPort => Some(AttrValue::UInt(self.dst_port.into())),
                 FtpAttr::Proto => Some(AttrValue::UInt(self.proto.into())),
                 FtpAttr::User => Some(AttrValue::VecString(&self.user_list)),
                 _ => None,
-            },
-            RawEventAttrKind::Conn(attr) => match attr {
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
-                _ => None,
-            },
-            _ => None,
+            }
+        } else {
+            None
         }
     }
 }
 
-pub type FtpEventFields = FtpEventFieldsV0_43;
+pub type FtpEventFields = FtpEventFieldsV0_42;
 
 impl FtpEventFields {
     #[must_use]
@@ -394,7 +316,7 @@ impl FtpEventFields {
             .join(";");
 
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -408,8 +330,6 @@ impl FtpEventFields {
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
@@ -423,7 +343,7 @@ impl FtpEventFields {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct FtpEventFieldsV0_43 {
+pub struct FtpEventFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub src_port: u16,
@@ -433,8 +353,6 @@ pub struct FtpEventFieldsV0_43 {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -446,53 +364,8 @@ pub struct FtpEventFieldsV0_43 {
     pub category: Option<EventCategory>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct FtpEventFieldsV0_42 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub user: String,
-    pub password: String,
-    pub commands: Vec<FtpCommand>,
-    pub confidence: f32,
-    pub category: Option<EventCategory>,
-}
-
-impl From<FtpEventFieldsV0_42> for FtpEventFieldsV0_43 {
-    fn from(value: FtpEventFieldsV0_42) -> Self {
-        let duration = 0;
-        let end_time = DateTime::from_timestamp_nanos(value.end_time);
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time: end_time,
-            end_time,
-            duration,
-            orig_bytes: 0,
-            resp_bytes: 0,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            user: value.user,
-            password: value.password,
-            commands: value.commands,
-            confidence: value.confidence,
-            category: value.category,
-        }
-    }
-}
-
-impl From<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
-    fn from(value: FtpEventFieldsV0_41) -> Self {
+impl MigrateFrom<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
+    fn new(value: FtpEventFieldsV0_41, start_time: i64) -> Self {
         let command = FtpCommand {
             command: value.command,
             reply_code: value.reply_code,
@@ -506,6 +379,9 @@ impl From<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
             file_id: value.file_id,
         };
 
+        let start_time_dt = DateTime::from_timestamp_nanos(start_time);
+        let duration = value.end_time.saturating_sub(start_time);
+
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -513,7 +389,13 @@ impl From<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            end_time: value.end_time,
+            start_time: start_time_dt,
+            end_time: DateTime::from_timestamp_nanos(value.end_time),
+            duration,
+            orig_pkts: 0,
+            resp_pkts: 0,
+            orig_l2_bytes: 0,
+            resp_l2_bytes: 0,
             user: value.user,
             password: value.password,
             commands: vec![command],
@@ -560,8 +442,6 @@ pub struct FtpPlainText {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -585,7 +465,7 @@ impl fmt::Display for FtpPlainText {
 
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -595,8 +475,6 @@ impl fmt::Display for FtpPlainText {
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
@@ -614,16 +492,14 @@ impl FtpPlainText {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
             end_time: fields.end_time,
             duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
             orig_l2_bytes: fields.orig_l2_bytes,
@@ -684,20 +560,7 @@ impl Match for FtpPlainText {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        match raw_event_attr {
-            RawEventAttrKind::Ftp(_) => find_ftp_attr_by_kind!(self, raw_event_attr),
-            RawEventAttrKind::Conn(attr) => match attr {
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
-                _ => None,
-            },
-            _ => None,
-        }
+        find_ftp_attr_by_kind!(self, raw_event_attr)
     }
 }
 
@@ -713,8 +576,6 @@ pub struct BlocklistFtp {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub duration: i64,
-    pub orig_bytes: u64,
-    pub resp_bytes: u64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
     pub orig_l2_bytes: u64,
@@ -738,7 +599,7 @@ impl fmt::Display for BlocklistFtp {
 
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} user={:?} password={:?} commands={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -748,8 +609,6 @@ impl fmt::Display for BlocklistFtp {
             self.start_time.to_rfc3339(),
             self.end_time.to_rfc3339(),
             self.duration.to_string(),
-            self.orig_bytes.to_string(),
-            self.resp_bytes.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
             self.orig_l2_bytes.to_string(),
@@ -767,16 +626,14 @@ impl BlocklistFtp {
         Self {
             time,
             sensor: fields.sensor,
+            start_time: fields.start_time,
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
             end_time: fields.end_time,
             duration: fields.duration,
-            orig_bytes: fields.orig_bytes,
-            resp_bytes: fields.resp_bytes,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
             orig_l2_bytes: fields.orig_l2_bytes,
@@ -837,19 +694,6 @@ impl Match for BlocklistFtp {
     }
 
     fn find_attr_by_kind(&self, raw_event_attr: RawEventAttrKind) -> Option<AttrValue<'_>> {
-        match raw_event_attr {
-            RawEventAttrKind::Ftp(_) => find_ftp_attr_by_kind!(self, raw_event_attr),
-            RawEventAttrKind::Conn(attr) => match attr {
-                ConnAttr::Duration => Some(AttrValue::SInt(self.duration)),
-                ConnAttr::OrigBytes => Some(AttrValue::UInt(self.orig_bytes)),
-                ConnAttr::RespBytes => Some(AttrValue::UInt(self.resp_bytes)),
-                ConnAttr::OrigPkts => Some(AttrValue::UInt(self.orig_pkts)),
-                ConnAttr::RespPkts => Some(AttrValue::UInt(self.resp_pkts)),
-                ConnAttr::OrigL2Bytes => Some(AttrValue::UInt(self.orig_l2_bytes)),
-                ConnAttr::RespL2Bytes => Some(AttrValue::UInt(self.resp_l2_bytes)),
-                _ => None,
-            },
-            _ => None,
-        }
+        find_ftp_attr_by_kind!(self, raw_event_attr)
     }
 }
