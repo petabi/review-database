@@ -23,22 +23,10 @@ pub(crate) async fn retrieve_model_to_migrate(database: &Database) -> Result<Vec
 
 pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()> {
     let models = retrieve_model_to_migrate(database).await?;
-    tracing::info!(
-        "Migrating Time Series for a total of {} models from PostgreSQL to RocksDb",
-        models.len()
-    );
     for &model in &models {
-        tracing::info!("Migrating Time Series for model {model}");
-        if let Err(e) = migrate_time_series_for_model(database, store, model).await {
-            tracing::error!("Migration for model {model} failed");
-            return Err(e);
-        }
-        if let Err(e) = remove_time_series(database, model).await {
-            tracing::error!("Removing time series for {model} in PostgresQL failed");
-            return Err(e);
-        }
+        migrate_time_series_for_model(database, store, model).await?;
+        remove_time_series(database, model).await?;
     }
-    tracing::info!("Time series data migration done.");
     Ok(())
 }
 
