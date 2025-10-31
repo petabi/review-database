@@ -270,15 +270,14 @@ impl SaltedPassword {
             .is_ok(),
             HashAlgorithm::Argon2id => {
                 let hash = String::from_utf8_lossy(&self.hash);
-                match PasswordHash::new(&hash) {
-                    Ok(parsed_hash) => Argon2::default()
-                        .verify_password(password.as_bytes(), &parsed_hash)
-                        .is_ok(),
-                    Err(e) => {
-                        tracing::error!("Failed to parse the password hash: {hash}, reason: {e:?}");
-                        false
-                    }
-                }
+                PasswordHash::new(&hash)
+                    .ok()
+                    .and_then(|parsed_hash| {
+                        Argon2::default()
+                            .verify_password(password.as_bytes(), &parsed_hash)
+                            .ok()
+                    })
+                    .is_some()
             }
         }
     }

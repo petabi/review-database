@@ -9,7 +9,6 @@ pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()>
     let models = retrieve_models(database).await?;
     insert_models(store, models)?;
     remove_all_models(database).await?;
-    tracing::info!("Models data migration done.");
     Ok(())
 }
 
