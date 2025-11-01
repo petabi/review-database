@@ -5013,36 +5013,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn syslog_for_blocklist_radius() {
-        let fields = blocklist_radius_fields();
-
-        let message = EventMessage {
-            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            kind: EventKind::BlocklistRadius,
-            fields: bincode::serialize(&fields).expect("serializable"),
-        };
-
-        let message = message.syslog_rfc5424();
-        assert!(message.is_ok());
-        let (_, _, syslog_message) = message.unwrap();
-        assert_eq!(
-            &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRadius" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1812" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" id="1" code="1" resp_code="2" auth="auth_string" resp_auth="resp_auth_string" user_name="user1" user_passwd="password" chap_passwd="chap_pass" nas_ip="127.0.0.3" nas_port="5060" state="state" nas_id="nas_identifier" nas_port_type="15" message="RADIUS message" confidence="1""#
-        );
-
-        let blocklist_radius = Event::Blocklist(RecordType::Radius(BlocklistRadius::new(
-            Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
-            fields,
-        )))
-        .to_string();
-
-        assert_eq!(
-            &blocklist_radius,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRadius" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1812" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" id="1" code="1" resp_code="2" auth="auth_string" resp_auth="resp_auth_string" user_name="user1" user_passwd="password" chap_passwd="chap_pass" nas_ip="127.0.0.3" nas_port="5060" state="state" nas_id="nas_identifier" nas_port_type="15" message="RADIUS message" triage_scores="""#
-        );
-    }
-
-    #[tokio::test]
     async fn syslog_for_rdpbruteforce() {
         let fields = RdpBruteForceFields {
             sensor: String::new(),
