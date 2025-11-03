@@ -54,9 +54,7 @@ pub struct DnsEventFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
@@ -539,9 +537,7 @@ pub struct CryptocurrencyMiningPoolFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
@@ -854,9 +850,7 @@ pub struct BlocklistDnsFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,

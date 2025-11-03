@@ -20,6 +20,20 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - New `FtpCommand` struct containing individual FTP command details (`command`,
   `reply_code`, `reply_msg`, `data_passive`, `data_orig_addr`, `data_resp_addr`,
   `data_resp_port`, `file`, `file_size`, `file_id`).
+- Added `start_time` field to all detection event structures to track when an
+  event began. This includes both Fields structs (e.g., `DnsEventFields`,
+  `BlocklistConnFields`) and main event structs (e.g., `DnsCovertChannel`,
+  `HttpThreat`, `BlocklistBootp`). Event types that already had `start_time`
+  (`RdpBruteForce`, `LdapBruteForce`, `FtpBruteForce`, `RepeatedHttpSessions`,
+  `PortScan`, `MultiHostPortScan`, `ExternalDdos`) are unchanged.
+- Timestamp fields (`start_time` and `end_time`) in event outputs are now
+  formatted using RFC3339 format (e.g., "1970-01-01T00:00:00+00:00") instead of
+  raw nanosecond integers. This affects both `syslog_rfc5424()` method output
+  and `Display` trait implementations for all detection events. The formatting
+  uses `.to_rfc3339()` on `DateTime<Utc>` values.
+- New `MigrateFrom<OldT>` trait for migrations that require additional context
+  like `start_time`. Events with newly added `start_time` fields use this trait
+  instead of the `From` trait for migration from v0.41 to v0.42.
 
 ### Changed
 

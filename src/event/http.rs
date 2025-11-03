@@ -64,9 +64,7 @@ pub struct HttpEventFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
@@ -180,8 +178,13 @@ pub(crate) struct HttpEventFieldsV0_41 {
 
 impl MigrateFrom<HttpEventFieldsV0_41> for HttpEventFieldsV0_42 {
     fn new(value: HttpEventFieldsV0_41, start_time: i64) -> Self {
+        let duration = value
+            .end_time
+            .timestamp_nanos_opt()
+            .unwrap_or(0)
+            .saturating_sub(start_time);
         let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
-        let duration = value.end_time.timestamp_nanos_opt().unwrap_or(0) - start_time;
+        let end_time_dt = value.end_time;
 
         Self {
             sensor: value.sensor,
@@ -191,7 +194,7 @@ impl MigrateFrom<HttpEventFieldsV0_41> for HttpEventFieldsV0_42 {
             dst_port: value.dst_port,
             proto: value.proto,
             start_time: start_time_dt,
-            end_time: value.end_time,
+            end_time: end_time_dt,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -419,9 +422,7 @@ pub struct HttpThreatFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
@@ -865,9 +866,7 @@ pub struct DgaFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,

@@ -1,6 +1,6 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
-use chrono::{DateTime, Utc, serde::ts_nanoseconds};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -14,9 +14,7 @@ pub struct BlocklistRadiusFields {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
@@ -90,8 +88,8 @@ pub struct BlocklistRadius {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -118,8 +116,8 @@ pub struct BlocklistRadius {
 
 impl fmt::Display for BlocklistRadius {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
-        let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
+        let start_time_str = self.start_time.to_rfc3339();
+        let end_time_str = self.end_time.to_rfc3339();
 
         write!(
             f,
@@ -166,8 +164,8 @@ impl BlocklistRadius {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time.timestamp_nanos_opt().unwrap_or_default(),
-            end_time: fields.end_time.timestamp_nanos_opt().unwrap_or_default(),
+            start_time: fields.start_time,
+            end_time: fields.end_time,
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,

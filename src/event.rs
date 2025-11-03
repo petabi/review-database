@@ -66,7 +66,7 @@ pub use self::{
     ldap::{BlocklistLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
     log::ExtraThreat,
     mqtt::{BlocklistMqtt, BlocklistMqttFields},
-    network::{NetworkThreat, NetworkThreatFields},
+    network::NetworkThreat,
     nfs::{BlocklistNfs, BlocklistNfsFields},
     ntlm::{BlocklistNtlm, BlocklistNtlmFields},
     radius::{BlocklistRadius, BlocklistRadiusFields},
