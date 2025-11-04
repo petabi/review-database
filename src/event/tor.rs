@@ -48,8 +48,10 @@ pub struct TorConnection {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -82,6 +84,8 @@ pub struct TorConnection {
 
 impl fmt::Display for TorConnection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         write!(
             f,
             "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} triage_scores={:?}",
@@ -91,8 +95,8 @@ impl fmt::Display for TorConnection {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -240,8 +244,10 @@ pub struct TorConnectionConn {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub conn_state: String,
     pub service: String,
@@ -258,6 +264,8 @@ pub struct TorConnectionConn {
 
 impl fmt::Display for TorConnectionConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         write!(
             f,
             "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} end_time={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
@@ -268,8 +276,8 @@ impl fmt::Display for TorConnectionConn {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.conn_state,
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.service,
             self.orig_bytes.to_string(),
@@ -384,8 +392,8 @@ mod tests {
             dst_port: 443,
             proto: 6,
             conn_state: "SF".to_string(),
-            start_time,
-            end_time,
+            start_time: start_time.timestamp_nanos_opt().unwrap(),
+            end_time: end_time.timestamp_nanos_opt().unwrap(),
             duration: 0,
             service: "https".to_string(),
             orig_bytes: 1024,
@@ -415,7 +423,7 @@ mod tests {
         assert_eq!(event.dst_port, 443);
         assert_eq!(event.proto, 6);
         assert_eq!(event.conn_state, "SF");
-        assert_eq!(event.end_time, end_time);
+        assert_eq!(event.end_time, end_time.timestamp_nanos_opt().unwrap());
         assert_eq!(event.service, "https");
         assert_eq!(event.orig_bytes, 1024);
         assert_eq!(event.resp_bytes, 2048);

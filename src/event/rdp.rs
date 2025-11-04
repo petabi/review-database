@@ -41,8 +41,10 @@ pub struct RdpBruteForceFieldsV0_42 {
     pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addrs: Vec<IpAddr>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub proto: u8,
     pub confidence: f32,
     pub category: Option<EventCategory>,
@@ -51,6 +53,8 @@ pub struct RdpBruteForceFieldsV0_42 {
 impl RdpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -60,8 +64,8 @@ impl RdpBruteForceFields {
             self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.proto.to_string(),
             self.confidence.to_string()
         )
@@ -86,8 +90,8 @@ impl From<RdpBruteForceFieldsV0_41> for RdpBruteForceFieldsV0_42 {
             sensor: String::new(),
             src_addr: value.src_addr,
             dst_addrs: value.dst_addrs,
-            start_time: value.start_time,
-            end_time: value.end_time,
+            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
             proto: value.proto,
             confidence: value.confidence,
             category: value.category.into(),
@@ -101,8 +105,10 @@ pub struct RdpBruteForce {
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addrs: Vec<IpAddr>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub proto: u8,
     pub confidence: f32,
     pub category: Option<EventCategory>,
@@ -111,13 +117,15 @@ pub struct RdpBruteForce {
 
 impl fmt::Display for RdpBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         write!(
             f,
             "src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} triage_scores={:?}",
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.proto.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref())
         )
@@ -210,8 +218,10 @@ pub struct BlocklistRdpFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -225,8 +235,6 @@ pub struct BlocklistRdpFieldsV0_42 {
 impl MigrateFrom<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
     fn new(value: BlocklistRdpFieldsV0_41, start_time: i64) -> Self {
         let duration = value.end_time.saturating_sub(start_time);
-        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
-        let end_time_dt = chrono::DateTime::from_timestamp_nanos(value.end_time);
 
         Self {
             sensor: value.sensor,
@@ -235,8 +243,8 @@ impl MigrateFrom<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: start_time_dt,
-            end_time: end_time_dt,
+            start_time,
+            end_time: value.end_time,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -266,6 +274,8 @@ pub(crate) struct BlocklistRdpFieldsV0_41 {
 impl BlocklistRdpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} cookie={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -278,8 +288,8 @@ impl BlocklistRdpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -299,8 +309,10 @@ pub struct BlocklistRdp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -313,8 +325,8 @@ pub struct BlocklistRdp {
 }
 impl fmt::Display for BlocklistRdp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = self.start_time.to_rfc3339();
-        let end_time_str = self.end_time.to_rfc3339();
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
 
         write!(
             f,
@@ -325,8 +337,8 @@ impl fmt::Display for BlocklistRdp {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),

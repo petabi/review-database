@@ -77,8 +77,10 @@ pub struct BlocklistTlsFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -112,8 +114,6 @@ pub struct BlocklistTlsFieldsV0_42 {
 impl MigrateFrom<BlocklistTlsFieldsV0_41> for BlocklistTlsFieldsV0_42 {
     fn new(value: BlocklistTlsFieldsV0_41, start_time: i64) -> Self {
         let duration = value.end_time.saturating_sub(start_time);
-        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
-        let end_time_dt = chrono::DateTime::from_timestamp_nanos(value.end_time);
 
         Self {
             sensor: value.sensor,
@@ -122,8 +122,8 @@ impl MigrateFrom<BlocklistTlsFieldsV0_41> for BlocklistTlsFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: start_time_dt,
-            end_time: end_time_dt,
+            start_time,
+            end_time: value.end_time,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -193,6 +193,8 @@ pub(crate) struct BlocklistTlsFieldsV0_41 {
 impl BlocklistTlsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} server_name={:?} alpn_protocol={:?} ja3={:?} version={:?} client_cipher_suites={:?} client_extensions={:?} cipher={:?} extensions={:?} ja3s={:?} serial={:?} subject_country={:?} subject_org_name={:?} subject_common_name={:?} validity_not_before={:?} validity_not_after={:?} subject_alt_name={:?} issuer_country={:?} issuer_org_name={:?} issuer_org_unit_name={:?} issuer_common_name={:?} last_alert={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -205,8 +207,8 @@ impl BlocklistTlsFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -247,8 +249,10 @@ pub struct BlocklistTls {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -282,8 +286,8 @@ pub struct BlocklistTls {
 
 impl fmt::Display for BlocklistTls {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = self.start_time.to_rfc3339();
-        let end_time_str = self.end_time.to_rfc3339();
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
 
         write!(
             f,
@@ -294,8 +298,8 @@ impl fmt::Display for BlocklistTls {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -431,8 +435,10 @@ pub struct SuspiciousTlsTraffic {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -466,8 +472,8 @@ pub struct SuspiciousTlsTraffic {
 
 impl fmt::Display for SuspiciousTlsTraffic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_str = self.start_time.to_rfc3339();
-        let end_time_str = self.end_time.to_rfc3339();
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
 
         write!(
             f,
@@ -478,8 +484,8 @@ impl fmt::Display for SuspiciousTlsTraffic {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_str,
-            end_time_str,
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),

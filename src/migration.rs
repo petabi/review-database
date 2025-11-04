@@ -946,7 +946,7 @@ mod tests {
         time += Duration::minutes(1);
         let mut tor_conn = HttpEventFieldsV0_41 {
             sensor: "test-sensor".to_string(),
-            end_time: DateTime::UNIX_EPOCH,
+            end_time: 0,
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
             src_port: 8080,
             dst_addr: "10.0.0.1".parse::<IpAddr>().unwrap(),
