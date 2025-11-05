@@ -43,7 +43,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Reduced redundant logging in migration code. Migration functions now return
   errors through `Result` types instead of logging errors before returning,
   allowing callers to handle errors appropriately. Progress messages that echo
-  information already known to the caller have been removed.
+  information already known to the caller have been removed. User-facing
+  progress messages are now displayed by the `review-migrate` binary instead of
+  internal library functions. Migration now fails fast on any individual error
+  instead of attempting to continue after failures.
 - **BREAKING**: Replaced `EventFilter::confidence` with
   `confidence_min`/`confidence_max` for range-based filtering. The single
   minimum threshold (`confidence`) is now split into two optional bounds:
