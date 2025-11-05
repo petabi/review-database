@@ -13,15 +13,22 @@ use serde::Deserialize;
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = Config::load_config(parse().as_deref())?;
+
+    println!("Starting migration process...");
+    println!("Migrating data directory...");
     migrate_data_dir(&config.data_dir, &config.backup_dir).context("migration failed")?;
 
+    println!("Connecting to PostgreSQL database...");
     let db = Database::new(&config.database_url, &config.ca_certs(), &config.data_dir)
         .await
         .context("failed to connect to the PostgreSQL database")?;
     let store = Store::new(&config.data_dir, &config.backup_dir)?;
 
     // transfer data from PostgreSQL to RocksDB.
+    println!("Migrating data from PostgreSQL to RocksDB...");
     migrate_backend(&db, &store, &config.data_dir).await?;
+
+    println!("Migration completed successfully.");
     Ok(())
 }
 
