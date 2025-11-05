@@ -1381,8 +1381,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap()
+                + chrono::Duration::nanoseconds(100),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1413,8 +1414,9 @@ mod tests {
             dst_port: 80,
             proto: 6,
             conn_state: "SAF".to_string(),
-            start_time: 0,
-            end_time: 1000,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap()
+                + chrono::Duration::nanoseconds(1000),
             duration: 0,
             service: "http".to_string(),
             orig_bytes: 100,
@@ -1436,8 +1438,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 135,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1460,8 +1462,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 67,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1498,8 +1500,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1530,8 +1532,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: 0,
-            end_time: 600,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1570,8 +1572,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 88,
             proto: 17,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1599,8 +1601,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 1883,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1625,8 +1627,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 2049,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1647,8 +1649,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1672,8 +1674,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 3389,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1693,8 +1695,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 445,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1724,8 +1726,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 25,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1751,8 +1753,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 22,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1784,8 +1786,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1825,16 +1827,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
             proto: 6,
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 2)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1875,16 +1869,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
             proto: 6,
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 2)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1904,16 +1890,8 @@ mod tests {
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 2)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
             category: Some(EventCategory::Reconnaissance),
@@ -1929,16 +1907,8 @@ mod tests {
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
             ],
             dst_port: 80,
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 2)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
             category: Some(EventCategory::Reconnaissance),
@@ -1953,16 +1923,8 @@ mod tests {
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
             ],
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 2)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
             category: Some(EventCategory::Impact),
@@ -1977,16 +1939,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 1, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -2018,16 +1972,8 @@ mod tests {
             dst_port: 21,
             proto: 6,
             user_list: vec!["user1".to_string(), "user_2".to_string()],
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 2)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             is_internal: true,
             confidence: 0.3,
             category: Some(EventCategory::CredentialAccess),
@@ -2035,7 +1981,7 @@ mod tests {
     }
 
     fn repeated_http_sessions_fiedls() -> RepeatedHttpSessionsFields {
-        let now = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+        let now = chrono::Utc::now();
         RepeatedHttpSessionsFields {
             sensor: "sensor".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -2058,8 +2004,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: 0,
-            end_time: 1000,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -2098,16 +2044,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 10, 10)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 10).unwrap(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -2149,16 +2087,8 @@ mod tests {
                 ("user1".to_string(), "pw1".to_string()),
                 ("user_2".to_string(), "pw2".to_string()),
             ],
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 2)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 2).unwrap(),
             confidence: 0.3,
             category: Some(EventCategory::CredentialAccess),
         }
@@ -2172,16 +2102,8 @@ mod tests {
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
             ],
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 10, 2)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 10, 2).unwrap(),
             proto: 6,
             confidence: 0.3,
             category: Some(EventCategory::Discovery),
@@ -2196,12 +2118,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc::now().timestamp_nanos_opt().unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc::now(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -2234,8 +2152,9 @@ mod tests {
             resp_port: 80,
             proto: 6,
             service: "http".to_string(),
-            start_time: 0,
-            end_time: 100,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap()
+                + chrono::Duration::nanoseconds(100),
             duration: 100,
             orig_pkts: 10,
             resp_pkts: 20,
@@ -2302,8 +2221,9 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 80,
             proto: 6,
-            start_time: 0,
-            end_time: 1000,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap()
+                + chrono::Duration::nanoseconds(1000),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,

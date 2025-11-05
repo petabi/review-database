@@ -45,10 +45,8 @@ pub struct BlocklistSmtpFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub start_time: i64,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -67,6 +65,8 @@ pub struct BlocklistSmtpFieldsV0_42 {
 
 impl MigrateFrom<BlocklistSmtpFieldsV0_41> for BlocklistSmtpFieldsV0_42 {
     fn new(value: BlocklistSmtpFieldsV0_41, start_time: i64) -> Self {
+        let start_time_dt = DateTime::from_timestamp_nanos(start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(value.end_time);
         let duration = value.end_time.saturating_sub(start_time);
 
         Self {
@@ -76,8 +76,8 @@ impl MigrateFrom<BlocklistSmtpFieldsV0_41> for BlocklistSmtpFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time,
-            end_time: value.end_time,
+            start_time: start_time_dt,
+            end_time: end_time_dt,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -119,8 +119,6 @@ pub(crate) struct BlocklistSmtpFieldsV0_41 {
 impl BlocklistSmtpFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -133,8 +131,8 @@ impl BlocklistSmtpFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -161,10 +159,8 @@ pub struct BlocklistSmtp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub start_time: i64,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -183,9 +179,6 @@ pub struct BlocklistSmtp {
 }
 impl fmt::Display for BlocklistSmtp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
-
         write!(
             f,
             "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} mailfrom={:?} date={:?} from={:?} to={:?} subject={:?} agent={:?} state={:?} triage_scores={:?}",
@@ -195,8 +188,8 @@ impl fmt::Display for BlocklistSmtp {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),

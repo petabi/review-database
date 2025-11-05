@@ -120,8 +120,6 @@ pub type FtpBruteForceFields = FtpBruteForceFieldsV0_42;
 impl FtpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -134,8 +132,8 @@ impl FtpBruteForceFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.user_list.join(","),
-            start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.is_internal.to_string(),
             self.confidence.to_string()
         )
@@ -150,10 +148,8 @@ pub struct FtpBruteForceFieldsV0_42 {
     pub dst_port: u16,
     pub proto: u8,
     pub user_list: Vec<String>,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub start_time: i64,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub confidence: f32,
     pub category: Option<EventCategory>,
@@ -185,10 +181,8 @@ pub(crate) struct FtpBruteForceFieldsV0_41 {
     pub dst_port: u16,
     pub proto: u8,
     pub user_list: Vec<String>,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub start_time: i64,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub confidence: f32,
     pub category: EventCategoryV0_41,
@@ -202,10 +196,8 @@ pub struct FtpBruteForce {
     pub dst_port: u16,
     pub proto: u8,
     pub user_list: Vec<String>,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub start_time: i64,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub is_internal: bool,
     pub confidence: f32,
     pub category: Option<EventCategory>,
@@ -214,8 +206,6 @@ pub struct FtpBruteForce {
 
 impl fmt::Display for FtpBruteForce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         write!(
             f,
             "src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_list={:?} start_time={:?} end_time={:?} is_internal={:?} triage_scores={:?}",
@@ -224,8 +214,8 @@ impl fmt::Display for FtpBruteForce {
             self.dst_port.to_string(),
             self.proto.to_string(),
             self.user_list.join(","),
-            start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.is_internal.to_string(),
             triage_scores_to_string(self.triage_scores.as_ref()),
         )
@@ -318,8 +308,6 @@ pub type FtpEventFields = FtpEventFieldsV0_42;
 impl FtpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
-        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         let commands_str = self
             .commands
             .iter()
@@ -339,8 +327,8 @@ impl FtpEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -362,10 +350,8 @@ pub struct FtpEventFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub start_time: i64,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -402,8 +388,8 @@ impl MigrateFrom<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time,
-            end_time: value.end_time,
+            start_time: DateTime::from_timestamp_nanos(start_time),
+            end_time: DateTime::from_timestamp_nanos(value.end_time),
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -452,10 +438,8 @@ pub struct FtpPlainText {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub start_time: i64,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -471,8 +455,6 @@ pub struct FtpPlainText {
 
 impl fmt::Display for FtpPlainText {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         let commands_str = self
             .commands
             .iter()
@@ -489,8 +471,8 @@ impl fmt::Display for FtpPlainText {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -590,10 +572,8 @@ pub struct BlocklistFtp {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub start_time: i64,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -609,8 +589,6 @@ pub struct BlocklistFtp {
 
 impl fmt::Display for BlocklistFtp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         let commands_str = self
             .commands
             .iter()
@@ -627,8 +605,8 @@ impl fmt::Display for BlocklistFtp {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),

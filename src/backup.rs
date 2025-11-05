@@ -93,12 +93,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 53,
             proto: 17,
-            start_time: Utc
-                .with_ymd_and_hms(1970, 1, 1, 0, 1, 1)
-                .unwrap()
-                .timestamp_nanos_opt()
-                .unwrap(),
-            end_time: Utc::now().timestamp_nanos_opt().unwrap(),
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
+            end_time: Utc::now(),
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,
