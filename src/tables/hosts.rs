@@ -3,7 +3,7 @@
 use std::{
     collections::HashMap,
     mem::size_of,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    net::{IpAddr, Ipv6Addr},
 };
 
 use anyhow::Result;
@@ -57,7 +57,7 @@ impl Host {
 
 impl FromKeyValue for Host {
     fn from_key_value(key: &[u8], value: &[u8]) -> Result<Self> {
-        let key = Key::from_be_bytes(key);
+        let key = Key::from_be_bytes(key)?;
         let host: Host = super::deserialize(value)?;
         Ok(Host {
             customer_id: key.customer_id,
@@ -84,9 +84,6 @@ impl UniqueKey for Host {
     }
 }
 
-const TYPE_IPV4: u8 = 4;
-const TYPE_IPV6: u8 = 6;
-
 impl Key {
     pub fn new(customer_id: u32, ip: IpAddr) -> Self {
         Self { customer_id, ip }
@@ -98,40 +95,30 @@ impl Key {
 
         match self.ip {
             IpAddr::V4(addr) => {
-                buf.push(TYPE_IPV4); // Type discriminator for IPv4
                 buf.extend(addr.octets());
-                // Pad with zeros to match Ipv6Addr size
-                buf.extend_from_slice(&[0; size_of::<Ipv6Addr>() - size_of::<Ipv4Addr>()]);
             }
             IpAddr::V6(addr) => {
-                buf.push(TYPE_IPV6); // Type discriminator for IPv6
                 buf.extend(addr.octets());
             }
         }
         buf
     }
 
-    pub fn from_be_bytes(buf: &[u8]) -> Self {
+    pub fn from_be_bytes(buf: &[u8]) -> Result<Self> {
         let (val, rest) = buf.split_at(size_of::<u32>());
         let mut buf_u32 = [0; size_of::<u32>()];
         buf_u32.copy_from_slice(val);
         let customer_id = u32::from_be_bytes(buf_u32);
 
-        let ip_type = rest[0];
-        let ip_bytes = &rest[1..];
-
-        let ip = if ip_type == TYPE_IPV4 {
+        let ip = match rest.len() {
             // IPv4
-            let mut buf_ipv4 = [0; size_of::<Ipv4Addr>()];
-            buf_ipv4.copy_from_slice(&ip_bytes[..size_of::<Ipv4Addr>()]);
-            IpAddr::V4(Ipv4Addr::from(buf_ipv4))
-        } else {
+            4 => IpAddr::from(<[u8; 4]>::try_from(rest)?),
             // IPv6
-            let mut buf_ipv6 = [0; size_of::<Ipv6Addr>()];
-            buf_ipv6.copy_from_slice(&ip_bytes[..size_of::<Ipv6Addr>()]);
-            IpAddr::V6(Ipv6Addr::from(buf_ipv6))
+            16 => IpAddr::from(<[u8; 16]>::try_from(rest)?),
+
+            len => return Err(anyhow::anyhow!("invalid ip length: {len}")),
         };
-        Self { customer_id, ip }
+        Ok(Self { customer_id, ip })
     }
 }
 
