@@ -128,8 +128,8 @@ impl TorConnection {
         TorConnection {
             time,
             sensor: fields.sensor.clone(),
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
@@ -288,14 +288,14 @@ impl TorConnectionConn {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
             conn_state: fields.conn_state,
-            end_time: fields.end_time,
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             service: fields.service,
             orig_bytes: fields.orig_bytes,
@@ -374,8 +374,16 @@ mod tests {
     };
 
     fn tor_connection_conn_fields() -> BlocklistConnFields {
-        let start_time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
-        let end_time = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 1).unwrap();
+        let start_time = Utc
+            .with_ymd_and_hms(2023, 1, 1, 12, 0, 0)
+            .unwrap()
+            .timestamp_nanos_opt()
+            .unwrap();
+        let end_time = Utc
+            .with_ymd_and_hms(2023, 1, 1, 12, 0, 1)
+            .unwrap()
+            .timestamp_nanos_opt()
+            .unwrap();
         BlocklistConnFields {
             sensor: "test-sensor".to_string(),
             src_addr: "192.168.1.100".parse().unwrap(),

@@ -64,8 +64,10 @@ pub struct HttpEventFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -98,6 +100,8 @@ pub struct HttpEventFieldsV0_42 {
 impl HttpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -110,8 +114,8 @@ impl HttpEventFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -179,8 +183,6 @@ pub(crate) struct HttpEventFieldsV0_41 {
 impl MigrateFrom<HttpEventFieldsV0_41> for HttpEventFieldsV0_42 {
     fn new(value: HttpEventFieldsV0_41, start_time: i64) -> Self {
         let duration = value.end_time.saturating_sub(start_time);
-        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
-        let end_time_dt = chrono::DateTime::from_timestamp_nanos(value.end_time);
 
         Self {
             sensor: value.sensor,
@@ -189,8 +191,8 @@ impl MigrateFrom<HttpEventFieldsV0_41> for HttpEventFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: start_time_dt,
-            end_time: end_time_dt,
+            start_time,
+            end_time: value.end_time,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -232,8 +234,10 @@ pub struct RepeatedHttpSessionsFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub confidence: f32,
     pub category: Option<EventCategory>,
 }
@@ -241,6 +245,8 @@ pub struct RepeatedHttpSessionsFieldsV0_42 {
 impl RepeatedHttpSessionsFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -253,8 +259,8 @@ impl RepeatedHttpSessionsFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.confidence.to_string()
         )
     }
@@ -283,8 +289,8 @@ impl From<RepeatedHttpSessionsFieldsV0_41> for RepeatedHttpSessionsFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: value.start_time,
-            end_time: value.end_time,
+            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
+            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
             confidence: value.confidence,
             category: value.category.into(),
         }
@@ -335,8 +341,8 @@ impl RepeatedHttpSessions {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
@@ -418,8 +424,10 @@ pub struct HttpThreatFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -457,6 +465,8 @@ pub struct HttpThreatFieldsV0_42 {
 impl HttpThreatFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -469,8 +479,8 @@ impl HttpThreatFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -550,8 +560,6 @@ pub(crate) struct HttpThreatFieldsV0_41 {
 impl MigrateFrom<HttpThreatFieldsV0_41> for HttpThreatFieldsV0_42 {
     fn new(value: HttpThreatFieldsV0_41, start_time: i64) -> Self {
         let duration = value.end_time - start_time;
-        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
-        let end_time_dt = chrono::DateTime::from_timestamp_nanos(value.end_time);
 
         Self {
             time: value.time,
@@ -561,8 +569,8 @@ impl MigrateFrom<HttpThreatFieldsV0_41> for HttpThreatFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: start_time_dt,
-            end_time: end_time_dt,
+            start_time,
+            end_time: value.end_time,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -716,13 +724,13 @@ impl HttpThreat {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            end_time: fields.end_time,
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
@@ -860,8 +868,10 @@ pub struct DgaFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -894,6 +904,8 @@ pub struct DgaFieldsV0_42 {
 impl DgaFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} filenames={:?} mime_types={:?} body={:?} state={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -906,8 +918,8 @@ impl DgaFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -974,8 +986,6 @@ pub(crate) struct DgaFieldsV0_41 {
 impl MigrateFrom<DgaFieldsV0_41> for DgaFieldsV0_42 {
     fn new(value: DgaFieldsV0_41, start_time: i64) -> Self {
         let duration = value.end_time - start_time;
-        let start_time_dt = chrono::DateTime::from_timestamp_nanos(start_time);
-        let end_time_dt = chrono::DateTime::from_timestamp_nanos(value.end_time);
 
         Self {
             sensor: value.sensor,
@@ -984,8 +994,8 @@ impl MigrateFrom<DgaFieldsV0_41> for DgaFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: start_time_dt,
-            end_time: end_time_dt,
+            start_time,
+            end_time: value.end_time,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -1108,13 +1118,13 @@ impl DomainGenerationAlgorithm {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            end_time: fields.end_time,
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
@@ -1301,8 +1311,8 @@ impl NonBrowser {
         NonBrowser {
             time,
             sensor: fields.sensor.clone(),
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
@@ -1500,13 +1510,13 @@ impl BlocklistHttp {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
             src_addr: fields.src_addr,
             src_port: fields.src_port,
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            end_time: fields.end_time,
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,

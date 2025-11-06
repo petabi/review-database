@@ -43,8 +43,10 @@ pub struct BlocklistNtlmFieldsV0_42 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub start_time: i64,
+    /// Timestamp in nanoseconds since the Unix epoch (UTC).
+    pub end_time: i64,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -61,8 +63,6 @@ pub struct BlocklistNtlmFieldsV0_42 {
 
 impl MigrateFrom<BlocklistNtlmFieldsV0_41> for BlocklistNtlmFieldsV0_42 {
     fn new(value: BlocklistNtlmFieldsV0_41, start_time: i64) -> Self {
-        let start_time_dt = DateTime::from_timestamp_nanos(start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(value.end_time);
         let duration = value.end_time.saturating_sub(start_time);
 
         Self {
@@ -72,8 +72,8 @@ impl MigrateFrom<BlocklistNtlmFieldsV0_41> for BlocklistNtlmFieldsV0_42 {
             dst_addr: value.dst_addr,
             dst_port: value.dst_port,
             proto: value.proto,
-            start_time: start_time_dt,
-            end_time: end_time_dt,
+            start_time,
+            end_time: value.end_time,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -123,8 +123,8 @@ impl BlocklistNtlmFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
+            DateTime::from_timestamp_nanos(self.start_time).to_rfc3339(),
+            DateTime::from_timestamp_nanos(self.end_time).to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -202,8 +202,8 @@ impl BlocklistNtlm {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,
