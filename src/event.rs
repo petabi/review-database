@@ -1922,7 +1922,6 @@ pub enum EventKind {
     BlocklistHttp,
     BlocklistKerberos,
     BlocklistLdap,
-    BlocklistMalformedDns,
     BlocklistMqtt,
     BlocklistNfs,
     BlocklistNtlm,
@@ -1939,6 +1938,7 @@ pub enum EventKind {
     BlocklistDhcp,
     TorConnectionConn,
     BlocklistRadius,
+    BlocklistMalformedDns,
 }
 
 impl EventKind {
@@ -2162,6 +2162,11 @@ impl EventFilter {
                 kinds,
                 &["block", "list", "blocklist", "ldap"],
                 "blocklist ldap",
+            );
+            moderate_kinds_by(
+                kinds,
+                &["block", "list", "blocklist", "malformed", "dns"],
+                "blocklist malformed dns",
             );
             moderate_kinds_by(
                 kinds,
