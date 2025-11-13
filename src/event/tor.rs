@@ -8,35 +8,9 @@ use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::TriageExclusion;
 use crate::event::{
     common::{AttrValue, triage_scores_to_string},
-    conn::BlocklistConnFields,
+    conn::{BlocklistConnFields, find_conn_attr_by_kind},
     http::{find_http_attr_by_kind, get_post_body},
 };
-
-macro_rules! find_conn_attr_by_kind {
-    ($event: expr, $raw_event_attr: expr) => {{
-        if let RawEventAttrKind::Conn(attr) = $raw_event_attr {
-            let target_value = match attr {
-                ConnAttr::SrcAddr => AttrValue::Addr($event.src_addr),
-                ConnAttr::SrcPort => AttrValue::UInt($event.src_port.into()),
-                ConnAttr::DstAddr => AttrValue::Addr($event.dst_addr),
-                ConnAttr::DstPort => AttrValue::UInt($event.dst_port.into()),
-                ConnAttr::Proto => AttrValue::UInt($event.proto.into()),
-                ConnAttr::ConnState => AttrValue::String(&$event.conn_state),
-                ConnAttr::Duration => AttrValue::SInt($event.duration),
-                ConnAttr::Service => AttrValue::String(&$event.service),
-                ConnAttr::OrigBytes => AttrValue::UInt($event.orig_bytes),
-                ConnAttr::RespBytes => AttrValue::UInt($event.resp_bytes),
-                ConnAttr::OrigPkts => AttrValue::UInt($event.orig_pkts),
-                ConnAttr::RespPkts => AttrValue::UInt($event.resp_pkts),
-                ConnAttr::OrigL2Bytes => AttrValue::UInt($event.orig_l2_bytes),
-                ConnAttr::RespL2Bytes => AttrValue::UInt($event.resp_l2_bytes),
-            };
-            Some(target_value)
-        } else {
-            None
-        }
-    }};
-}
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]

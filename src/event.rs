@@ -2870,7 +2870,7 @@ mod tests {
         sync::Arc,
     };
 
-    use chrono::{DateTime, TimeZone, Utc};
+    use chrono::{TimeZone, Utc};
 
     use crate::{
         Store,
@@ -4817,8 +4817,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 1812,
             proto: 17,
-            start_time: DateTime::from_timestamp_nanos(0),
-            end_time: DateTime::from_timestamp_nanos(100),
+            start_time: 0,
+            end_time: 100,
             duration: 0,
             orig_pkts: 0,
             resp_pkts: 0,

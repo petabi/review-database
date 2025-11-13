@@ -1042,7 +1042,9 @@ mod tests {
         time += Duration::minutes(1);
         let mut dns_covert = DnsEventFieldsV0_41 {
             sensor: "test-sensor".to_string(),
-            end_time: time + Duration::seconds(1),
+            end_time: (time + Duration::seconds(1))
+                .timestamp_nanos_opt()
+                .unwrap_or_default(),
             src_addr: "192.168.1.7".parse::<IpAddr>().unwrap(),
             src_port: 54321,
             dst_addr: "8.8.4.4".parse::<IpAddr>().unwrap(),

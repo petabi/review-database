@@ -11,6 +11,7 @@ use crate::{
     types::EventCategoryV0_41,
 };
 
+#[macro_export]
 macro_rules! find_conn_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
         if let RawEventAttrKind::Conn(attr) = $raw_event_attr {
@@ -36,6 +37,7 @@ macro_rules! find_conn_attr_by_kind {
         }
     }};
 }
+pub(crate) use find_conn_attr_by_kind;
 
 pub type PortScanFields = PortScanFieldsV0_42;
 

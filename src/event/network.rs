@@ -2,7 +2,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{NetworkAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -30,6 +30,7 @@ macro_rules! find_network_attr_by_kind {
 
 #[derive(Serialize, Deserialize)]
 pub struct NetworkThreat {
+    #[serde(with = "ts_nanoseconds")]
     pub time: DateTime<Utc>,
     pub sensor: String,
     pub orig_addr: IpAddr,

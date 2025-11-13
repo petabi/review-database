@@ -2,7 +2,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{DnsAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc, serde::ts_nanoseconds};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, HIGH, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -81,8 +81,7 @@ pub struct DnsEventFieldsV0_42 {
 
 impl MigrateFrom<DnsEventFieldsV0_41> for DnsEventFieldsV0_42 {
     fn new(value: DnsEventFieldsV0_41, start_time: i64) -> Self {
-        let end_time = value.end_time.timestamp_nanos_opt().unwrap_or_default();
-        let duration = end_time.saturating_sub(start_time);
+        let duration = value.end_time.saturating_sub(start_time);
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -91,7 +90,7 @@ impl MigrateFrom<DnsEventFieldsV0_41> for DnsEventFieldsV0_42 {
             dst_port: value.dst_port,
             proto: value.proto,
             start_time,
-            end_time,
+            end_time: value.end_time,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
@@ -118,8 +117,7 @@ impl MigrateFrom<DnsEventFieldsV0_41> for DnsEventFieldsV0_42 {
 #[derive(Deserialize, Serialize)]
 pub(crate) struct DnsEventFieldsV0_41 {
     pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub src_addr: IpAddr,
     pub src_port: u16,
     pub dst_addr: IpAddr,
@@ -618,8 +616,7 @@ pub(crate) struct CryptocurrencyMiningPoolFieldsV0_41 {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
+    pub end_time: i64,
     pub query: String,
     pub answer: Vec<String>,
     pub trans_id: u16,
@@ -638,8 +635,7 @@ pub(crate) struct CryptocurrencyMiningPoolFieldsV0_41 {
 }
 impl MigrateFrom<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolFieldsV0_42 {
     fn new(value: CryptocurrencyMiningPoolFieldsV0_41, start_time: i64) -> Self {
-        let end_time = value.end_time.timestamp_nanos_opt().unwrap_or_default();
-        let duration = end_time.saturating_sub(start_time);
+        let duration = value.end_time.saturating_sub(start_time);
         Self {
             sensor: value.sensor,
             src_addr: value.src_addr,
@@ -648,7 +644,7 @@ impl MigrateFrom<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPo
             dst_port: value.dst_port,
             proto: value.proto,
             start_time,
-            end_time,
+            end_time: value.end_time,
             duration,
             orig_pkts: 0,
             resp_pkts: 0,
