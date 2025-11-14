@@ -2361,8 +2361,6 @@ mod tests {
             proto: 6,
             service: "http".to_string(),
             start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
-            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap()
-                + chrono::Duration::nanoseconds(100),
             duration: 100,
             orig_pkts: 10,
             resp_pkts: 20,

@@ -39,8 +39,8 @@ pub struct NetworkThreat {
     pub resp_port: u16,
     pub proto: u8,
     pub service: String,
+    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -61,9 +61,8 @@ impl NetworkThreat {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         let start_time_dt = self.start_time;
-        let end_time_dt = self.end_time;
         format!(
-            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -76,7 +75,6 @@ impl NetworkThreat {
             self.proto.to_string(),
             self.service,
             start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -98,7 +96,7 @@ impl fmt::Display for NetworkThreat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
             self.sensor,
             self.orig_addr.to_string(),
             self.orig_port.to_string(),
@@ -107,7 +105,6 @@ impl fmt::Display for NetworkThreat {
             self.proto.to_string(),
             self.service,
             self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),

@@ -63,10 +63,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   (e.g., `DnsEventFields`, `HttpThreatFields`, `BlocklistDnsFields`, etc.) now
   include additional session tracking fields: `duration` (i64), `orig_pkts`
   (u64), `resp_pkts` (u64), `orig_l2_bytes` (u64), and `resp_l2_bytes` (u64).
-  The `start_time` and `end_time` fields now use `DateTime<Utc>` type instead
-  of raw i64 nanoseconds, providing better type safety and consistency across
-  all event types. These changes affect the serialization format. Automatic
-  migration from v0.41 to v0.42 format is provided.
+  Field structures (V0_42) use i64 nanosecond timestamps for `start_time`, while
+  main event structures use `DateTime<Utc>` with serde serialization. The
+  `end_time` field has been removed from single-raw-based detection events
+  (blocklist events, DNS events, Tor events, etc.) but is retained in multi-raw-
+  based events (PortScan, MultiHostPortScan, ExternalDdos, brute force events,
+  and RepeatedHttpSessions) that aggregate multiple network flows. These changes
+  affect the serialization format. Automatic migration from v0.41 to v0.42
+  format is provided.
 - Modified FTP detection event structures to store all commands and responses
   from an FTP session instead of just the last command. The `FtpEventFields`,
   `FtpPlainText`, and `BlocklistFtp` structures now use a `commands:

@@ -43,9 +43,8 @@ impl BlocklistRadiusFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
-        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -57,7 +56,6 @@ impl BlocklistRadiusFields {
             self.dst_port.to_string(),
             self.proto.to_string(),
             start_time_dt.to_rfc3339(),
-            end_time_dt.to_rfc3339(),
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -91,7 +89,6 @@ pub struct BlocklistRadius {
     pub dst_port: u16,
     pub proto: u8,
     pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub orig_pkts: u64,
     pub resp_pkts: u64,
@@ -119,11 +116,10 @@ pub struct BlocklistRadius {
 impl fmt::Display for BlocklistRadius {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let start_time_str = self.start_time.to_rfc3339();
-        let end_time_str = self.end_time.to_rfc3339();
 
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} duration={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} id={:?} code={:?} resp_code={:?} auth={:?} resp_auth={:?} user_name={:?} user_passwd={:?} chap_passwd={:?} nas_ip={:?} nas_port={:?} state={:?} nas_id={:?} nas_port_type={:?} message={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -131,7 +127,6 @@ impl fmt::Display for BlocklistRadius {
             self.dst_port.to_string(),
             self.proto.to_string(),
             start_time_str,
-            end_time_str,
             self.duration.to_string(),
             self.orig_pkts.to_string(),
             self.resp_pkts.to_string(),
@@ -167,7 +162,6 @@ impl BlocklistRadius {
             dst_port: fields.dst_port,
             proto: fields.proto,
             start_time: DateTime::from_timestamp_nanos(fields.start_time),
-            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             orig_pkts: fields.orig_pkts,
             resp_pkts: fields.resp_pkts,

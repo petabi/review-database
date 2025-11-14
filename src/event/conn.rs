@@ -619,7 +619,7 @@ impl BlocklistConnFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} end_time={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -632,7 +632,6 @@ impl BlocklistConnFields {
             self.proto.to_string(),
             self.conn_state,
             DateTime::from_timestamp_nanos(self.start_time).to_rfc3339(),
-            DateTime::from_timestamp_nanos(self.end_time).to_rfc3339(),
             self.duration.to_string(),
             self.service,
             self.orig_bytes.to_string(),
@@ -685,7 +684,6 @@ pub struct BlocklistConn {
     pub proto: u8,
     pub conn_state: String,
     pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
     pub duration: i64,
     pub service: String,
     pub orig_bytes: u64,
@@ -703,7 +701,7 @@ impl fmt::Display for BlocklistConn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} end_time={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
+            "sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} conn_state={:?} start_time={:?} duration={:?} service={:?} orig_bytes={:?} resp_bytes={:?} orig_pkts={:?} resp_pkts={:?} orig_l2_bytes={:?} resp_l2_bytes={:?} triage_scores={:?}",
             self.sensor,
             self.src_addr.to_string(),
             self.src_port.to_string(),
@@ -712,7 +710,6 @@ impl fmt::Display for BlocklistConn {
             self.proto.to_string(),
             self.conn_state,
             self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
             self.duration.to_string(),
             self.service,
             self.orig_bytes.to_string(),
@@ -738,7 +735,6 @@ impl BlocklistConn {
             proto: fields.proto,
             conn_state: fields.conn_state,
             start_time: DateTime::from_timestamp_nanos(fields.start_time),
-            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             duration: fields.duration,
             service: fields.service,
             orig_bytes: fields.orig_bytes,
