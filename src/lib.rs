@@ -52,7 +52,7 @@ pub use self::tables::{
     AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Cluster, ClusterTimeSeries,
     ColumnStats, ColumnTimeSeries, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
     CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, ExternalService,
-    ExternalServiceConfig, ExternalServiceKind, ExternalServiceStatus, Filter, FilterValue,
+    ExternalServiceConfig, ExternalServiceKind, ExternalServiceStatus, Filter, FilterValue, Host,
     IndexedTable, Iterable, Model as ModelDigest, ModelIndicator, Network, NetworkFilter,
     NetworkUpdate, Node, NodeProfile, NodeTable, NodeUpdate, OutlierInfo, OutlierInfoKey,
     OutlierInfoValue, PacketAttr, PeriodForSearch, ProtocolPorts, Response, ResponseKind,
@@ -61,7 +61,7 @@ pub use self::tables::{
     TidbRuleKind, TimeSeries, TopColumnsOfCluster, TopMultimaps, TorExitNode, TrafficFilter,
     TriageExclusion, TriageExclusionReason, TriagePolicy, TriagePolicyInput, TriagePolicyUpdate,
     TriageResponse, TriageResponseUpdate, TrustedDomain, TrustedUserAgent, UniqueKey, Unstructured,
-    UnstructuredClusteringAlgorithm, ValueKind,
+    UnstructuredClusteringAlgorithm, UserAgent, ValueKind,
 };
 pub use self::top_n::*;
 #[allow(deprecated)]
@@ -370,6 +370,12 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn traffic_filter_map(&self) -> Table<'_, TrafficFilter> {
         self.states.traffic_filters()
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn hosts_map(&self) -> Table<'_, Host> {
+        self.states.hosts()
     }
 
     /// Returns the tag set for workflow.

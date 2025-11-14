@@ -14,6 +14,7 @@ mod customer;
 mod data_source;
 mod external_service;
 mod filter;
+mod hosts;
 mod model;
 mod model_indicator;
 mod network;
@@ -51,6 +52,7 @@ pub use self::customer::{Customer, Network as CustomerNetwork, Update as Custome
 pub use self::data_source::{DataSource, DataType, Update as DataSourceUpdate};
 pub use self::external_service::{ExternalService, ExternalServiceKind};
 pub use self::filter::{Filter, PeriodForSearch, Value as FilterValue};
+pub use self::hosts::{Host, UserAgent};
 pub use self::model::Model;
 pub use self::model_indicator::ModelIndicator;
 pub use self::network::{Network, Update as NetworkUpdate};
@@ -107,6 +109,7 @@ pub(super) const CSV_COLUMN_EXTRAS: &str = "csv column extras";
 pub(super) const CUSTOMERS: &str = "customers";
 pub(super) const DATA_SOURCES: &str = "data sources";
 pub(super) const FILTERS: &str = "filters";
+pub(super) const HOSTS: &str = "hosts";
 pub(super) const MODELS: &str = "models";
 pub(super) const MODEL_INDICATORS: &str = "model indicators";
 const META: &str = "meta";
@@ -128,7 +131,7 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 35] = [
+const MAP_NAMES: [&str; 36] = [
     ACCESS_TOKENS,
     ACCOUNTS,
     ACCOUNT_POLICY,
@@ -144,6 +147,7 @@ const MAP_NAMES: [&str; 35] = [
     CUSTOMERS,
     DATA_SOURCES,
     FILTERS,
+    HOSTS,
     MODELS,
     MODEL_INDICATORS,
     META,
@@ -394,6 +398,12 @@ impl StateDb {
     pub(crate) fn configs(&self) -> Table<'_, String> {
         let inner = self.inner.as_ref().expect("database must be open");
         Table::<String>::open(inner).expect("{CONFIGS} table must be present")
+    }
+
+    #[must_use]
+    pub(crate) fn hosts(&self) -> Table<'_, Host> {
+        let inner = self.inner.as_ref().expect("database must be open");
+        Table::<Host>::open(inner).expect("{HOSTS} table must be present")
     }
 
     #[must_use]
