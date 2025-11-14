@@ -104,7 +104,7 @@ pub trait MigrateFrom<OldT> {
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.4,<0.42.0-alpha.5";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.5,<0.42.0-alpha.6";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
@@ -199,8 +199,8 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
     let migration: Vec<Migration> = vec![(
-        VersionReq::parse(">=0.41.0,<0.42.0-alpha.4")?,
-        Version::parse("0.42.0-alpha.4")?,
+        VersionReq::parse(">=0.41.0,<0.42.0-alpha.5")?,
+        Version::parse("0.42.0-alpha.5")?,
         migrate_0_41_to_0_42,
     )];
 
@@ -946,7 +946,7 @@ mod tests {
         time += Duration::minutes(1);
         let mut tor_conn = HttpEventFieldsV0_41 {
             sensor: "test-sensor".to_string(),
-            end_time: DateTime::UNIX_EPOCH,
+            end_time: 0,
             src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
             src_port: 8080,
             dst_addr: "10.0.0.1".parse::<IpAddr>().unwrap(),
@@ -1042,7 +1042,9 @@ mod tests {
         time += Duration::minutes(1);
         let mut dns_covert = DnsEventFieldsV0_41 {
             sensor: "test-sensor".to_string(),
-            end_time: time + Duration::seconds(1),
+            end_time: (time + Duration::seconds(1))
+                .timestamp_nanos_opt()
+                .unwrap_or_default(),
             src_addr: "192.168.1.7".parse::<IpAddr>().unwrap(),
             src_port: 54321,
             dst_addr: "8.8.4.4".parse::<IpAddr>().unwrap(),

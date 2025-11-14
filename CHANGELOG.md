@@ -28,19 +28,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   `reply_code`, `reply_msg`, `data_passive`, `data_orig_addr`, `data_resp_addr`,
   `data_resp_port`, `file`, `file_size`, `file_id`).
 - Added `start_time` field to all detection event structures to track when an
-  event began. The field is stored as an `i64` timestamp (nanoseconds since
-  Unix epoch) internally. This includes both Fields structs (e.g.,
-  `DnsEventFields`, `BlocklistConnFields`) and main event structs (e.g.,
-  `DnsCovertChannel`, `HttpThreat`). Event types that already had `start_time`
+  event began. This includes both Fields structs (e.g., `DnsEventFields`,
+  `BlocklistConnFields`) and main event structs (e.g., `DnsCovertChannel`,
+  `HttpThreat`, `BlocklistBootp`). Event types that already had `start_time`
   (`RdpBruteForce`, `LdapBruteForce`, `FtpBruteForce`, `RepeatedHttpSessions`,
   `PortScan`, `MultiHostPortScan`, `ExternalDdos`) are unchanged.
 - Timestamp fields (`start_time` and `end_time`) in event outputs are now
   formatted using RFC3339 format (e.g., "1970-01-01T00:00:00+00:00") instead of
-  raw nanosecond integers or string representations. This affects both
-  `syslog_rfc5424()` method output and `Display` trait implementations for all
-  detection events. For `DateTime<Utc>` fields, the formatting uses
-  `.to_rfc3339()` directly. For `i64` timestamp fields, the formatting uses
-  `DateTime::from_timestamp_nanos(value).to_rfc3339()`.
+  raw nanosecond integers. This affects both `syslog_rfc5424()` method output
+  and `Display` trait implementations for all detection events. The formatting
+  uses `.to_rfc3339()` on `DateTime<Utc>` values.
 - New `MigrateFrom<OldT>` trait for migrations that require additional context
   like `start_time`. Events with newly added `start_time` fields use this trait
   instead of the `From` trait for migration from v0.41 to v0.42.
@@ -61,6 +58,19 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   small epsilon (1e-6). Existing stored filters are automatically migrated
   during upgrade (`confidence = x` becomes `confidence_min = x`,
   `confidence_max = None`).
+- **BREAKING**: Enhanced all detection event field structures with session
+  information and unified time handling. All detection event field structures
+  (e.g., `DnsEventFields`, `HttpThreatFields`, `BlocklistDnsFields`, etc.) now
+  include additional session tracking fields: `duration` (i64), `orig_pkts`
+  (u64), `resp_pkts` (u64), `orig_l2_bytes` (u64), and `resp_l2_bytes` (u64).
+  Field structures (V0_42) use i64 nanosecond timestamps for `start_time`, while
+  main event structures use `DateTime<Utc>` with serde serialization. The
+  `end_time` field has been removed from single-raw-based detection events
+  (blocklist events, DNS events, Tor events, etc.) but is retained in multi-raw-
+  based events (PortScan, MultiHostPortScan, ExternalDdos, brute force events,
+  and RepeatedHttpSessions) that aggregate multiple network flows. These changes
+  affect the serialization format. Automatic migration from v0.41 to v0.42
+  format is provided.
 - Modified FTP detection event structures to store all commands and responses
   from an FTP session instead of just the last command. The `FtpEventFields`,
   `FtpPlainText`, and `BlocklistFtp` structures now use a `commands:
