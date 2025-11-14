@@ -9,6 +9,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added `BlocklistMalformedDns` event type for detecting blocklist-matched
+  malformed DNS traffic. This includes the `BlocklistMalformedDnsFields` struct
+  with fields for DNS-specific attributes such as `trans_id`, `flags`,
+  `question_count`, `answer_count`, `authority_count`, `additional_count`,
+  `query_count`, `resp_count`, `query_bytes`, `resp_bytes`, `query_body`, and
+  `resp_body`, along with network flow fields like `orig_pkts`, `resp_pkts`,
+  `orig_l2_bytes`, `resp_l2_bytes`, and `duration`.
 - Added `BlocklistRadius` event type for detecting blocklist-matched RADIUS
   traffic. This includes the `BlocklistRadiusFields` struct with fields for
   RADIUS-specific attributes such as `id`, `code`, `resp_code`, `auth`,

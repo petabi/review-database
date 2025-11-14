@@ -10,6 +10,7 @@ mod http;
 mod kerberos;
 mod ldap;
 mod log;
+mod malformed_dns;
 mod mqtt;
 mod network;
 mod nfs;
@@ -65,6 +66,7 @@ pub use self::{
     kerberos::{BlocklistKerberos, BlocklistKerberosFields},
     ldap::{BlocklistLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
     log::ExtraThreat,
+    malformed_dns::{BlocklistMalformedDns, BlocklistMalformedDnsFields},
     mqtt::{BlocklistMqtt, BlocklistMqttFields},
     network::NetworkThreat,
     nfs::{BlocklistNfs, BlocklistNfsFields},
@@ -406,6 +408,13 @@ impl fmt::Display for Event {
                         event.time.to_rfc3339(),
                     )
                 }
+                RecordType::MalformedDns(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
                 RecordType::Mqtt(event) => {
                     write!(
                         f,
@@ -517,6 +526,7 @@ pub enum RecordType {
     Http(BlocklistHttp),
     Kerberos(BlocklistKerberos),
     Ldap(BlocklistLdap),
+    MalformedDns(BlocklistMalformedDns),
     Mqtt(BlocklistMqtt),
     Nfs(BlocklistNfs),
     Ntlm(BlocklistNtlm),
@@ -570,6 +580,9 @@ impl Event {
                 RecordType::Http(http_event) => http_event.matches(locator, filter),
                 RecordType::Kerberos(kerberos_event) => kerberos_event.matches(locator, filter),
                 RecordType::Ldap(ldap_event) => ldap_event.matches(locator, filter),
+                RecordType::MalformedDns(malformed_dns_event) => {
+                    malformed_dns_event.matches(locator, filter)
+                }
                 RecordType::Mqtt(mqtt_event) => mqtt_event.matches(locator, filter),
                 RecordType::Nfs(nfs_event) => nfs_event.matches(locator, filter),
                 RecordType::Ntlm(ntlm_event) => ntlm_event.matches(locator, filter),
@@ -719,6 +732,14 @@ impl Event {
                 RecordType::Ldap(ldap_event) => {
                     if ldap_event.matches(locator, filter)?.0 {
                         addr_pair = (Some(ldap_event.src_addr), Some(ldap_event.dst_addr));
+                    }
+                }
+                RecordType::MalformedDns(malformed_dns_event) => {
+                    if malformed_dns_event.matches(locator, filter)?.0 {
+                        addr_pair = (
+                            Some(malformed_dns_event.orig_addr),
+                            Some(malformed_dns_event.resp_addr),
+                        );
                     }
                 }
                 RecordType::Mqtt(mqtt_event) => {
@@ -921,6 +942,11 @@ impl Event {
                         kind = Some(BLOCKLIST);
                     }
                 }
+                RecordType::MalformedDns(malformed_dns_event) => {
+                    if malformed_dns_event.matches(locator, filter)?.0 {
+                        kind = Some(BLOCKLIST);
+                    }
+                }
                 RecordType::Mqtt(mqtt_event) => {
                     if mqtt_event.matches(locator, filter)?.0 {
                         kind = Some(BLOCKLIST);
@@ -1028,6 +1054,7 @@ impl Event {
                 RecordType::Http(e) => (EventKind::BlocklistHttp, e.category()),
                 RecordType::Kerberos(e) => (EventKind::BlocklistKerberos, e.category()),
                 RecordType::Ldap(e) => (EventKind::BlocklistLdap, e.category()),
+                RecordType::MalformedDns(e) => (EventKind::BlocklistMalformedDns, e.category()),
                 RecordType::Mqtt(e) => (EventKind::BlocklistMqtt, e.category()),
                 RecordType::Nfs(e) => (EventKind::BlocklistNfs, e.category()),
                 RecordType::Ntlm(e) => (EventKind::BlocklistNtlm, e.category()),
@@ -1242,6 +1269,11 @@ impl Event {
                 RecordType::Ldap(ldap_event) => {
                     if ldap_event.matches(locator, filter)?.0 {
                         category = ldap_event.category();
+                    }
+                }
+                RecordType::MalformedDns(malformed_dns_event) => {
+                    if malformed_dns_event.matches(locator, filter)?.0 {
+                        category = malformed_dns_event.category();
                     }
                 }
                 RecordType::Mqtt(mqtt_event) => {
@@ -1606,6 +1638,11 @@ impl Event {
                         level = Some(ldap_event.level());
                     }
                 }
+                RecordType::MalformedDns(malformed_dns_event) => {
+                    if malformed_dns_event.matches(locator, filter)?.0 {
+                        level = Some(malformed_dns_event.level());
+                    }
+                }
                 RecordType::Mqtt(mqtt_event) => {
                     if mqtt_event.matches(locator, filter)?.0 {
                         level = Some(mqtt_event.level());
@@ -1793,6 +1830,9 @@ impl Event {
                 RecordType::Ldap(ldap_event) => {
                     ldap_event.triage_scores = Some(triage_scores);
                 }
+                RecordType::MalformedDns(malformed_dns_event) => {
+                    malformed_dns_event.triage_scores = Some(triage_scores);
+                }
                 RecordType::Mqtt(mqtt_event) => {
                     mqtt_event.triage_scores = Some(triage_scores);
                 }
@@ -1898,6 +1938,7 @@ pub enum EventKind {
     BlocklistDhcp,
     TorConnectionConn,
     BlocklistRadius,
+    BlocklistMalformedDns,
 }
 
 impl EventKind {
@@ -1936,6 +1977,7 @@ impl EventKind {
             Self::BlocklistHttp => &[EventCategory::InitialAccess],
             Self::BlocklistKerberos => &[EventCategory::InitialAccess],
             Self::BlocklistLdap => &[EventCategory::InitialAccess],
+            Self::BlocklistMalformedDns => &[EventCategory::InitialAccess],
             Self::BlocklistMqtt => &[EventCategory::InitialAccess],
             Self::BlocklistNfs => &[EventCategory::InitialAccess],
             Self::BlocklistNtlm => &[EventCategory::InitialAccess],
@@ -2123,6 +2165,11 @@ impl EventFilter {
             );
             moderate_kinds_by(
                 kinds,
+                &["block", "list", "blocklist", "malformed", "dns"],
+                "blocklist malformed dns",
+            );
+            moderate_kinds_by(
+                kinds,
                 &["block", "list", "blocklist", "mqtt"],
                 "blocklist mqtt",
             );
@@ -2273,6 +2320,10 @@ impl EventMessage {
             }
             EventKind::BlocklistLdap => bincode::deserialize::<LdapEventFields>(&self.fields)
                 .map(|fields| fields.syslog_rfc5424()),
+            EventKind::BlocklistMalformedDns => {
+                bincode::deserialize::<BlocklistMalformedDnsFields>(&self.fields)
+                    .map(|fields| fields.syslog_rfc5424())
+            }
             EventKind::BlocklistMqtt => bincode::deserialize::<BlocklistMqttFields>(&self.fields)
                 .map(|fields| fields.syslog_rfc5424()),
             EventKind::BlocklistNfs => bincode::deserialize::<BlocklistNfsFields>(&self.fields)
@@ -2555,6 +2606,18 @@ impl Iterator for EventIterator<'_> {
                 Some(Ok((
                     key,
                     Event::Blocklist(RecordType::Ldap(BlocklistLdap::new(time, fields))),
+                )))
+            }
+            EventKind::BlocklistMalformedDns => {
+                let Ok(fields) = bincode::deserialize::<BlocklistMalformedDnsFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::Blocklist(RecordType::MalformedDns(BlocklistMalformedDns::new(
+                        time, fields,
+                    ))),
                 )))
             }
             EventKind::BlocklistMqtt => {
@@ -2878,19 +2941,19 @@ mod tests {
             BlocklistBootp, BlocklistBootpFields, BlocklistConn, BlocklistConnFields,
             BlocklistDceRpc, BlocklistDceRpcFields, BlocklistDhcp, BlocklistDhcpFields,
             BlocklistDns, BlocklistDnsFields, BlocklistFtp, BlocklistHttp, BlocklistHttpFields,
-            BlocklistKerberos, BlocklistKerberosFields, BlocklistLdap, BlocklistMqtt,
-            BlocklistMqttFields, BlocklistNfs, BlocklistNfsFields, BlocklistNtlm,
-            BlocklistNtlmFields, BlocklistRadius, BlocklistRadiusFields, BlocklistRdp,
-            BlocklistRdpFields, BlocklistSmb, BlocklistSmbFields, BlocklistSmtp,
-            BlocklistSmtpFields, BlocklistSsh, BlocklistSshFields, BlocklistTls,
-            BlocklistTlsFields, CryptocurrencyMiningPool, CryptocurrencyMiningPoolFields,
-            DgaFields, DnsCovertChannel, DnsEventFields, DomainGenerationAlgorithm, Event,
-            EventFilter, EventKind, EventMessage, ExternalDdos, ExternalDdosFields, ExtraThreat,
-            FtpBruteForce, FtpBruteForceFields, FtpEventFields, FtpPlainText, HttpEventFields,
-            HttpThreat, HttpThreatFields, LOCKY_RANSOMWARE, LdapBruteForce, LdapBruteForceFields,
-            LdapEventFields, LdapPlainText, LockyRansomware, MultiHostPortScan,
-            MultiHostPortScanFields, NetworkThreat, NonBrowser, PortScan, PortScanFields,
-            RdpBruteForce, RdpBruteForceFields, RecordType, RepeatedHttpSessions,
+            BlocklistKerberos, BlocklistKerberosFields, BlocklistLdap, BlocklistMalformedDns,
+            BlocklistMalformedDnsFields, BlocklistMqtt, BlocklistMqttFields, BlocklistNfs,
+            BlocklistNfsFields, BlocklistNtlm, BlocklistNtlmFields, BlocklistRadius,
+            BlocklistRadiusFields, BlocklistRdp, BlocklistRdpFields, BlocklistSmb,
+            BlocklistSmbFields, BlocklistSmtp, BlocklistSmtpFields, BlocklistSsh,
+            BlocklistSshFields, BlocklistTls, BlocklistTlsFields, CryptocurrencyMiningPool,
+            CryptocurrencyMiningPoolFields, DgaFields, DnsCovertChannel, DnsEventFields,
+            DomainGenerationAlgorithm, Event, EventFilter, EventKind, EventMessage, ExternalDdos,
+            ExternalDdosFields, ExtraThreat, FtpBruteForce, FtpBruteForceFields, FtpEventFields,
+            FtpPlainText, HttpEventFields, HttpThreat, HttpThreatFields, LOCKY_RANSOMWARE,
+            LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText, LockyRansomware,
+            MultiHostPortScan, MultiHostPortScanFields, NetworkThreat, NonBrowser, PortScan,
+            PortScanFields, RdpBruteForce, RdpBruteForceFields, RecordType, RepeatedHttpSessions,
             RepeatedHttpSessionsFields, SuspiciousTlsTraffic, TorConnection, TriageScore,
             WindowsThreat,
         },
@@ -5188,6 +5251,136 @@ mod tests {
         assert_eq!(
             &blocklist_radius,
             r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistRadius" category="InitialAccess" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="1812" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:00.000000100+00:00" duration="0" orig_pkts="0" resp_pkts="0" orig_l2_bytes="0" resp_l2_bytes="0" id="1" code="1" resp_code="2" auth="auth_string" resp_auth="resp_auth_string" user_name="user1" user_passwd="password" chap_passwd="chap_pass" nas_ip="127.0.0.3" nas_port="5060" state="state" nas_id="nas_identifier" nas_port_type="15" message="RADIUS message" triage_scores="""#
+        );
+    }
+
+    fn blocklist_malformed_dns_fields() -> BlocklistMalformedDnsFields {
+        BlocklistMalformedDnsFields {
+            sensor: "collector1".to_string(),
+            orig_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            orig_port: 10000,
+            resp_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
+            resp_port: 53,
+            proto: 17,
+            start_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap(),
+            end_time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 1).unwrap(),
+            duration: 1_000_000_000,
+            orig_pkts: 10,
+            resp_pkts: 5,
+            orig_l2_bytes: 500,
+            resp_l2_bytes: 300,
+            trans_id: 1234,
+            flags: 0x8180,
+            question_count: 1,
+            answer_count: 1,
+            authority_count: 0,
+            additional_count: 0,
+            query_count: 1,
+            resp_count: 1,
+            query_bytes: 50,
+            resp_bytes: 100,
+            query_body: vec![b"example.com".to_vec()],
+            resp_body: vec![b"192.0.2.1".to_vec()],
+            confidence: 0.95,
+            category: Some(EventCategory::InitialAccess),
+        }
+    }
+
+    #[tokio::test]
+    async fn event_blocklist_malformed_dns() {
+        use super::{BLOCKLIST, MEDIUM};
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let fields = blocklist_malformed_dns_fields();
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlocklistMalformedDns,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+        let store = Arc::new(Store::new(db_dir.path(), backup_dir.path()).unwrap());
+        let db = store.events();
+        db.put(&message).unwrap();
+        let mut iter = db.iter_forward();
+        let e = iter.next();
+        assert!(e.is_some());
+        let (_key, event) = e.unwrap().unwrap();
+        let filter = EventFilter {
+            customers: None,
+            endpoints: None,
+            directions: None,
+            source: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+            destination: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))),
+            countries: None,
+            categories: None,
+            levels: Some(vec![MEDIUM]),
+            kinds: Some(vec!["blocklist malformed dns".to_string()]),
+            learning_methods: None,
+            sensors: Some(vec!["collector1".to_string()]),
+            confidence_min: Some(0.5),
+            confidence_max: None,
+            triage_policies: None,
+        };
+        assert_eq!(
+            event.address_pair(None, &filter).unwrap(),
+            (
+                Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+                Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)))
+            )
+        );
+        assert_eq!(event.kind(None, &filter).unwrap(), Some(BLOCKLIST));
+        let mut counter = HashMap::new();
+        event.count_level(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.len(), 1);
+
+        let mut counter = HashMap::new();
+        event.count_kind(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(BLOCKLIST), Some(&1));
+
+        let mut counter = HashMap::new();
+        event.count_category(&mut counter, None, &filter).unwrap();
+        assert_eq!(counter.get(&EventCategory::InitialAccess), Some(&1));
+
+        let mut counter = HashMap::new();
+        event
+            .count_ip_address_pair(&mut counter, None, &filter)
+            .unwrap();
+        assert_eq!(
+            counter.get(&(
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2))
+            )),
+            Some(&1)
+        );
+    }
+
+    #[tokio::test]
+    async fn syslog_for_blocklist_malformed_dns() {
+        let fields = blocklist_malformed_dns_fields();
+
+        let message = EventMessage {
+            time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
+            kind: EventKind::BlocklistMalformedDns,
+            fields: bincode::serialize(&fields).expect("serializable"),
+        };
+
+        let message = message.syslog_rfc5424();
+        assert!(message.is_ok());
+        let (_, _, syslog_message) = message.unwrap();
+        assert_eq!(
+            &syslog_message,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMalformedDns" category="InitialAccess" sensor="collector1" orig_addr="127.0.0.1" orig_port="10000" resp_addr="127.0.0.2" resp_port="53" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:01+00:00" duration="1000000000" orig_pkts="10" resp_pkts="5" orig_l2_bytes="500" resp_l2_bytes="300" trans_id="1234" flags="33152" question_count="1" answer_count="1" authority_count="0" additional_count="0" query_count="1" resp_count="1" query_bytes="50" resp_bytes="100" query_body="example.com" resp_body="192.0.2.1" confidence="0.95""#
+        );
+
+        let blocklist_malformed_dns = Event::Blocklist(RecordType::MalformedDns(
+            BlocklistMalformedDns::new(Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(), fields),
+        ))
+        .to_string();
+
+        assert_eq!(
+            &blocklist_malformed_dns,
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="BlocklistMalformedDns" category="InitialAccess" sensor="collector1" orig_addr="127.0.0.1" orig_port="10000" resp_addr="127.0.0.2" resp_port="53" proto="17" start_time="1970-01-01T00:00:00+00:00" end_time="1970-01-01T00:00:01+00:00" duration="1000000000" orig_pkts="10" resp_pkts="5" orig_l2_bytes="500" resp_l2_bytes="300" trans_id="1234" flags="33152" question_count="1" answer_count="1" authority_count="0" additional_count="0" query_count="1" resp_count="1" query_bytes="50" resp_bytes="100" query_body="example.com" resp_body="192.0.2.1" triage_scores="""#
         );
     }
 
