@@ -250,7 +250,7 @@ fn migrate_0_42_filter(store: &super::Store) -> Result<()> {
 
     let map = store.filter_map();
     let raw = map.raw();
-    let iter = raw.db.iterator(rocksdb::IteratorMode::Start);
+    let iter = raw.db.iterator_cf(raw.cf, rocksdb::IteratorMode::Start);
     for item in iter {
         let (key, value) = item.context("Failed to read filter from database")?;
         let old_filter: FilterValueV0_41 = bincode::DefaultOptions::new()
@@ -1164,6 +1164,108 @@ mod tests {
             panic!("expected LockyRansomware event");
         };
         assert_eq!(event.category, Some(EventCategoryV0_42::Impact));
+    }
+
+    #[test]
+    fn migrate_0_42_filter_with_column_family() {
+        use bincode::Options;
+
+        use crate::migration::migration_structures::FilterValueV0_41;
+        use crate::{FilterValue, PeriodForSearch};
+
+        let schema = TestSchema::new();
+        let filter_map = schema.store.filter_map();
+
+        // Create an old filter with the V0_41 structure
+        let old_filter = FilterValueV0_41 {
+            directions: None,
+            keywords: Some(vec!["test".to_string()]),
+            network_tags: None,
+            customers: None,
+            endpoints: None,
+            sensors: Some(vec!["sensor1".to_string()]),
+            os: None,
+            devices: None,
+            hostnames: None,
+            user_ids: None,
+            user_names: None,
+            user_departments: None,
+            countries: None,
+            categories: None,
+            levels: None,
+            kinds: Some(vec!["DnsCovertChannel".to_string()]),
+            learning_methods: None,
+            confidence: Some(0.5),
+            period: PeriodForSearch::Recent("1d".to_string()),
+        };
+
+        // Serialize and store it using the old format
+        let key = b"test_user\x00test_filter";
+        let old_value = bincode::DefaultOptions::new()
+            .serialize(&old_filter)
+            .unwrap();
+        filter_map.raw().put(key, &old_value).unwrap();
+
+        // Also add another filter to ensure we iterate correctly
+        let old_filter2 = FilterValueV0_41 {
+            directions: None,
+            keywords: Some(vec!["another".to_string()]),
+            network_tags: None,
+            customers: None,
+            endpoints: None,
+            sensors: Some(vec!["sensor2".to_string()]),
+            os: None,
+            devices: None,
+            hostnames: None,
+            user_ids: None,
+            user_names: None,
+            user_departments: None,
+            countries: None,
+            categories: None,
+            levels: None,
+            kinds: None,
+            learning_methods: None,
+            confidence: Some(0.8),
+            period: PeriodForSearch::Recent("7d".to_string()),
+        };
+
+        let key2 = b"test_user\x00another_filter";
+        let old_value2 = bincode::DefaultOptions::new()
+            .serialize(&old_filter2)
+            .unwrap();
+        filter_map.raw().put(key2, &old_value2).unwrap();
+
+        // Run the migration
+        super::migrate_0_42_filter(&schema.store).unwrap();
+
+        // Verify the migration was successful
+        let raw = filter_map.raw();
+        let iter = raw.db.iterator_cf(raw.cf, rocksdb::IteratorMode::Start);
+        let mut count = 0;
+
+        for item in iter {
+            let (key, value) = item.unwrap();
+            let new_filter: FilterValue = bincode::DefaultOptions::new()
+                .deserialize(value.as_ref())
+                .unwrap();
+
+            count += 1;
+
+            if &key[..] == b"test_user\x00test_filter" {
+                // Verify the confidence field was migrated to confidence_min
+                assert_eq!(new_filter.confidence_min, Some(0.5));
+                assert_eq!(new_filter.confidence_max, None);
+                assert_eq!(new_filter.keywords, Some(vec!["test".to_string()]));
+                assert_eq!(new_filter.kinds, Some(vec!["DnsCovertChannel".to_string()]));
+            } else if &key[..] == b"test_user\x00another_filter" {
+                assert_eq!(new_filter.confidence_min, Some(0.8));
+                assert_eq!(new_filter.confidence_max, None);
+                assert_eq!(new_filter.keywords, Some(vec!["another".to_string()]));
+            }
+        }
+
+        // Ensure we migrated both filters
+        assert_eq!(count, 2);
     }
 
     #[test]

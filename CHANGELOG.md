@@ -114,6 +114,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed `migrate_0_42_filter` migration failure where the function incorrectly
+  iterated over all database data instead of only the filters column family,
+  causing deserialization errors when encountering non-filter data types.
 - `BackupInfo.timestamp` now correctly interprets `BackupEngineInfo.timestamp`
   as seconds instead of nanoseconds, fixing incorrect backup timestamps that
   appeared as dates in 1970.
