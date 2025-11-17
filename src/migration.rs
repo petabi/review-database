@@ -1241,15 +1241,12 @@ mod tests {
         // Verify the migration was successful
         let raw = filter_map.raw();
         let iter = raw.db.iterator_cf(raw.cf, rocksdb::IteratorMode::Start);
-        let mut count = 0;
 
         for item in iter {
             let (key, value) = item.unwrap();
             let new_filter: FilterValue = bincode::DefaultOptions::new()
                 .deserialize(value.as_ref())
                 .unwrap();
-
-            count += 1;
 
             if &key[..] == b"test_user\x00test_filter" {
                 // Verify the confidence field was migrated to confidence_min
@@ -1265,6 +1262,10 @@ mod tests {
         }
 
         // Ensure we migrated both filters
+        let count = raw
+            .db
+            .iterator_cf(raw.cf, rocksdb::IteratorMode::Start)
+            .count();
         assert_eq!(count, 2);
     }
 
