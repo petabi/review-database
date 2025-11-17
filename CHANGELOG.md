@@ -86,6 +86,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 
 - Legacy PostgreSQL-based column statistics tables and APIs have been removed.
+- Removed `triage_scores` field from syslog output for `NetworkThreat`,
+  `WindowsThreat`, and `ExtraThreat` events. The field was always empty since
+  triage scores are generated after REview processes the detection event.
 
 ### Fixed
 
