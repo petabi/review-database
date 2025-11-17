@@ -1200,7 +1200,7 @@ mod tests {
         };
 
         // Serialize and store it using the old format
-        let key = b"test_user\x00test_filter";
+        let key = b"test_user3\x00test_filter3";
         let old_value = bincode::DefaultOptions::new()
             .serialize(&old_filter)
             .unwrap();
@@ -1229,7 +1229,7 @@ mod tests {
             period: PeriodForSearch::Recent("7d".to_string()),
         };
 
-        let key2 = b"test_user\x00another_filter";
+        let key2 = b"test_user2\x00another_filter2";
         let old_value2 = bincode::DefaultOptions::new()
             .serialize(&old_filter2)
             .unwrap();
@@ -1240,33 +1240,28 @@ mod tests {
 
         // Verify the migration was successful
         let raw = filter_map.raw();
-        let iter = raw.db.iterator_cf(raw.cf, rocksdb::IteratorMode::Start);
+        let mut iter = raw.db.iterator_cf(raw.cf, rocksdb::IteratorMode::Start);
 
-        for item in iter {
-            let (key, value) = item.unwrap();
-            let new_filter: FilterValue = bincode::DefaultOptions::new()
-                .deserialize(value.as_ref())
-                .unwrap();
+        let item1 = iter.next().unwrap();
+        let (key, value) = item1.unwrap();
+        let new_filter: FilterValue = bincode::DefaultOptions::new()
+            .deserialize(value.as_ref())
+            .unwrap();
+        assert_eq!(key.as_ref(), b"test_user2\x00another_filter2");
+        assert_eq!(new_filter.confidence_min, Some(0.8));
+        assert_eq!(new_filter.confidence_max, None);
+        assert_eq!(new_filter.keywords, Some(vec!["another".to_string()]));
 
-            if &key[..] == b"test_user\x00test_filter" {
-                // Verify the confidence field was migrated to confidence_min
-                assert_eq!(new_filter.confidence_min, Some(0.5));
-                assert_eq!(new_filter.confidence_max, None);
-                assert_eq!(new_filter.keywords, Some(vec!["test".to_string()]));
-                assert_eq!(new_filter.kinds, Some(vec!["DnsCovertChannel".to_string()]));
-            } else if &key[..] == b"test_user\x00another_filter" {
-                assert_eq!(new_filter.confidence_min, Some(0.8));
-                assert_eq!(new_filter.confidence_max, None);
-                assert_eq!(new_filter.keywords, Some(vec!["another".to_string()]));
-            }
-        }
-
-        // Ensure we migrated both filters
-        let count = raw
-            .db
-            .iterator_cf(raw.cf, rocksdb::IteratorMode::Start)
-            .count();
-        assert_eq!(count, 2);
+        let item2 = iter.next().unwrap();
+        let (key, value) = item2.unwrap();
+        let new_filter: FilterValue = bincode::DefaultOptions::new()
+            .deserialize(value.as_ref())
+            .unwrap();
+        assert_eq!(key.as_ref(), b"test_user3\x00test_filter3");
+        assert_eq!(new_filter.confidence_min, Some(0.5));
+        assert_eq!(new_filter.confidence_max, None);
+        assert_eq!(new_filter.keywords, Some(vec!["test".to_string()]));
+        assert_eq!(new_filter.kinds, Some(vec!["DnsCovertChannel".to_string()]));
     }
 
     #[test]
