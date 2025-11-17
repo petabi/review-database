@@ -23,6 +23,7 @@ mod ssh;
 mod sysmon;
 mod tls;
 mod tor;
+mod unusual_destination_pattern;
 
 use std::{
     collections::HashMap,
@@ -79,6 +80,7 @@ pub use self::{
     sysmon::WindowsThreat,
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
     tor::{TorConnection, TorConnectionConn},
+    unusual_destination_pattern::{UnusualDestinationPattern, UnusualDestinationPatternFields},
 };
 pub(crate) use self::{
     bootp::{BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42},
@@ -158,6 +160,7 @@ const NETWORK_THREAT_EVENT: &str = "Network Threat Events";
 const MISC_LOG_THREAT: &str = "Log Threat";
 const LOCKY_RANSOMWARE: &str = "Locky Ransomware";
 const SUSPICIOUS_TLS_TRAFFIC: &str = "Suspicious TLS Traffic";
+const UNUSUAL_DESTINATION_PATTERN: &str = "Unusual Destination Pattern";
 
 pub enum Event {
     /// DNS requests and responses that convey unusual host names.
@@ -478,6 +481,13 @@ impl fmt::Display for Event {
                         event.time.to_rfc3339(),
                     )
                 }
+                RecordType::UnusualDestinationPattern(event) => {
+                    write!(
+                        f,
+                        "time={:?} event_kind={event_kind:?} category={category:?} {event}",
+                        event.time.to_rfc3339(),
+                    )
+                }
             },
             Event::WindowsThreat(event) => {
                 write!(
@@ -538,6 +548,7 @@ pub enum RecordType {
     Tls(BlocklistTls),
     Bootp(BlocklistBootp),
     Dhcp(BlocklistDhcp),
+    UnusualDestinationPattern(UnusualDestinationPattern),
 }
 
 impl Event {
@@ -592,6 +603,7 @@ impl Event {
                 RecordType::Smtp(smtp_event) => smtp_event.matches(locator, filter),
                 RecordType::Ssh(ssh_event) => ssh_event.matches(locator, filter),
                 RecordType::Tls(tls_event) => tls_event.matches(locator, filter),
+                RecordType::UnusualDestinationPattern(event) => event.matches(locator, filter),
             },
             Event::WindowsThreat(event) => event.matches(locator, filter),
             Event::NetworkThreat(event) => event.matches(locator, filter),
@@ -785,6 +797,13 @@ impl Event {
                 RecordType::Tls(tls_event) => {
                     if tls_event.matches(locator, filter)?.0 {
                         addr_pair = (Some(tls_event.src_addr), Some(tls_event.dst_addr));
+                    }
+                }
+                RecordType::UnusualDestinationPattern(event) => {
+                    if event.matches(locator, filter)?.0 {
+                        // UnusualDestinationPattern has multiple destination IPs but no source
+                        // Use first destination IP if available
+                        addr_pair = (None, event.destination_ips.first().copied());
                     }
                 }
             },
@@ -992,6 +1011,11 @@ impl Event {
                         kind = Some(BLOCKLIST);
                     }
                 }
+                RecordType::UnusualDestinationPattern(event) => {
+                    if event.matches(locator, filter)?.0 {
+                        kind = Some(UNUSUAL_DESTINATION_PATTERN);
+                    }
+                }
             },
             Event::WindowsThreat(event) => {
                 if event.matches(locator, filter)?.0 {
@@ -1064,6 +1088,9 @@ impl Event {
                 RecordType::Smtp(e) => (EventKind::BlocklistSmtp, e.category()),
                 RecordType::Ssh(e) => (EventKind::BlocklistSsh, e.category()),
                 RecordType::Tls(e) => (EventKind::BlocklistTls, e.category()),
+                RecordType::UnusualDestinationPattern(e) => {
+                    (EventKind::UnusualDestinationPattern, e.category())
+                }
             },
             Event::WindowsThreat(e) => (EventKind::WindowsThreat, e.category()),
             Event::NetworkThreat(e) => (EventKind::NetworkThreat, e.category()),
@@ -1319,6 +1346,11 @@ impl Event {
                 RecordType::Tls(tls_event) => {
                     if tls_event.matches(locator, filter)?.0 {
                         category = tls_event.category();
+                    }
+                }
+                RecordType::UnusualDestinationPattern(event) => {
+                    if event.matches(locator, filter)?.0 {
+                        category = event.category();
                     }
                 }
             },
@@ -1688,6 +1720,11 @@ impl Event {
                         level = Some(tls_event.level());
                     }
                 }
+                RecordType::UnusualDestinationPattern(event) => {
+                    if event.matches(locator, filter)?.0 {
+                        level = Some(event.level());
+                    }
+                }
             },
             Event::WindowsThreat(event) => {
                 if event.matches(locator, filter)?.0 {
@@ -1860,6 +1897,9 @@ impl Event {
                 RecordType::Tls(tls_event) => {
                     tls_event.triage_scores = Some(triage_scores);
                 }
+                RecordType::UnusualDestinationPattern(event) => {
+                    event.triage_scores = Some(triage_scores);
+                }
             },
             Event::WindowsThreat(event) => {
                 event.triage_scores = Some(triage_scores);
@@ -1939,6 +1979,7 @@ pub enum EventKind {
     TorConnectionConn,
     BlocklistRadius,
     BlocklistMalformedDns,
+    UnusualDestinationPattern,
 }
 
 impl EventKind {
@@ -1993,6 +2034,7 @@ impl EventKind {
             Self::BlocklistBootp => &[EventCategory::InitialAccess],
             Self::BlocklistDhcp => &[EventCategory::InitialAccess],
             Self::BlocklistRadius => &[EventCategory::InitialAccess],
+            Self::UnusualDestinationPattern => &[EventCategory::Reconnaissance],
         }
     }
 }
@@ -2354,6 +2396,10 @@ impl EventMessage {
                 .map(|fields| fields.syslog_rfc5424()),
             EventKind::SuspiciousTlsTraffic => {
                 bincode::deserialize::<BlocklistTlsFields>(&self.fields)
+                    .map(|fields| fields.syslog_rfc5424())
+            }
+            EventKind::UnusualDestinationPattern => {
+                bincode::deserialize::<UnusualDestinationPatternFields>(&self.fields)
                     .map(|fields| fields.syslog_rfc5424())
             }
         };
@@ -2851,6 +2897,19 @@ impl Iterator for EventIterator<'_> {
                 Some(Ok((
                     key,
                     Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, fields)),
+                )))
+            }
+            EventKind::UnusualDestinationPattern => {
+                let Ok(fields) =
+                    bincode::deserialize::<UnusualDestinationPatternFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::Blocklist(RecordType::UnusualDestinationPattern(
+                        UnusualDestinationPattern::new(time, fields),
+                    )),
                 )))
             }
             EventKind::TorConnection => {

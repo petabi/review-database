@@ -9,6 +9,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added `UnusualDestinationPattern` event type for detecting anomalous
+  destination IP patterns. This includes the `UnusualDestinationPatternFields`
+  struct with fields for statistical analysis such as `sensor`, `start_time`,
+  `end_time`, `destination_ips`, `count`, `expected_mean`, `std_deviation`,
+  `z_score`, `confidence`, and `category`.
 - Added `BlocklistMalformedDns` event type for detecting blocklist-matched
   malformed DNS traffic. This includes the `BlocklistMalformedDnsFields` struct
   with fields for DNS-specific attributes such as `trans_id`, `flags`,
