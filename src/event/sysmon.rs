@@ -62,7 +62,7 @@ impl WindowsThreat {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} service={:?} agent_name={:?} agent_id={:?} process_guid={:?} process_id={:?} image=\"{}\" user=\"{}\" content=\"{}\" db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "category={:?} sensor={:?} service={:?} agent_name={:?} agent_id={:?} process_guid={:?} process_id={:?} image=\"{}\" user=\"{}\" content=\"{}\" db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -81,8 +81,7 @@ impl WindowsThreat {
             self.matched_to,
             self.cluster_id.map_or("-".to_string(), |s| s.to_string()),
             self.attack_kind,
-            self.confidence.to_string(),
-            triage_scores_to_string(self.triage_scores.as_ref())
+            self.confidence.to_string()
         )
     }
 }

@@ -58,7 +58,7 @@ impl NetworkThreat {
         let start_time_str = DateTime::from_timestamp_nanos(self.start_time).to_rfc3339();
         let end_time_str = DateTime::from_timestamp_nanos(self.end_time).to_rfc3339();
         format!(
-            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?} triage_scores={:?}",
+            "category={:?} sensor={:?} orig_addr={:?} orig_port={:?} resp_addr={:?} resp_port={:?} proto={:?} service={:?} start_time={:?} end_time={:?} content={:?} db_name={:?} rule_id={:?} matched_to={:?} cluster_id={:?} attack_kind={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
                 || "Unspecified".to_string(),
                 std::string::ToString::to_string
@@ -78,8 +78,7 @@ impl NetworkThreat {
             self.matched_to,
             self.cluster_id.map_or("-".to_string(), |s| s.to_string()),
             self.attack_kind,
-            self.confidence.to_string(),
-            triage_scores_to_string(self.triage_scores.as_ref())
+            self.confidence.to_string()
         )
     }
 }
