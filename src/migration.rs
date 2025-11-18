@@ -1262,6 +1262,9 @@ mod tests {
         assert_eq!(new_filter.confidence_max, None);
         assert_eq!(new_filter.keywords, Some(vec!["test".to_string()]));
         assert_eq!(new_filter.kinds, Some(vec!["DnsCovertChannel".to_string()]));
+
+        // Verify that we migrated exactly 2 filters
+        assert_eq!(iter.count(), 0);
     }
 
     #[test]
