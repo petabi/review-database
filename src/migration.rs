@@ -1264,7 +1264,11 @@ mod tests {
         assert_eq!(new_filter.kinds, Some(vec!["DnsCovertChannel".to_string()]));
 
         // Verify that we migrated exactly 2 filters
-        assert_eq!(iter.count(), 0);
+        let count = raw
+            .db
+            .iterator_cf(raw.cf, rocksdb::IteratorMode::Start)
+            .count();
+        assert_eq!(count, 2);
     }
 
     #[test]
