@@ -6,8 +6,7 @@ use review_database::migrate_data_dir;
 use serde::Deserialize;
 
 #[cfg(feature = "migrate")]
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let config = Config::load_config(parse().as_deref())?;
 
     println!("Starting migration process...");
