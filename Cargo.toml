@@ -33,13 +33,11 @@ structured = "0.16"
 strum = "0.27"
 strum_macros = "0.27"
 thiserror = "2"
-tokio = { version = "1", features = ["fs", "macros", "sync"] }
 toml = "0.8.13"
 tracing = "0.1"
 
 [dev-dependencies]
 tempfile = "3"
-tokio = { version = "1", features = ["fs", "macros", "sync", "rt-multi-thread"] }
 
 [[bin]]
 name = "review-migrate"

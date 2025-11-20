@@ -1,11 +1,10 @@
 //! Database backup utilities.
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use chrono::{DateTime, TimeZone, Utc};
 use rocksdb::backup::BackupEngineInfo;
-use tokio::sync::RwLock;
 
 use crate::Store;
 
@@ -32,9 +31,16 @@ impl From<BackupEngineInfo> for BackupInfo {
 /// # Errors
 ///
 /// Returns an error if backup fails.
-pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u32) -> Result<()> {
+///
+/// # Panics
+///
+/// Panics if the lock is poisoned, which should never happen as the backup
+/// operation does not panic.
+pub fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u32) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    let mut store = store.write().await;
+    let mut store = store
+        .write()
+        .expect("write lock should not be poisoned as backup does not panic");
     store.backup(flush, backups_to_keep)
 }
 
@@ -43,10 +49,17 @@ pub async fn create(store: &Arc<RwLock<Store>>, flush: bool, backups_to_keep: u3
 /// # Errors
 ///
 /// Returns an error if backup list fails to create
-pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
+///
+/// # Panics
+///
+/// Panics if the lock is poisoned, which should never happen as reading backup
+/// info does not panic.
+pub fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
     let backup_list = {
-        let store = store.read().await;
+        let store = store
+            .read()
+            .expect("read lock should not be poisoned as get_backup_info does not panic");
         store.get_backup_info()?
     };
     Ok(backup_list
@@ -60,9 +73,16 @@ pub async fn list(store: &Arc<RwLock<Store>>) -> Result<Vec<BackupInfo>> {
 /// # Errors
 ///
 /// Returns an error if the restore operation fails.
-pub async fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Result<()> {
+///
+/// # Panics
+///
+/// Panics if the lock is poisoned, which should never happen as the restore
+/// operation does not panic.
+pub fn restore(store: &Arc<RwLock<Store>>, backup_id: Option<u32>) -> Result<()> {
     // TODO: This function should be expanded to support PostgreSQL backups as well.
-    let mut store = store.write().await;
+    let mut store = store
+        .write()
+        .expect("write lock should not be poisoned as restore does not panic");
     match &backup_id {
         Some(id) => store.restore_from_backup(*id),
         None => store.restore_from_latest_backup(),
@@ -125,9 +145,9 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn db_backup_list() {
-        use tokio::sync::RwLock;
+    #[test]
+    fn db_backup_list() {
+        use std::sync::RwLock;
 
         use crate::backup::list;
 
@@ -139,7 +159,7 @@ mod tests {
         ));
 
         {
-            let store = store.read().await;
+            let store = store.read().expect("test holds no other locks");
             let db = store.events();
             assert!(db.iter_forward().next().is_none());
         }
@@ -148,7 +168,7 @@ mod tests {
 
         // backing up 1
         {
-            let mut store = store.write().await;
+            let mut store = store.write().expect("test holds no other locks");
             let db = store.events();
             db.put(&msg).unwrap();
             let res = store.backup(true, 3);
@@ -156,7 +176,7 @@ mod tests {
         }
         // backing up 2
         {
-            let mut store = store.write().await;
+            let mut store = store.write().expect("test holds no other locks");
             let db = store.events();
             db.put(&msg).unwrap();
             let res = store.backup(true, 3);
@@ -165,7 +185,7 @@ mod tests {
 
         // backing up 3
         {
-            let mut store = store.write().await;
+            let mut store = store.write().expect("test holds no other locks");
             let db = store.events();
             db.put(&msg).unwrap();
             let res = store.backup(true, 3);
@@ -173,7 +193,7 @@ mod tests {
         }
 
         // get backup list
-        let backup_list = list(&store).await.unwrap();
+        let backup_list = list(&store).unwrap();
         assert_eq!(backup_list.len(), 3);
         assert_eq!(backup_list[0].id, 1);
         assert_eq!(backup_list[1].id, 2);

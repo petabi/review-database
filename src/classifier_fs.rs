@@ -3,8 +3,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use tokio::fs as async_fs;
-
 pub type Result<T> = std::result::Result<T, ClassifierFsError>;
 
 /// Manages classifier file storage in the file system using computed paths.
@@ -70,17 +68,12 @@ impl ClassifierFileManager {
     /// If storage fails due to insufficient disk space, permission denied, I/O
     /// errors during directory creation, file write, or rename, or concurrent
     /// access conflicts (rare with timestamp-based temp files), etc.
-    pub(crate) async fn store_classifier(
-        &self,
-        model_id: u32,
-        name: &str,
-        data: &[u8],
-    ) -> Result<()> {
+    pub(crate) fn store_classifier(&self, model_id: u32, name: &str, data: &[u8]) -> Result<()> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
         // Create parent directories if they don't exist
         if let Some(parent) = file_path.parent() {
-            async_fs::create_dir_all(parent).await.map_err(|err| {
+            fs::create_dir_all(parent).map_err(|err| {
                 ClassifierFsError::ParentDirectoryCreation(err, file_path.clone())
             })?;
         }
@@ -89,14 +82,13 @@ impl ClassifierFileManager {
         let temp_path = file_path.with_extension(timestamp.to_string());
 
         // Write to temporary file first
-        async_fs::write(&temp_path, data)
-            .await
+        fs::write(&temp_path, data)
             .map_err(|err| ClassifierFsError::FileWrite(err, temp_path.clone()))?;
 
         // Rename to final location
-        if let Err(rename_err) = async_fs::rename(&temp_path, &file_path).await {
+        if let Err(rename_err) = fs::rename(&temp_path, &file_path) {
             // Clean up temp file on failure
-            return match async_fs::remove_file(&temp_path).await {
+            return match fs::remove_file(&temp_path) {
                 Ok(()) => Err(ClassifierFsError::FileRename(
                     rename_err, temp_path, file_path,
                 )),
@@ -113,7 +105,7 @@ impl ClassifierFileManager {
     ///
     /// Returns `FileNotFound` if the classifier file does not exist.
     /// If loading fails due to permission denied, I/O errors, corrupted file, etc.
-    pub(crate) async fn load_classifier(&self, model_id: u32, name: &str) -> Result<Vec<u8>> {
+    pub(crate) fn load_classifier(&self, model_id: u32, name: &str) -> Result<Vec<u8>> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
         // Return error if file doesn't exist
@@ -121,9 +113,7 @@ impl ClassifierFileManager {
             return Err(ClassifierFsError::FileNotFound(model_id, name.to_string()));
         }
 
-        async_fs::read(&file_path)
-            .await
-            .map_err(|err| ClassifierFsError::FileRead(err, file_path))
+        fs::read(&file_path).map_err(|err| ClassifierFsError::FileRead(err, file_path))
     }
 
     /// Checks if a classifier file exists without loading it.
@@ -146,13 +136,12 @@ impl ClassifierFileManager {
     /// # Errors
     ///
     /// If deletion fails due to permission denied, I/O errors, etc.
-    pub(crate) async fn delete_classifier(&self, model_id: u32, name: &str) -> Result<()> {
+    pub(crate) fn delete_classifier(&self, model_id: u32, name: &str) -> Result<()> {
         let file_path = self.create_classifier_path(model_id, name)?;
 
         // Only attempt deletion if file exists
         if file_path.exists() {
-            async_fs::remove_file(&file_path)
-                .await
+            fs::remove_file(&file_path)
                 .map_err(|err| ClassifierFsError::FileRemoval(err, file_path))?;
         }
 
@@ -269,8 +258,8 @@ mod tests {
         assert_eq!(path, expected);
     }
 
-    #[tokio::test]
-    async fn test_store_and_load_classifier() {
+    #[test]
+    fn test_store_and_load_classifier() {
         let temp_dir = TempDir::new().unwrap();
         let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
 
@@ -278,21 +267,18 @@ mod tests {
         let model_id = 456;
         let name = "test_model";
 
-        manager
-            .store_classifier(model_id, name, test_data)
-            .await
-            .unwrap();
+        manager.store_classifier(model_id, name, test_data).unwrap();
 
-        let loaded_data = manager.load_classifier(model_id, name).await.unwrap();
+        let loaded_data = manager.load_classifier(model_id, name).unwrap();
         assert_eq!(loaded_data, test_data);
     }
 
-    #[tokio::test]
-    async fn test_load_nonexistent_classifier() {
+    #[test]
+    fn test_load_nonexistent_classifier() {
         let temp_dir = TempDir::new().unwrap();
         let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
 
-        let result = manager.load_classifier(999, "nonexistent").await;
+        let result = manager.load_classifier(999, "nonexistent");
         assert!(matches!(
             result,
             Err(ClassifierFsError::FileNotFound(999, name)) if name == "nonexistent"
@@ -313,8 +299,8 @@ mod tests {
         assert!(manager.classifier_exists(123, "test"));
     }
 
-    #[tokio::test]
-    async fn test_delete_classifier() {
+    #[test]
+    fn test_delete_classifier() {
         let temp_dir = TempDir::new().unwrap();
         let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
 
@@ -322,27 +308,24 @@ mod tests {
         let name = "delete_test";
         let test_data = b"data to delete";
 
-        manager
-            .store_classifier(model_id, name, test_data)
-            .await
-            .unwrap();
+        manager.store_classifier(model_id, name, test_data).unwrap();
         assert!(manager.classifier_exists(model_id, name));
 
-        manager.delete_classifier(model_id, name).await.unwrap();
+        manager.delete_classifier(model_id, name).unwrap();
         assert!(!manager.classifier_exists(model_id, name));
     }
 
-    #[tokio::test]
-    async fn test_delete_nonexistent_classifier() {
+    #[test]
+    fn test_delete_nonexistent_classifier() {
         let temp_dir = TempDir::new().unwrap();
         let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
 
-        let result = manager.delete_classifier(999, "nonexistent").await;
+        let result = manager.delete_classifier(999, "nonexistent");
         assert!(result.is_ok());
     }
 
-    #[tokio::test]
-    async fn test_store_creates_parent_directories() {
+    #[test]
+    fn test_store_creates_parent_directories() {
         let temp_dir = TempDir::new().unwrap();
         let manager = ClassifierFileManager::new(temp_dir.path()).unwrap();
 
@@ -350,15 +333,12 @@ mod tests {
         let name = "nested_test";
         let test_data = b"nested data";
 
-        manager
-            .store_classifier(model_id, name, test_data)
-            .await
-            .unwrap();
+        manager.store_classifier(model_id, name, test_data).unwrap();
 
         let expected_parent = temp_dir.path().join("classifiers").join("model_111");
         assert!(expected_parent.exists());
 
-        let loaded_data = manager.load_classifier(model_id, name).await.unwrap();
+        let loaded_data = manager.load_classifier(model_id, name).unwrap();
         assert_eq!(loaded_data, test_data);
     }
 
@@ -382,8 +362,10 @@ mod tests {
         assert!(validate_name("valid_name_123").is_ok());
     }
 
-    #[tokio::test]
-    async fn test_concurrent_stores() {
+    #[test]
+    fn test_concurrent_stores() {
+        use std::thread;
+
         let temp_dir = TempDir::new().unwrap();
         let manager = Arc::new(ClassifierFileManager::new(temp_dir.path()).unwrap());
 
@@ -391,16 +373,12 @@ mod tests {
             .map(|i| {
                 let manager = Arc::clone(&manager);
                 let data = format!("data_{i}").into_bytes();
-                tokio::spawn(async move {
-                    manager
-                        .store_classifier(1, &format!("test_{i}"), &data)
-                        .await
-                })
+                thread::spawn(move || manager.store_classifier(1, &format!("test_{i}"), &data))
             })
             .collect();
 
         for handle in handles {
-            handle.await.unwrap().unwrap();
+            handle.join().unwrap().unwrap();
         }
 
         for i in 0..10 {

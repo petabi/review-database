@@ -380,8 +380,8 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error if the model already exists or if a database operation fails.
-    pub async fn add_model(&self, model: crate::model::Model) -> Result<i32> {
-        self.upsert_model(model, false).await
+    pub fn add_model(&self, model: crate::model::Model) -> Result<i32> {
+        self.upsert_model(model, false)
     }
 
     /// Updates the model and related statistics with given id.
@@ -389,11 +389,11 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn update_model(&self, model: crate::model::Model) -> Result<i32> {
-        self.upsert_model(model, true).await
+    pub fn update_model(&self, model: crate::model::Model) -> Result<i32> {
+        self.upsert_model(model, true)
     }
 
-    async fn upsert_model(&self, model: crate::model::Model, is_update: bool) -> Result<i32> {
+    fn upsert_model(&self, model: crate::model::Model, is_update: bool) -> Result<i32> {
         let classifier = model.serialized_classifier;
         let batch_info = model.batch_info;
         let scores = model.scores;
@@ -418,8 +418,7 @@ impl Store {
 
         let model_id_u32 = u32::try_from(model_id)?;
         self.classifier_fm
-            .store_classifier(model_id_u32, &name, &classifier)
-            .await?;
+            .store_classifier(model_id_u32, &name, &classifier)?;
 
         let table = self.batch_info_map();
         for batch in batch_info {
@@ -449,11 +448,11 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error if database operation fails or the data is invalid.
-    pub async fn delete_model(&self, name: &str) -> Result<()> {
+    pub fn delete_model(&self, name: &str) -> Result<()> {
         let table = self.model_map();
         let model_id = table.delete_model(name)?;
         self.delete_stats(model_id)?;
-        self.classifier_fm.delete_classifier(model_id, name).await?;
+        self.classifier_fm.delete_classifier(model_id, name)?;
         Ok(())
     }
 
@@ -565,7 +564,7 @@ impl Store {
     /// # Errors
     ///
     /// Returns an error if the model does not exist or if a database operation fails.
-    pub async fn load_model_by_name(&self, name: &str) -> Result<crate::model::Model> {
+    pub fn load_model_by_name(&self, name: &str) -> Result<crate::model::Model> {
         let table = self.model_map();
         let model = table.load_model_by_name(name)?;
 
@@ -576,10 +575,7 @@ impl Store {
             ));
         }
 
-        let classifier = self
-            .classifier_fm
-            .load_classifier(model.id, &model.name)
-            .await?;
+        let classifier = self.classifier_fm.load_classifier(model.id, &model.name)?;
 
         Ok(crate::model::Model {
             id: i32::try_from(model.id)?,

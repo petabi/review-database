@@ -3059,8 +3059,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn event_db_put() {
+    #[test]
+    fn event_db_put() {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
 
@@ -3084,8 +3084,8 @@ mod tests {
         assert!(iter.next().is_none());
     }
 
-    #[tokio::test]
-    async fn event_message() {
+    #[test]
+    fn event_message() {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
 
@@ -3139,8 +3139,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_dga() {
+    #[test]
+    fn syslog_for_dga() {
         let fields = DgaFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3206,10 +3206,11 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn event_db_backup() {
+    #[test]
+    fn event_db_backup() {
+        use std::sync::RwLock;
+
         use rocksdb::backup::{BackupEngine, BackupEngineOptions, RestoreOptions};
-        use tokio::sync::RwLock;
 
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
@@ -3218,7 +3219,7 @@ mod tests {
             Store::new(db_dir.path(), backup_dir.path()).unwrap(),
         ));
         {
-            let store = store.read().await;
+            let store = store.read().expect("test holds no other locks");
             let db = store.events();
             assert!(db.iter_forward().next().is_none());
 
@@ -3236,14 +3237,14 @@ mod tests {
         }
         // backing up
         {
-            let mut store = store.write().await;
+            let mut store = store.write().expect("test holds no other locks");
             let res = store.backup(true, 1);
             assert!(res.is_ok());
         }
 
         // more operations
         {
-            let store = store.read().await;
+            let store = store.read().expect("test holds no other locks");
             let db = store.events();
             let msg = example_message(EventKind::LockyRansomware, EventCategory::Impact);
             db.put(&msg).unwrap();
@@ -3277,7 +3278,7 @@ mod tests {
             Store::new(db_dir.path(), backup_dir.path()).unwrap(),
         ));
         {
-            let store = store.read().await;
+            let store = store.read().expect("test holds no other locks");
             let db = store.events();
             let mut iter = db.iter_forward();
             assert!(iter.next().is_some());
@@ -3288,8 +3289,8 @@ mod tests {
         assert_eq!(info[0].backup_id, 1);
     }
 
-    #[tokio::test]
-    async fn syslog_for_httpthreat() {
+    #[test]
+    fn syslog_for_httpthreat() {
         let fields = HttpThreatFields {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             sensor: "collector1".to_string(),
@@ -3360,8 +3361,8 @@ mod tests {
         assert!(http_threat_display.contains("confidence=\"0.8\""));
     }
 
-    #[tokio::test]
-    async fn syslog_for_nonbrowser() {
+    #[test]
+    fn syslog_for_nonbrowser() {
         let fields = HttpEventFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3426,8 +3427,8 @@ mod tests {
         assert!(non_browser.contains("state=\"\""));
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_http() {
+    #[test]
+    fn syslog_for_blocklist_http() {
         let fields = BlocklistHttpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3493,8 +3494,8 @@ mod tests {
         assert!(blocklist_http.contains("mime_types=\"b1,b2\""));
     }
 
-    #[tokio::test]
-    async fn syslog_for_lockyransomware() {
+    #[test]
+    fn syslog_for_lockyransomware() {
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
@@ -3554,8 +3555,8 @@ mod tests {
         assert!(locky_ransomware.contains("triage_scores=\"\""));
     }
 
-    #[tokio::test]
-    async fn syslog_for_portscan() {
+    #[test]
+    fn syslog_for_portscan() {
         let fields = PortScanFields {
             sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3601,8 +3602,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_multihostportscan() {
+    #[test]
+    fn syslog_for_multihostportscan() {
         let fields = MultiHostPortScanFields {
             sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3651,8 +3652,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_externalddos() {
+    #[test]
+    fn syslog_for_externalddos() {
         let fields = ExternalDdosFields {
             sensor: String::new(),
             src_addrs: vec![
@@ -3733,8 +3734,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_bootp() {
+    #[test]
+    fn syslog_for_blocklist_bootp() {
         let fields = blocklist_bootp_fields();
 
         let message = EventMessage {
@@ -3762,8 +3763,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn event_blocklist_bootp() {
+    #[test]
+    fn event_blocklist_bootp() {
         use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
@@ -3831,8 +3832,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_conn() {
+    #[test]
+    fn syslog_for_blocklist_conn() {
         let fields = BlocklistConnFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3883,8 +3884,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_dcerpc() {
+    #[test]
+    fn syslog_for_blocklist_dcerpc() {
         let fields = BlocklistDceRpcFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -3976,8 +3977,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_dhcp() {
+    #[test]
+    fn syslog_for_blocklist_dhcp() {
         let fields = blocklist_dhcp_fields();
 
         let message = EventMessage {
@@ -4005,8 +4006,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn event_blocklist_dhcp() {
+    #[test]
+    fn event_blocklist_dhcp() {
         use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
@@ -4074,8 +4075,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_dnscovertchannel() {
+    #[test]
+    fn syslog_for_dnscovertchannel() {
         let fields = DnsEventFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4140,8 +4141,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_cryptocurrencyminingpool() {
+    #[test]
+    fn syslog_for_cryptocurrencyminingpool() {
         let fields = CryptocurrencyMiningPoolFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4202,8 +4203,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_dns() {
+    #[test]
+    fn syslog_for_blocklist_dns() {
         let fields = BlocklistDnsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4261,8 +4262,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_ftpbruteforce() {
+    #[test]
+    fn syslog_for_ftpbruteforce() {
         let fields = FtpBruteForceFields {
             sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4311,8 +4312,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_ftpplaintext() {
+    #[test]
+    fn syslog_for_ftpplaintext() {
         use crate::event::ftp::FtpCommand;
 
         let command = FtpCommand {
@@ -4418,8 +4419,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_ftp() {
+    #[test]
+    fn syslog_for_blocklist_ftp() {
         let fields = ftpeventfields();
 
         let message = EventMessage {
@@ -4448,8 +4449,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn event_blocklist_ftp() {
+    #[test]
+    fn event_blocklist_ftp() {
         use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
@@ -4517,8 +4518,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_repeatedhttpsessions() {
+    #[test]
+    fn syslog_for_repeatedhttpsessions() {
         let now = Utc
             .with_ymd_and_hms(1970, 1, 1, 1, 1, 1)
             .unwrap()
@@ -4561,8 +4562,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_kerberos() {
+    #[test]
+    fn syslog_for_blocklist_kerberos() {
         let fields = BlocklistKerberosFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4619,8 +4620,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_ldapbruteforce() {
+    #[test]
+    fn syslog_for_ldapbruteforce() {
         let fields = LdapBruteForceFields {
             sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4671,8 +4672,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_ldapplaintext() {
+    #[test]
+    fn syslog_for_ldapplaintext() {
         let fields = LdapEventFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4757,8 +4758,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_ldap() {
+    #[test]
+    fn syslog_for_blocklist_ldap() {
         let fields = ldapeventfields();
 
         let message = EventMessage {
@@ -4787,8 +4788,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn event_blocklist_ldap() {
+    #[test]
+    fn event_blocklist_ldap() {
         use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
@@ -4889,8 +4890,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn event_blocklist_radius() {
+    #[test]
+    fn event_blocklist_radius() {
         use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
@@ -4958,8 +4959,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_extrathreat() {
+    #[test]
+    fn syslog_for_extrathreat() {
         let fields = ExtraThreat {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             sensor: "collector1".to_string(),
@@ -4990,8 +4991,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_mqtt() {
+    #[test]
+    fn syslog_for_blocklist_mqtt() {
         let fields = BlocklistMqttFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5045,8 +5046,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_networkthreat() {
+    #[test]
+    fn syslog_for_networkthreat() {
         let fields = NetworkThreat {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
             sensor: "collector1".to_string(),
@@ -5088,8 +5089,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_nfs() {
+    #[test]
+    fn syslog_for_blocklist_nfs() {
         let fields = BlocklistNfsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5139,8 +5140,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_ntlm() {
+    #[test]
+    fn syslog_for_blocklist_ntlm() {
         let fields = BlocklistNtlmFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5193,8 +5194,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_radius() {
+    #[test]
+    fn syslog_for_blocklist_radius() {
         let fields = blocklist_radius_fields();
 
         let message = EventMessage {
@@ -5258,8 +5259,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn event_blocklist_malformed_dns() {
+    #[test]
+    fn event_blocklist_malformed_dns() {
         use super::{BLOCKLIST, MEDIUM};
 
         let db_dir = tempfile::tempdir().unwrap();
@@ -5327,8 +5328,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_malformed_dns() {
+    #[test]
+    fn syslog_for_blocklist_malformed_dns() {
         let fields = blocklist_malformed_dns_fields();
 
         let message = EventMessage {
@@ -5356,8 +5357,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_rdpbruteforce() {
+    #[test]
+    fn syslog_for_rdpbruteforce() {
         let fields = RdpBruteForceFields {
             sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5406,8 +5407,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_rdp() {
+    #[test]
+    fn syslog_for_blocklist_rdp() {
         let fields = BlocklistRdpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5456,8 +5457,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_smb() {
+    #[test]
+    fn syslog_for_blocklist_smb() {
         let fields = BlocklistSmbFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5516,8 +5517,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_smtp() {
+    #[test]
+    fn syslog_for_blocklist_smtp() {
         let fields = BlocklistSmtpFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5572,8 +5573,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_ssh() {
+    #[test]
+    fn syslog_for_blocklist_ssh() {
         let fields = BlocklistSshFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5634,8 +5635,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_windowsthreat() {
+    #[test]
+    fn syslog_for_windowsthreat() {
         let fields = WindowsThreat {
             time: Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap(),
             sensor: "collector1".to_string(),
@@ -5688,8 +5689,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn syslog_for_blocklist_tls() {
+    #[test]
+    fn syslog_for_blocklist_tls() {
         let fields = BlocklistTlsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -5801,8 +5802,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn syslog_for_torconnection() {
+    #[test]
+    fn syslog_for_torconnection() {
         let fields = httpeventfields();
 
         let message = EventMessage {
@@ -5831,8 +5832,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn event_torconnection() {
+    #[test]
+    fn event_torconnection() {
         use super::{MEDIUM, TOR_CONNECTION};
 
         let db_dir = tempfile::tempdir().unwrap();
@@ -5944,8 +5945,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn syslog_for_suspicious_tls_traffic() {
+    #[test]
+    fn syslog_for_suspicious_tls_traffic() {
         use super::common::Match;
 
         let fields = blocklist_tls_fields();
@@ -5989,8 +5990,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn event_suspicious_tls_traffic() {
+    #[test]
+    fn event_suspicious_tls_traffic() {
         use super::{MEDIUM, SUSPICIOUS_TLS_TRAFFIC};
 
         let db_dir = tempfile::tempdir().unwrap();
@@ -6083,8 +6084,8 @@ mod tests {
         assert!(blocklist_categories.contains(&EventCategory::InitialAccess));
     }
 
-    #[tokio::test]
-    async fn event_categories_method() {
+    #[test]
+    fn event_categories_method() {
         let db_dir = tempfile::tempdir().unwrap();
         let backup_dir = tempfile::tempdir().unwrap();
 
