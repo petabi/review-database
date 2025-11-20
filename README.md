@@ -2,15 +2,13 @@
 
 This crate provides a permanent storage solution for data collected and
 maintained by REview, a cybersecurity analysis system. It offers a robust and
-flexible database interface, supporting both PostgreSQL and RocksDB backends for
-different storage needs.
+flexible database interface for efficient data management.
 
 [![Coverage Status](https://codecov.io/gh/petabi/review-database/branch/main/graphs/badge.svg)](https://codecov.io/gh/petabi/review-database)
 
 ## Features
 
-- Dual backend support: PostgreSQL for relational data and RocksDB for
-  high-performance key-value storage
+- High-performance persistent storage
 - Comprehensive data models for cybersecurity events, network information, and
   system configurations
 - Advanced querying capabilities including time series data and statistical
