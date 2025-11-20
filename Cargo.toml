@@ -15,8 +15,6 @@ chrono = { version = "0.4.42", default-features = false, features = [
 config = { version = "0.15", optional = true }
 data-encoding = "2"
 flate2 = "1.0"
-futures = "0.3"
-humantime-serde = "1"
 ip2location = "0.6.0"
 ipnet = { version = "2", features = ["serde"] }
 jiff = "0.2.15"
@@ -27,13 +25,6 @@ rand = "0.9"
 regex = "1"
 ring = { version = "0.17", features = ["std"] }
 rocksdb = "0.24"
-rustls = { version = "0.23", default-features = false, features = [
-  "ring",
-  "std",
-] }
-rustls-native-certs = "0.8"
-rustls-pemfile = "2"
-rustls-pki-types = "1"
 semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0.11"
