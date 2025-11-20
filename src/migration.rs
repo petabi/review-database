@@ -104,7 +104,7 @@ pub trait MigrateFrom<OldT> {
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42.0-alpha.5,<0.42.0-alpha.6";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.42,<0.43.0-alpha";
 
 /// Migrates data exists in `PostgresQL` to Rocksdb if necessary.
 ///
