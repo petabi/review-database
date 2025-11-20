@@ -23,6 +23,8 @@ pub struct UnusualDestinationPatternFields {
 impl UnusualDestinationPatternFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
+        let start_time_dt = DateTime::from_timestamp_nanos(self.start_time);
+        let end_time_dt = DateTime::from_timestamp_nanos(self.end_time);
         format!(
             "category={:?} sensor={:?} start_time={:?} end_time={:?} destination_ips={:?} count={:?} expected_mean={:?} std_deviation={:?} z_score={:?} confidence={:?}",
             self.category.as_ref().map_or_else(
@@ -30,8 +32,8 @@ impl UnusualDestinationPatternFields {
                 std::string::ToString::to_string
             ),
             self.sensor,
-            self.start_time.to_string(),
-            self.end_time.to_string(),
+            start_time_dt.to_rfc3339(),
+            end_time_dt.to_rfc3339(),
             format_ip_vec(&self.destination_ips),
             self.count.to_string(),
             self.expected_mean.to_string(),
@@ -53,8 +55,8 @@ fn format_ip_vec(ips: &[IpAddr]) -> String {
 pub struct UnusualDestinationPattern {
     pub time: DateTime<Utc>,
     pub sensor: String,
-    pub start_time: i64,
-    pub end_time: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub destination_ips: Vec<IpAddr>,
     pub count: usize,
     pub expected_mean: f64,
@@ -71,8 +73,8 @@ impl fmt::Display for UnusualDestinationPattern {
             f,
             "sensor={:?} start_time={:?} end_time={:?} destination_ips={:?} count={:?} expected_mean={:?} std_deviation={:?} z_score={:?} triage_scores={:?}",
             self.sensor,
-            self.start_time.to_string(),
-            self.end_time.to_string(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
             format_ip_vec(&self.destination_ips),
             self.count.to_string(),
             self.expected_mean.to_string(),
@@ -88,8 +90,8 @@ impl UnusualDestinationPattern {
         Self {
             time,
             sensor: fields.sensor,
-            start_time: fields.start_time,
-            end_time: fields.end_time,
+            start_time: DateTime::from_timestamp_nanos(fields.start_time),
+            end_time: DateTime::from_timestamp_nanos(fields.end_time),
             destination_ips: fields.destination_ips,
             count: fields.count,
             expected_mean: fields.expected_mean,
