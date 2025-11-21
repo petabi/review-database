@@ -11,6 +11,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Migrations from versions earlier than 0.42.0 are no longer supported.
 
+### Removed
+
+- The deprecated function, `Store::account_policy_map`, has been removed; use
+  `Store::config_map` instead.
+
 ## [0.42.0] - 2025-11-20
 
 ### Added

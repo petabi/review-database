@@ -41,7 +41,7 @@ pub use self::model::{Digest, Model};
 pub use self::scores::Scores;
 use self::tables::StateDb;
 pub use self::tables::{
-    AccessToken, AccountPolicy, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
+    AccessToken, Agent, AgentConfig, AgentKind, AgentStatus, AllowNetwork,
     AllowNetworkUpdate, AttrCmpKind, BlockNetwork, BlockNetworkUpdate, Cluster, ClusterTimeSeries,
     ColumnStats, ColumnTimeSeries, Confidence, CsvColumnExtra as CsvColumnExtraConfig, Customer,
     CustomerNetwork, CustomerUpdate, DataSource, DataSourceUpdate, DataType, ExternalService,
@@ -116,13 +116,6 @@ impl Store {
     #[allow(clippy::missing_panics_doc)]
     pub fn account_map(&self) -> Table<'_, types::Account> {
         self.states.accounts()
-    }
-
-    #[deprecated(since = "0.42.0", note = "Replaced with config map")]
-    #[must_use]
-    #[allow(clippy::missing_panics_doc)]
-    pub fn account_policy_map(&self) -> Table<'_, AccountPolicy> {
-        self.states.account_policy()
     }
 
     #[must_use]
