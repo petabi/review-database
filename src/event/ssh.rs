@@ -5,11 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::{
-    event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
-    types::EventCategoryV0_41,
-};
+use crate::event::common::{AttrValue, triage_scores_to_string};
 
 macro_rules! find_ssh_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -75,68 +71,6 @@ pub struct BlocklistSshFieldsV0_42 {
     pub server_shka: String,
     pub confidence: f32,
     pub category: Option<EventCategory>,
-}
-
-impl MigrateFrom<BlocklistSshFieldsV0_41> for BlocklistSshFieldsV0_42 {
-    fn new(value: BlocklistSshFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            client: value.client,
-            server: value.server,
-            cipher_alg: value.cipher_alg,
-            mac_alg: value.mac_alg,
-            compression_alg: value.compression_alg,
-            kex_alg: value.kex_alg,
-            host_key_alg: value.host_key_alg,
-            hassh_algorithms: value.hassh_algorithms,
-            hassh: value.hassh,
-            hassh_server_algorithms: value.hassh_server_algorithms,
-            hassh_server: value.hassh_server,
-            client_shka: value.client_shka,
-            server_shka: value.server_shka,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistSshFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub client: String,
-    pub server: String,
-    pub cipher_alg: String,
-    pub mac_alg: String,
-    pub compression_alg: String,
-    pub kex_alg: String,
-    pub host_key_alg: String,
-    pub hassh_algorithms: String,
-    pub hassh: String,
-    pub hassh_server_algorithms: String,
-    pub hassh_server: String,
-    pub client_shka: String,
-    pub server_shka: String,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
 }
 
 impl BlocklistSshFields {

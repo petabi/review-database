@@ -9,8 +9,6 @@ use super::{EventCategory, HIGH, LearningMethod, MEDIUM, TriageScore, common::Ma
 use crate::{
     TriageExclusion,
     event::common::{AttrValue, triage_scores_to_string, vector_to_string},
-    migration::MigrateFrom,
-    types::EventCategoryV0_41,
 };
 
 macro_rules! find_dns_attr_by_kind {
@@ -75,65 +73,6 @@ pub struct DnsEventFieldsV0_42 {
     pub ttl: Vec<i32>,
     pub confidence: f32,
     pub category: Option<EventCategory>,
-}
-
-impl MigrateFrom<DnsEventFieldsV0_41> for DnsEventFieldsV0_42 {
-    fn new(value: DnsEventFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            query: value.query,
-            answer: value.answer,
-            trans_id: value.trans_id,
-            rtt: value.rtt,
-            qclass: value.qclass,
-            qtype: value.qtype,
-            rcode: value.rcode,
-            aa_flag: value.aa_flag,
-            tc_flag: value.tc_flag,
-            rd_flag: value.rd_flag,
-            ra_flag: value.ra_flag,
-            ttl: value.ttl,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-pub(crate) struct DnsEventFieldsV0_41 {
-    pub sensor: String,
-    pub end_time: i64,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub query: String,
-    pub answer: Vec<String>,
-    pub trans_id: u16,
-    pub rtt: i64,
-    pub qclass: u16,
-    pub qtype: u16,
-    pub rcode: u16,
-    pub aa_flag: bool,
-    pub tc_flag: bool,
-    pub rd_flag: bool,
-    pub ra_flag: bool,
-    pub ttl: Vec<i32>,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
 }
 
 impl DnsEventFields {
@@ -593,66 +532,6 @@ impl CryptocurrencyMiningPoolFields {
     }
 }
 
-#[derive(Deserialize, Serialize)]
-pub(crate) struct CryptocurrencyMiningPoolFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub query: String,
-    pub answer: Vec<String>,
-    pub trans_id: u16,
-    pub rtt: i64,
-    pub qclass: u16,
-    pub qtype: u16,
-    pub rcode: u16,
-    pub aa_flag: bool,
-    pub tc_flag: bool,
-    pub rd_flag: bool,
-    pub ra_flag: bool,
-    pub ttl: Vec<i32>,
-    pub coins: Vec<String>,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-impl MigrateFrom<CryptocurrencyMiningPoolFieldsV0_41> for CryptocurrencyMiningPoolFieldsV0_42 {
-    fn new(value: CryptocurrencyMiningPoolFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            query: value.query,
-            answer: value.answer,
-            trans_id: value.trans_id,
-            rtt: value.rtt,
-            qclass: value.qclass,
-            qtype: value.qtype,
-            rcode: value.rcode,
-            aa_flag: value.aa_flag,
-            tc_flag: value.tc_flag,
-            rd_flag: value.rd_flag,
-            ra_flag: value.ra_flag,
-            ttl: value.ttl,
-            coins: value.coins,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct CryptocurrencyMiningPool {
     pub time: DateTime<Utc>,
@@ -896,65 +775,6 @@ impl BlocklistDnsFields {
             vector_to_string(&self.ttl),
             self.confidence.to_string(),
         )
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-pub(crate) struct BlocklistDnsFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub query: String,
-    pub answer: Vec<String>,
-    pub trans_id: u16,
-    pub rtt: i64,
-    pub qclass: u16,
-    pub qtype: u16,
-    pub rcode: u16,
-    pub aa_flag: bool,
-    pub tc_flag: bool,
-    pub rd_flag: bool,
-    pub ra_flag: bool,
-    pub ttl: Vec<i32>,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-
-impl MigrateFrom<BlocklistDnsFieldsV0_41> for BlocklistDnsFieldsV0_42 {
-    fn new(value: BlocklistDnsFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            query: value.query,
-            answer: value.answer,
-            trans_id: value.trans_id,
-            rtt: value.rtt,
-            qclass: value.qclass,
-            qtype: value.qtype,
-            rcode: value.rcode,
-            aa_flag: value.aa_flag,
-            tc_flag: value.tc_flag,
-            rd_flag: value.rd_flag,
-            ra_flag: value.ra_flag,
-            ttl: value.ttl,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
     }
 }
 

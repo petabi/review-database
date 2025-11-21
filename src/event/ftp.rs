@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::{
     event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
     types::EventCategoryV0_41,
 };
 
@@ -366,70 +365,6 @@ pub struct FtpEventFieldsV0_42 {
     pub commands: Vec<FtpCommand>,
     pub confidence: f32,
     pub category: Option<EventCategory>,
-}
-
-impl MigrateFrom<FtpEventFieldsV0_41> for FtpEventFieldsV0_42 {
-    fn new(value: FtpEventFieldsV0_41, start_time: i64) -> Self {
-        let command = FtpCommand {
-            command: value.command,
-            reply_code: value.reply_code,
-            reply_msg: value.reply_msg,
-            data_passive: value.data_passive,
-            data_orig_addr: value.data_orig_addr,
-            data_resp_addr: value.data_resp_addr,
-            data_resp_port: value.data_resp_port,
-            file: value.file,
-            file_size: value.file_size,
-            file_id: value.file_id,
-        };
-
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            user: value.user,
-            password: value.password,
-            commands: vec![command],
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct FtpEventFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub user: String,
-    pub password: String,
-    pub command: String,
-    pub reply_code: String,
-    pub reply_msg: String,
-    pub data_passive: bool,
-    pub data_orig_addr: IpAddr,
-    pub data_resp_addr: IpAddr,
-    pub data_resp_port: u16,
-    pub file: String,
-    pub file_size: u64,
-    pub file_id: String,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
 }
 
 #[derive(Deserialize, Serialize)]

@@ -5,11 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::{
-    event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
-    types::EventCategoryV0_41,
-};
+use crate::event::common::{AttrValue, triage_scores_to_string};
 
 macro_rules! find_kerberos_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -65,60 +61,6 @@ pub struct BlocklistKerberosFieldsV0_42 {
     pub service_name: Vec<String>,
     pub confidence: f32,
     pub category: Option<EventCategory>,
-}
-
-impl MigrateFrom<BlocklistKerberosFieldsV0_41> for BlocklistKerberosFieldsV0_42 {
-    fn new(value: BlocklistKerberosFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            client_time: value.client_time,
-            server_time: value.server_time,
-            error_code: value.error_code,
-            client_realm: value.client_realm,
-            cname_type: value.cname_type,
-            client_name: value.client_name,
-            realm: value.realm,
-            sname_type: value.sname_type,
-            service_name: value.service_name,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistKerberosFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub client_time: i64,
-    pub server_time: i64,
-    pub error_code: u32,
-    pub client_realm: String,
-    pub cname_type: u8,
-    pub client_name: Vec<String>,
-    pub realm: String,
-    pub sname_type: u8,
-    pub service_name: Vec<String>,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
 }
 
 impl BlocklistKerberosFields {

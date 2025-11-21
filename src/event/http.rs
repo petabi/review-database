@@ -9,8 +9,6 @@ use super::{EventCategory, EventFilter, LOW, LearningMethod, MEDIUM, TriageScore
 use crate::{
     TriageExclusion,
     event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
-    types::EventCategoryV0_41,
 };
 
 macro_rules! find_http_attr_by_kind {
@@ -142,83 +140,6 @@ impl HttpEventFields {
     }
 }
 
-#[derive(Deserialize, Serialize)]
-pub(crate) struct HttpEventFieldsV0_41 {
-    pub sensor: String,
-    /// Timestamp in nanoseconds since the Unix epoch (UTC).
-    pub end_time: i64,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub method: String,
-    pub host: String,
-    pub uri: String,
-    pub referer: String,
-    pub version: String,
-    pub user_agent: String,
-    pub request_len: usize,
-    pub response_len: usize,
-    pub status_code: u16,
-    pub status_msg: String,
-    pub username: String,
-    pub password: String,
-    pub cookie: String,
-    pub content_encoding: String,
-    pub content_type: String,
-    pub cache_control: String,
-    pub filenames: Vec<String>,
-    pub mime_types: Vec<String>,
-    pub body: Vec<u8>,
-    pub state: String,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-
-impl MigrateFrom<HttpEventFieldsV0_41> for HttpEventFieldsV0_42 {
-    fn new(value: HttpEventFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            method: value.method,
-            host: value.host,
-            uri: value.uri,
-            referer: value.referer,
-            version: value.version,
-            user_agent: value.user_agent,
-            request_len: value.request_len,
-            response_len: value.response_len,
-            status_code: value.status_code,
-            status_msg: value.status_msg,
-            username: value.username,
-            password: value.password,
-            cookie: value.cookie,
-            content_encoding: value.content_encoding,
-            content_type: value.content_type,
-            cache_control: value.cache_control,
-            filenames: value.filenames,
-            mime_types: value.mime_types,
-            body: value.body,
-            state: value.state,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
 pub type RepeatedHttpSessionsFields = RepeatedHttpSessionsFieldsV0_42;
 
 #[derive(Serialize, Deserialize)]
@@ -258,37 +179,6 @@ impl RepeatedHttpSessionsFields {
             end_time_dt.to_rfc3339(),
             self.confidence.to_string()
         )
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct RepeatedHttpSessionsFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-
-impl From<RepeatedHttpSessionsFieldsV0_41> for RepeatedHttpSessionsFieldsV0_42 {
-    fn from(value: RepeatedHttpSessionsFieldsV0_41) -> Self {
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
-            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
     }
 }
 
@@ -504,96 +394,6 @@ impl HttpThreatFields {
             self.attack_kind,
             self.confidence.to_string(),
         )
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[allow(clippy::module_name_repetitions)]
-pub(crate) struct HttpThreatFieldsV0_41 {
-    #[serde(with = "ts_nanoseconds")]
-    pub time: DateTime<Utc>,
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub method: String,
-    pub host: String,
-    pub uri: String,
-    pub referer: String,
-    pub version: String,
-    pub user_agent: String,
-    pub request_len: usize,
-    pub response_len: usize,
-    pub status_code: u16,
-    pub status_msg: String,
-    pub username: String,
-    pub password: String,
-    pub cookie: String,
-    pub content_encoding: String,
-    pub content_type: String,
-    pub cache_control: String,
-    pub filenames: Vec<String>,
-    pub mime_types: Vec<String>,
-    pub body: Vec<u8>,
-    pub state: String,
-    pub db_name: String,
-    pub rule_id: u32,
-    pub matched_to: String,
-    pub cluster_id: Option<usize>,
-    pub attack_kind: String,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-
-impl MigrateFrom<HttpThreatFieldsV0_41> for HttpThreatFieldsV0_42 {
-    fn new(value: HttpThreatFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            time: value.time,
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            method: value.method,
-            host: value.host,
-            uri: value.uri,
-            referer: value.referer,
-            version: value.version,
-            user_agent: value.user_agent,
-            request_len: value.request_len,
-            response_len: value.response_len,
-            status_code: value.status_code,
-            status_msg: value.status_msg,
-            username: value.username,
-            password: value.password,
-            cookie: value.cookie,
-            content_encoding: value.content_encoding,
-            content_type: value.content_type,
-            cache_control: value.cache_control,
-            filenames: value.filenames,
-            mime_types: value.mime_types,
-            body: value.body,
-            state: value.state,
-            db_name: value.db_name,
-            rule_id: value.rule_id,
-            matched_to: value.matched_to,
-            cluster_id: value.cluster_id,
-            attack_kind: value.attack_kind,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
     }
 }
 
@@ -930,82 +730,6 @@ impl DgaFields {
             self.state,
             self.confidence.to_string()
         )
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct DgaFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub method: String,
-    pub host: String,
-    pub uri: String,
-    pub referer: String,
-    pub version: String,
-    pub user_agent: String,
-    pub request_len: usize,
-    pub response_len: usize,
-    pub status_code: u16,
-    pub status_msg: String,
-    pub username: String,
-    pub password: String,
-    pub cookie: String,
-    pub content_encoding: String,
-    pub content_type: String,
-    pub cache_control: String,
-    pub filenames: Vec<String>,
-    pub mime_types: Vec<String>,
-    pub body: Vec<u8>,
-    pub state: String,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-
-impl MigrateFrom<DgaFieldsV0_41> for DgaFieldsV0_42 {
-    fn new(value: DgaFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            method: value.method,
-            host: value.host,
-            uri: value.uri,
-            referer: value.referer,
-            version: value.version,
-            user_agent: value.user_agent,
-            request_len: value.request_len,
-            response_len: value.response_len,
-            status_code: value.status_code,
-            status_msg: value.status_msg,
-            username: value.username,
-            password: value.password,
-            cookie: value.cookie,
-            content_encoding: value.content_encoding,
-            content_type: value.content_type,
-            cache_control: value.cache_control,
-            filenames: value.filenames,
-            mime_types: value.mime_types,
-            body: value.body,
-            state: value.state,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
     }
 }
 
@@ -1393,8 +1117,6 @@ impl Match for NonBrowser {
 // Note: BlocklistHttpFields has been merged with DgaFields as they have identical structure.
 // Use DgaFields for both BlocklistHttp and DomainGenerationAlgorithm events.
 pub type BlocklistHttpFields = DgaFields;
-pub type BlocklistHttpFieldsV0_42 = DgaFieldsV0_42;
-pub(crate) type BlocklistHttpFieldsV0_41 = DgaFieldsV0_41;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize, Serialize)]
@@ -1583,158 +1305,5 @@ impl Match for BlocklistHttp {
             TriageExclusion::Uri(uris) => uris.contains(&self.uri),
         });
         if matched { f64::MIN } else { 0.0 }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::net::IpAddr;
-
-    use chrono::DateTime;
-
-    use super::{EventCategoryV0_41, HttpEventFieldsV0_41, HttpEventFieldsV0_42};
-
-    #[test]
-    #[allow(clippy::float_cmp)]
-    fn test_http_event_fields_migration_from_v0_41() {
-        // Test case 1
-        let old_fields_case1 = HttpEventFieldsV0_41 {
-            sensor: "test-sensor".to_string(),
-            end_time: DateTime::UNIX_EPOCH
-                .timestamp_nanos_opt()
-                .unwrap_or_default(),
-            src_addr: "192.168.1.1".parse::<IpAddr>().unwrap(),
-            src_port: 8080,
-            dst_addr: "10.0.0.1".parse::<IpAddr>().unwrap(),
-            dst_port: 80,
-            proto: 6,
-            method: "GET".to_string(),
-            host: "example.com".to_string(),
-            uri: "/test".to_string(),
-            referer: "https://referer.com".to_string(),
-            version: "1.1".to_string(),
-            user_agent: "test-agent".to_string(),
-            request_len: 100,
-            response_len: 200,
-            status_code: 200,
-            status_msg: "OK".to_string(),
-            username: "testuser".to_string(),
-            password: "testpass".to_string(),
-            cookie: "session=123".to_string(),
-            content_encoding: "gzip".to_string(),
-            content_type: "text/html".to_string(),
-            cache_control: "no-cache".to_string(),
-            filenames: vec!["file1.txt".to_string(), "file2.txt".to_string()],
-            mime_types: vec!["text/plain".to_string(), "application/json".to_string()],
-            body: b"test body content".to_vec(),
-            state: "active".to_string(),
-            confidence: 1.0,
-            category: EventCategoryV0_41::InitialAccess,
-        };
-
-        let new_fields_case1: HttpEventFieldsV0_42 =
-            crate::migration::MigrateFrom::new(old_fields_case1, 0);
-
-        // Verify that fields were merged correctly (orig + resp)
-        assert_eq!(new_fields_case1.filenames.len(), 2);
-        assert_eq!(new_fields_case1.filenames[0], "file1.txt");
-        assert_eq!(new_fields_case1.filenames[1], "file2.txt");
-
-        assert_eq!(new_fields_case1.mime_types.len(), 2);
-        assert_eq!(new_fields_case1.mime_types[0], "text/plain");
-        assert_eq!(new_fields_case1.mime_types[1], "application/json");
-
-        // Verify that post_body was renamed to body
-        assert_eq!(new_fields_case1.body, b"test body content".to_vec());
-        assert_eq!(new_fields_case1.confidence, 1.0);
-
-        // Test case 2: Single orig file, multiple resp files and mime types
-        let old_fields_case2 = HttpEventFieldsV0_41 {
-            sensor: "api-sensor".to_string(),
-            end_time: 0,
-            src_addr: "10.0.0.2".parse::<IpAddr>().unwrap(),
-            src_port: 9090,
-            dst_addr: "192.168.1.10".parse::<IpAddr>().unwrap(),
-            dst_port: 443,
-            proto: 6,
-            method: "POST".to_string(),
-            host: "api.example.com".to_string(),
-            uri: "/api/v1/test".to_string(),
-            referer: "https://app.example.com".to_string(),
-            version: "2.0".to_string(),
-            user_agent: "api-client".to_string(),
-            request_len: 150,
-            response_len: 300,
-            status_code: 201,
-            status_msg: "Created".to_string(),
-            username: "apiuser".to_string(),
-            password: "apipass".to_string(),
-            cookie: "token=abc123".to_string(),
-            content_encoding: "deflate".to_string(),
-            content_type: "application/json".to_string(),
-            cache_control: "max-age=3600".to_string(),
-            filenames: vec!["upload1.dat".to_string()],
-            mime_types: vec!["application/octet-stream".to_string()],
-            body: b"{\"key\":\"value\"}".to_vec(),
-            state: "processing".to_string(),
-            confidence: 1.0,
-            category: EventCategoryV0_41::Collection,
-        };
-
-        let new_fields_case2: HttpEventFieldsV0_42 =
-            crate::migration::MigrateFrom::new(old_fields_case2, 0);
-
-        // Verify migration worked correctly (orig + resp)
-        assert_eq!(new_fields_case2.filenames.len(), 1);
-        assert_eq!(new_fields_case2.filenames[0], "upload1.dat");
-
-        assert_eq!(new_fields_case2.mime_types.len(), 1);
-        assert_eq!(new_fields_case2.mime_types[0], "application/octet-stream");
-
-        assert_eq!(new_fields_case2.body, b"{\"key\":\"value\"}".to_vec());
-        assert_eq!(new_fields_case2.confidence, 1.0);
-    }
-
-    #[test]
-    fn test_empty_collections_migration() {
-        // Test migration with empty filename and mime type collections
-        let old_fields = HttpEventFieldsV0_41 {
-            sensor: "test-sensor".to_string(),
-            end_time: 0,
-            src_addr: "127.0.0.1".parse::<IpAddr>().unwrap(),
-            src_port: 3000,
-            dst_addr: "127.0.0.1".parse::<IpAddr>().unwrap(),
-            dst_port: 8000,
-            proto: 6,
-            method: "HEAD".to_string(),
-            host: "localhost".to_string(),
-            uri: "/health".to_string(),
-            referer: String::new(),
-            version: "1.0".to_string(),
-            user_agent: "health-check".to_string(),
-            request_len: 0,
-            response_len: 0,
-            status_code: 204,
-            status_msg: "No Content".to_string(),
-            username: String::new(),
-            password: String::new(),
-            cookie: String::new(),
-            content_encoding: String::new(),
-            content_type: String::new(),
-            cache_control: String::new(),
-            filenames: Vec::new(),
-            mime_types: Vec::new(),
-            body: Vec::new(),
-            state: "idle".to_string(),
-            confidence: 1.0,
-            category: EventCategoryV0_41::Discovery,
-        };
-
-        let new_fields: HttpEventFieldsV0_42 = crate::migration::MigrateFrom::new(old_fields, 0);
-
-        // Verify empty collections remain empty after merge
-        assert!(new_fields.filenames.is_empty());
-        assert!(new_fields.mime_types.is_empty());
-        assert!(new_fields.body.is_empty());
     }
 }

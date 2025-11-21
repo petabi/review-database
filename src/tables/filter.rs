@@ -238,10 +238,6 @@ impl<'d> Table<'d, Filter> {
         })
         .collect()
     }
-
-    pub(crate) fn raw(&self) -> &Map<'_> {
-        &self.map
-    }
 }
 
 #[cfg(test)]

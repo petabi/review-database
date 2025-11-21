@@ -82,46 +82,6 @@ pub use self::{
     tor::{TorConnection, TorConnectionConn},
     unusual_destination_pattern::{UnusualDestinationPattern, UnusualDestinationPatternFields},
 };
-pub(crate) use self::{
-    bootp::{BlocklistBootpFieldsV0_41, BlocklistBootpFieldsV0_42},
-    conn::{
-        BlocklistConnFieldsV0_41, BlocklistConnFieldsV0_42, ExternalDdosFieldsV0_41,
-        ExternalDdosFieldsV0_42, MultiHostPortScanFieldsV0_41, MultiHostPortScanFieldsV0_42,
-        PortScanFieldsV0_41, PortScanFieldsV0_42,
-    },
-    dcerpc::{BlocklistDceRpcFieldsV0_41, BlocklistDceRpcFieldsV0_42},
-    dhcp::{BlocklistDhcpFieldsV0_41, BlocklistDhcpFieldsV0_42},
-    dns::{
-        BlocklistDnsFieldsV0_41, BlocklistDnsFieldsV0_42,
-        CryptocurrencyMiningPoolFields as CryptocurrencyMiningPoolFieldsV0_42,
-        CryptocurrencyMiningPoolFieldsV0_41, DnsEventFieldsV0_41, DnsEventFieldsV0_42,
-    },
-    ftp::{
-        FtpBruteForceFields as FtpBruteForceFieldsV0_42, FtpBruteForceFieldsV0_41,
-        FtpEventFieldsV0_41, FtpEventFieldsV0_42,
-    },
-    http::{
-        BlocklistHttpFieldsV0_41, BlocklistHttpFieldsV0_42, DgaFieldsV0_41, DgaFieldsV0_42,
-        HttpEventFieldsV0_41, HttpEventFieldsV0_42, HttpThreatFieldsV0_41, HttpThreatFieldsV0_42,
-        RepeatedHttpSessionsFieldsV0_41, RepeatedHttpSessionsFieldsV0_42,
-    },
-    kerberos::{BlocklistKerberosFieldsV0_41, BlocklistKerberosFieldsV0_42},
-    ldap::{
-        LdapBruteForceFieldsV0_41, LdapBruteForceFieldsV0_42, LdapEventFieldsV0_39,
-        LdapEventFieldsV0_42,
-    },
-    mqtt::{BlocklistMqttFieldsV0_41, BlocklistMqttFieldsV0_42},
-    nfs::{BlocklistNfsFieldsV0_41, BlocklistNfsFieldsV0_42},
-    ntlm::{BlocklistNtlmFieldsV0_41, BlocklistNtlmFieldsV0_42},
-    rdp::{
-        BlocklistRdpFieldsV0_41, BlocklistRdpFieldsV0_42, RdpBruteForceFieldsV0_41,
-        RdpBruteForceFieldsV0_42,
-    },
-    smb::{BlocklistSmbFieldsV0_41, BlocklistSmbFieldsV0_42},
-    smtp::{BlocklistSmtpFieldsV0_41, BlocklistSmtpFieldsV0_42},
-    ssh::{BlocklistSshFieldsV0_41, BlocklistSshFieldsV0_42},
-    tls::{BlocklistTlsFieldsV0_41, BlocklistTlsFieldsV0_42},
-};
 use super::{
     Customer, EventCategory, Network, TriagePolicy, TriagePolicyInput,
     types::{Endpoint, HostNetworkGroup},
@@ -2448,16 +2408,6 @@ impl<'a> EventDb<'a> {
     pub fn iter_forward(&self) -> EventIterator<'_> {
         let iter = self.inner.iterator(IteratorMode::Start);
         EventIterator { inner: iter }
-    }
-
-    /// Creates an raw iterator over key-value pairs for the entire events.
-    ///
-    /// Used for migration.
-    #[must_use]
-    pub(crate) fn raw_iter_forward(
-        &self,
-    ) -> rocksdb::DBIteratorWithThreadMode<'_, rocksdb::OptimisticTransactionDB> {
-        self.inner.iterator(IteratorMode::Start)
     }
 
     /// Stores a new event into the database.

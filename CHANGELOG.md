@@ -5,6 +5,12 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Migrations from versions earlier than 0.42.0 are no longer supported.
+
 ## [0.42.0] - 2025-11-20
 
 ### Added
@@ -1177,6 +1183,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
+[Unreleased]: https://github.com/petabi/review-database/compare/0.42.0...main
 [0.42.0]: https://github.com/petabi/review-database/compare/0.41.0...0.42.0
 [0.41.0]: https://github.com/petabi/review-database/compare/0.40.0...0.41.0
 [0.40.0]: https://github.com/petabi/review-database/compare/0.39.0...0.40.0

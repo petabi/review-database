@@ -6,11 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::{
-    event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
-    types::EventCategoryV0_41,
-};
+use crate::event::common::{AttrValue, triage_scores_to_string};
 
 macro_rules! find_ldap_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -75,36 +71,6 @@ impl LdapBruteForceFields {
             end_time_dt.to_rfc3339(),
             self.confidence.to_string()
         )
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct LdapBruteForceFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub user_pw_list: Vec<(String, String)>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-impl From<LdapBruteForceFieldsV0_41> for LdapBruteForceFieldsV0_42 {
-    fn from(value: LdapBruteForceFieldsV0_41) -> Self {
-        Self {
-            sensor: String::new(),
-            src_addr: value.src_addr,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            user_pw_list: value.user_pw_list,
-            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
-            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
     }
 }
 
@@ -291,56 +257,6 @@ impl LdapEventFields {
             self.argument.join(","),
             self.confidence.to_string()
         )
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct LdapEventFieldsV0_39 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub message_id: u32,
-    pub version: u8,
-    pub opcode: Vec<String>,
-    pub result: Vec<String>,
-    pub diagnostic_message: Vec<String>,
-    pub object: Vec<String>,
-    pub argument: Vec<String>,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-
-impl MigrateFrom<LdapEventFieldsV0_39> for LdapEventFieldsV0_42 {
-    fn new(value: LdapEventFieldsV0_39, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            message_id: value.message_id,
-            version: value.version,
-            opcode: value.opcode,
-            result: value.result,
-            diagnostic_message: value.diagnostic_message,
-            object: value.object,
-            argument: value.argument,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
     }
 }
 

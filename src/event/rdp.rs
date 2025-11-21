@@ -10,11 +10,7 @@ use super::{
     EventCategory, LearningMethod, MEDIUM, TriageScore,
     common::{Match, vector_to_string},
 };
-use crate::{
-    event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
-    types::EventCategoryV0_41,
-};
+use crate::event::common::{AttrValue, triage_scores_to_string};
 
 macro_rules! find_rdp_attr_by_kind {
     ($event: expr, $raw_event_attr: expr) => {{
@@ -69,33 +65,6 @@ impl RdpBruteForceFields {
             self.proto.to_string(),
             self.confidence.to_string()
         )
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct RdpBruteForceFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub dst_addrs: Vec<IpAddr>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub proto: u8,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
-}
-
-impl From<RdpBruteForceFieldsV0_41> for RdpBruteForceFieldsV0_42 {
-    fn from(value: RdpBruteForceFieldsV0_41) -> Self {
-        Self {
-            sensor: String::new(),
-            src_addr: value.src_addr,
-            dst_addrs: value.dst_addrs,
-            start_time: value.start_time.timestamp_nanos_opt().unwrap_or_default(),
-            end_time: value.end_time.timestamp_nanos_opt().unwrap_or_default(),
-            proto: value.proto,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
     }
 }
 
@@ -224,44 +193,6 @@ pub struct BlocklistRdpFieldsV0_42 {
     pub cookie: String,
     pub confidence: f32,
     pub category: Option<EventCategory>,
-}
-
-impl MigrateFrom<BlocklistRdpFieldsV0_41> for BlocklistRdpFieldsV0_42 {
-    fn new(value: BlocklistRdpFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            cookie: value.cookie,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistRdpFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub cookie: String,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
 }
 
 impl BlocklistRdpFields {

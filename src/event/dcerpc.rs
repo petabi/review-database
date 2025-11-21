@@ -5,11 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
-use crate::{
-    event::common::{AttrValue, triage_scores_to_string},
-    migration::MigrateFrom,
-    types::EventCategoryV0_41,
-};
+use crate::event::common::{AttrValue, triage_scores_to_string};
 
 pub type BlocklistDceRpcFields = BlocklistDceRpcFieldsV0_42;
 
@@ -34,50 +30,6 @@ pub struct BlocklistDceRpcFieldsV0_42 {
     pub operation: String,
     pub confidence: f32,
     pub category: Option<EventCategory>,
-}
-
-impl MigrateFrom<BlocklistDceRpcFieldsV0_41> for BlocklistDceRpcFieldsV0_42 {
-    fn new(value: BlocklistDceRpcFieldsV0_41, start_time: i64) -> Self {
-        let duration = value.end_time.saturating_sub(start_time);
-
-        Self {
-            sensor: value.sensor,
-            src_addr: value.src_addr,
-            src_port: value.src_port,
-            dst_addr: value.dst_addr,
-            dst_port: value.dst_port,
-            proto: value.proto,
-            start_time,
-            duration,
-            orig_pkts: 0,
-            resp_pkts: 0,
-            orig_l2_bytes: 0,
-            resp_l2_bytes: 0,
-            rtt: value.rtt,
-            named_pipe: value.named_pipe,
-            endpoint: value.endpoint,
-            operation: value.operation,
-            confidence: value.confidence,
-            category: value.category.into(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct BlocklistDceRpcFieldsV0_41 {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub rtt: i64,
-    pub named_pipe: String,
-    pub endpoint: String,
-    pub operation: String,
-    pub confidence: f32,
-    pub category: EventCategoryV0_41,
 }
 
 impl BlocklistDceRpcFields {
