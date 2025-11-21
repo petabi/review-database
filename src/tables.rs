@@ -94,7 +94,6 @@ use crate::{
 // Key-value map names in `Database`.
 pub(super) const ACCESS_TOKENS: &str = "access_tokens";
 pub(super) const ACCOUNTS: &str = "accounts";
-pub(super) const ACCOUNT_POLICY: &str = "account policy";
 pub(super) const AGENTS: &str = "agents";
 pub(super) const ALLOW_NETWORKS: &str = "allow networks";
 pub(super) const BATCH_INFO: &str = "batch_info";
@@ -129,10 +128,9 @@ pub(super) const TRIAGE_RESPONSE: &str = "triage response";
 pub(super) const TRUSTED_DNS_SERVERS: &str = "trusted DNS servers";
 pub(super) const TRUSTED_USER_AGENTS: &str = "trusted user agents";
 
-const MAP_NAMES: [&str; 36] = [
+pub(crate) const MAP_NAMES: [&str; 35] = [
     ACCESS_TOKENS,
     ACCOUNTS,
-    ACCOUNT_POLICY,
     AGENTS,
     ALLOW_NETWORKS,
     BATCH_INFO,

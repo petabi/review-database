@@ -93,7 +93,7 @@ use tracing::info;
 /// // release that involves database format change) to 3.5.0, including
 /// // all alpha changes finalized in 3.5.0.
 /// ```
-const COMPATIBLE_VERSION_REQ: &str = ">=0.42,<0.43.0-alpha";
+const COMPATIBLE_VERSION_REQ: &str = ">=0.43.0-alpha.1,<0.43.0-alpha.2";
 
 /// Migrates the data directory to the up-to-date format if necessary.
 ///
@@ -106,7 +106,7 @@ const COMPATIBLE_VERSION_REQ: &str = ">=0.42,<0.43.0-alpha";
 /// or if the data directory exists but is in the format incompatible with the
 /// current version.
 pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()> {
-    type Migration = (VersionReq, Version, fn(&crate::Store) -> anyhow::Result<()>);
+    type Migration = (VersionReq, Version, fn(&Path, &Path) -> anyhow::Result<()>);
 
     let data_dir = data_dir.as_ref();
     let backup_dir = backup_dir.as_ref();
@@ -140,22 +140,18 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
     //   to "to version". The function name should be in the form of "migrate_A_to_B" where A is
     //   the first version (major.minor) in the "version requirement" and B is the "to version"
     //   (major.minor). (NOTE: Once we release 1.0.0, A and B will contain the major version only.)
-    let migration: Vec<Migration> = vec![// (
-        // VersionReq::parse(">=0.42.0-alpha.5,<0.43.0-alpha")?,
-        // Version::parse("0.43.0")?,
-        // migrate_0_42_to_0_43,
-    // )
-    ];
-
-    let mut store = super::Store::new(data_dir, backup_dir)?;
-    store.backup(false, 1)?;
+    let migration: Vec<Migration> = vec![(
+        VersionReq::parse(">=0.42.0-alpha.5,<0.43.0-alpha.1")?,
+        Version::parse("0.43.0-alpha.1")?,
+        migrate_0_42_to_0_43,
+    )];
 
     while let Some((_req, to, m)) = migration
         .iter()
         .find(|(req, _to, _m)| req.matches(&version))
     {
         info!("Migrating database to {to}");
-        m(&store)?;
+        m(data_dir, backup_dir)?;
         version = to.clone();
         if compatible.matches(&version) {
             create_version_file(&backup).context("failed to update VERSION")?;
@@ -163,8 +159,85 @@ pub fn migrate_data_dir<P: AsRef<Path>>(data_dir: P, backup_dir: P) -> Result<()
         }
     }
 
-    store.purge_old_backups(0)?;
     Err(anyhow!("migration from {version} is not supported",))
+}
+
+/// Column family names for version 0.42 (includes the deprecated "account policy" column family)
+const MAP_NAMES_V0_42: [&str; 36] = [
+    "access_tokens",
+    "accounts",
+    "account policy",
+    "agents",
+    "allow networks",
+    "batch_info",
+    "block networks",
+    "category",
+    "cluster",
+    "column stats",
+    "configs",
+    "csv column extras",
+    "customers",
+    "data sources",
+    "filters",
+    "hosts",
+    "models",
+    "model indicators",
+    "meta",
+    "networks",
+    "nodes",
+    "outliers",
+    "qualifiers",
+    "external services",
+    "sampling policy",
+    "scores",
+    "statuses",
+    "templates",
+    "TI database",
+    "time series",
+    "Tor exit nodes",
+    "traffic filter rules",
+    "triage policy",
+    "triage response",
+    "trusted DNS servers",
+    "trusted user agents",
+];
+
+fn migrate_0_42_to_0_43(data_dir: &Path, backup_dir: &Path) -> Result<()> {
+    // Open the database with the old column family list (including "account policy")
+    let db_path = data_dir.join("states.db");
+    let backup_path = backup_dir.join("states.db");
+
+    info!("Opening database with legacy column families to drop 'account policy'");
+
+    // Open the database with the old column family names
+    let mut opts = rocksdb::Options::default();
+    opts.create_if_missing(false);
+    opts.create_missing_column_families(false);
+
+    let db = rocksdb::OptimisticTransactionDB::open_cf(&opts, &db_path, MAP_NAMES_V0_42)
+        .context("Failed to open database with legacy column families")?;
+
+    // Drop the "account policy" column family
+    info!("Dropping 'account policy' column family");
+    db.drop_cf("account policy")
+        .context("Failed to drop 'account policy' column family")?;
+
+    // Close the database by dropping it
+    drop(db);
+
+    // Also drop from backup database
+    let backup_db = rocksdb::OptimisticTransactionDB::open_cf(&opts, &backup_path, MAP_NAMES_V0_42)
+        .context("Failed to open backup database with legacy column families")?;
+
+    info!("Dropping 'account policy' column family from backup");
+    backup_db
+        .drop_cf("account policy")
+        .context("Failed to drop 'account policy' column family from backup")?;
+
+    drop(backup_db);
+
+    info!("Successfully removed 'account policy' column family");
+    Ok(())
 }
 
 /// Recursively creates `path` if not existed, creates the VERSION file
@@ -290,5 +363,84 @@ mod tests {
             breaking
         };
         assert!(!compatible.matches(&breaking));
+    }
+
+    #[test]
+    fn migrate_0_42_to_0_43_drops_account_policy() {
+        use std::fs;
+        use std::io::Write;
+
+        // Create test directories
+        let db_dir = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+
+        let db_path = db_dir.path().join("states.db");
+        let backup_path = backup_dir.path().join("states.db");
+
+        // Create a database with the old column family list (including "account policy")
+        let mut opts = rocksdb::Options::default();
+        opts.create_if_missing(true);
+        opts.create_missing_column_families(true);
+
+        let db: rocksdb::OptimisticTransactionDB =
+            rocksdb::OptimisticTransactionDB::open_cf(&opts, &db_path, super::MAP_NAMES_V0_42)
+                .unwrap();
+        drop(db);
+
+        let backup_db: rocksdb::OptimisticTransactionDB =
+            rocksdb::OptimisticTransactionDB::open_cf(&opts, &backup_path, super::MAP_NAMES_V0_42)
+                .unwrap();
+        drop(backup_db);
+
+        // Create VERSION files with 0.42.0-alpha.5
+        let mut version_file = fs::File::create(db_dir.path().join("VERSION")).unwrap();
+        version_file.write_all(b"0.42.0-alpha.5").unwrap();
+        drop(version_file);
+
+        let mut backup_version_file = fs::File::create(backup_dir.path().join("VERSION")).unwrap();
+        backup_version_file.write_all(b"0.42.0-alpha.5").unwrap();
+        drop(backup_version_file);
+
+        // Run the migration
+        super::migrate_0_42_to_0_43(db_dir.path(), backup_dir.path()).unwrap();
+
+        // Verify the column family has been dropped by opening with the new list
+        let db: rocksdb::OptimisticTransactionDB =
+            rocksdb::OptimisticTransactionDB::open_cf(&opts, &db_path, crate::tables::MAP_NAMES)
+                .unwrap();
+
+        // Try to access "account policy" - should fail since it was dropped
+        assert!(db.cf_handle("account policy").is_none());
+
+        // Close and reopen to ensure it still works
+        drop(db);
+
+        let db: rocksdb::OptimisticTransactionDB =
+            rocksdb::OptimisticTransactionDB::open_cf(&opts, &db_path, crate::tables::MAP_NAMES)
+                .unwrap();
+        assert!(db.cf_handle("account policy").is_none());
+        drop(db);
+
+        // Verify backup database too
+        let backup_db: rocksdb::OptimisticTransactionDB =
+            rocksdb::OptimisticTransactionDB::open_cf(
+                &opts,
+                &backup_path,
+                crate::tables::MAP_NAMES,
+            )
+            .unwrap();
+        assert!(backup_db.cf_handle("account policy").is_none());
+
+        // Close and reopen backup database to ensure it still works
+        drop(backup_db);
+
+        let backup_db: rocksdb::OptimisticTransactionDB =
+            rocksdb::OptimisticTransactionDB::open_cf(
+                &opts,
+                &backup_path,
+                crate::tables::MAP_NAMES,
+            )
+            .unwrap();
+        assert!(backup_db.cf_handle("account policy").is_none());
     }
 }
