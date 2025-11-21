@@ -203,19 +203,90 @@ const MAP_NAMES_V0_42: [&str; 36] = [
 ];
 
 fn migrate_0_42_to_0_43(data_dir: &Path, backup_dir: &Path) -> Result<()> {
-    // Open the database with the old column family list (including "account policy")
     let db_path = data_dir.join("states.db");
     let backup_path = backup_dir.join("states.db");
 
-    info!("Opening database with legacy column families to drop 'account policy'");
+    info!("Opening database with legacy column families");
 
-    // Open the database with the old column family names
+    // Open the database with the old column family names (including "account policy")
     let mut opts = rocksdb::Options::default();
     opts.create_if_missing(false);
     opts.create_missing_column_families(false);
 
-    let db = rocksdb::OptimisticTransactionDB::open_cf(&opts, &db_path, MAP_NAMES_V0_42)
-        .context("Failed to open database with legacy column families")?;
+    let mut db: rocksdb::OptimisticTransactionDB =
+        rocksdb::OptimisticTransactionDB::open_cf(&opts, &db_path, MAP_NAMES_V0_42)
+            .context("Failed to open database with legacy column families")?;
+
+    // Perform data migrations for TriagePolicy and Tidb
+    info!("Migrating TriagePolicy and Tidb data");
+
+    // Get column family handles
+    let triage_policy_cf: &rocksdb::ColumnFamily = match db.cf_handle("triage policy") {
+        Some(cf) => cf,
+        None => anyhow::bail!("Failed to find triage policy column family"),
+    };
+    let tidb_cf: &rocksdb::ColumnFamily = match db.cf_handle("TI database") {
+        Some(cf) => cf,
+        None => anyhow::bail!("Failed to find TI database column family"),
+    };
+
+    // Migrate TriagePolicy
+    {
+        use bincode::Options;
+
+        use self::migration_structures::TriagePolicyV0_42;
+        use crate::TriagePolicy;
+
+        let mut updates = Vec::new();
+        let iter = db.iterator_cf(triage_policy_cf, rocksdb::IteratorMode::Start);
+        for item in iter {
+            let (key, value) = item.context("Failed to read from database")?;
+
+            let old_policy: TriagePolicyV0_42 = bincode::DefaultOptions::new()
+                .deserialize(value.as_ref())
+                .context("Failed to deserialize old triage policy")?;
+
+            let new_policy = TriagePolicy::from(old_policy);
+            let new_value = bincode::DefaultOptions::new()
+                .serialize(&new_policy)
+                .context("Failed to serialize new triage policy")?;
+
+            updates.push((key.to_vec(), new_value));
+        }
+
+        for (key, value) in updates {
+            db.put_cf(triage_policy_cf, &key, &value)?;
+        }
+    }
+
+    // Migrate Tidb
+    {
+        use bincode::Options;
+
+        use self::migration_structures::TidbV0_42;
+        use crate::Tidb;
+
+        let mut updates = Vec::new();
+        let iter = db.iterator_cf(tidb_cf, rocksdb::IteratorMode::Start);
+        for item in iter {
+            let (key, value) = item.context("Failed to read from database")?;
+
+            let old_tidb: TidbV0_42 = bincode::DefaultOptions::new()
+                .deserialize(value.as_ref())
+                .context("Failed to deserialize old tidb")?;
+
+            let new_tidb = Tidb::from(old_tidb);
+            let new_value = bincode::DefaultOptions::new()
+                .serialize(&new_tidb)
+                .context("Failed to serialize new tidb")?;
+
+            updates.push((key.to_vec(), new_value));
+        }
+
+        for (key, value) in updates {
+            db.put_cf(tidb_cf, &key, &value)?;
+        }
+    }
 
     // Drop the "account policy" column family
     info!("Dropping 'account policy' column family");
@@ -225,9 +296,78 @@ fn migrate_0_42_to_0_43(data_dir: &Path, backup_dir: &Path) -> Result<()> {
     // Close the database by dropping it
     drop(db);
 
-    // Also drop from backup database
-    let backup_db = rocksdb::OptimisticTransactionDB::open_cf(&opts, &backup_path, MAP_NAMES_V0_42)
-        .context("Failed to open backup database with legacy column families")?;
+    // Also perform migration on backup database
+    let mut backup_db: rocksdb::OptimisticTransactionDB =
+        rocksdb::OptimisticTransactionDB::open_cf(&opts, &backup_path, MAP_NAMES_V0_42)
+            .context("Failed to open backup database with legacy column families")?;
+
+    let backup_triage_policy_cf: &rocksdb::ColumnFamily = match backup_db.cf_handle("triage policy")
+    {
+        Some(cf) => cf,
+        None => anyhow::bail!("Failed to find triage policy column family in backup"),
+    };
+    let backup_tidb_cf: &rocksdb::ColumnFamily = match backup_db.cf_handle("TI database") {
+        Some(cf) => cf,
+        None => anyhow::bail!("Failed to find TI database column family in backup"),
+    };
+
+    // Migrate TriagePolicy in backup
+    {
+        use bincode::Options;
+
+        use self::migration_structures::TriagePolicyV0_42;
+        use crate::TriagePolicy;
+
+        let mut updates = Vec::new();
+        let iter = backup_db.iterator_cf(backup_triage_policy_cf, rocksdb::IteratorMode::Start);
+        for item in iter {
+            let (key, value) = item.context("Failed to read from backup database")?;
+
+            let old_policy: TriagePolicyV0_42 = bincode::DefaultOptions::new()
+                .deserialize(value.as_ref())
+                .context("Failed to deserialize old triage policy from backup")?;
+
+            let new_policy = TriagePolicy::from(old_policy);
+            let new_value = bincode::DefaultOptions::new()
+                .serialize(&new_policy)
+                .context("Failed to serialize new triage policy for backup")?;
+
+            updates.push((key.to_vec(), new_value));
+        }
+
+        for (key, value) in updates {
+            backup_db.put_cf(backup_triage_policy_cf, &key, &value)?;
+        }
+    }
+
+    // Migrate Tidb in backup
+    {
+        use bincode::Options;
+
+        use self::migration_structures::TidbV0_42;
+        use crate::Tidb;
+
+        let mut updates = Vec::new();
+        let iter = backup_db.iterator_cf(backup_tidb_cf, rocksdb::IteratorMode::Start);
+        for item in iter {
+            let (key, value) = item.context("Failed to read from backup database")?;
+
+            let old_tidb: TidbV0_42 = bincode::DefaultOptions::new()
+                .deserialize(value.as_ref())
+                .context("Failed to deserialize old tidb from backup")?;
+
+            let new_tidb = Tidb::from(old_tidb);
+            let new_value = bincode::DefaultOptions::new()
+                .serialize(&new_tidb)
+                .context("Failed to serialize new tidb for backup")?;
+
+            updates.push((key.to_vec(), new_value));
+        }
+
+        for (key, value) in updates {
+            backup_db.put_cf(backup_tidb_cf, &key, &value)?;
+        }
+    }
 
     info!("Dropping 'account policy' column family from backup");
     backup_db
